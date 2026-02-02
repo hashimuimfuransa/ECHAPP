@@ -1,0 +1,183 @@
+const Lesson = require('../models/Lesson');
+const Section = require('../models/Section');
+const Course = require('../models/Course');
+const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+
+// Get all lessons for a section
+const getLessonsBySection = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    
+    // Verify section exists
+    const section = await Section.findById(sectionId);
+    if (!section) {
+      return sendNotFound(res, 'Section not found');
+    }
+    
+    const lessons = await Lesson.find({ sectionId })
+      .sort({ order: 1 });
+    
+    sendSuccess(res, lessons, 'Lessons retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve lessons', 500, error.message);
+  }
+};
+
+// Get lesson by ID
+const getLessonById = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    
+    const lesson = await Lesson.findById(lessonId);
+    
+    if (!lesson) {
+      return sendNotFound(res, 'Lesson not found');
+    }
+    
+    sendSuccess(res, lesson, 'Lesson retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve lesson', 500, error.message);
+  }
+};
+
+// Create lesson (admin only)
+const createLesson = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    const { title, description, videoId, notes, order, duration } = req.body;
+    
+    // Verify section exists
+    const section = await Section.findById(sectionId);
+    if (!section) {
+      return sendNotFound(res, 'Section not found');
+    }
+    
+    const lesson = await Lesson.create({
+      sectionId,
+      courseId: section.courseId,
+      title,
+      description,
+      videoId,
+      notes,
+      order,
+      duration
+    });
+    
+    sendSuccess(res, lesson, 'Lesson created successfully', 201);
+  } catch (error) {
+    sendError(res, 'Failed to create lesson', 500, error.message);
+  }
+};
+
+// Update lesson (admin only)
+const updateLesson = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const updateData = req.body;
+    
+    const lesson = await Lesson.findByIdAndUpdate(
+      lessonId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    if (!lesson) {
+      return sendNotFound(res, 'Lesson not found');
+    }
+    
+    sendSuccess(res, lesson, 'Lesson updated successfully');
+  } catch (error) {
+    sendError(res, 'Failed to update lesson', 500, error.message);
+  }
+};
+
+// Delete lesson (admin only)
+const deleteLesson = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    
+    const lesson = await Lesson.findByIdAndDelete(lessonId);
+    
+    if (!lesson) {
+      return sendNotFound(res, 'Lesson not found');
+    }
+    
+    sendSuccess(res, null, 'Lesson deleted successfully');
+  } catch (error) {
+    sendError(res, 'Failed to delete lesson', 500, error.message);
+  }
+};
+
+// Reorder lessons (admin only)
+const reorderLessons = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    const { lessons } = req.body; // Array of {lessonId, order}
+    
+    // Verify section exists
+    const section = await Section.findById(sectionId);
+    if (!section) {
+      return sendNotFound(res, 'Section not found');
+    }
+    
+    // Update order for each lesson
+    const updatePromises = lessons.map(({ lessonId, order }) =>
+      Lesson.findByIdAndUpdate(lessonId, { order }, { new: true })
+    );
+    
+    await Promise.all(updatePromises);
+    
+    const updatedLessons = await Lesson.find({ sectionId }).sort({ order: 1 });
+    
+    sendSuccess(res, updatedLessons, 'Lessons reordered successfully');
+  } catch (error) {
+    sendError(res, 'Failed to reorder lessons', 500, error.message);
+  }
+};
+
+// Get course content with sections and lessons
+const getCourseContent = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    // Verify course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return sendNotFound(res, 'Course not found');
+    }
+    
+    // Get all sections for the course
+    const sections = await Section.find({ courseId })
+      .sort({ order: 1 });
+    
+    // Get all lessons for each section
+    const sectionsWithLessons = await Promise.all(
+      sections.map(async (section) => {
+        const lessons = await Lesson.find({ sectionId: section._id })
+          .sort({ order: 1 });
+        
+        return {
+          ...section.toObject(),
+          lessons
+        };
+      })
+    );
+    
+    sendSuccess(res, {
+      course,
+      sections: sectionsWithLessons
+    }, 'Course content retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve course content', 500, error.message);
+  }
+};
+
+module.exports = {
+  getLessonsBySection,
+  getLessonById,
+  createLesson,
+  updateLesson,
+  deleteLesson,
+  reorderLessons,
+  getCourseContent
+};

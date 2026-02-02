@@ -1,0 +1,43 @@
+type User @table {
+  displayName: String!
+  email: String!
+  role: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  bio: String
+}
+
+type Course @table {
+  title: String!
+  description: String!
+  instructor: User!
+  createdAt: Timestamp!
+  learningObjectives: [String]
+  difficultyLevel: String
+}
+
+type Enrollment @table(key: ["student", "course"]) {
+  student: User!
+  course: Course!
+  enrolledAt: Timestamp!
+  completionStatus: String
+  completedAt: Timestamp
+}
+
+type Module @table {
+  title: String!
+  course: Course!
+  orderIndex: Int!
+  description: String
+}
+
+type Material @table {
+  title: String!
+  module: Module!
+  materialType: String!
+  url: String!
+  createdAt: Timestamp!
+  description: String
+  duration: Int
+  fileSize: Int
+}

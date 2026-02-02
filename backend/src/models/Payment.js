@@ -1,0 +1,51 @@
+const mongoose = require('mongoose');
+
+const paymentSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required']
+  },
+  courseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course',
+    required: [true, 'Course ID is required']
+  },
+  amount: {
+    type: Number,
+    required: [true, 'Amount is required'],
+    min: [0, 'Amount cannot be negative']
+  },
+  currency: {
+    type: String,
+    default: 'UGX' // Assuming Uganda Shillings, change as needed
+  },
+  paymentMethod: {
+    type: String,
+    required: [true, 'Payment method is required'],
+    enum: ['mtn_momo', 'airtel_money']
+  },
+  transactionId: {
+    type: String,
+    required: [true, 'Transaction ID is required'],
+    unique: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    default: 'pending'
+  },
+  paymentDate: {
+    type: Date
+  }
+}, {
+  timestamps: true
+});
+
+// Index for better performance
+paymentSchema.index({ userId: 1 });
+paymentSchema.index({ courseId: 1 });
+paymentSchema.index({ transactionId: 1 });
+paymentSchema.index({ status: 1 });
+
+module.exports = mongoose.model('Payment', paymentSchema);

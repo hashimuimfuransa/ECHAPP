@@ -1,0 +1,110 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/models/coaching_category.dart';
+
+// Provider for categories
+final categoriesProvider = StateProvider<List<CoachingCategory>>((ref) {
+  return CategoriesService.getAllCategories();
+});
+
+class CategoriesService {
+  static List<CoachingCategory> getAllCategories() {
+    return [
+      // Professional Coaching
+      CoachingCategory(
+        id: 'professional_coaching',
+        name: 'Professional Coaching',
+        description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA',
+        icon: '💼',
+        subcategories: ['Leadership', 'Executive', 'Project Management', 'CPA/CAT/ACCA'],
+        isFeatured: true,
+        level: 5,
+      ),
+      
+      // Business & Entrepreneurship Coaching
+      CoachingCategory(
+        id: 'business_entrepreneurship',
+        name: 'Business & Entrepreneurship Coaching',
+        description: 'Startup, Strategy, Finance, Marketing, Innovation',
+        icon: '🚀',
+        subcategories: ['Startup', 'Strategy', 'Finance', 'Marketing', 'Innovation'],
+        isPopular: true,
+        isFeatured: true,
+        level: 3,
+      ),
+      
+      // Academic Coaching
+      CoachingCategory(
+        id: 'academic_coaching',
+        name: 'Academic Coaching',
+        description: 'Primary, Secondary, University, Nursery, Exams, Research',
+        icon: '📚',
+        subcategories: ['Primary', 'Secondary', 'University', 'Nursery', 'Exams', 'Research'],
+        isPopular: true,
+        isFeatured: true,
+        level: 1,
+      ),
+      
+      // Language Coaching
+      CoachingCategory(
+        id: 'language_coaching',
+        name: 'Language Coaching',
+        description: 'English, French, Kinyarwanda, Business Communication',
+        icon: '🗣️',
+        subcategories: ['English', 'French', 'Kinyarwanda', 'Business Communication'],
+        level: 2,
+      ),
+      
+      // Technical & Digital Coaching
+      CoachingCategory(
+        id: 'technical_digital',
+        name: 'Technical & Digital Coaching',
+        description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing',
+        icon: '💻',
+        subcategories: ['AI', 'Data', 'Cybersecurity', 'Cloud', 'Dev', 'Digital Marketing'],
+        isFeatured: true,
+        level: 3,
+      ),
+      
+      // Job Seeker Coaching
+      CoachingCategory(
+        id: 'job_seeker',
+        name: 'Job Seeker Coaching',
+        description: 'Career choice, skills, exams, interview, resume',
+        icon: '🎯',
+        subcategories: ['Career choice', 'Skills', 'Exams', 'Interview', 'Resume'],
+        isFeatured: true,
+        level: 4,
+      ),
+      
+      // Personal & Corporate Development
+      CoachingCategory(
+        id: 'personal_corporate',
+        name: 'Personal & Corporate Development',
+        description: 'Communication, EI, Time, Team, HR, Ethics',
+        icon: '🌱',
+        subcategories: ['Communication', 'Emotional Intelligence', 'Time Management', 'Team Building', 'HR', 'Ethics'],
+        level: 5,
+      ),
+    ];
+  }
+
+  static List<CoachingCategory> getPopularCategories(List<CoachingCategory> allCategories) {
+    return allCategories.where((category) => category.isPopular).toList();
+  }
+
+  static List<CoachingCategory> getFeaturedCategories(List<CoachingCategory> allCategories) {
+    return allCategories.where((category) => category.isFeatured).toList();
+  }
+
+  static List<CoachingCategory> getCategoriesByLevel(List<CoachingCategory> allCategories, int level) {
+    return allCategories.where((category) => category.level == level).toList();
+  }
+
+  static CoachingCategory? getCategoryById(List<CoachingCategory> allCategories, String id) {
+    try {
+      return allCategories.firstWhere((category) => category.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+}

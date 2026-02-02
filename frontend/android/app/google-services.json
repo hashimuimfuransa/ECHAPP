@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "216678536759",
+    "project_id": "excellencecoachinghub-5597c",
+    "storage_bucket": "excellencecoachinghub-5597c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:216678536759:android:f024947f5605bbbc2b91b2",
+        "android_client_info": {
+          "package_name": "com.example.excellence_coaching_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrDh_HTXexEbp98YOsTb5Y_NRcxufj-iI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,73 @@
+mutation CreateSeedData @auth(level: PUBLIC, insecureReason: "This mutation is used to seed the database with initial data and does not require authentication") @transaction {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      displayName: "demouser1",
+      email: "demouser1@example.com",
+      createdAt: "2024-04-26T12:00:00Z",
+      role: "student"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      displayName: "demouser2",
+      email: "demouser2@example.com",
+      createdAt: "2024-04-26T13:00:00Z",
+      role: "instructor"
+    }
+  ])
+  course_insertMany(data: [
+    {
+      id: "650e8400-e29b-41d4-a716-446655440002",
+      instructorId: "550e8400-e29b-41d4-a716-446655440001",
+      title: "Demo Course 1",
+      description: "Example course for demo purposes",
+      createdAt: "2024-04-27T09:00:00Z"
+    },
+    {
+      id: "750e8400-e29b-41d4-a716-446655440003",
+      instructorId: "550e8400-e29b-41d4-a716-446655440001",
+      title: "Demo Course 2",
+      description: "Another example course",
+      createdAt: "2024-04-27T10:00:00Z"
+    }
+  ])
+  module_insertMany(data: [
+    {
+      id: "850e8400-e29b-41d4-a716-446655440004",
+      courseId: "650e8400-e29b-41d4-a716-446655440002",
+      title: "Module 1",
+      orderIndex: 1
+    },
+    {
+      id: "950e8400-e29b-41d4-a716-446655440005",
+      courseId: "750e8400-e29b-41d4-a716-446655440003",
+      title: "Module 2",
+      orderIndex: 1
+    }
+  ])
+  material_insertMany(data: [
+    {
+      id: "a50e8400-e29b-41d4-a716-446655440006",
+      moduleId: "850e8400-e29b-41d4-a716-446655440004",
+      title: "Material 1",
+      materialType: "video",
+      url: "http://example.com/video1",
+      createdAt: "2024-04-27T11:00:00Z"
+    },
+    {
+      id: "b50e8400-e29b-41d4-a716-446655440007",
+      moduleId: "950e8400-e29b-41d4-a716-446655440005",
+      title: "Material 2",
+      materialType: "pdf",
+      url: "http://example.com/pdf2",
+      createdAt: "2024-04-27T12:00:00Z"
+    }
+  ])
+  enrollment_insertMany(data: [
+    {
+      studentId: "550e8400-e29b-41d4-a716-446655440000",
+      courseId: "650e8400-e29b-41d4-a716-446655440002",
+      enrolledAt: "2024-04-28T08:00:00Z"
+    }
+  ])
+}
