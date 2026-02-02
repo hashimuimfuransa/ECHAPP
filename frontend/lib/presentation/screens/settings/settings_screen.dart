@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
 
 // Providers for settings
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -287,7 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.greyColor,
                       fontSize: 13,
                     ),
@@ -295,7 +296,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-            Icon(
+            const Icon(
               Icons.arrow_forward_ios,
               color: AppTheme.greyColor,
               size: 16,
@@ -359,7 +360,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.primaryGreen,
+            activeThumbColor: AppTheme.primaryGreen,
             inactiveThumbColor: Colors.grey[400],
             inactiveTrackColor: Colors.grey[600],
           ),
@@ -421,7 +422,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.primaryGreen,
+            activeThumbColor: AppTheme.primaryGreen,
             inactiveThumbColor: Colors.grey[400],
             inactiveTrackColor: Colors.grey[600],
           ),
@@ -873,7 +874,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               color: Theme.of(context).brightness == Brightness.dark 
                 ? AppTheme.whiteColor 
                 : AppTheme.blackColor)),
-          content: SizedBox(
+          content: const SizedBox(
             height: 200, // Set fixed height to prevent overflow
             child: SingleChildScrollView(
               child: Text(
@@ -975,7 +976,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                context.go('/auth-selection');
+                ref.read(authProvider.notifier).logout();
+                context.go('/login');
                 _showSnackbar(context, 'Signed out successfully');
               },
               child: const Text('Sign Out', 

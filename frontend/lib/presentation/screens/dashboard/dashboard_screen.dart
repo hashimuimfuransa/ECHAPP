@@ -21,58 +21,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final popularCoursesAsync = ref.watch(popularCoursesProvider);
 
     return Scaffold(
-      body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(context, user),
-              
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Welcome Section
-                      _buildWelcomeCard(context, user),
-                      
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            _buildHeader(context, user),
+                  
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome Section
+                    _buildWelcomeCard(context, user),
+                                  
+                    const SizedBox(height: 25),
+                                  
+                    // Admin Access Button (visible only for admins)
+                    if (ref.watch(authProvider.notifier).isAdmin) ...[
+                      _buildAdminAccessButton(context),
                       const SizedBox(height: 25),
-                      
-                      // Admin Access Button (visible only for admins)
-                      if (ref.watch(authProvider.notifier).isAdmin) ...[
-                        _buildAdminAccessButton(context),
-                        const SizedBox(height: 25),
-                      ],
-                                    
-                      // Quick Actions
-                      _buildQuickActions(context),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // Continue Learning
-                      enrolledCoursesAsync.when(
-                        data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
-                        loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                        error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
-                      ),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // Popular Courses
-                      popularCoursesAsync.when(
-                        data: (popularCourses) => _buildPopularCourses(context, popularCourses),
-                        loading: () => _buildLoadingCard(context, 'Popular Courses'),
-                        error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
-                      ),
                     ],
-                  ),
+                                  
+                    // Quick Actions
+                    _buildQuickActions(context),
+                                  
+                    const SizedBox(height: 25),
+                                  
+                    // Continue Learning
+                    enrolledCoursesAsync.when(
+                      data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
+                      loading: () => _buildLoadingCard(context, 'Continue Learning'),
+                      error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
+                    ),
+                                  
+                    const SizedBox(height: 25),
+                                  
+                    // Popular Courses
+                    popularCoursesAsync.when(
+                      data: (popularCourses) => _buildPopularCourses(context, popularCourses),
+                      loading: () => _buildLoadingCard(context, 'Popular Courses'),
+                      error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
+                    ),
+                    
+                    // Add some bottom padding to ensure content isn't cut off
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _buildBottomNavBar(context),
@@ -80,7 +80,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildHeader(BuildContext context, user) {
-    return Padding(
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.all(20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -375,27 +376,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 15,
-            mainAxisSpacing: 15,
-            childAspectRatio: 1.3,
-          ),
-          itemCount: actions.length,
-          itemBuilder: (context, index) {
-            final action = actions[index];
-            return _buildActionCard(
-              context,
-              action['title'] as String,
-              action['subtitle'] as String,
-              action['icon'] as IconData,
-              action['color'] as Color,
-              action['onTap'] as Function,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
+                childAspectRatio: 1.3,
+              ),
+              itemCount: actions.length,
+              itemBuilder: (context, index) {
+                final action = actions[index];
+                return _buildActionCard(
+                  context,
+                  action['title'] as String,
+                  action['subtitle'] as String,
+                  action['icon'] as IconData,
+                  action['color'] as Color,
+                  action['onTap'] as Function,
+                );
+              },
             );
-          },
+          }
         ),
       ],
     );
@@ -888,7 +893,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 ref.read(authProvider.notifier).logout();
-                context.go('/auth-selection');
+                context.go('/login');
               },
               child: const Text(
                 'Logout',

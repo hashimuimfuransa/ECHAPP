@@ -223,7 +223,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 onTap: () {
                   // Handle logout
                   ref.read(authProvider.notifier).logout();
-                  context.go('/auth-selection');
+                  context.go('/login');
                   Navigator.pop(context);
                 },
               );
