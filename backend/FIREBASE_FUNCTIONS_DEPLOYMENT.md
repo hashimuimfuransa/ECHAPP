@@ -20,13 +20,13 @@ After upgrading to Blaze plan, run:
 
 ```bash
 cd d:\ECHAPP\backend\functions
-firebase functions:secrets:set MONGODB_URI --data="mongodb+srv://hashimuimfuransa:hashimu@cluster0.qzuhv97.mongodb.net/echapp?retryWrites=true&w=majority&appName=Cluster0"
+firebase functions:secrets:set MONGODB_URI --data="YOUR_MONGODB_CONNECTION_STRING_HERE"
 ```
 
 Alternatively, you can use the newer params system:
 
 ```bash
-firebase functions:config:set mongodb.uri="mongodb+srv://hashimuimfuransa:hashimu@cluster0.qzuhv97.mongodb.net/echapp?retryWrites=true&w=majority&appName=Cluster0"
+firebase functions:config:set mongodb.uri="YOUR_MONGODB_CONNECTION_STRING_HERE"
 ```
 
 ### 3. Deploy Functions

@@ -59,7 +59,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (authState.user?.role == 'admin') {
           debugPrint('AuthSelection: Navigating to admin dashboard');
-          context.go('/admin/dashboard');
+          context.go('/admin');
         } else {
           debugPrint('AuthSelection: Navigating to student dashboard');
           context.go('/dashboard');

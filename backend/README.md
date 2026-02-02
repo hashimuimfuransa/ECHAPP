@@ -89,7 +89,7 @@ Create a `.env` file in the backend root directory:
 ```
 NODE_ENV=development
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/echapp
+MONGODB_URI=your_mongodb_connection_string_here
 JWT_SECRET=your_jwt_secret_key_here
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_key_here
 CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
