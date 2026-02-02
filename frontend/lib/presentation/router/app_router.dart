@@ -17,7 +17,7 @@ import 'package:excellence_coaching_hub/presentation/screens/categories/categori
 import 'package:excellence_coaching_hub/presentation/screens/help/help_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboard_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_courses_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_create_course_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/create_course_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_course_content_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
 
@@ -93,7 +93,7 @@ class AppRouter {
             path: '/admin/courses/:courseId/edit',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return AdminCreateCourseScreen(); // Would pass courseId for editing
+              return const AdminCreateCourseScreen(); // Would pass courseId for editing
             },
           ),
           GoRoute(

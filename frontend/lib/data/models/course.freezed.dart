@@ -29,6 +29,7 @@ mixin _$Course {
   String? get thumbnail => throw _privateConstructorUsedError;
   bool get isPublished => throw _privateConstructorUsedError;
   User get createdBy => throw _privateConstructorUsedError;
+  String? get categoryId => throw _privateConstructorUsedError;
   Map<String, dynamic>? get category => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
 
@@ -56,6 +57,7 @@ abstract class $CourseCopyWith<$Res> {
       String? thumbnail,
       bool isPublished,
       User createdBy,
+      String? categoryId,
       Map<String, dynamic>? category,
       DateTime createdAt});
 }
@@ -84,6 +86,7 @@ class _$CourseCopyWithImpl<$Res, $Val extends Course>
     Object? thumbnail = freezed,
     Object? isPublished = null,
     Object? createdBy = null,
+    Object? categoryId = freezed,
     Object? category = freezed,
     Object? createdAt = null,
   }) {
@@ -124,6 +127,10 @@ class _$CourseCopyWithImpl<$Res, $Val extends Course>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as User,
+      categoryId: freezed == categoryId
+          ? _value.categoryId
+          : categoryId // ignore: cast_nullable_to_non_nullable
+              as String?,
       category: freezed == category
           ? _value.category
           : category // ignore: cast_nullable_to_non_nullable
@@ -153,6 +160,7 @@ abstract class _$$CourseImplCopyWith<$Res> implements $CourseCopyWith<$Res> {
       String? thumbnail,
       bool isPublished,
       User createdBy,
+      String? categoryId,
       Map<String, dynamic>? category,
       DateTime createdAt});
 }
@@ -179,6 +187,7 @@ class __$$CourseImplCopyWithImpl<$Res>
     Object? thumbnail = freezed,
     Object? isPublished = null,
     Object? createdBy = null,
+    Object? categoryId = freezed,
     Object? category = freezed,
     Object? createdAt = null,
   }) {
@@ -219,6 +228,10 @@ class __$$CourseImplCopyWithImpl<$Res>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as User,
+      categoryId: freezed == categoryId
+          ? _value.categoryId
+          : categoryId // ignore: cast_nullable_to_non_nullable
+              as String?,
       category: freezed == category
           ? _value._category
           : category // ignore: cast_nullable_to_non_nullable
@@ -244,6 +257,7 @@ class _$CourseImpl implements _Course {
       this.thumbnail,
       required this.isPublished,
       required this.createdBy,
+      this.categoryId,
       final Map<String, dynamic>? category,
       required this.createdAt})
       : _category = category;
@@ -269,6 +283,8 @@ class _$CourseImpl implements _Course {
   final bool isPublished;
   @override
   final User createdBy;
+  @override
+  final String? categoryId;
   final Map<String, dynamic>? _category;
   @override
   Map<String, dynamic>? get category {
@@ -284,7 +300,7 @@ class _$CourseImpl implements _Course {
 
   @override
   String toString() {
-    return 'Course(id: $id, title: $title, description: $description, price: $price, duration: $duration, level: $level, thumbnail: $thumbnail, isPublished: $isPublished, createdBy: $createdBy, category: $category, createdAt: $createdAt)';
+    return 'Course(id: $id, title: $title, description: $description, price: $price, duration: $duration, level: $level, thumbnail: $thumbnail, isPublished: $isPublished, createdBy: $createdBy, categoryId: $categoryId, category: $category, createdAt: $createdAt)';
   }
 
   @override
@@ -306,6 +322,8 @@ class _$CourseImpl implements _Course {
                 other.isPublished == isPublished) &&
             (identical(other.createdBy, createdBy) ||
                 other.createdBy == createdBy) &&
+            (identical(other.categoryId, categoryId) ||
+                other.categoryId == categoryId) &&
             const DeepCollectionEquality().equals(other._category, _category) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
@@ -324,6 +342,7 @@ class _$CourseImpl implements _Course {
       thumbnail,
       isPublished,
       createdBy,
+      categoryId,
       const DeepCollectionEquality().hash(_category),
       createdAt);
 
@@ -354,6 +373,7 @@ abstract class _Course implements Course {
       final String? thumbnail,
       required final bool isPublished,
       required final User createdBy,
+      final String? categoryId,
       final Map<String, dynamic>? category,
       required final DateTime createdAt}) = _$CourseImpl;
 
@@ -377,6 +397,8 @@ abstract class _Course implements Course {
   bool get isPublished;
   @override
   User get createdBy;
+  @override
+  String? get categoryId;
   @override
   Map<String, dynamic>? get category;
   @override

@@ -16,6 +16,7 @@ class Course with _$Course {
     String? thumbnail,
     required bool isPublished,
     required User createdBy,
+    String? categoryId,
     Map<String, dynamic>? category,
     required DateTime createdAt,
   }) = _Course;

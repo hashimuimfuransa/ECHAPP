@@ -21,7 +21,7 @@ class CoachingCategory {
 
   factory CoachingCategory.fromJson(Map<String, dynamic> json) {
     return CoachingCategory(
-      id: json['id'] as String,
+      id: (json['_id'] ?? json['id']) as String,
       name: json['name'] as String,
       description: json['description'] as String,
       icon: json['icon'] as String,

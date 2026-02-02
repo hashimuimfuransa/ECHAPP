@@ -1,13 +1,13 @@
 const Category = require('../models/Category');
-const { successResponse, errorResponse } = require('../utils/response.utils');
+const { sendSuccess, sendError } = require('../utils/response.utils');
 
 // Get all categories
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ level: 1, name: 1 });
-    return successResponse(res, categories, 'Categories retrieved successfully');
+    return sendSuccess(res, categories, 'Categories retrieved successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -15,9 +15,9 @@ exports.getAllCategories = async (req, res) => {
 exports.getPopularCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isPopular: true }).sort({ name: 1 });
-    return successResponse(res, categories, 'Popular categories retrieved successfully');
+    return sendSuccess(res, categories, 'Popular categories retrieved successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -25,9 +25,9 @@ exports.getPopularCategories = async (req, res) => {
 exports.getFeaturedCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isFeatured: true }).sort({ name: 1 });
-    return successResponse(res, categories, 'Featured categories retrieved successfully');
+    return sendSuccess(res, categories, 'Featured categories retrieved successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -36,9 +36,9 @@ exports.getCategoriesByLevel = async (req, res) => {
   try {
     const { level } = req.params;
     const categories = await Category.find({ level: parseInt(level) }).sort({ name: 1 });
-    return successResponse(res, categories, `Level ${level} categories retrieved successfully`);
+    return sendSuccess(res, categories, `Level ${level} categories retrieved successfully`);
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -49,12 +49,12 @@ exports.getCategoryById = async (req, res) => {
     const category = await Category.findById(id).populate('courses');
     
     if (!category) {
-      return errorResponse(res, 'Category not found', 404);
+      return sendError(res, 'Category not found', 404);
     }
     
-    return successResponse(res, category, 'Category retrieved successfully');
+    return sendSuccess(res, category, 'Category retrieved successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -66,7 +66,7 @@ exports.createCategory = async (req, res) => {
     // Check if category already exists
     const existingCategory = await Category.findOne({ name });
     if (existingCategory) {
-      return errorResponse(res, 'Category with this name already exists', 400);
+      return sendError(res, 'Category with this name already exists', 400);
     }
     
     const category = new Category({
@@ -80,9 +80,9 @@ exports.createCategory = async (req, res) => {
     });
     
     await category.save();
-    return successResponse(res, category, 'Category created successfully', 201);
+    return sendSuccess(res, category, 'Category created successfully', 201);
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -99,12 +99,12 @@ exports.updateCategory = async (req, res) => {
     );
     
     if (!category) {
-      return errorResponse(res, 'Category not found', 404);
+      return sendError(res, 'Category not found', 404);
     }
     
-    return successResponse(res, category, 'Category updated successfully');
+    return sendSuccess(res, category, 'Category updated successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -116,12 +116,12 @@ exports.deleteCategory = async (req, res) => {
     const category = await Category.findByIdAndDelete(id);
     
     if (!category) {
-      return errorResponse(res, 'Category not found', 404);
+      return sendError(res, 'Category not found', 404);
     }
     
-    return successResponse(res, null, 'Category deleted successfully');
+    return sendSuccess(res, null, 'Category deleted successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };
 
@@ -131,15 +131,15 @@ exports.searchCategories = async (req, res) => {
     const { query } = req.query;
     
     if (!query) {
-      return errorResponse(res, 'Search query is required', 400);
+      return sendError(res, 'Search query is required', 400);
     }
     
     const categories = await Category.find({
       $text: { $search: query }
     }).sort({ score: { $meta: 'textScore' } });
     
-    return successResponse(res, categories, 'Search results retrieved successfully');
+    return sendSuccess(res, categories, 'Search results retrieved successfully');
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return sendError(res, error.message, 500);
   }
 };

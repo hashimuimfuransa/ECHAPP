@@ -6,35 +6,39 @@ const sendSuccess = (res, data, message = 'Success', statusCode = 200) => {
   });
 };
 
-const sendError = (res, message = 'Something went wrong', statusCode = 500, errors = null) => {
-  const response = {
+const sendError = (res, message = 'Internal Server Error', statusCode = 500, error = null) => {
+  res.status(statusCode).json({
     success: false,
-    message
-  };
-  
-  if (errors) {
-    response.errors = errors;
-  }
-  
-  res.status(statusCode).json(response);
-};
-
-const sendUnauthorized = (res, message = 'Unauthorized access') => {
-  sendError(res, message, 401);
-};
-
-const sendForbidden = (res, message = 'Forbidden access') => {
-  sendError(res, message, 403);
+    message,
+    error
+  });
 };
 
 const sendNotFound = (res, message = 'Resource not found') => {
-  sendError(res, message, 404);
+  res.status(404).json({
+    success: false,
+    message
+  });
+};
+
+const sendUnauthorized = (res, message = 'Unauthorized') => {
+  res.status(401).json({
+    success: false,
+    message
+  });
+};
+
+const sendForbidden = (res, message = 'Forbidden') => {
+  res.status(403).json({
+    success: false,
+    message
+  });
 };
 
 module.exports = {
   sendSuccess,
   sendError,
+  sendNotFound,
   sendUnauthorized,
-  sendForbidden,
-  sendNotFound
+  sendForbidden
 };

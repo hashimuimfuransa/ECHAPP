@@ -1,4 +1,3 @@
-import 'dart:io';
 
 class ApiConfig {
   // For Android emulator, use 10.0.2.2 to reach the host machine
@@ -23,6 +22,9 @@ class ApiConfig {
   
   // Course endpoints
   static String get courses => '$baseUrl/courses';
+  
+  // Category endpoints
+  static String get categories => '$baseUrl/categories';
   
   // Enrollment endpoints
   static String get enrollments => '$baseUrl/enrollments';

@@ -134,9 +134,9 @@ const getCourseDetails = async (req, res) => {
 // Create course (admin only)
 const createCourse = async (req, res) => {
   try {
-    const { title, description, price, duration, level, thumbnail } = req.body;
+    const { title, description, price, duration, level, thumbnail, categoryId } = req.body;
     
-    const course = await Course.create({
+    const courseData = {
       title,
       description,
       price,
@@ -144,7 +144,14 @@ const createCourse = async (req, res) => {
       level,
       thumbnail,
       createdBy: req.user.id
-    });
+    };
+    
+    // Add category if provided
+    if (categoryId) {
+      courseData.category = categoryId;
+    }
+    
+    const course = await Course.create(courseData);
     
     sendSuccess(res, course, 'Course created successfully', 201);
   } catch (error) {

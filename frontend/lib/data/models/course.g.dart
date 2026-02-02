@@ -16,6 +16,7 @@ _$CourseImpl _$$CourseImplFromJson(Map<String, dynamic> json) => _$CourseImpl(
       thumbnail: json['thumbnail'] as String?,
       isPublished: json['isPublished'] as bool,
       createdBy: User.fromJson(json['createdBy'] as String),
+      categoryId: json['categoryId'] as String?,
       category: json['category'] as Map<String, dynamic>?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
@@ -31,6 +32,7 @@ Map<String, dynamic> _$$CourseImplToJson(_$CourseImpl instance) =>
       'thumbnail': instance.thumbnail,
       'isPublished': instance.isPublished,
       'createdBy': instance.createdBy,
+      'categoryId': instance.categoryId,
       'category': instance.category,
       'createdAt': instance.createdAt.toIso8601String(),
     };
