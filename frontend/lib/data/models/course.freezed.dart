@@ -28,6 +28,7 @@ mixin _$Course {
   String get level => throw _privateConstructorUsedError;
   String? get thumbnail => throw _privateConstructorUsedError;
   bool get isPublished => throw _privateConstructorUsedError;
+  @UserConverter()
   User get createdBy => throw _privateConstructorUsedError;
   String? get categoryId => throw _privateConstructorUsedError;
   Map<String, dynamic>? get category => throw _privateConstructorUsedError;
@@ -56,7 +57,7 @@ abstract class $CourseCopyWith<$Res> {
       String level,
       String? thumbnail,
       bool isPublished,
-      User createdBy,
+      @UserConverter() User createdBy,
       String? categoryId,
       Map<String, dynamic>? category,
       DateTime createdAt});
@@ -159,7 +160,7 @@ abstract class _$$CourseImplCopyWith<$Res> implements $CourseCopyWith<$Res> {
       String level,
       String? thumbnail,
       bool isPublished,
-      User createdBy,
+      @UserConverter() User createdBy,
       String? categoryId,
       Map<String, dynamic>? category,
       DateTime createdAt});
@@ -256,7 +257,7 @@ class _$CourseImpl implements _Course {
       required this.level,
       this.thumbnail,
       required this.isPublished,
-      required this.createdBy,
+      @UserConverter() required this.createdBy,
       this.categoryId,
       final Map<String, dynamic>? category,
       required this.createdAt})
@@ -282,6 +283,7 @@ class _$CourseImpl implements _Course {
   @override
   final bool isPublished;
   @override
+  @UserConverter()
   final User createdBy;
   @override
   final String? categoryId;
@@ -372,7 +374,7 @@ abstract class _Course implements Course {
       required final String level,
       final String? thumbnail,
       required final bool isPublished,
-      required final User createdBy,
+      @UserConverter() required final User createdBy,
       final String? categoryId,
       final Map<String, dynamic>? category,
       required final DateTime createdAt}) = _$CourseImpl;
@@ -396,6 +398,7 @@ abstract class _Course implements Course {
   @override
   bool get isPublished;
   @override
+  @UserConverter()
   User get createdBy;
   @override
   String? get categoryId;

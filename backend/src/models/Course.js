@@ -43,7 +43,17 @@ const courseSchema = new mongoose.Schema({
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
-  }
+  },
+  type: {
+    type: String,
+    required: false // Making it optional to avoid breaking existing functionality
+  },
+  learningObjectives: [{
+    type: String
+  }],
+  requirements: [{
+    type: String
+  }]
 }, {
   timestamps: true
 });

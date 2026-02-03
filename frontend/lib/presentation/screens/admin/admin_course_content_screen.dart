@@ -89,11 +89,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             ),
           ),
           const SizedBox(width: 15),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Mathematics Advanced',
                   style: TextStyle(
                     fontSize: 20,
@@ -101,8 +101,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                     color: AppTheme.blackColor,
                   ),
                 ),
-                const SizedBox(height: 5),
-                const Text(
+                SizedBox(height: 5),
+                Text(
                   'Manage course sections and lessons',
                   style: TextStyle(
                     color: AppTheme.greyColor,
@@ -479,6 +479,14 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           ),
           ElevatedButton(
             onPressed: () {
+              // Clean validation pattern
+              if (titleController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Section title is required")),
+                );
+                return;
+              }
+              
               // Handle section creation
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -520,6 +528,14 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           ),
           ElevatedButton(
             onPressed: () {
+              // Clean validation pattern
+              if (titleController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Section title is required")),
+                );
+                return;
+              }
+              
               // Handle section update
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(

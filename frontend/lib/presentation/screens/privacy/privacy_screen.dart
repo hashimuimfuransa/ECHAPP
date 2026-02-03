@@ -239,7 +239,7 @@ class PrivacyScreen extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),

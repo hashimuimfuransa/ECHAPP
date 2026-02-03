@@ -85,8 +85,7 @@ class AppTheme {
       secondary: accent,
       surface: surface, // Updated surface color
       onSurface: blackColor, // Clear text on surface
-      onPrimary: Colors.white,
-      background: surface, // Consistent background
+      onPrimary: Colors.white, // Consistent background
     ),
 
     appBarTheme: const AppBarTheme(
@@ -185,8 +184,7 @@ class AppTheme {
       secondary: accent,
       surface: darkSurface,
       onSurface: darkTextPrimary, // Clearer text
-      onPrimary: Colors.white,
-      background: darkBg, // Consistent background
+      onPrimary: Colors.white, // Consistent background
     ),
 
     appBarTheme: const AppBarTheme(
@@ -257,4 +255,9 @@ class AppTheme {
       elevation: 8,
     ),
   );
+
+  static const List<Color> secondaryGradient = [
+    Color(0xFF8B5CF6), // Purple 500
+    Color(0xFF7C3AED), // Purple 600
+  ];
 }

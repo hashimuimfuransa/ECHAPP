@@ -118,7 +118,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   Widget _buildVideoControls() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -283,7 +283,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 });
                 Navigator.pop(context);
               },
-            )).toList(),
+            )),
           ],
         ),
       ),

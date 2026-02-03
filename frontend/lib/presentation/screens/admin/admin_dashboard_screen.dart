@@ -120,15 +120,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
+          const DrawerHeader(
+            decoration: BoxDecoration(
               color: AppTheme.primaryGreen,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
                   child: Icon(
@@ -137,8 +137,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     color: AppTheme.primaryGreen,
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
+                SizedBox(height: 10),
+                Text(
                   'Admin Panel',
                   style: TextStyle(
                     color: Colors.white,
@@ -146,8 +146,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 5),
-                const Text(
+                SizedBox(height: 5),
+                Text(
                   'Excellence Coaching Hub',
                   style: TextStyle(
                     color: Colors.white70,

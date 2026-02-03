@@ -1,8 +1,29 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'dart:convert';
 import 'user.dart';
 
 part 'course.freezed.dart';
 part 'course.g.dart';
+
+class UserConverter implements JsonConverter<User, Object> {
+  const UserConverter();
+
+  @override
+  User fromJson(Object json) {
+    if (json is String) {
+      // If it's a string, parse it as JSON
+      return User.fromJson(json);
+    } else if (json is Map<String, dynamic>) {
+      // If it's a map, convert directly
+      return User.fromMap(json);
+    } else {
+      throw Exception('Invalid type for User conversion: ${json.runtimeType}');
+    }
+  }
+
+  @override
+  Object toJson(User user) => user.toMap();
+}
 
 @freezed
 class Course with _$Course {
@@ -15,7 +36,7 @@ class Course with _$Course {
     required String level,
     String? thumbnail,
     required bool isPublished,
-    required User createdBy,
+    @UserConverter() required User createdBy,
     String? categoryId,
     Map<String, dynamic>? category,
     required DateTime createdAt,

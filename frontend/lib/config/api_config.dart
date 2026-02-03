@@ -4,11 +4,9 @@ class ApiConfig {
   // For iOS simulator, use 10.0.2.2 or your machine's IP address
   // For web, use localhost
   static String get baseUrl {
-    // Use your machine's actual IP address
-    const String ipAddress = '192.168.1.2'; // ← Your actual IP address
-    
-    // For all platforms, use your machine's IP address
-    // This works for both emulator and physical devices
+    // For web development, use localhost
+    // For mobile development, use your machine's IP address
+    const String ipAddress = '192.168.1.3'; // Updated to machine's IP for mobile testing
     return 'http://$ipAddress:5000/api';
   }
   

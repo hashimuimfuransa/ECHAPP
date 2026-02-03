@@ -175,7 +175,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(height: 15),
         if (_isEditing)
-          Text(
+          const Text(
             'Tap to change photo',
             style: TextStyle(
               color: AppTheme.greyColor,

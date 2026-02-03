@@ -51,7 +51,7 @@ ExcellenceCoachingHub is a comprehensive e-learning platform that provides a com
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose
 - **Authentication**: JWT (access + refresh tokens)
-- **Video Streaming**: Cloudflare Stream
+- **File Storage**: AWS S3 with streaming capability
 - **Security**: bcrypt, helmet, CORS
 
 ## Data Flow
@@ -74,9 +74,9 @@ Flutter App → Course List → HTTP GET /api/courses
 ### 3. Video Streaming Flow
 ```
 Flutter App → Lesson → HTTP GET /api/videos/{lessonId}/stream-url
-    → Backend verifies enrollment → Generates signed Cloudflare URL
+    → Backend verifies enrollment → Generates signed AWS S3 URL
     → Flutter receives signed URL → Video player loads content
-    → Video expires after 10 minutes (security)
+    → Video expires after 1 hour (security)
 ```
 
 ### 4. Payment Flow
@@ -237,8 +237,8 @@ User (1) ──────────── (Many) Enrollment
 ### Horizontal Scaling
 - Load balancer for multiple backend instances
 - Database sharding for large datasets
-- CDN for static assets
-- Cloudflare Stream for video distribution
+- AWS S3 for file storage and distribution
+- Potential future addition of CloudFront CDN
 
 ### Performance Optimization
 - Database indexing

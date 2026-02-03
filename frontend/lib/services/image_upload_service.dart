@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'dart:convert';
 import '../config/api_config.dart';
 
 class ImageUploadService {
@@ -44,9 +46,17 @@ class ImageUploadService {
     }
   }
 
-  /// Upload image to backend
+  /// Upload image to backend with authentication
   static Future<String> uploadImage(File imageFile) async {
     try {
+      // Get Firebase ID token for authentication
+      final firebase_auth.User? currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final idToken = await currentUser.getIdToken(true);
+      
       // Determine content type
       final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
       
@@ -56,6 +66,11 @@ class ImageUploadService {
       // Create multipart request
       final uri = Uri.parse('${ApiConfig.baseUrl}/upload/image');
       final request = http.MultipartRequest('POST', uri);
+      
+      // Add authentication header
+      request.headers.addAll({
+        'Authorization': 'Bearer $idToken',
+      });
       
       // Add file to request
       final multipartFile = http.MultipartFile.fromBytes(
@@ -72,11 +87,31 @@ class ImageUploadService {
       
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
-        // Parse response to get image URL
-        // This will depend on your backend response format
-        return responseBody; // Assuming backend returns the image URL directly
+        
+        // Parse JSON response to extract image URL
+        try {
+          final jsonResponse = json.decode(responseBody);
+          if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+            final data = jsonResponse['data'];
+            if (data['imageUrl'] != null) {
+              return data['imageUrl'];
+            } else {
+              throw Exception('Image URL not found in response');
+            }
+          } else {
+            throw Exception(jsonResponse['message'] ?? 'Upload failed');
+          }
+        } catch (parseError) {
+          throw Exception('Failed to parse upload response: $parseError');
+        }
       } else {
-        throw Exception('Upload failed with status: ${response.statusCode}');
+        final errorBody = await response.stream.bytesToString();
+        try {
+          final errorResponse = json.decode(errorBody);
+          throw Exception(errorResponse['message'] ?? 'Upload failed with status: ${response.statusCode}');
+        } catch (e) {
+          throw Exception('Upload failed with status: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Image upload failed: $e');

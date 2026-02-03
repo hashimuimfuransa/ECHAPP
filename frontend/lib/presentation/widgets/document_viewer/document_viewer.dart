@@ -207,7 +207,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
 
   Widget _buildControlsOverlay() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,

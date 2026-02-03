@@ -86,7 +86,7 @@ lib/
 ### Environment Configuration
 Create a `.env` file in the root directory:
 ```
-API_BASE_URL=http://localhost:5000/api
+API_BASE_URL=http://192.168.1.3:5000/api
 ```
 
 ### Code Generation

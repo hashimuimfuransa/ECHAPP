@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
 import 'package:excellence_coaching_hub/data/models/coaching_category.dart';
-import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});

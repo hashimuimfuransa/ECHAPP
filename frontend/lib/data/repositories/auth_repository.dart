@@ -83,7 +83,7 @@ class AuthRepository {
 
   Future<AuthResponse> firebaseLogin(String idToken) async {
     print('AuthRepository.firebaseLogin called with idToken type: ${idToken.runtimeType}');
-    print('AuthRepository.firebaseLogin idToken value: ${idToken.toString().length > 100 ? idToken.toString().substring(0, 100) + '...' : idToken}');
+    print('AuthRepository.firebaseLogin idToken value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
     
     try {
       print('Attempting to encode JSON body');

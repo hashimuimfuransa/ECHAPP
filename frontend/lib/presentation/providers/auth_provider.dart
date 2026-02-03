@@ -145,7 +145,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final idToken = await firebaseUser.getIdToken();
         debugPrint('AuthProvider: Got Firebase ID token');
         debugPrint('AuthProvider: Token type: ${idToken.runtimeType}');
-        debugPrint('AuthProvider: Token value: ${idToken.toString().length > 100 ? idToken.toString().substring(0, 100) + '...' : idToken}');
+        debugPrint('AuthProvider: Token value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
         
         if (idToken == null) {
           debugPrint('AuthProvider: ERROR - idToken is null');
@@ -154,14 +154,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         
         // Verify that idToken is a String before passing to repository
         debugPrint('AuthProvider: Verifying idToken is String, runtimeType: ${idToken.runtimeType}');
-        if (idToken is! String) {
-          debugPrint('AuthProvider: ERROR - idToken is not a String: ${idToken.runtimeType}');
-          debugPrint('AuthProvider: ERROR - idToken value: $idToken');
-          throw Exception('Firebase ID token is not a valid String: ${idToken.runtimeType}');
-        } else {
-          debugPrint('AuthProvider: idToken is confirmed to be a String');
-        }
-        
+        debugPrint('AuthProvider: idToken is confirmed to be a String');
+              
         // Send token to backend for authentication
         final authResponse = await _authRepository.firebaseLogin(idToken);
         debugPrint('AuthProvider: Backend authentication successful');

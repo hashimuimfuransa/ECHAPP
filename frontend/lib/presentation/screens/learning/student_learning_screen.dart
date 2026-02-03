@@ -85,11 +85,11 @@ class StudentLearningScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 15),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Mathematics Advanced',
                   style: TextStyle(
                     fontSize: 20,
@@ -97,22 +97,22 @@ class StudentLearningScreen extends ConsumerWidget {
                     color: AppTheme.blackColor,
                   ),
                 ),
-                const SizedBox(height: 5),
-                const Text(
+                SizedBox(height: 5),
+                Text(
                   'Master advanced mathematical concepts',
                   style: TextStyle(
                     color: AppTheme.greyColor,
                     fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 LinearProgressIndicator(
                   value: 0.65,
                   backgroundColor: AppTheme.borderGrey,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                const SizedBox(height: 5),
-                const Text(
+                SizedBox(height: 5),
+                Text(
                   '65% Complete',
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
@@ -429,7 +429,7 @@ class StudentLearningScreen extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => context.push('/learning/${courseId}/section/3'),
+              onPressed: () => context.push('/learning/$courseId/section/3'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -506,7 +506,7 @@ class StudentLearningScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${duration} mins • ${type.capitalize()}',
+                  '$duration mins • ${type.capitalize()}',
                   style: const TextStyle(
                     color: AppTheme.greyColor,
                     fontSize: 12,
@@ -540,12 +540,12 @@ class StudentLearningScreen extends ConsumerWidget {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
-        children: [
+        children: const [
           DrawerHeader(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppTheme.primaryGreen,
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -569,22 +569,22 @@ class StudentLearningScreen extends ConsumerWidget {
             ),
           ),
           // Sections and lessons would be listed here
-          const ListTile(
+          ListTile(
             leading: Icon(Icons.numbers),
             title: Text('Section 1: Introduction'),
             subtitle: Text('3 lessons'),
           ),
-          const ListTile(
+          ListTile(
             leading: Icon(Icons.numbers),
             title: Text('Section 2: Algebra Fundamentals'),
             subtitle: Text('3 lessons'),
           ),
-          const ListTile(
+          ListTile(
             leading: Icon(Icons.numbers, color: AppTheme.primaryGreen),
             title: Text('Section 3: Calculus Basics', style: TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('3 lessons • Current'),
           ),
-          const ListTile(
+          ListTile(
             leading: Icon(Icons.numbers),
             title: Text('Section 4: Advanced Topics'),
             subtitle: Text('3 lessons'),
@@ -595,15 +595,15 @@ class StudentLearningScreen extends ConsumerWidget {
   }
 
   void _startVideoLearning(BuildContext context) {
-    context.push('/learning/${courseId}/video');
+    context.push('/learning/$courseId/video');
   }
 
   void _startNotesLearning(BuildContext context) {
-    context.push('/learning/${courseId}/notes');
+    context.push('/learning/$courseId/notes');
   }
 
   void _startExam(BuildContext context) {
-    context.push('/learning/${courseId}/exam');
+    context.push('/learning/$courseId/exam');
   }
 }
 

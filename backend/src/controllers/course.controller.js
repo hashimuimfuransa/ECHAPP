@@ -136,15 +136,44 @@ const createCourse = async (req, res) => {
   try {
     const { title, description, price, duration, level, thumbnail, categoryId } = req.body;
     
+    // Validate required fields
+    if (!title || !title.trim()) {
+      return sendError(res, 'Title is required', 400);
+    }
+    if (!description || !description.trim()) {
+      return sendError(res, 'Description is required', 400);
+    }
+    // Convert to number if it's a string and validate
+    const parsedPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return sendError(res, 'Valid price is required', 400);
+    }
+    // Convert to number if it's a string and validate
+    const parsedDuration = typeof duration === 'string' ? parseInt(duration) : duration;
+    if (isNaN(parsedDuration) || parsedDuration <= 0) {
+      return sendError(res, 'Valid duration is required', 400);
+    }
+    if (!level || !['beginner', 'intermediate', 'advanced'].includes(level)) {
+      return sendError(res, 'Valid level is required (beginner, intermediate, advanced)', 400);
+    }
+    
     const courseData = {
-      title,
-      description,
-      price,
-      duration,
+      title: title.trim(),
+      description: description.trim(),
+      price: parsedPrice,
+      duration: parsedDuration,
       level,
-      thumbnail,
+      thumbnail: thumbnail || null, // Ensure thumbnail is null if not provided
       createdBy: req.user.id
     };
+    
+    // Add learning objectives and requirements if provided
+    if (req.body.learningObjectives && Array.isArray(req.body.learningObjectives)) {
+      courseData.learningObjectives = req.body.learningObjectives.filter(obj => obj.trim() !== '');
+    }
+    if (req.body.requirements && Array.isArray(req.body.requirements)) {
+      courseData.requirements = req.body.requirements.filter(req => req.trim() !== '');
+    }
     
     // Add category if provided
     if (categoryId) {
@@ -155,6 +184,7 @@ const createCourse = async (req, res) => {
     
     sendSuccess(res, course, 'Course created successfully', 201);
   } catch (error) {
+    console.error('Error creating course:', error);
     sendError(res, 'Failed to create course', 500, error.message);
   }
 };

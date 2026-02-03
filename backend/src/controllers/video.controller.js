@@ -1,4 +1,4 @@
-const cloudflareService = require('../services/cloudflare.service');
+const s3Service = require('../services/s3.service');
 const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../utils/response.utils');
@@ -30,55 +30,60 @@ const getVideoStreamUrl = async (req, res) => {
       return sendForbidden(res, 'You must be enrolled in this course to access the video');
     }
 
-    // Generate signed URL
-    const signedUrl = cloudflareService.generateSignedUrl(lesson.videoId, 10); // 10 minutes expiration
+    // Generate signed streaming URL from S3
+    // AWS S3 supports byte-range requests which enables efficient streaming
+    const streamingUrl = await s3Service.generateStreamingUrl(lesson.videoId, 3600); // 1 hour expiration
 
     sendSuccess(res, {
-      signedUrl,
+      streamingUrl,
       lessonId: lesson._id,
       courseId: lesson.courseId,
-      expiration: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+      expiration: new Date(Date.now() + 3600 * 1000) // 1 hour from now
     }, 'Video stream URL generated successfully');
   } catch (error) {
     sendError(res, 'Failed to generate video stream URL', 500, error.message);
   }
 };
 
-// Upload video (admin only)
-const uploadVideo = async (req, res) => {
-  try {
-    // In a real implementation, you would handle file upload
-    // For now, we'll simulate the upload process
-    
-    const { filename } = req.body;
-    
-    if (!filename) {
-      return sendError(res, 'Filename is required', 400);
-    }
-
-    const result = await cloudflareService.uploadVideo(null, filename);
-    
-    sendSuccess(res, result, 'Video upload initiated', 201);
-  } catch (error) {
-    sendError(res, 'Failed to upload video', 500, error.message);
-  }
-};
-
-// Get video details
+// Get video details from S3
 const getVideoDetails = async (req, res) => {
   try {
     const { videoId } = req.params;
     
-    const details = await cloudflareService.getVideoDetails(videoId);
+    // Get file metadata from S3
+    const metadata = await s3Service.getFileMetadata(videoId);
     
-    sendSuccess(res, details, 'Video details retrieved successfully');
+    sendSuccess(res, {
+      id: videoId,
+      status: 'ready',
+      size: metadata.size,
+      contentType: metadata.contentType,
+      lastModified: metadata.lastModified,
+      url: s3Service.getPublicUrl(videoId)
+    }, 'Video details retrieved successfully');
   } catch (error) {
-    sendError(res, 'Failed to retrieve video details', 500, error.message);
+    if (error.message.includes('NoSuchKey')) {
+      return sendNotFound(res, 'Video not found');
+    }
+    sendError(res, 'Failed to get video details', 500, error.message);
+  }
+};
+
+// Delete video from S3
+const deleteVideo = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    
+    const result = await s3Service.deleteFile(videoId);
+    
+    sendSuccess(res, result, 'Video deleted successfully');
+  } catch (error) {
+    sendError(res, 'Failed to delete video', 500, error.message);
   }
 };
 
 module.exports = {
   getVideoStreamUrl,
-  uploadVideo,
-  getVideoDetails
+  getVideoDetails,
+  deleteVideo
 };

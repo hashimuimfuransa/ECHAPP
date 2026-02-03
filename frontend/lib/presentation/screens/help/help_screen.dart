@@ -295,7 +295,7 @@ class HelpScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 15),
-            ...faqs.map((faq) => _buildFAQItem(context, faq['question']!, faq['answer']!)).toList(),
+            ...faqs.map((faq) => _buildFAQItem(context, faq['question']!, faq['answer']!)),
           ],
         ),
       ),
@@ -312,6 +312,10 @@ class HelpScreen extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
       ),
+      iconColor: Colors.white,
+      collapsedIconColor: Colors.white70,
+      textColor: Colors.white,
+      collapsedTextColor: Colors.white,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -325,10 +329,6 @@ class HelpScreen extends StatelessWidget {
           ),
         ),
       ],
-      iconColor: Colors.white,
-      collapsedIconColor: Colors.white70,
-      textColor: Colors.white,
-      collapsedTextColor: Colors.white,
     );
   }
 
