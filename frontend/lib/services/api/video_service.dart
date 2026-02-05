@@ -56,8 +56,10 @@ class VideoService {
       );
       request.files.add(multipartFile);
       
-      // Send request
+      // Send request and track progress
       final response = await request.send();
+      
+      // If the response includes an uploadId, we can track progress
       final responseBody = await response.stream.bytesToString();
       
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -86,6 +88,47 @@ class VideoService {
       }
     } catch (e) {
       throw Exception('Video upload failed: $e');
+    }
+  }
+
+  /// Track upload progress using the upload ID
+  Stream<double> trackUploadProgress(String uploadId) async* {
+    try {
+      final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final idToken = await currentUser.getIdToken(true);
+      final uri = Uri.parse('${ApiConfig.upload}/progress/$uploadId');
+      
+      while (true) {
+        final response = await http.get(
+          uri,
+          headers: {'Authorization': 'Bearer $idToken'},
+        );
+        
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body)['data'];
+          final progress = data['progress'].toDouble();
+          yield progress;
+          
+          // If upload is complete or failed, stop tracking
+          final status = data['status'];
+          if (status == 'completed' || status == 'error') {
+            break;
+          }
+        } else {
+          yield -1; // Error indicator
+          break;
+        }
+        
+        // Wait 1 second before checking progress again
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    } catch (e) {
+      print('Error tracking upload progress: $e');
+      yield -1; // Error indicator
     }
   }
 
