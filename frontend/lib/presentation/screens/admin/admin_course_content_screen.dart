@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellence_coaching_hub/presentation/providers/content_management_provider.dart';
+import 'package:excellence_coaching_hub/models/section.dart';
+import 'package:excellence_coaching_hub/models/lesson.dart';
+import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
 
 class AdminCourseContentScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -14,9 +19,45 @@ class AdminCourseContentScreen extends ConsumerStatefulWidget {
 
 class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScreen> {
   bool _isReordering = false;
+  Course? _course;
+  bool _courseLoading = true;
+  String? _courseError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourseData();
+  }
+
+  Future<void> _loadCourseData() async {
+    try {
+      setState(() {
+        _courseLoading = true;
+        _courseError = null;
+      });
+
+      final repository = CourseRepository();
+      final course = await repository.getCourseById(widget.courseId);
+      
+      setState(() {
+        _course = course;
+        _courseLoading = false;
+      });
+
+      // Load sections for this course
+      ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
+    } catch (e) {
+      setState(() {
+        _courseLoading = false;
+        _courseError = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final contentState = ref.watch(contentManagementProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Course Content'),
@@ -29,19 +70,38 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
               setState(() {
                 _isReordering = !_isReordering;
               });
+              ref.read(contentManagementProvider.notifier).toggleReordering();
             },
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showAddSectionDialog(context),
+            onPressed: _courseLoading ? null : () => _showAddSectionDialog(context),
           ),
         ],
       ),
-      body: _buildContent(context),
+      body: _courseLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : _courseError != null 
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 50, color: Colors.red),
+                  const SizedBox(height: 20),
+                  Text('Error: $_courseError'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _loadCourseData,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : _buildContent(context, contentState),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, ContentManagementState contentState) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -53,7 +113,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           const SizedBox(height: 30),
           
           // Sections List
-          _buildSectionsList(context),
+          _buildSectionsList(context, contentState),
         ],
       ),
     );
@@ -89,19 +149,19 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             ),
           ),
           const SizedBox(width: 15),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mathematics Advanced',
-                  style: TextStyle(
+                  _course?.title ?? 'Loading...',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.blackColor,
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
                   'Manage course sections and lessons',
                   style: TextStyle(
@@ -117,41 +177,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  Widget _buildSectionsList(BuildContext context) {
-    // Mock sections data
-    final sections = [
-      {
-        'id': '1',
-        'title': 'Introduction to Advanced Mathematics',
-        'order': 1,
-        'lessons': [
-          {'id': '1', 'title': 'Course Overview', 'type': 'video', 'duration': 15},
-          {'id': '2', 'title': 'Prerequisites Review', 'type': 'notes', 'duration': 10},
-          {'id': '3', 'title': 'Getting Started Quiz', 'type': 'quiz', 'duration': 20},
-        ]
-      },
-      {
-        'id': '2',
-        'title': 'Algebra Fundamentals',
-        'order': 2,
-        'lessons': [
-          {'id': '4', 'title': 'Linear Equations', 'type': 'video', 'duration': 25},
-          {'id': '5', 'title': 'Quadratic Equations', 'type': 'video', 'duration': 30},
-          {'id': '6', 'title': 'Algebra Practice Problems', 'type': 'notes', 'duration': 15},
-        ]
-      },
-      {
-        'id': '3',
-        'title': 'Calculus Basics',
-        'order': 3,
-        'lessons': [
-          {'id': '7', 'title': 'Limits and Continuity', 'type': 'video', 'duration': 35},
-          {'id': '8', 'title': 'Derivatives Introduction', 'type': 'video', 'duration': 40},
-          {'id': '9', 'title': 'Calculus Formula Sheet', 'type': 'notes', 'duration': 5},
-        ]
-      },
-    ];
-
+  Widget _buildSectionsList(BuildContext context, ContentManagementState contentState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -167,7 +193,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
               ),
             ),
             Text(
-              '${sections.length} sections',
+              '${contentState.sections.length} sections',
               style: const TextStyle(
                 color: AppTheme.greyColor,
                 fontSize: 14,
@@ -176,25 +202,82 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           ],
         ),
         const SizedBox(height: 15),
-        ReorderableListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          onReorder: _isReordering 
-            ? ((int oldIndex, int newIndex) => _handleReorder(oldIndex, newIndex))
-            : ((int oldIndex, int newIndex) {}),
-          itemCount: sections.length,
-          itemBuilder: (context, index) {
-            final section = sections[index];
-            return _buildSectionCard(context, section, index);
-          },
-        ),
+        if (contentState.isLoading && contentState.sections.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (contentState.error != null)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.error, color: Colors.red),
+                  const SizedBox(height: 8),
+                  Text('Error loading sections: ${contentState.error}'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () => ref.read(contentManagementProvider.notifier).loadSections(widget.courseId),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (contentState.sections.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.library_books, size: 60, color: AppTheme.greyColor),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No sections yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add your first section to organize your course content',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _showAddSectionDialog(context),
+                    child: const Text('Add Section'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            onReorder: contentState.isReordering 
+              ? ((int oldIndex, int newIndex) => _handleReorder(oldIndex, newIndex))
+              : ((int oldIndex, int newIndex) {}),
+            itemCount: contentState.sections.length,
+            itemBuilder: (context, index) {
+              final section = contentState.sections[index];
+              return _buildSectionCard(context, section, index);
+            },
+          ),
       ],
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, Map<String, dynamic> section, int index) {
+  Widget _buildSectionCard(BuildContext context, Section section, int index) {
     return Container(
-      key: ValueKey(section['id']),
+      key: ValueKey(section.id),
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -225,7 +308,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                 ],
                 Expanded(
                   child: Text(
-                    section['title'],
+                    section.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -234,7 +317,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                   ),
                 ),
                 Text(
-                  'Section ${section['order']}',
+                  'Section ${section.order}',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
@@ -281,15 +364,12 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             ),
           ),
           
-          // Lessons List
+          // Lessons List - temporarily showing empty since we don't have lessons data yet
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                ...List.generate(section['lessons'].length, (lessonIndex) {
-                  final lesson = section['lessons'][lessonIndex];
-                  return _buildLessonItem(lesson, lessonIndex == section['lessons'].length - 1);
-                }),
+                const Text('No lessons in this section yet'),
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
                   onPressed: () => _showAddLessonDialog(context, section),
@@ -421,7 +501,23 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
-    // In a real implementation, this would update the backend
+    
+    // Create new order mapping
+    final contentState = ref.read(contentManagementProvider);
+    final reorderedSections = List<Section>.from(contentState.sections);
+    final movedSection = reorderedSections.removeAt(oldIndex);
+    reorderedSections.insert(newIndex, movedSection);
+    
+    // Update order values
+    final newOrder = reorderedSections.asMap().entries.map((entry) {
+      final index = entry.key;
+      final section = entry.value;
+      return {'sectionId': section.id, 'order': index + 1};
+    }).toList();
+    
+    // Call the reorder function in the provider
+    ref.read(contentManagementProvider.notifier).reorderSections(widget.courseId, newOrder);
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Sections reordered successfully'),
@@ -430,7 +526,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  void _handleSectionAction(String action, Map<String, dynamic> section) {
+  void _handleSectionAction(String action, Section section) {
     switch (action) {
       case 'edit':
         _showEditSectionDialog(context, section);
@@ -439,7 +535,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
         _showAddLessonDialog(context, section);
         break;
       case 'delete':
-        _showDeleteConfirmation(context, 'section', section['title']);
+        _showDeleteConfirmation(context, 'section', section.title, sectionId: section.id);
         break;
     }
   }
@@ -489,6 +585,13 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
               
               // Handle section creation
               Navigator.pop(context);
+              final contentState = ref.read(contentManagementProvider);
+              final order = contentState.sections.length + 1;
+              ref.read(contentManagementProvider.notifier).createSection(
+                widget.courseId,
+                titleController.text.trim(),
+                order,
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Section added successfully'),
@@ -503,12 +606,12 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  void _showAddLessonDialog(BuildContext context, Map<String, dynamic> section) {
-    context.push('/admin/courses/${widget.courseId}/sections/${section['id']}/lessons/create');
+  void _showAddLessonDialog(BuildContext context, Section section) {
+    context.push('/admin/courses/${widget.courseId}/sections/${section.id}/lessons/create');
   }
 
-  void _showEditSectionDialog(BuildContext context, Map<String, dynamic> section) {
-    final titleController = TextEditingController(text: section['title']);
+  void _showEditSectionDialog(BuildContext context, Section section) {
+    final titleController = TextEditingController(text: section.title);
     
     showDialog(
       context: context,
@@ -538,6 +641,9 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
               
               // Handle section update
               Navigator.pop(context);
+              ref.read(contentManagementProvider.notifier).updateSection(section.id, {
+                'title': titleController.text.trim()
+              });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Section updated successfully'),
@@ -556,7 +662,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     // Handle lesson editing
   }
 
-  void _showDeleteConfirmation(BuildContext context, String type, String title) {
+  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId}) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -570,6 +676,9 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (type == 'section' && sectionId != null) {
+                ref.read(contentManagementProvider.notifier).deleteSection(sectionId);
+              }
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('$type deleted successfully'),

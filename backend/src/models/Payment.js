@@ -18,7 +18,7 @@ const paymentSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'UGX' // Assuming Uganda Shillings, change as needed
+    default: 'RWF' // Rwanda Francs
   },
   paymentMethod: {
     type: String,
@@ -32,8 +32,24 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'cancelled'],
+    enum: ['pending', 'admin_review', 'approved', 'completed', 'failed', 'cancelled'],
     default: 'pending'
+  },
+  adminApproval: {
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    approvedAt: {
+      type: Date
+    },
+    adminNotes: {
+      type: String
+    }
+  },
+  contactInfo: {
+    type: String,
+    required: [true, 'Contact information is required for payment']
   },
   paymentDate: {
     type: Date

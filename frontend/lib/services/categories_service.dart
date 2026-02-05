@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/models/coaching_category.dart';
+import '../models/category.dart';
 
 // Provider for categories
-final categoriesProvider = StateProvider<List<CoachingCategory>>((ref) {
+final categoriesProvider = StateProvider<List<Category>>((ref) {
   return CategoriesService.getAllCategories();
 });
 
 class CategoriesService {
-  static List<CoachingCategory> getAllCategories() {
+  static List<Category> getAllCategories() {
     return [
       // Professional Coaching
-      CoachingCategory(
+      Category(
         id: 'professional_coaching',
         name: 'Professional Coaching',
         description: 'Leadership, Executive, Project Management, CPA/CAT/ACCA',
@@ -21,7 +21,7 @@ class CategoriesService {
       ),
       
       // Business & Entrepreneurship Coaching
-      CoachingCategory(
+      Category(
         id: 'business_entrepreneurship',
         name: 'Business & Entrepreneurship Coaching',
         description: 'Startup, Strategy, Finance, Marketing, Innovation',
@@ -33,7 +33,7 @@ class CategoriesService {
       ),
       
       // Academic Coaching
-      CoachingCategory(
+      Category(
         id: 'academic_coaching',
         name: 'Academic Coaching',
         description: 'Primary, Secondary, University, Nursery, Exams, Research',
@@ -45,7 +45,7 @@ class CategoriesService {
       ),
       
       // Language Coaching
-      CoachingCategory(
+      Category(
         id: 'language_coaching',
         name: 'Language Coaching',
         description: 'English, French, Kinyarwanda, Business Communication',
@@ -55,7 +55,7 @@ class CategoriesService {
       ),
       
       // Technical & Digital Coaching
-      CoachingCategory(
+      Category(
         id: 'technical_digital',
         name: 'Technical & Digital Coaching',
         description: 'AI, Data, Cybersecurity, Cloud, Dev, Digital Marketing',
@@ -66,7 +66,7 @@ class CategoriesService {
       ),
       
       // Job Seeker Coaching
-      CoachingCategory(
+      Category(
         id: 'job_seeker',
         name: 'Job Seeker Coaching',
         description: 'Career choice, skills, exams, interview, resume',
@@ -77,7 +77,7 @@ class CategoriesService {
       ),
       
       // Personal & Corporate Development
-      CoachingCategory(
+      Category(
         id: 'personal_corporate',
         name: 'Personal & Corporate Development',
         description: 'Communication, EI, Time, Team, HR, Ethics',
@@ -88,19 +88,19 @@ class CategoriesService {
     ];
   }
 
-  static List<CoachingCategory> getPopularCategories(List<CoachingCategory> allCategories) {
+  static List<Category> getPopularCategories(List<Category> allCategories) {
     return allCategories.where((category) => category.isPopular).toList();
   }
 
-  static List<CoachingCategory> getFeaturedCategories(List<CoachingCategory> allCategories) {
+  static List<Category> getFeaturedCategories(List<Category> allCategories) {
     return allCategories.where((category) => category.isFeatured).toList();
   }
 
-  static List<CoachingCategory> getCategoriesByLevel(List<CoachingCategory> allCategories, int level) {
+  static List<Category> getCategoriesByLevel(List<Category> allCategories, int level) {
     return allCategories.where((category) => category.level == level).toList();
   }
 
-  static CoachingCategory? getCategoryById(List<CoachingCategory> allCategories, String id) {
+  static Category? getCategoryById(List<Category> allCategories, String id) {
     try {
       return allCategories.firstWhere((category) => category.id == id);
     } catch (e) {

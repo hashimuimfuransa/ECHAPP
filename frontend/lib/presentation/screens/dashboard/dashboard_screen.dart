@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
-import 'package:excellence_coaching_hub/data/models/course.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 import 'package:excellence_coaching_hub/widgets/responsive_navigation_drawer.dart';
+import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -1182,7 +1183,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             itemCount: popularCourses.length,
             itemBuilder: (context, index) {
               final course = popularCourses[index];
-              return _buildResponsiveCourseCard(context, course);
+              return Consumer(
+                builder: (context, ref, child) {
+                  return InkWell(
+                    onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                    borderRadius: BorderRadius.circular(isDesktop ? 18 : 15),
+                    child: _buildResponsiveCourseCard(context, course),
+                  );
+                },
+              );
             },
           ),
         ],

@@ -1,214 +1,302 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:excellence_coaching_hub/config/api_config.dart';
 
+import 'dart:convert';
+
+import './infrastructure/api_client.dart';
+import '../config/api_config.dart';
+import '../models/user.dart';
+
+/// Service for admin-related API operations using the new professional architecture
 class AdminService {
-  static String get baseUrl => ApiConfig.admin;
-  
-  // Get authorization header with Firebase ID token
-  static Future<Map<String, String>> _getHeaders() async {
+  final ApiClient _apiClient;
+
+  AdminService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// Get dashboard statistics
+  Future<AdminDashboardStats> getDashboardStats() async {
     try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final idToken = await user.getIdToken();
-        return {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        };
-      } else {
-        throw Exception('No authenticated user found');
-      }
-    } catch (e) {
-      throw Exception('Failed to get Firebase ID token: $e');
-    }
-  }
-  
-  // Get dashboard statistics
-  static Future<Map<String, dynamic>> getDashboardStats() async {
-    try {
-      final headers = await _getHeaders();
-      
       // Fetch all required data in parallel
       final futures = [
-        _getCourseStats(headers),
-        _getPaymentStats(headers),
-        _getUserStats(headers),
+        _getCourseStats(),
+        _getPaymentStats(),
+        _getUserStats(),
       ];
       
       final results = await Future.wait(futures);
       
-      final courseStats = results[0];
-      final paymentStats = results[1];
-      final userStats = results[2];
+      final courseStats = results[0] as CourseStats;
+      final paymentStats = results[1] as PaymentStats;
+      final userStats = results[2] as UserStats;
       
-      return {
-        'totalCourses': courseStats['totalCourses'] ?? 0,
-        'activeStudents': userStats['totalStudents'] ?? 0,
-        'totalRevenue': paymentStats['totalRevenue'] ?? 0,
-        'pendingExams': 0, // Will implement when exam stats are available
-        'recentActivity': _generateRecentActivity(courseStats, paymentStats),
-      };
+      return AdminDashboardStats(
+        totalCourses: courseStats.totalCourses,
+        activeStudents: userStats.totalStudents,
+        totalRevenue: paymentStats.totalRevenue,
+        pendingExams: 0, // Will implement when exam stats are available
+        recentActivity: _generateRecentActivity(courseStats, paymentStats),
+      );
     } catch (e) {
-      throw Exception('Failed to fetch dashboard statistics: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch dashboard statistics: $e');
     }
   }
-  
-  // Get course statistics
-  static Future<Map<String, dynamic>> _getCourseStats(Map<String, String> headers) async {
+
+  /// Get course statistics
+  Future<CourseStats> _getCourseStats() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/course-stats'),
-        headers: headers,
-      );
+      final response = await _apiClient.get('${ApiConfig.admin}/course-stats');
+      response.validateStatus();
       
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final courseStats = data['data'] as List;
+      // Parse the response directly since data is a List
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'];
+      
+      if (data is List) {
+        final courses = data.cast<Map<String, dynamic>>();
         
-        return {
-          'totalCourses': courseStats.length,
-          'courses': courseStats,
-        };
-      } else {
-        throw Exception('Failed to fetch course stats: ${response.statusCode}');
-      }
-    } catch (e) {
-      // Return default values if API fails
-      return {
-        'totalCourses': 0,
-        'courses': [],
-      };
-    }
-  }
-  
-  // Get payment statistics
-  static Future<Map<String, dynamic>> _getPaymentStats(Map<String, String> headers) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/payment-stats'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final paymentData = data['data'];
+        // Calculate total courses (all courses, not just published)
+        final totalCourses = courses.length;
         
-        return {
-          'totalRevenue': paymentData['totalRevenue'] ?? 0,
-          'totalPayments': paymentData['totalPayments'] ?? 0,
-          'recentPayments': paymentData['recentPayments'] ?? [],
-        };
+        // Calculate published courses
+        final publishedCourses = courses.where((course) => 
+          course['isPublished'] == true).length;
+        
+        return CourseStats(
+          totalCourses: totalCourses,
+          publishedCourses: publishedCourses,
+          courses: courses
+        );
       } else {
-        throw Exception('Failed to fetch payment stats: ${response.statusCode}');
+        throw ApiException('Invalid response format: expected List but got ${data.runtimeType}');
       }
     } catch (e) {
+      if (e is ApiException) rethrow;
       // Return default values if API fails
-      return {
-        'totalRevenue': 0,
-        'totalPayments': 0,
-        'recentPayments': [],
-      };
+      return CourseStats(totalCourses: 0, publishedCourses: 0, courses: []);
     }
   }
-  
-  // Get user statistics
-  static Future<Map<String, dynamic>> _getUserStats(Map<String, String> headers) async {
+
+  /// Get payment statistics
+  Future<PaymentStats> _getPaymentStats() async {
     try {
-      // Get total students count from Firebase source
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/admin/students?page=1&limit=1&source=firebase'),
-        headers: headers,
-      );
+      final response = await _apiClient.get('${ApiConfig.admin}/payment-stats');
+      response.validateStatus();
       
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return {
-          'totalStudents': data['data']['total'] ?? 0,
-          'source': data['data']['source'] ?? 'unknown',
-        };
-      } else {
-        throw Exception('Failed to fetch user stats: ${response.statusCode}');
-      }
+      // Parse the response directly
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return PaymentStats(
+        totalRevenue: (data['totalRevenue'] as num?)?.toDouble() ?? 0.0,
+        totalPayments: data['totalPayments'] as int? ?? 0,
+        recentPayments: data['recentPayments'] is List ? data['recentPayments'] as List : [],
+      );
     } catch (e) {
+      if (e is ApiException) rethrow;
       // Return default values if API fails
-      return {
-        'totalStudents': 0,
-        'source': 'fallback',
-      };
+      return PaymentStats(totalRevenue: 0, totalPayments: 0, recentPayments: []);
     }
   }
-  
-  // Manual sync all users from Firebase to backend
-  static Future<Map<String, dynamic>> manualSyncUsers() async {
+
+  /// Get user statistics
+  Future<UserStats> _getUserStats() async {
     try {
-      final headers = await _getHeaders();
+      final response = await _apiClient.get('${ApiConfig.admin}/students?page=1&limit=1&source=firebase');
+      response.validateStatus();
       
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/admin/manual-sync-users'),
-        headers: headers,
+      // Parse the response directly
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return UserStats(
+        totalStudents: data['total'] as int? ?? 0,
+        source: data['source'] as String? ?? 'unknown',
       );
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['data'];
-      } else {
-        throw Exception('Sync failed: ${response.statusCode}');
-      }
     } catch (e) {
-      throw Exception('Manual sync failed: $e');
+      if (e is ApiException) rethrow;
+      // Return default values if API fails
+      return UserStats(totalStudents: 0, source: 'fallback');
     }
   }
-  
-  // Generate recent activity based on fetched data
-  static List<Map<String, dynamic>> _generateRecentActivity(
-    Map<String, dynamic> courseStats,
-    Map<String, dynamic> paymentStats,
-  ) {
-    final List<Map<String, dynamic>> activity = [];
+
+  /// Get students with pagination and search
+  Future<StudentListResponse> getStudents({int page = 1, int limit = 10, String? search}) async {
+    try {
+      final queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (search != null && search.isNotEmpty) 'search': search,
+      };
+      
+      final response = await _apiClient.get('${ApiConfig.admin}/students', queryParams: queryParams);
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      final students = (data['students'] as List)
+          .map((item) => User.fromJson(item as Map<String, dynamic>))
+          .toList();
+      
+      return StudentListResponse(
+        students: students,
+        totalPages: data['totalPages'] as int? ?? 1,
+        currentPage: data['currentPage'] as int? ?? 1,
+        total: data['total'] as int? ?? 0,
+        source: data['source'] as String? ?? 'unknown',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch students: $e');
+    }
+  }
+
+  /// Manual sync all users from Firebase to backend
+  Future<Map<String, dynamic>> manualSyncUsers() async {
+    try {
+      final response = await _apiClient.post('${ApiConfig.admin}/manual-sync-users');
+      response.validateStatus();
+      
+      // Parse the response directly
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return data;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Manual sync failed: $e');
+    }
+  }
+
+  /// Generate recent activity based on fetched data
+  List<ActivityItem> _generateRecentActivity(CourseStats courseStats, PaymentStats paymentStats) {
+    final List<ActivityItem> activity = [];
     
     // Add recent course activities
-    final courses = courseStats['courses'] as List;
-    for (var i = 0; i < courses.length && i < 3; i++) {
-      final course = courses[i];
-      activity.add({
-        'icon': 'school',
-        'title': 'Course Published',
-        'subtitle': '${course['title']} is now live',
-        'time': 'Recently',
-      });
+    for (var i = 0; i < courseStats.courses.length && i < 3; i++) {
+      final course = courseStats.courses[i];
+      activity.add(ActivityItem(
+        icon: 'school',
+        title: 'Course Published',
+        subtitle: 'Course is now live',
+        time: 'Recently',
+      ));
     }
     
     // Add recent payment activities
-    final recentPayments = paymentStats['recentPayments'] as List;
-    for (var i = 0; i < recentPayments.length && i < 2; i++) {
-      final payment = recentPayments[i];
-      activity.add({
-        'icon': 'payment',
-        'title': 'Payment Received',
-        'subtitle': 'Payment for ${payment['courseId']?['title'] ?? 'course'}',
-        'time': 'Recently',
-      });
+    for (var i = 0; i < paymentStats.recentPayments.length && i < 2; i++) {
+      final payment = paymentStats.recentPayments[i];
+      activity.add(ActivityItem(
+        icon: 'payment',
+        title: 'Payment Received',
+        subtitle: 'Payment processed successfully',
+        time: 'Recently',
+      ));
     }
     
     // Add default activities if no real data
     if (activity.isEmpty) {
       activity.addAll([
-        {
-          'icon': 'school',
-          'title': 'Platform Ready',
-          'subtitle': 'Your coaching platform is set up',
-          'time': 'Just now',
-        },
-        {
-          'icon': 'people',
-          'title': 'Welcome Admin',
-          'subtitle': 'Start managing your platform',
-          'time': 'Just now',
-        },
+        ActivityItem(
+          icon: 'school',
+          title: 'Platform Ready',
+          subtitle: 'Your coaching platform is set up',
+          time: 'Just now',
+        ),
+        ActivityItem(
+          icon: 'people',
+          title: 'Welcome Admin',
+          subtitle: 'Start managing your platform',
+          time: 'Just now',
+        ),
       ]);
     }
     
     return activity.take(5).toList();
   }
+
+  /// Dispose of resources
+  void dispose() {
+    _apiClient.dispose();
+  }
+}
+
+class StudentListResponse {
+  final List<User> students;
+  final int totalPages;
+  final int currentPage;
+  final int total;
+  final String source;
+
+  StudentListResponse({
+    required this.students,
+    required this.totalPages,
+    required this.currentPage,
+    required this.total,
+    required this.source,
+  });
+}
+
+/// Data models for admin statistics
+class AdminDashboardStats {
+  final int totalCourses;
+  final int activeStudents;
+  final double totalRevenue;
+  final int pendingExams;
+  final List<ActivityItem> recentActivity;
+
+  AdminDashboardStats({
+    required this.totalCourses,
+    required this.activeStudents,
+    required this.totalRevenue,
+    required this.pendingExams,
+    required this.recentActivity,
+  });
+}
+
+class CourseStats {
+  final int totalCourses;
+  final int publishedCourses;
+  final List<Map<String, dynamic>> courses;
+
+  CourseStats({
+    required this.totalCourses,
+    required this.publishedCourses,
+    required this.courses,
+  });
+}
+
+class PaymentStats {
+  final double totalRevenue;
+  final int totalPayments;
+  final List<dynamic> recentPayments;
+
+  PaymentStats({
+    required this.totalRevenue,
+    required this.totalPayments,
+    required this.recentPayments,
+  });
+}
+
+class UserStats {
+  final int totalStudents;
+  final String source;
+
+  UserStats({
+    required this.totalStudents,
+    required this.source,
+  });
+}
+
+class ActivityItem {
+  final String icon;
+  final String title;
+  final String subtitle;
+  final String time;
+
+  ActivityItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.time,
+  });
 }

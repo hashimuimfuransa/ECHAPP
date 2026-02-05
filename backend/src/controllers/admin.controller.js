@@ -210,7 +210,8 @@ const getStudents = async (req, res) => {
 // Get course statistics
 const getCourseStats = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true });
+    // For admin dashboard, show all courses (both published and unpublished)
+    const courses = await Course.find({});
     
     const stats = await Promise.all(courses.map(async (course) => {
       const enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
@@ -225,7 +226,9 @@ const getCourseStats = async (req, res) => {
         price: course.price,
         enrollmentCount,
         paymentCount,
-        revenue: paymentCount * course.price
+        revenue: paymentCount * course.price,
+        isPublished: course.isPublished,
+        createdAt: course.createdAt
       };
     }));
     

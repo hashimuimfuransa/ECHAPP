@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/login_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/register_screen.dart';
@@ -19,7 +18,15 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboa
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_courses_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/create_course_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_course_content_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_students_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/course_videos_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/course_materials_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/course_exams_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_settings_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_payments_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
+import 'package:excellence_coaching_hub/config/app_theme.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
@@ -93,7 +100,7 @@ class AppRouter {
             path: '/admin/courses/:courseId/edit',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return const AdminCreateCourseScreen(); // Would pass courseId for editing
+              return AdminCreateCourseScreen(courseId: courseId);
             },
           ),
           GoRoute(
@@ -101,6 +108,27 @@ class AppRouter {
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
               return AdminCourseContentScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
+            path: '/admin/courses/:courseId/videos',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return CourseVideosScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
+            path: '/admin/courses/:courseId/materials',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return CourseMaterialsScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
+            path: '/admin/courses/:courseId/exams',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return CourseExamsScreen(courseId: courseId);
             },
           ),
           GoRoute(
@@ -115,38 +143,23 @@ class AppRouter {
           ),
           GoRoute(
             path: '/admin/videos',
-            builder: (context, state) => Scaffold(
-              appBar: AppBar(title: const Text('Video Management')),
-              body: const Center(child: Text('Video management screen')),
-            ),
+            builder: (context, state) => const AdminVideosScreen(),
           ),
           GoRoute(
             path: '/admin/exams',
-            builder: (context, state) => Scaffold(
-              appBar: AppBar(title: const Text('Exam Management')),
-              body: const Center(child: Text('Exam management screen')),
-            ),
+            builder: (context, state) => const CourseExamsScreen(courseId: 'all'),
           ),
           GoRoute(
             path: '/admin/students',
-            builder: (context, state) => Scaffold(
-              appBar: AppBar(title: const Text('Student Management')),
-              body: const Center(child: Text('Student management screen')),
-            ),
+            builder: (context, state) => const AdminStudentsScreen(),
           ),
           GoRoute(
             path: '/admin/payments',
-            builder: (context, state) => Scaffold(
-              appBar: AppBar(title: const Text('Payment Management')),
-              body: const Center(child: Text('Payment management screen')),
-            ),
+            builder: (context, state) => const AdminPaymentsScreen(),
           ),
           GoRoute(
             path: '/admin/settings',
-            builder: (context, state) => Scaffold(
-              appBar: AppBar(title: const Text('Admin Settings')),
-              body: const Center(child: Text('Admin settings screen')),
-            ),
+            builder: (context, state) => const AdminSettingsScreen(),
           ),
           
           // Learning Routes

@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/data/models/course.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
+import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
@@ -27,12 +28,9 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
 });
 
 final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
-  // This would typically fetch courses the user is enrolled in
-  // For now, returning an empty list - this would be implemented based on the user's enrollment records
-  final repository = ref.read(courseRepositoryProvider);
-  final allCourses = await repository.getCourses();
-  // Mock: return first 2 courses as enrolled (this would come from enrollment API in real implementation)
-  return allCourses.take(2).toList();
+  // Fetch courses the user is enrolled in using the enrollment repository
+  final enrollmentRepository = EnrollmentRepository();
+  return await enrollmentRepository.getEnrolledCourses();
 });
 
 // Category providers

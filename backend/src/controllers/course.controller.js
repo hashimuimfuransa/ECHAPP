@@ -5,10 +5,21 @@ const { sendSuccess, sendError, sendNotFound } = require('../utils/response.util
 // Get all courses
 const getCourses = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, level, minPrice, maxPrice, category } = req.query;
+    const { page = 1, limit = 10, search, level, minPrice, maxPrice, category, showUnpublished } = req.query;
+    
+    console.log('getCourses called with query params:', req.query);
+    console.log('User role:', req.user?.role);
     
     // Build filter object
-    const filter = { isPublished: true };
+    const filter = {};
+    
+    // Show unpublished courses if specifically requested via query param
+    // This allows both authenticated and unauthenticated requests to see unpublished courses
+    if (showUnpublished !== 'true') {
+      filter.isPublished = true;
+    }
+    
+    console.log('Applied filter:', filter);
     
     if (search) {
       filter.$or = [
@@ -48,6 +59,8 @@ const getCourses = async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
     
+    console.log('Final filter before query:', filter);
+    
     let query = Course.find(filter).populate('createdBy', 'fullName');
     
     if (category) {
@@ -61,6 +74,9 @@ const getCourses = async (req, res) => {
     
     const total = await Course.countDocuments(filter);
     
+    console.log(`Found ${courses.length} courses out of ${total} total`);
+    console.log('Courses found:', courses.map(c => ({ id: c._id, title: c.title, isPublished: c.isPublished })));
+    
     sendSuccess(res, {
       courses,
       totalPages: Math.ceil(total / limit),
@@ -68,6 +84,7 @@ const getCourses = async (req, res) => {
       total
     }, 'Courses retrieved successfully');
   } catch (error) {
+    console.error('Error in getCourses:', error);
     sendError(res, 'Failed to retrieve courses', 500, error.message);
   }
 };
@@ -82,8 +99,12 @@ const getCourseById = async (req, res) => {
       return sendNotFound(res, 'Course not found');
     }
     
-    if (!course.isPublished && req.user?.role !== 'admin') {
-      return sendNotFound(res, 'Course not found');
+    // If course is not published, only allow admin access
+    if (!course.isPublished) {
+      // Check if user is authenticated and is admin
+      if (!req.user || req.user.role !== 'admin') {
+        return sendNotFound(res, 'Course not found');
+      }
     }
     
     sendSuccess(res, course, 'Course retrieved successfully');
@@ -182,7 +203,11 @@ const createCourse = async (req, res) => {
     
     const course = await Course.create(courseData);
     
-    sendSuccess(res, course, 'Course created successfully', 201);
+    // Populate the course with user details before sending response
+    const populatedCourse = await Course.findById(course._id)
+      .populate('createdBy', 'id fullName email role createdAt');
+
+    sendSuccess(res, populatedCourse, 'Course created successfully', 201);
   } catch (error) {
     console.error('Error creating course:', error);
     sendError(res, 'Failed to create course', 500, error.message);

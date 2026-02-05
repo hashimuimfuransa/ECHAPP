@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../utils/date_utils.dart';
 
 class User {
   final String id;
@@ -42,7 +43,7 @@ class User {
       'email': email,
       'phone': phone,
       'role': role,
-      'createdAt': createdAt.millisecondsSinceEpoch,
+      'createdAt': DateUtils.toTimestamp(createdAt),
     };
   }
 
@@ -53,7 +54,7 @@ class User {
       email: map['email'] as String,
       phone: map['phone'] as String?,
       role: map['role'] as String,
-      createdAt: map['createdAt'] != null ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int) : DateTime.now(),
+      createdAt: DateUtils.parseDate(map['createdAt']),
     );
   }
 

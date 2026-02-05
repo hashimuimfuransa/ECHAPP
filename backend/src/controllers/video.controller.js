@@ -82,8 +82,65 @@ const deleteVideo = async (req, res) => {
   }
 };
 
+// Get all videos (admin only)
+const getAllVideos = async (req, res) => {
+  try {
+    const { courseId } = req.query;
+    
+    // Get all lessons that have videos
+    const filter = courseId ? { courseId, videoId: { $exists: true, $ne: null } } : { videoId: { $exists: true, $ne: null } };
+    
+    const lessons = await Lesson.find(filter)
+      .populate('courseId', 'title')
+      .sort({ createdAt: -1 });
+    
+    const videos = lessons.map(lesson => ({
+      id: lesson._id,
+      title: lesson.title,
+      description: lesson.description,
+      courseId: lesson.courseId._id,
+      courseTitle: lesson.courseId.title,
+      videoId: lesson.videoId,
+      duration: lesson.duration || 0,
+      createdAt: lesson.createdAt,
+      updatedAt: lesson.updatedAt
+    }));
+    
+    sendSuccess(res, videos, 'Videos retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve videos', 500, error.message);
+  }
+};
+
+// Get videos by course ID
+const getVideosByCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    const lessons = await Lesson.find({ courseId, videoId: { $exists: true, $ne: null } })
+      .sort({ createdAt: -1 });
+    
+    const videos = lessons.map(lesson => ({
+      id: lesson._id,
+      title: lesson.title,
+      description: lesson.description,
+      courseId: lesson.courseId,
+      videoId: lesson.videoId,
+      duration: lesson.duration || 0,
+      createdAt: lesson.createdAt,
+      updatedAt: lesson.updatedAt
+    }));
+    
+    sendSuccess(res, videos, 'Course videos retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve course videos', 500, error.message);
+  }
+};
+
 module.exports = {
   getVideoStreamUrl,
   getVideoDetails,
-  deleteVideo
+  deleteVideo,
+  getAllVideos,
+  getVideosByCourse
 };

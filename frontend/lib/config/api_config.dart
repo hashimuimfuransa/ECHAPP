@@ -1,12 +1,10 @@
 
 class ApiConfig {
-  // For Android emulator, use 10.0.2.2 to reach the host machine
-  // For iOS simulator, use 10.0.2.2 or your machine's IP address
-  // For web, use localhost
+  // Dynamic base URL that works across platforms
   static String get baseUrl {
     // For web development, use localhost
     // For mobile development, use your machine's IP address
-    const String ipAddress = '192.168.1.3'; // Updated to machine's IP for mobile testing
+    const String ipAddress = '192.168.1.3'; // Updated to your current IP
     return 'http://$ipAddress:5000/api';
   }
   
@@ -36,8 +34,17 @@ class ApiConfig {
   // Video endpoints
   static String get videos => '$baseUrl/videos';
   
+  // Upload endpoints
+  static String get upload => '$baseUrl/upload';
+  
   // Admin endpoints
   static String get admin => '$baseUrl/admin';
+  
+  // Section endpoints
+  static String get sections => '$baseUrl/sections';
+  
+  // Lesson endpoints
+  static String get lessons => '$baseUrl/lessons';
 }
 
 class StorageKeys {

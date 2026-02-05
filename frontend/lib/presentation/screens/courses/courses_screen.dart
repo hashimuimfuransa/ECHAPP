@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/data/models/course.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 import 'package:excellence_coaching_hub/widgets/responsive_navigation_drawer.dart';
+import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -24,7 +25,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   @override
   void initState() {
     super.initState();
-    _coursesFuture = CourseRepository().getCourses(categoryId: widget.categoryId);
+    _coursesFuture = CourseRepository().getCourses(categoryId: widget.categoryId) as Future<List<Course>>;
   }
 
   @override
@@ -849,9 +850,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () {
-          context.push('/course/${course.id}');
-        },
+        onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
         borderRadius: BorderRadius.circular(15),
         child: Padding(
           padding: const EdgeInsets.all(15),

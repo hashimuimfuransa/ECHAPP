@@ -33,6 +33,10 @@ const enrollmentSchema = new mongoose.Schema({
   certificateEligible: {
     type: Boolean,
     default: false
+  },
+  paymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment'
   }
 }, {
   timestamps: true

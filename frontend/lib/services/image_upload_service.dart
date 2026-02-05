@@ -95,6 +95,8 @@ class ImageUploadService {
             final data = jsonResponse['data'];
             if (data['imageUrl'] != null) {
               return data['imageUrl'];
+            } else if (data['signedUrl'] != null) {
+              return data['signedUrl']; // Fallback to signed URL
             } else {
               throw Exception('Image URL not found in response');
             }

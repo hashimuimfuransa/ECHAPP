@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/config/api_config.dart';
-import 'package:excellence_coaching_hub/data/models/user.dart';
+import 'package:excellence_coaching_hub/models/user.dart';
 
 class AuthRepository {
   final http.Client _client;
@@ -24,11 +24,11 @@ class AuthRepository {
         final data = jsonDecode(response.body);
         // Ensure data['data'] is properly formatted for fromJson
         if (data['data'] is Map<String, dynamic>) {
-          return AuthResponse.fromMap(data['data'] as Map<String, dynamic>);
+          return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
         } else {
           // If it's already a string, parse it again
           final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
-          return AuthResponse.fromMap(mapData);
+          return AuthResponse.fromJson(mapData);
         }
       } else {
         final errorData = jsonDecode(response.body);
@@ -56,11 +56,11 @@ class AuthRepository {
         final data = jsonDecode(response.body);
         // Ensure data['data'] is properly formatted for fromJson
         if (data['data'] is Map<String, dynamic>) {
-          return AuthResponse.fromMap(data['data'] as Map<String, dynamic>);
+          return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
         } else {
           // If it's already a string, parse it again
           final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
-          return AuthResponse.fromMap(mapData);
+          return AuthResponse.fromJson(mapData);
         }
       } else {
         final errorData = jsonDecode(response.body);
@@ -118,17 +118,17 @@ class AuthRepository {
           
           if (data['data'] is Map<String, dynamic>) {
             print('Processing as Map: ${data['data']}');
-            return AuthResponse.fromMap(data['data'] as Map<String, dynamic>);
+            return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
           } else {
             // If it's already a string, parse it again
             print('Processing as String: ${data['data']}');
             final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
-            return AuthResponse.fromMap(mapData);
+            return AuthResponse.fromJson(mapData);
           }
         } else {
           // Direct response without wrapper - fallback
           print('Direct response without wrapper');
-          return AuthResponse.fromMap(data as Map<String, dynamic>);
+          return AuthResponse.fromJson(data as Map<String, dynamic>);
         }
       } else {
         final errorData = jsonDecode(response.body);

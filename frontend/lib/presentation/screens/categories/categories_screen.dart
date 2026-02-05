@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
-import 'package:excellence_coaching_hub/data/models/coaching_category.dart';
+import 'package:excellence_coaching_hub/models/category.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -115,7 +115,7 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryGrid(BuildContext context, List<CoachingCategory> categories) {
+  Widget _buildCategoryGrid(BuildContext context, List<Category> categories) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -133,7 +133,7 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryList(BuildContext context, List<CoachingCategory> categories) {
+  Widget _buildCategoryList(BuildContext context, List<Category> categories) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -146,7 +146,7 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLevelSection(BuildContext context, List<CoachingCategory> allCategories, int level, String title) {
+  Widget _buildLevelSection(BuildContext context, List<Category> allCategories, int level, String title) {
     final levelCategories = CategoriesService.getCategoriesByLevel(allCategories, level);
     if (levelCategories.isEmpty) return const SizedBox.shrink();
     

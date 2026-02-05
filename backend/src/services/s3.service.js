@@ -42,6 +42,8 @@ class S3Service {
         Key: key,
         Body: buffer,
         ContentType: contentType,
+        // Remove ACL since modern S3 buckets may not allow ACLs
+        // Public access is controlled via bucket policy
         Metadata: {
           'original-name': originalName
         }
@@ -56,6 +58,14 @@ class S3Service {
         etag: response.ETag
       };
     } catch (error) {
+      console.error('S3 Upload Error Details:', {
+        error: error.message,
+        stack: error.stack,
+        bucket: this.bucketName,
+        key: key,
+        contentType: contentType,
+        bufferLength: buffer ? buffer.length : 'undefined'
+      });
       throw new Error(`Failed to upload file: ${error.message}`);
     }
   }
@@ -148,7 +158,65 @@ class S3Service {
 
   // Get public URL (for publicly accessible files)
   getPublicUrl(key) {
+    // For public files, we can use the direct S3 URL
     return `${this.bucketUrl}/${key}`;
+  }
+  
+  // Generate presigned URL for direct client upload (PUT method)
+  async generatePresignedUploadUrl(fileName, contentType, folder = 'uploads', expiresIn = 300) {
+    try {
+      const key = this.generateFileKey(fileName, folder);
+      
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+        // Remove ACL since modern S3 buckets may not allow ACLs
+        // Public access is controlled via bucket policy
+      });
+
+      // Generate presigned URL for PUT request
+      const uploadUrl = await getSignedUrl(this.client, command, {
+        expiresIn: expiresIn
+      });
+
+      return {
+        uploadUrl: uploadUrl,
+        key: key,
+        publicUrl: `${this.bucketUrl}/${key}`
+      };
+    } catch (error) {
+      console.error('S3 Presigned URL Generation Error Details:', {
+        error: error.message,
+        stack: error.stack,
+        bucket: this.bucketName,
+        fileName: fileName,
+        contentType: contentType,
+        folder: folder
+      });
+      throw new Error(`Failed to generate presigned upload URL: ${error.message}`);
+    }
+  }
+
+  // Get signed URL for private files (alternative approach)
+  async getSignedPublicUrl(key, expiresIn = 3600) {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key
+      });
+      
+      // Generate a signed URL that will work even for public files
+      const signedUrl = await getSignedUrl(this.client, command, {
+        expiresIn: expiresIn
+      });
+      
+      return signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error.message);
+      // Return the public URL as fallback instead of throwing error
+      return this.getPublicUrl(key);
+    }
   }
 }
 

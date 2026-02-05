@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/data/models/coaching_category.dart';
+import 'package:excellence_coaching_hub/models/category.dart';
 import 'package:excellence_coaching_hub/data/repositories/category_repository.dart';
 import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
 import 'package:excellence_coaching_hub/services/image_upload_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:math' as math;
+
 
 class AdminCreateCourseScreen extends ConsumerStatefulWidget {
-  const AdminCreateCourseScreen({super.key});
+  final String? courseId; // Added courseId parameter to differentiate between create and edit
+  
+  const AdminCreateCourseScreen({super.key, this.courseId});
 
   @override
   ConsumerState<AdminCreateCourseScreen> createState() => _AdminCreateCourseScreenState();
@@ -26,22 +30,32 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
 
   bool _isFree = false;
   bool _isLoading = false;
+  bool _isPublished = false; // Add publish status
   String? _selectedCategoryId;
   String _selectedLevel = 'beginner';
   String? _thumbnailUrl;
   File? _selectedImage;
   bool _isUploadingImage = false;
+  UniqueKey _thumbnailKey = UniqueKey();
 
   List<String> _learningObjectives = [];
   List<String> _requirementsList = [];
 
-  List<CoachingCategory> _categories = [];
+  List<Category> _categories = [];
   bool _categoriesLoading = true;
+  bool _isEditing = false;
+  bool _courseLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _isEditing = widget.courseId != null;
+    print('Course ID in initState: ${widget.courseId}'); // Debug log
     _loadCategories();
+    
+    if (_isEditing) {
+      _loadCourseDetails();
+    }
   }
 
   @override
@@ -53,6 +67,60 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
     _requirementsController.dispose();
     _objectivesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCourseDetails() async {
+    if (widget.courseId == null) return;
+    
+    print('Loading course details for ID: ${widget.courseId}'); // Debug log
+    
+    setState(() {
+      _courseLoading = true;
+    });
+
+    try {
+      final repository = CourseRepository();
+      final course = await repository.getCourseById(widget.courseId!);
+      
+      print('Course loaded successfully: ${course.title}'); // Debug log
+      
+      // Populate form with course data
+      _titleController.text = course.title;
+      _descriptionController.text = course.description;
+      _priceController.text = course.price.toString();
+      _durationController.text = course.duration.toString();
+      _isFree = course.price == 0.0;
+      _selectedLevel = course.level.toLowerCase();
+      _thumbnailUrl = course.thumbnail;
+      _isPublished = course.isPublished; // Set publish status
+      _selectedCategoryId = course.category?['id'];
+      _thumbnailKey = UniqueKey(); // Refresh key when loading course details
+      
+      if (course.learningObjectives != null) {
+        _learningObjectives = List.from(course.learningObjectives!);
+      }
+      
+      if (course.requirements != null) {
+        _requirementsList = List.from(course.requirements!);
+      }
+      
+      setState(() {
+        _courseLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _courseLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading course details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.of(context).pop(); // Go back if there's an error
+      }
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -146,6 +214,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       if (imageUrl != null) {
         setState(() {
           _thumbnailUrl = imageUrl;
+          _thumbnailKey = UniqueKey(); // Regenerate key to force image refresh
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -177,8 +246,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
     }
   }
 
-  Future<void> _createCourse() async {
-    // Validation
+  Future<void> _saveCourse() async {
+    // Minimal validation to ensure required fields have values
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Course title is required")),
@@ -199,27 +268,6 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       );
       return;
     }
-    
-    if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a category")),
-      );
-      return;
-    }
-
-    if (_thumbnailUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please upload a thumbnail image")),
-      );
-      return;
-    }
-
-    if (_learningObjectives.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please add at least one learning objective")),
-      );
-      return;
-    }
 
     setState(() {
       _isLoading = true;
@@ -230,29 +278,57 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
 
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
-      final duration = int.tryParse(_durationController.text.trim()) ?? 0;
+      final duration = int.tryParse(_durationController.text.trim()) ?? 1; // Default to 1 if parsing fails
       final price = _isFree ? 0.0 : (double.tryParse(_priceController.text.trim()) ?? 0.0);
 
-      final course = await repository.createCourseWithObjectives(
-        title: title,
-        description: description,
-        price: price,
-        duration: duration,
-        level: _selectedLevel,
-        categoryId: _selectedCategoryId!,
-        thumbnail: _thumbnailUrl,
-        learningObjectives: _learningObjectives,
-        requirements: _requirementsList,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Course created successfully!'),
-            backgroundColor: AppTheme.primaryGreen,
-          ),
+      if (_isEditing && widget.courseId != null) {
+        // Update existing course
+        final course = await repository.updateCourse(
+          id: widget.courseId!,
+          title: title,
+          description: description,
+          price: price,
+          duration: duration,
+          level: _selectedLevel,
+          categoryId: _selectedCategoryId,
+          thumbnail: _thumbnailUrl,
+          learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
+          requirements: _requirementsList.isEmpty ? null : _requirementsList,
         );
-        Navigator.of(context).pop(course);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Course updated successfully!'),
+              backgroundColor: AppTheme.primaryGreen,
+            ),
+          );
+          Navigator.of(context).pop(course);
+        }
+      } else {
+        // Create new course
+        final course = await repository.createCourse(
+          title: title,
+          description: description,
+          price: price,
+          duration: duration,
+          level: _selectedLevel,
+          categoryId: _selectedCategoryId,
+          thumbnail: _thumbnailUrl,
+          isPublished: _isPublished, // Add publish status
+          learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
+          requirements: _requirementsList.isEmpty ? null : _requirementsList,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Course created successfully!'),
+              backgroundColor: AppTheme.primaryGreen,
+            ),
+          );
+          Navigator.of(context).pop(course);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -276,7 +352,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Course'),
+        title: Text(_isEditing ? 'Edit Course' : 'Create New Course'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -287,7 +363,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Course Creation Guide'),
+                  title: const Text('Course Creation/Edit Guide'),
                   content: const Text(
                     'Fill in all required fields. Add learning objectives and requirements '
                     'to help students understand what they will learn and what they need '
@@ -306,7 +382,20 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
         ],
       ),
       body: SafeArea(
-        child: _buildForm(),
+        child: _courseLoading ? _buildLoading() : _buildForm(),
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 20),
+          Text('Loading course details...'),
+        ],
       ),
     );
   }
@@ -355,9 +444,9 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
             color: AppTheme.primaryGreen,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Create Your Course',
-            style: TextStyle(
+          Text(
+            _isEditing ? 'Edit Your Course' : 'Create Your Course',
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppTheme.primaryGreen,
@@ -365,7 +454,9 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           ),
           const SizedBox(height: 4),
           Text(
-            'Fill in the details to create a new course',
+            _isEditing 
+                ? 'Update the details of your existing course'
+                : 'Fill in the details to create a new course',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -406,14 +497,59 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   _thumbnailUrl!,
+                  key: _thumbnailKey,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
                     return Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.broken_image,
-                        size: 48,
-                        color: Colors.grey,
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading thumbnail image: $error, stack: $stackTrace'); // Debug log
+                    return Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Failed to load image',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _thumbnailUrl != null 
+                              ? (_thumbnailUrl!.length > 50 
+                                  ? '${_thumbnailUrl!.substring(0, 50)}...' 
+                                  : _thumbnailUrl!)
+                              : 'No URL',
+                            style: const TextStyle(color: Colors.grey, fontSize: 10),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Try uploading again',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -541,16 +677,16 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
               const Text('No categories available')
             else
               DropdownButtonFormField<String>(
-                value: _selectedCategoryId,
+                initialValue: _selectedCategoryId,
                 decoration: const InputDecoration(
-                  labelText: 'Select Category *',
+                  labelText: 'Select Category',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
                 ),
                 items: _categories.map((category) {
                   return DropdownMenuItem(
                     value: category.id,
-                    child: Text(category.name),
+                    child: Text(category.name ?? 'Unnamed Category'),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -559,9 +695,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                   });
                 },
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select a category';
-                  }
+                  // Make category selection optional
                   return null;
                 },
               ),
@@ -753,7 +887,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                     controller: _durationController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Duration (hours) *',
+                      labelText: 'Duration (minutes) *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.schedule),
                     ),
@@ -761,7 +895,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                       if (value == null || value.isEmpty) {
                         return 'Please enter duration';
                       }
-                      if (int.tryParse(value) == null || int.tryParse(value)! <= 0) {
+                      final parsedValue = int.tryParse(value);
+                      if (parsedValue == null || parsedValue <= 0) {
                         return 'Please enter a valid duration';
                       }
                       return null;
@@ -783,6 +918,18 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                     },
                   ),
                 ),
+                Expanded(
+                  child: SwitchListTile(
+                    title: const Text('Publish Course'),
+                    value: _isPublished,
+                    onChanged: (value) {
+                      setState(() {
+                        _isPublished = value;
+                      });
+                    },
+                    activeThumbColor: AppTheme.primaryGreen,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -796,10 +943,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                   prefixIcon: Icon(Icons.attach_money),
                 ),
                 validator: (value) {
-                  if (!_isFree && (value == null || value.isEmpty)) {
-                    return 'Please enter a price';
-                  }
-                  if (!_isFree && double.tryParse(value!) == null) {
+                  // Only validate if not free and has a value
+                  if (!_isFree && value != null && value.isNotEmpty && double.tryParse(value) == null) {
                     return 'Please enter a valid price';
                   }
                   return null;
@@ -815,7 +960,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _createCourse,
+        onPressed: _isLoading ? null : _saveCourse,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryGreen,
           foregroundColor: Colors.white,
@@ -829,9 +974,9 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text(
-                'Create Course',
-                style: TextStyle(
+            : Text(
+                _isEditing ? 'Update Course' : 'Create Course',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

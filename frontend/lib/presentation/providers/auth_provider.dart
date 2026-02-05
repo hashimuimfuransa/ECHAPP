@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-import 'package:excellence_coaching_hub/data/models/user.dart';
+import 'package:excellence_coaching_hub/models/user.dart';
 import 'package:excellence_coaching_hub/config/storage_manager.dart';
 import 'package:excellence_coaching_hub/services/firebase_auth_service.dart';
 import 'package:excellence_coaching_hub/data/repositories/auth_repository.dart';

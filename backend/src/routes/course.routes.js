@@ -13,8 +13,10 @@ const { authorize } = require('../middleware/role.middleware');
 
 // Public routes
 router.get('/', getCourses);
-router.get('/:id', getCourseById);
 router.get('/:id/details', getCourseDetails);
+
+// Temporarily make this route protected to test authentication
+router.get('/:id', protect, getCourseById);
 
 // Admin routes
 router.post('/', protect, authorize('admin'), createCourse);

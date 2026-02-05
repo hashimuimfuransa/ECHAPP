@@ -5,7 +5,92 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
-// Get exams for a course
+// Get all exams for admin
+const getAllExams = async (req, res) => {
+  try {
+    const { courseId, page = 1, limit = 10 } = req.query;
+    
+    const filter = {};
+    if (courseId) filter.courseId = courseId;
+    
+    const exams = await Exam.find(filter)
+      .populate('courseId', 'title')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+    
+    const total = await Exam.countDocuments(filter);
+    
+    sendSuccess(res, {
+      exams,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      total
+    }, 'Exams retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve exams', 500, error.message);
+  }
+};
+
+// Get exam by ID
+const getExamById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const exam = await Exam.findById(id)
+      .populate('courseId', 'title');
+    
+    if (!exam) {
+      return sendNotFound(res, 'Exam not found');
+    }
+    
+    sendSuccess(res, exam, 'Exam retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve exam', 500, error.message);
+  }
+};
+
+// Update exam
+const updateExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const exam = await Exam.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('courseId', 'title');
+    
+    if (!exam) {
+      return sendNotFound(res, 'Exam not found');
+    }
+    
+    sendSuccess(res, exam, 'Exam updated successfully');
+  } catch (error) {
+    sendError(res, 'Failed to update exam', 500, error.message);
+  }
+};
+
+// Delete exam
+const deleteExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const exam = await Exam.findByIdAndDelete(id);
+    
+    if (!exam) {
+      return sendNotFound(res, 'Exam not found');
+    }
+    
+    // Delete associated questions
+    await Question.deleteMany({ examId: id });
+    
+    sendSuccess(res, null, 'Exam deleted successfully');
+  } catch (error) {
+    sendError(res, 'Failed to delete exam', 500, error.message);
+  }
+};
 const getCourseExams = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -181,6 +266,10 @@ const createExam = async (req, res) => {
 };
 
 module.exports = {
+  getAllExams,
+  getExamById,
+  updateExam,
+  deleteExam,
   getCourseExams,
   getExamQuestions,
   submitExam,

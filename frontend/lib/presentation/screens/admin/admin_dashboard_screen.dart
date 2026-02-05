@@ -15,6 +15,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   bool _isSyncing = false;
+  bool _hasLoadedInitialData = false;
   String? _syncMessage;
 
   Future<void> _triggerManualSync() async {
@@ -26,7 +27,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     });
     
     try {
-      final result = await AdminService.manualSyncUsers();
+      final adminService = AdminService();
+      final result = await adminService.manualSyncUsers();
       
       setState(() {
         _syncMessage = result['message'] ?? 'Sync completed successfully';
@@ -69,12 +71,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(adminDashboardProvider);
     
-    // Load dashboard data when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (dashboardState.stats == null && !dashboardState.isLoading) {
+    // Load dashboard data only once when screen opens
+    if (!_hasLoadedInitialData && dashboardState.stats == null && !dashboardState.isLoading) {
+      _hasLoadedInitialData = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(adminDashboardProvider.notifier).loadDashboardData();
-      }
-    });
+      });
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -270,7 +273,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       );
     }
     
-    final stats = dashboardState.stats ?? {};
+    final stats = dashboardState.stats;
+    
+    if (stats == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -317,29 +324,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildDataSourceInfo(Map<String, dynamic> stats) {
-    final source = stats['source'] ?? 'unknown';
-    final sourceText = source == 'firebase' 
-        ? 'Firebase Real-time' 
-        : source == 'mongodb' 
-            ? 'MongoDB Backup' 
-            : 'Fallback Mode';
+  Widget _buildDataSourceInfo(AdminDashboardStats stats) {
+    // For now, we'll use default values since AdminDashboardStats doesn't have source info
+    final sourceText = 'MongoDB Primary';
     
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: source == 'firebase' ? Colors.green[50] : Colors.orange[50],
+        color: Colors.orange[50],
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: source == 'firebase' ? Colors.green : Colors.orange,
+          color: Colors.orange,
           width: 1,
         ),
       ),
       child: Row(
         children: [
           Icon(
-            source == 'firebase' ? Icons.cloud_done : Icons.warning,
-            color: source == 'firebase' ? Colors.green : Colors.orange,
+            Icons.warning,
+            color: Colors.orange,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -347,32 +350,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             child: Text(
               'Data Source: $sourceText',
               style: TextStyle(
-                color: source == 'firebase' ? Colors.green[800] : Colors.orange[800],
+                color: Colors.orange[800],
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),
             ),
           ),
-          if (source != 'firebase')
-            TextButton(
-              onPressed: _isSyncing ? null : _triggerManualSync,
-              child: _isSyncing
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(
-                      'Sync Now',
-                      style: TextStyle(fontSize: 12),
-                    ),
-            ),
         ],
       ),
     );
   }
   
-  Widget _buildStatsSection(Map<String, dynamic> stats) {
+  Widget _buildStatsSection(AdminDashboardStats stats) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -387,17 +376,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         const SizedBox(height: 20),
         Row(
           children: [
-            _buildStatCard('Total Courses', stats['totalCourses']?.toString() ?? '0', Icons.school, AppTheme.primaryGreen),
+            _buildStatCard('Total Courses', stats.totalCourses.toString(), Icons.school, AppTheme.primaryGreen),
             const SizedBox(width: 15),
-            _buildStatCard('Active Students', stats['activeStudents']?.toString() ?? '0', Icons.people, AppTheme.accent),
+            _buildStatCard('Active Students', stats.activeStudents.toString(), Icons.people, AppTheme.accent),
           ],
         ),
         const SizedBox(height: 15),
         Row(
           children: [
-            _buildStatCard('Total Revenue', 'UGX ${stats['totalRevenue']?.toString() ?? '0'}', Icons.attach_money, AppTheme.primaryGreen),
+            _buildStatCard('Total Revenue', 'RWF ${stats.totalRevenue.toStringAsFixed(0)}', Icons.attach_money, AppTheme.primaryGreen),
             const SizedBox(width: 15),
-            _buildStatCard('Pending Exams', stats['pendingExams']?.toString() ?? '0', Icons.quiz, AppTheme.accent),
+            _buildStatCard('Pending Exams', stats.pendingExams.toString(), Icons.quiz, AppTheme.accent),
           ],
         ),
       ],
@@ -580,7 +569,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildRecentActivitySection(Map<String, dynamic> stats) {
+  Widget _buildRecentActivitySection(AdminDashboardStats stats) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -608,18 +597,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ],
           ),
           child: Column(
-            children: (
-              stats['recentActivity'] as List<dynamic>
-            ).map((activity) => Column(
+            children: stats.recentActivity.map((activity) => Column(
               children: [
                 _ActivityItem(
-                  icon: _getIconFromString(activity['icon']),
-                  title: activity['title'],
-                  subtitle: activity['subtitle'],
-                  time: activity['time'],
+                  icon: _getIconFromString(activity.icon),
+                  title: activity.title,
+                  subtitle: activity.subtitle,
+                  time: activity.time,
                 ),
-                if ((stats['recentActivity'] as List<dynamic>).indexOf(activity) < 
-                    (stats['recentActivity'] as List<dynamic>).length - 1)
+                if (stats.recentActivity.indexOf(activity) < stats.recentActivity.length - 1)
                   const SizedBox(height: 15),
               ],
             )).toList(),

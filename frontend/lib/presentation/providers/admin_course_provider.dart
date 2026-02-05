@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/data/models/course.dart';
-import 'package:excellence_coaching_hub/data/models/user.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellence_coaching_hub/models/user.dart';
+import 'package:excellence_coaching_hub/services/api/course_service.dart';
 
 // Admin course management state
 class AdminCourseState {
@@ -33,6 +34,8 @@ class AdminCourseState {
 
 // Admin course notifier
 class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
+  final CourseService _courseService = CourseService();
+
   AdminCourseNotifier() : super(AdminCourseState(
     courses: [],
     isLoading: false,
@@ -43,50 +46,13 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // In real implementation, this would call the API
-      // final courses = await courseRepository.getAdminCourses();
-      
-      // Mock data for now
-      final mockCourses = [
-        Course(
-          id: '1',
-          title: 'Mathematics Advanced',
-          description: 'Advanced mathematics concepts for high school students',
-          price: 150000,
-          duration: 120,
-          level: 'advanced',
-          thumbnail: '',
-          isPublished: true,
-          createdBy: User(
-            id: 'admin1',
-            fullName: 'Admin User',
-            email: 'admin@example.com',
-            role: 'admin',
-            createdAt: DateTime.now(),
-          ),
-          createdAt: DateTime.now(),
-        ),
-        Course(
-          id: '2',
-          title: 'Physics Fundamentals',
-          description: 'Basic physics concepts for beginners',
-          price: 120000,
-          duration: 90,
-          level: 'beginner',
-          thumbnail: '',
-          isPublished: false,
-          createdBy: User(
-            id: 'admin1',
-            fullName: 'Admin User',
-            email: 'admin@example.com',
-            role: 'admin',
-            createdAt: DateTime.now(),
-          ),
-          createdAt: DateTime.now(),
-        ),
-      ];
-      
-      state = state.copyWith(courses: mockCourses, isLoading: false);
+      // Fetch real courses from backend, including unpublished ones for admin
+      final courses = await _courseService.getAllCourses(showUnpublished: true);
+      print('Loaded ${courses.length} courses for admin'); // Debug log
+      for (var course in courses) {
+        print('Course ID: ${course.id}, Title: ${course.title}'); // Debug log
+      }
+      state = state.copyWith(courses: courses, isLoading: false);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -95,31 +61,44 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     }
   }
 
+  // Search courses
+  Future<void> searchCourses(String query) async {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      // Fetch courses with search query
+      final courses = await _courseService.searchCourses(query, showUnpublished: true);
+      state = state.copyWith(courses: courses, isLoading: false);
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        error: error.toString(),
+      );
+    }
+  }
+
+  // Filter courses by status
+  void filterCoursesByStatus(String status) {
+    // This would be implemented with proper filtering logic
+    // For now, we'll just reload with the appropriate filter
+    loadCourses();
+  }
+
   // Create new course
   Future<void> createCourse(Map<String, dynamic> courseData) async {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // In real implementation: await courseRepository.createCourse(courseData)
-      
-      // Mock implementation
-      final newCourse = Course(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      final newCourse = await _courseService.createCourse(
         title: courseData['title'],
         description: courseData['description'],
         price: courseData['price'],
         duration: courseData['duration'],
         level: courseData['level'],
-        thumbnail: courseData['thumbnail'] ?? '',
-        isPublished: courseData['isPublished'] ?? false,
-        createdBy: User(
-          id: 'admin1',
-          fullName: 'Admin User',
-          email: 'admin@example.com',
-          role: 'admin',
-          createdAt: DateTime.now(),
-        ),
-        createdAt: DateTime.now(),
+        thumbnail: courseData['thumbnail'],
+        categoryId: courseData['categoryId'],
+        learningObjectives: courseData['learningObjectives'],
+        requirements: courseData['requirements'],
       );
       
       state = state.copyWith(
@@ -139,25 +118,22 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // In real implementation: await courseRepository.updateCourse(courseId, updateData)
+      final updatedCourse = await _courseService.updateCourse(
+        id: courseId,
+        title: updateData['title'],
+        description: updateData['description'],
+        price: updateData['price'],
+        duration: updateData['duration'],
+        level: updateData['level'],
+        thumbnail: updateData['thumbnail'],
+        categoryId: updateData['categoryId'],
+        isPublished: updateData['isPublished'],
+        learningObjectives: updateData['learningObjectives'],
+        requirements: updateData['requirements'],
+      );
       
-      // Mock implementation
       final updatedCourses = state.courses.map((course) {
-        if (course.id == courseId) {
-          return Course(
-            id: course.id,
-            title: updateData['title'] ?? course.title,
-            description: updateData['description'] ?? course.description,
-            price: updateData['price'] ?? course.price,
-            duration: updateData['duration'] ?? course.duration,
-            level: updateData['level'] ?? course.level,
-            thumbnail: updateData['thumbnail'] ?? course.thumbnail,
-            isPublished: updateData['isPublished'] ?? course.isPublished,
-            createdBy: course.createdBy,
-            createdAt: course.createdAt,
-          );
-        }
-        return course;
+        return course.id == courseId ? updatedCourse : course;
       }).toList();
       
       state = state.copyWith(courses: updatedCourses, isLoading: false);
@@ -174,9 +150,7 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // In real implementation: await courseRepository.deleteCourse(courseId)
-      
-      // Mock implementation
+      await _courseService.deleteCourse(courseId);
       final updatedCourses = state.courses.where((course) => course.id != courseId).toList();
       state = state.copyWith(courses: updatedCourses, isLoading: false);
     } catch (error) {
@@ -192,9 +166,33 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     state = state.copyWith(selectedCourse: course);
   }
 
-  // Clear selection
-  void clearSelection() {
-    state = state.copyWith(selectedCourse: null);
+  // Toggle course publish status
+  Future<void> toggleCoursePublish(String courseId, bool currentStatus) async {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      final updatedCourse = await _courseService.updateCourse(
+        id: courseId,
+        isPublished: !currentStatus,
+      );
+      
+      final updatedCourses = state.courses.map((course) {
+        return course.id == courseId ? updatedCourse : course;
+      }).toList();
+      
+      state = state.copyWith(courses: updatedCourses, isLoading: false);
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        error: error.toString(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _courseService.dispose();
+    super.dispose();
   }
 }
 
