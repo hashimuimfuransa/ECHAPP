@@ -176,29 +176,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Welcome back,',
                 style: TextStyle(
                   color: Theme.of(context).textTheme.bodyMedium?.color,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
               ),
               Text(
                 user?.fullName ?? 'Student',
                 style: TextStyle(
                   color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
           PopupMenuButton(
             icon: CircleAvatar(
-              radius: 25,
+              radius: 22,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
               child: Text(
                 user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
                 style: const TextStyle(
                   color: AppTheme.primaryGreen,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -214,7 +214,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   value: 'profile',
                   child: const Row(
                     children: [
-                      Icon(Icons.person_outline, color: AppTheme.blackColor, size: 20),
+                      Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
                       SizedBox(width: 10),
                       Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
                     ],
@@ -225,7 +225,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   value: 'settings',
                   child: const Row(
                     children: [
-                      Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 20),
+                      Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
                       SizedBox(width: 10),
                       Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
                     ],
@@ -237,7 +237,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout, color: Colors.red, size: 20),
+                      Icon(Icons.logout, color: Colors.red, size: 18),
                       SizedBox(width: 10),
                       Text('Logout', style: TextStyle(color: Colors.red)),
                     ],
@@ -265,15 +265,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Welcome back,',
                 style: TextStyle(
                   color: Theme.of(context).textTheme.bodyMedium?.color,
-                  fontSize: 18,
+                  fontSize: 16,
                 ),
               ),
               Text(
                 user?.fullName ?? 'Student',
                 style: TextStyle(
                   color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -281,7 +281,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, size: 28),
+                icon: const Icon(Icons.notifications_outlined, size: 24),
                 onPressed: () {
                   // Handle notifications
                 },
@@ -289,14 +289,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 16),
               PopupMenuButton(
                 icon: CircleAvatar(
-                  radius: 25,
+                  radius: 22,
                   backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
                   child: Text(
                     user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -312,7 +312,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       value: 'profile',
                       child: const Row(
                         children: [
-                          Icon(Icons.person_outline, color: AppTheme.blackColor, size: 20),
+                          Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
                           SizedBox(width: 10),
                           Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
                         ],
@@ -323,7 +323,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       value: 'settings',
                       child: const Row(
                         children: [
-                          Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 20),
+                          Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
                           SizedBox(width: 10),
                           Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
                         ],
@@ -335,7 +335,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(Icons.logout, color: Colors.red, size: 20),
+                          Icon(Icons.logout, color: Colors.red, size: 18),
                           SizedBox(width: 10),
                           Text('Logout', style: TextStyle(color: Colors.red)),
                         ],
@@ -354,29 +354,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildWelcomeCard(BuildContext context, user) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: AppTheme.primaryGreen,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00cdac).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppTheme.primaryGreen.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: AppTheme.whiteColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -384,10 +380,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Icon(
                     Icons.school,
                     color: AppTheme.whiteColor,
-                    size: 28,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,16 +392,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         'Welcome Back!',
                         style: TextStyle(
                           color: AppTheme.whiteColor,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 4),
                       Text(
-                        'Continue your learning journey today',
+                        'Continue your learning journey',
                         style: TextStyle(
                           color: AppTheme.whiteColor.withOpacity(0.9),
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -413,7 +409,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -421,21 +417,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     'Ready to learn something new?',
                     style: TextStyle(
                       color: AppTheme.whiteColor,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
                 Container(
                   decoration: BoxDecoration(
                     color: AppTheme.whiteColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
                     icon: Icon(
                       Icons.arrow_forward,
                       color: AppTheme.primaryGreen,
+                      size: 20,
                     ),
                     onPressed: () {
                       context.push('/courses');
@@ -566,12 +562,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
           style: TextStyle(
             color: AppTheme.blackColor,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 15),
@@ -584,7 +580,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
-                childAspectRatio: 1.3,
+                childAspectRatio: 1.4,
               ),
               itemCount: actions.length,
               itemBuilder: (context, index) {
@@ -647,7 +643,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           style: TextStyle(
             color: AppTheme.blackColor,
             fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 20),
@@ -681,55 +677,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 0.5,
         ),
       ),
       child: InkWell(
         onTap: () => onTap(),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(14),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 32),
+                child: Icon(icon, color: color, size: 30),
               ),
               const SizedBox(height: 12),
               Text(
                 title,
                 style: const TextStyle(
                   color: AppTheme.blackColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: const TextStyle(
                   color: AppTheme.greyColor,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -745,10 +737,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final double iconSize = isDesktop ? 36.0 : 32.0;
     final double fontSize = isDesktop ? 17.0 : 16.0;
     final double subtitleFontSize = isDesktop ? 14.0 : 12.0;
-    final double borderRadius = isDesktop ? 18.0 : 15.0;
-    final double containerPadding = isDesktop ? 20.0 : 15.0;
-    final double iconContainerPadding = isDesktop ? 16.0 : 15.0;
-    final double iconBorderRadius = isDesktop ? 16.0 : 16.0;
+    final double borderRadius = isDesktop ? 16.0 : 12.0;
+    final double containerPadding = isDesktop ? 18.0 : 15.0;
+    final double iconContainerPadding = isDesktop ? 16.0 : 14.0;
+    final double iconBorderRadius = isDesktop ? 14.0 : 12.0;
     final double verticalSpacing = isDesktop ? 14.0 : 12.0;
     final double subtitleSpacing = isDesktop ? 6.0 : 5.0;
     
@@ -758,14 +750,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: isDesktop ? 12.0 : 10.0,
-            offset: const Offset(0, 5),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: isDesktop ? 10.0 : 8.0,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 0.5,
         ),
       ),
       child: InkWell(
@@ -779,11 +771,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Container(
                 padding: EdgeInsets.all(iconContainerPadding),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(iconBorderRadius),
                 ),
                 child: Icon(icon, color: color, size: iconSize),
@@ -794,7 +782,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 style: TextStyle(
                   color: AppTheme.blackColor,
                   fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -819,33 +807,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Continue Learning',
             style: TextStyle(
               color: AppTheme.blackColor,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 15),
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).shadowColor.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  color: Theme.of(context).shadowColor.withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
               border: Border.all(
-                color: Theme.of(context).dividerColor.withOpacity(0.2),
-                width: 1,
+                color: Theme.of(context).dividerColor.withOpacity(0.1),
+                width: 0.5,
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   Row(
@@ -873,7 +861,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               style: TextStyle(
                                 color: AppTheme.blackColor,
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             SizedBox(height: 5),
@@ -917,17 +905,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Continue Learning',
             style: TextStyle(
               color: AppTheme.blackColor,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 15),
           SizedBox(
-            height: 120,
+            height: 130,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: enrolledCourses.length,
@@ -938,20 +926,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     return GestureDetector(
                       onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
                       child: Container(
-                        width: 300,
+                        width: 320,
                         margin: const EdgeInsets.only(right: 15),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(15),
+                          color: AppTheme.primaryGreen,
+                          borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF00cdac).withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                              color: AppTheme.primaryGreen.withOpacity(0.2),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
@@ -959,26 +943,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.greyColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                                      ? DecorationImage(
-                                          image: NetworkImage(course.thumbnail!),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.greyColor.withOpacity(0.1),
+                                  ),
+                                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                      ? Image.network(
+                                          course.thumbnail!,
                                           fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Container(
+                                              color: AppTheme.greyColor.withOpacity(0.1),
+                                              child: const Icon(
+                                                Icons.play_circle_filled,
+                                                color: AppTheme.greyColor,
+                                                size: 24,
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              color: AppTheme.greyColor.withOpacity(0.1),
+                                              child: const Icon(
+                                                Icons.image_not_supported_outlined,
+                                                color: AppTheme.greyColor,
+                                                size: 24,
+                                              ),
+                                            );
+                                          },
                                         )
-                                      : null,
+                                      : Container(
+                                          color: AppTheme.greyColor.withOpacity(0.1),
+                                          child: const Icon(
+                                            Icons.play_circle_filled,
+                                            color: AppTheme.greyColor,
+                                            size: 32,
+                                          ),
+                                        ),
                                 ),
-                                child: course.thumbnail == null || course.thumbnail!.isEmpty
-                                    ? const Icon(
-                                        Icons.play_circle_filled,
-                                        color: AppTheme.whiteColor,
-                                        size: 32,
-                                      )
-                                    : null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -991,7 +998,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       style: const TextStyle(
                                         color: AppTheme.whiteColor,
                                         fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -1021,11 +1028,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               Container(
                                 decoration: BoxDecoration(
                                   color: AppTheme.whiteColor,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   Icons.arrow_forward,
                                   color: AppTheme.primaryGreen,
+                                  size: 20,
                                 ),
                               ),
                             ],
@@ -1050,12 +1058,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Popular Courses',
               style: TextStyle(
                 color: AppTheme.blackColor,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+                fontWeight: FontWeight.w600,
               ),
             ),
             TextButton(
@@ -1073,7 +1081,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 200,
+          height: 180,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: popularCourses.length,
@@ -1084,47 +1092,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return GestureDetector(
                     onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
                     child: Container(
-                      width: 250,
+                      width: 240,
                       margin: EdgeInsets.only(
                         right: 15,
                         left: index == 0 ? 0 : 0,
                       ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Theme.of(context).shadowColor.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+                            color: Theme.of(context).shadowColor.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                         border: Border.all(
-                          color: Theme.of(context).dividerColor.withOpacity(0.2),
-                          width: 1,
+                          color: Theme.of(context).dividerColor.withOpacity(0.1),
+                          width: 0.5,
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                height: 70,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
                                 ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.play_circle_filled,
-                                  color: AppTheme.whiteColor,
-                                  size: 35,
-                                ),
+                                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                    ? Image.network(
+                                        course.thumbnail!,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Container(
+                                            color: AppTheme.greyColor.withOpacity(0.1),
+                                            child: const Icon(
+                                              Icons.play_circle_filled,
+                                              color: AppTheme.greyColor,
+                                              size: 24,
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: AppTheme.greyColor.withOpacity(0.1),
+                                            child: const Icon(
+                                              Icons.image_not_supported_outlined,
+                                              color: AppTheme.greyColor,
+                                              size: 24,
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : Container(
+                                        color: AppTheme.greyColor.withOpacity(0.1),
+                                        child: const Icon(
+                                          Icons.play_circle_filled,
+                                          color: AppTheme.greyColor,
+                                          size: 30,
+                                        ),
+                                      ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -1132,18 +1166,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               course.title ?? 'Untitled Course',
                               style: const TextStyle(
                                 color: AppTheme.blackColor,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 4),
                             Text(
                               'by ${course.createdBy.fullName}',
                               style: const TextStyle(
                                 color: AppTheme.greyColor,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                             const Spacer(),
@@ -1155,33 +1189,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     Icon(
                                       Icons.star,
                                       color: Colors.amber,
-                                      size: 14,
+                                      size: 12,
                                     ),
                                     SizedBox(width: 3),
                                     Text(
-                                      '4.8', // In a real app, this would come from the course data
+                                      '4.8',
                                       style: TextStyle(
                                         color: AppTheme.blackColor,
-                                        fontSize: 12,
+                                        fontSize: 10,
                                       ),
                                     ),
                                   ],
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
+                                    horizontal: 8,
+                                    vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.primaryGreen.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
                                     '\$${course.price.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       color: AppTheme.primaryGreen,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -1218,7 +1252,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 style: TextStyle(
                   color: AppTheme.blackColor,
                   fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               TextButton(
@@ -1251,7 +1285,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 builder: (context, ref, child) {
                   return InkWell(
                     onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
-                    borderRadius: BorderRadius.circular(isDesktop ? 18 : 15),
+                    borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
                     child: _buildResponsiveCourseCard(context, course),
                   );
                 },
@@ -1268,12 +1302,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Popular Courses',
                 style: TextStyle(
                   color: AppTheme.blackColor,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               TextButton(
@@ -1302,7 +1336,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     return GestureDetector(
                       onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
                       child: Container(
-                        width: 250,
+                        width: 240,
                         margin: EdgeInsets.only(
                           right: 15,
                           left: index == 0 ? 0 : 0,
@@ -1329,45 +1363,67 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(isDesktop ? 18 : 15),
+        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: isDesktop ? 12 : 10,
-            offset: const Offset(0, 5),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: isDesktop ? 10 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 0.5,
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.all(isDesktop ? 16 : 12),
+        padding: EdgeInsets.all(isDesktop ? 14 : 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: imageSize,
-              decoration: BoxDecoration(
-                color: AppTheme.greyColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(isDesktop ? 12 : 10),
-                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(course.thumbnail!),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(isDesktop ? 10 : 8),
+              child: Container(
+                height: imageSize,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.greyColor.withOpacity(0.1),
+                ),
+                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? Image.network(
+                        course.thumbnail!,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: AppTheme.greyColor.withOpacity(0.1),
+                            child: const Icon(
+                              Icons.play_circle_filled,
+                              color: AppTheme.greyColor,
+                              size: 30,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: AppTheme.greyColor.withOpacity(0.1),
+                            child: const Icon(
+                              Icons.image_not_supported_outlined,
+                              color: AppTheme.greyColor,
+                              size: 30,
+                            ),
+                          );
+                        },
                       )
-                    : null,
-              ),
-              child: course.thumbnail == null || course.thumbnail!.isEmpty
-                  ? const Center(
-                      child: Icon(
-                        Icons.play_circle_filled,
-                        color: AppTheme.whiteColor,
-                        size: 35,
+                    : Container(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                        child: const Icon(
+                          Icons.play_circle_filled,
+                          color: AppTheme.greyColor,
+                          size: 35,
+                        ),
                       ),
-                    )
-                  : null,
+              ),
             ),
             SizedBox(height: isDesktop ? 12 : 10),
             Text(
@@ -1375,12 +1431,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               style: TextStyle(
                 color: AppTheme.blackColor,
                 fontSize: titleFontSize,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 5),
+            SizedBox(height: 4),
             Text(
               'by ${course.createdBy.fullName}',
               style: TextStyle(
@@ -1404,7 +1460,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       '4.8',
                       style: TextStyle(
                         color: AppTheme.blackColor,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -1412,7 +1468,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 5,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryGreen.withOpacity(0.1),
@@ -1422,8 +1478,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     '\$${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1439,45 +1495,67 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 0.5,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppTheme.greyColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(course.thumbnail!),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 80,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.greyColor.withOpacity(0.1),
+                ),
+                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? Image.network(
+                        course.thumbnail!,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: AppTheme.greyColor.withOpacity(0.1),
+                            child: const Icon(
+                              Icons.play_circle_filled,
+                              color: AppTheme.greyColor,
+                              size: 30,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: AppTheme.greyColor.withOpacity(0.1),
+                            child: const Icon(
+                              Icons.image_not_supported_outlined,
+                              color: AppTheme.greyColor,
+                              size: 30,
+                            ),
+                          );
+                        },
                       )
-                    : null,
-              ),
-              child: course.thumbnail == null || course.thumbnail!.isEmpty
-                  ? const Center(
-                      child: Icon(
-                        Icons.play_circle_filled,
-                        color: AppTheme.whiteColor,
-                        size: 35,
+                    : Container(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                        child: const Icon(
+                          Icons.play_circle_filled,
+                          color: AppTheme.greyColor,
+                          size: 35,
+                        ),
                       ),
-                    )
-                  : null,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -1485,12 +1563,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               style: const TextStyle(
                 color: AppTheme.blackColor,
                 fontSize: 15,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             Text(
               'by ${course.createdBy.fullName}',
               style: const TextStyle(
@@ -1514,7 +1592,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       '4.8',
                       style: TextStyle(
                         color: AppTheme.blackColor,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -1522,7 +1600,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 5,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryGreen.withOpacity(0.1),
@@ -1532,8 +1610,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     '\$${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
