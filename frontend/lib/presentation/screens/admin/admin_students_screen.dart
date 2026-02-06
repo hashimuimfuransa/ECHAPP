@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/services/admin_service.dart';
 import 'package:excellence_coaching_hub/models/user.dart';
+import 'package:excellence_coaching_hub/models/enrollment.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
   const AdminStudentsScreen({super.key});
@@ -19,6 +20,9 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
   int _currentPage = 1;
   int _totalPages = 1;
   final TextEditingController _searchController = TextEditingController();
+  
+  // Loading state for student details
+  bool _loadingStudentDetail = false;
 
   @override
   void initState() {
@@ -51,6 +55,184 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     }
   }
 
+  Future<void> _loadStudentDetail(String studentId) async {
+    setState(() {
+      _loadingStudentDetail = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final studentDetail = await _adminService.getStudentDetail(studentId);
+      setState(() {
+        _loadingStudentDetail = false;
+      });
+      
+      // Show dialog with student detail
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => StudentDetailModal(
+            studentDetail: studentDetail,
+            onClose: () => Navigator.pop(context),
+            isLoading: false,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _loadingStudentDetail = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading student details: $e')),
+        );
+      }
+    }
+  }
+
+  void _showResetPasswordDialog(User student) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Text('Are you sure you want to reset the password for ${student.fullName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement password reset functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Password reset functionality coming soon')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Reset Password'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeactivateDialog(User student) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deactivate Account'),
+        content: Text('Are you sure you want to deactivate ${student.fullName}\'s account? This action can be reversed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement deactivation functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Account deactivation functionality coming soon')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(User student) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Student'),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(color: Colors.black87, fontSize: 16),
+            children: [
+              const TextSpan(text: 'Are you sure you want to permanently delete '),
+              TextSpan(
+                text: student.fullName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '\'s account?\n\n'),
+              const TextSpan(
+                text: 'This action will permanently delete:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '\n• User account\n• All enrollments\n• Payment records\n• Exam results\n\n'),
+              const TextSpan(
+                text: 'This action cannot be undone!',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteStudent(student);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteStudent(User student) async {
+    setState(() {
+      _loadingStudentDetail = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _adminService.deleteStudent(student.id);
+      
+      setState(() {
+        _loadingStudentDetail = false;
+        // Remove the deleted student from the list
+        _students.removeWhere((s) => s.id == student.id);
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${student.fullName} deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Refresh the student list
+        await _loadStudents(searchQuery: _searchController.text);
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _loadingStudentDetail = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting student: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _searchStudents(String query) {
     _currentPage = 1;
     _loadStudents(searchQuery: query);
@@ -78,6 +260,11 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _loadStudents(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.analytics),
+            onPressed: () => context.push('/admin/analytics'),
+            tooltip: 'Analytics',
           ),
         ],
       ),
@@ -229,60 +416,159 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         final student = _students[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 15),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
+              radius: 25,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
               child: Text(
                 student.fullName.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   color: AppTheme.primaryGreen,
                   fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
             ),
             title: Text(
               student.fullName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              overflow: TextOverflow.ellipsis,
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(student.email),
                 const SizedBox(height: 5),
                 Text(
-                  'Role: ${student.role}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.greyColor),
+                  student.email,
+                  style: const TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  'Joined: ${_formatDate(student.createdAt)}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.greyColor),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: student.role == 'admin' 
+                            ? AppTheme.primaryGreen.withOpacity(0.2) 
+                            : AppTheme.accent.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        student.role.toUpperCase(),
+                        style: TextStyle(
+                          color: student.role == 'admin' 
+                              ? AppTheme.primaryGreen 
+                              : AppTheme.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: AppTheme.greyColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        'Joined: ${_formatDate(student.createdAt)}',
+                        style: const TextStyle(
+                          fontSize: 12, 
+                          color: AppTheme.greyColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) {
-                // TODO: Implement student actions
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'view',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility),
-                      SizedBox(width: 10),
-                      Text('View Details'),
-                    ],
-                  ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: AppTheme.primaryGreen),
+                  onPressed: () => _loadStudentDetail(student.id),
+                  tooltip: 'View Details',
                 ),
-                const PopupMenuItem(
-                  value: 'enrollments',
-                  child: Row(
-                    children: [
-                      Icon(Icons.school),
-                      SizedBox(width: 10),
-                      Text('View Enrollments'),
-                    ],
-                  ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'view':
+                        _loadStudentDetail(student.id);
+                        break;
+                      case 'enrollments':
+                        _loadStudentDetail(student.id);
+                        break;
+                      case 'reset_password':
+                        _showResetPasswordDialog(student);
+                        break;
+                      case 'deactivate':
+                        _showDeactivateDialog(student);
+                        break;
+                      case 'delete':
+                        _showDeleteConfirmationDialog(student);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'view',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility, color: AppTheme.primaryGreen),
+                          SizedBox(width: 10),
+                          Text('View Details'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'enrollments',
+                      child: Row(
+                        children: [
+                          Icon(Icons.school, color: AppTheme.accent),
+                          SizedBox(width: 10),
+                          Text('View Enrollments'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'reset_password',
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock_reset, color: Colors.orange),
+                          SizedBox(width: 10),
+                          Text('Reset Password'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'deactivate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text('Deactivate Account'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text('Delete Student'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -318,5 +604,356 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     _searchController.dispose();
     _adminService.dispose();
     super.dispose();
+  }
+}
+
+// Student Detail Modal Widget
+class StudentDetailModal extends StatelessWidget {
+  final StudentDetail studentDetail;
+  final VoidCallback onClose;
+  final bool isLoading;
+
+  const StudentDetailModal({
+    super.key,
+    required this.studentDetail,
+    required this.onClose,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Dialog(
+        child: Container(
+          padding: const EdgeInsets.all(30),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text('Loading student details...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppTheme.primaryGreen,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    child: Text(
+                      studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          studentDetail.user.fullName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          studentDetail.user.email,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Summary Cards
+                    _buildSummaryCards(context),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Enrollments Section
+                    _buildEnrollmentsSection(context),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Activity Timeline
+                    _buildActivityTimeline(context),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards(BuildContext context) {
+    return Row(
+      children: [
+        _buildStatCard(
+          context,
+          'Total Enrollments',
+          studentDetail.totalEnrollments.toString(),
+          Icons.school,
+          AppTheme.primaryGreen,
+        ),
+        const SizedBox(width: 15),
+        _buildStatCard(
+          context,
+          'Completed',
+          studentDetail.completedCourses.toString(),
+          Icons.check_circle,
+          Colors.green,
+        ),
+        const SizedBox(width: 15),
+        _buildStatCard(
+          context,
+          'In Progress',
+          studentDetail.inProgressCourses.toString(),
+          Icons.timelapse,
+          AppTheme.accent,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.greyColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnrollmentsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Course Enrollments',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.blackColor,
+          ),
+        ),
+        const SizedBox(height: 15),
+        if (studentDetail.enrollments.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.greyColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'No course enrollments found',
+              style: TextStyle(color: AppTheme.greyColor),
+            ),
+          )
+        else
+          ...studentDetail.enrollments.asMap().entries.map((entry) {
+            final index = entry.key;
+            final enrollment = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.greyColor.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.school,
+                      color: AppTheme.primaryGreen,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          enrollment.course?.title ?? 'Unknown Course',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(enrollment.completionStatus)
+                                    .withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                enrollment.statusDisplay,
+                                style: TextStyle(
+                                  color: _getStatusColor(enrollment.completionStatus),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Progress: ${enrollment.progressDisplay}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.greyColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Enrolled: ${_formatDateSimple(enrollment.enrollmentDate)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.greyColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'RWF ${enrollment.course?.price ?? 0}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryGreen,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildActivityTimeline(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Recent Activity',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.blackColor,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: AppTheme.greyColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            'Activity timeline will be implemented in future updates',
+            style: TextStyle(color: AppTheme.greyColor),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'completed':
+        return Colors.green;
+      case 'in-progress':
+        return AppTheme.accent;
+      case 'enrolled':
+        return AppTheme.primaryGreen;
+      default:
+        return AppTheme.greyColor;
+    }
+  }
+
+  String _formatDateSimple(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

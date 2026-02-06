@@ -177,27 +177,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               Navigator.pop(context);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.video_library),
-            title: const Text('Videos'),
-            onTap: () {
-              context.push('/admin/videos');
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.quiz),
-            title: const Text('Exams'),
-            onTap: () {
-              context.push('/admin/exams');
-              Navigator.pop(context);
-            },
-          ),
+
           ListTile(
             leading: const Icon(Icons.people),
             title: const Text('Students'),
             onTap: () {
               context.push('/admin/students');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.analytics),
+            title: const Text('Analytics'),
+            onTap: () {
+              context.push('/admin/analytics');
               Navigator.pop(context);
             },
           ),
@@ -497,7 +490,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               'Check platform analytics',
               Icons.bar_chart,
               AppTheme.accent,
-              '/admin/reports',
+              '/admin/analytics',
             ),
           ],
         ),

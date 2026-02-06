@@ -4,6 +4,7 @@ import 'dart:convert';
 import './infrastructure/api_client.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
+import '../models/enrollment.dart';
 
 /// Service for admin-related API operations using the new professional architecture
 class AdminService {
@@ -147,6 +148,81 @@ class AdminService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch students: $e');
+    }
+  }
+
+  /// Get detailed student information including enrollments
+  Future<StudentDetail> getStudentDetail(String studentId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/students/$studentId/detail');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      final user = User.fromJson(data['user'] as Map<String, dynamic>);
+      final enrollments = (data['enrollments'] as List)
+          .map((item) => Enrollment.fromJson(item as Map<String, dynamic>))
+          .toList();
+      
+      return StudentDetail(
+        user: user,
+        enrollments: enrollments,
+        totalEnrollments: data['totalEnrollments'] as int? ?? 0,
+        completedCourses: data['completedCourses'] as int? ?? 0,
+        inProgressCourses: data['inProgressCourses'] as int? ?? 0,
+        totalSpent: (data['totalSpent'] as num?)?.toDouble() ?? 0.0,
+        lastActive: data['lastActive'] != null 
+            ? DateTime.parse(data['lastActive'].toString()) 
+            : null,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch student details: $e');
+    }
+  }
+
+  /// Get student analytics data
+  Future<StudentAnalytics> getStudentAnalytics() async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/analytics/students');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return StudentAnalytics(
+        totalStudents: data['totalStudents'] as int? ?? 0,
+        activeStudents: data['activeStudents'] as int? ?? 0,
+        inactiveStudents: data['inactiveStudents'] as int? ?? 0,
+        newStudentsThisMonth: data['newStudentsThisMonth'] as int? ?? 0,
+        averageEnrollmentsPerStudent: (data['averageEnrollmentsPerStudent'] as num?)?.toDouble() ?? 0.0,
+        topPerformingStudents: (data['topPerformingStudents'] as List)
+            .map((item) => TopStudent.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        enrollmentTrends: (data['enrollmentTrends'] as List)
+            .map((item) => EnrollmentTrend.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        studentActivityStats: StudentActivityStats.fromJson(
+            data['studentActivityStats'] as Map<String, dynamic>),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch student analytics: $e');
+    }
+  }
+
+  /// Delete a student and all related data
+  Future<Map<String, dynamic>> deleteStudent(String studentId) async {
+    try {
+      final response = await _apiClient.delete('${ApiConfig.admin}/students/$studentId');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonBody['data'] as Map<String, dynamic>;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete student: $e');
     }
   }
 
@@ -299,4 +375,125 @@ class ActivityItem {
     required this.subtitle,
     required this.time,
   });
+}
+
+/// Data models for student management
+class StudentDetail {
+  final User user;
+  final List<Enrollment> enrollments;
+  final int totalEnrollments;
+  final int completedCourses;
+  final int inProgressCourses;
+  final double totalSpent;
+  final DateTime? lastActive;
+
+  StudentDetail({
+    required this.user,
+    required this.enrollments,
+    required this.totalEnrollments,
+    required this.completedCourses,
+    required this.inProgressCourses,
+    required this.totalSpent,
+    this.lastActive,
+  });
+}
+
+class StudentAnalytics {
+  final int totalStudents;
+  final int activeStudents;
+  final int inactiveStudents;
+  final int newStudentsThisMonth;
+  final double averageEnrollmentsPerStudent;
+  final List<TopStudent> topPerformingStudents;
+  final List<EnrollmentTrend> enrollmentTrends;
+  final StudentActivityStats studentActivityStats;
+
+  StudentAnalytics({
+    required this.totalStudents,
+    required this.activeStudents,
+    required this.inactiveStudents,
+    required this.newStudentsThisMonth,
+    required this.averageEnrollmentsPerStudent,
+    required this.topPerformingStudents,
+    required this.enrollmentTrends,
+    required this.studentActivityStats,
+  });
+}
+
+class TopStudent {
+  final String id;
+  final String name;
+  final String email;
+  final int totalEnrollments;
+  final int completedCourses;
+  final double averageProgress;
+  final double totalSpent;
+
+  TopStudent({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.totalEnrollments,
+    required this.completedCourses,
+    required this.averageProgress,
+    required this.totalSpent,
+  });
+
+  factory TopStudent.fromJson(Map<String, dynamic> json) {
+    return TopStudent(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      totalEnrollments: json['totalEnrollments'] as int,
+      completedCourses: json['completedCourses'] as int,
+      averageProgress: (json['averageProgress'] as num).toDouble(),
+      totalSpent: (json['totalSpent'] as num).toDouble(),
+    );
+  }
+}
+
+class EnrollmentTrend {
+  final String date;
+  final int enrollments;
+  final int completions;
+
+  EnrollmentTrend({
+    required this.date,
+    required this.enrollments,
+    required this.completions,
+  });
+
+  factory EnrollmentTrend.fromJson(Map<String, dynamic> json) {
+    return EnrollmentTrend(
+      date: json['date'] as String,
+      enrollments: json['enrollments'] as int,
+      completions: json['completions'] as int,
+    );
+  }
+}
+
+class StudentActivityStats {
+  final int dailyActiveStudents;
+  final int weeklyActiveStudents;
+  final int monthlyActiveStudents;
+  final double avgSessionDuration;
+  final int totalStudyHours;
+
+  StudentActivityStats({
+    required this.dailyActiveStudents,
+    required this.weeklyActiveStudents,
+    required this.monthlyActiveStudents,
+    required this.avgSessionDuration,
+    required this.totalStudyHours,
+  });
+
+  factory StudentActivityStats.fromJson(Map<String, dynamic> json) {
+    return StudentActivityStats(
+      dailyActiveStudents: json['dailyActiveStudents'] as int,
+      weeklyActiveStudents: json['weeklyActiveStudents'] as int,
+      monthlyActiveStudents: json['monthlyActiveStudents'] as int,
+      avgSessionDuration: (json['avgSessionDuration'] as num).toDouble(),
+      totalStudyHours: json['totalStudyHours'] as int,
+    );
+  }
 }

@@ -26,6 +26,7 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/course_exams_
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_settings_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_payments_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
 
 class AppRouter {
@@ -161,6 +162,10 @@ class AppRouter {
           GoRoute(
             path: '/admin/settings',
             builder: (context, state) => const AdminSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/analytics',
+            builder: (context, state) => const AdminAnalyticsScreen(),
           ),
           
           // Learning Routes

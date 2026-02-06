@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { 
   getStudents,
+  getStudentDetail,
+  deleteStudent,
   getCourseStats,
   getPaymentStats,
   getExamStats,
+  getStudentAnalytics,
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,
@@ -23,8 +26,11 @@ router.post('/manual-sync-users', protect, authorize('admin'), manualSyncAllUser
 
 // Protected admin routes
 router.get('/students', protect, authorize('admin'), getStudents);
+router.get('/students/:id/detail', protect, authorize('admin'), getStudentDetail);
+router.delete('/students/:id', protect, authorize('admin'), deleteStudent);
 router.get('/course-stats', protect, authorize('admin'), getCourseStats);
 router.get('/payment-stats', protect, authorize('admin'), getPaymentStats);
 router.get('/exam-stats', protect, authorize('admin'), getExamStats);
+router.get('/analytics/students', protect, authorize('admin'), getStudentAnalytics);
 
 module.exports = router;
