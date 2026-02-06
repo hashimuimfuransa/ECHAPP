@@ -1,7 +1,5 @@
-import 'dart:convert';
 
 import '../../models/course.dart';
-import '../../models/api_response.dart';
 
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
@@ -29,22 +27,7 @@ class CourseService {
 
       response.validateStatus();
       
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = jsonBody['data'] as Map<String, dynamic>;
-      final coursesData = data['courses'] as List;
-      
-      final courses = coursesData
-          .map((item) => Course.fromJson(item as Map<String, dynamic>))
-          .toList();
-      
-      final apiResponse = ApiResponse<List<Course>>(
-        success: jsonBody['success'] as bool? ?? false,
-        message: jsonBody['message'] as String? ?? '',
-        data: courses,
-        error: jsonBody['error'] != null 
-            ? ApiError.fromJson(jsonBody['error'] as Map<String, dynamic>)
-            : null,
-      );
+      final apiResponse = response.toApiResponseList(Course.fromJson);
 
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -68,6 +51,8 @@ class CourseService {
         queryParams['showUnpublished'] = 'true';
       }
 
+      print('CourseService: Fetching courses with params: $queryParams');
+      
       final response = await _apiClient.get(
         ApiConfig.courses,
         queryParams: queryParams,
@@ -75,22 +60,13 @@ class CourseService {
 
       response.validateStatus();
       
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = jsonBody['data'] as Map<String, dynamic>;
-      final coursesData = data['courses'] as List;
+      final apiResponse = response.toApiResponseList(Course.fromJson);
       
-      final courses = coursesData
-          .map((item) => Course.fromJson(item as Map<String, dynamic>))
-          .toList();
-      
-      final apiResponse = ApiResponse<List<Course>>(
-        success: jsonBody['success'] as bool? ?? false,
-        message: jsonBody['message'] as String? ?? '',
-        data: courses,
-        error: jsonBody['error'] != null 
-            ? ApiError.fromJson(jsonBody['error'] as Map<String, dynamic>)
-            : null,
-      );
+      print('CourseService: API Response success: ${apiResponse.success}');
+      print('CourseService: API Response data length: ${apiResponse.data?.length ?? 0}');
+      if (apiResponse.data != null && apiResponse.data!.isNotEmpty) {
+        print('CourseService: First course thumbnail: ${apiResponse.data![0].thumbnail ?? "null"}');
+      }
 
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;

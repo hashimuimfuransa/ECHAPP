@@ -29,7 +29,7 @@ class CourseDetailScreen extends ConsumerWidget {
 
   // Method to handle payment
   void _handlePayment(WidgetRef ref, Course course) async {
-    print('Initiating payment for course: ${course.title} (ID: ${course.id})');
+    print('Initiating payment for course: ${course.title ?? "Untitled Course"} (ID: ${course.id})');
     print('Course price: ${course.price}');
     
     final paymentNotifier = ref.read(initiatePaymentProvider.notifier);
@@ -39,7 +39,7 @@ class CourseDetailScreen extends ConsumerWidget {
       await paymentNotifier.initiatePayment(
         courseId: course.id,
         paymentMethod: 'mtn_momo', // Changed to valid payment method
-        contactInfo: 'Student initiated payment for ${course.title}',
+        contactInfo: 'Student initiated payment for ${course.title ?? "Untitled Course"}',
       );
       print('Payment initiation completed');
     } catch (e) {
@@ -68,14 +68,14 @@ class CourseDetailScreen extends ConsumerWidget {
 
   // Method to handle sharing
   void _handleShare(Course course) async {
-    final String shareText = 'Check out this amazing course: ${course.title}\n'
+    final String shareText = 'Check out this amazing course: ${course.title ?? "Untitled Course"}\n'
         'Instructor: ${course.createdBy.fullName}\n'
         'Price: ${course.price == 0 ? 'Free' : 'RWF ${course.price.toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
         'Duration: ${course.duration} minutes\n\n'
         'Learn more at Excellence Coaching Hub!';
     
-    await Share.share(shareText, subject: 'Course Recommendation: ${course.title}');
+    await Share.share(shareText, subject: 'Course Recommendation: ${course.title ?? "Untitled Course"}');
   }
 
   @override
@@ -129,12 +129,20 @@ class CourseDetailScreen extends ConsumerWidget {
                         Container(
                           decoration: BoxDecoration(
                             color: AppTheme.greyColor.withOpacity(0.1),
+                            image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage(course.thumbnail!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
-                          child: const Icon(
-                            Icons.play_circle_outline,
-                            color: AppTheme.greyColor,
-                            size: 100,
-                          ),
+                          child: course.thumbnail == null || course.thumbnail!.isEmpty
+                              ? const Icon(
+                                  Icons.play_circle_outline,
+                                  color: AppTheme.greyColor,
+                                  size: 100,
+                                )
+                              : null,
                         ),
                         // Gradient overlay
                         Container(
@@ -158,7 +166,7 @@ class CourseDetailScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                course.title,
+                                course.title ?? 'Untitled Course',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -238,7 +246,7 @@ class CourseDetailScreen extends ConsumerWidget {
                                           final paymentState = ref.watch(initiatePaymentProvider);
                                           final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
                                           
-                                          return Container(
+                                          return SizedBox(
                                             width: isWideScreen ? 300 : double.infinity,
                                             child: paymentState.when(
                                               data: (response) {
@@ -997,10 +1005,10 @@ class CourseDetailScreen extends ConsumerWidget {
                           fontSize: 14,
                         ),
                       ),
-                      if (course.createdBy.email?.isNotEmpty == true) ...[
+                      if (course.createdBy.email.isNotEmpty == true) ...[
                         const SizedBox(height: 3),
                         Text(
-                          course.createdBy.email!,
+                          course.createdBy.email,
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 12,

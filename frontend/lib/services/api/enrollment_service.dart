@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../models/course.dart';
+import '../../models/user.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -42,6 +43,8 @@ class EnrollmentService {
       final response = await _apiClient.get('${ApiConfig.enrollments}/my-courses');
       response.validateStatus();
       
+      // Since the backend returns enrollments with course data nested in 'courseId', 
+      // we need to create a custom parser
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       print('Enrollment API response: ${jsonBody['success']}, Data length: ${(jsonBody['data'] as List?)?.length ?? 0}');
       
@@ -51,9 +54,27 @@ class EnrollmentService {
         
         // The backend returns enrollments with populated courseId, so we need to extract the course data
         final courses = data.map((enrollment) {
-          final courseData = enrollment['courseId'] as Map<String, dynamic>? ?? enrollment as Map<String, dynamic>;
-          print('Processing enrollment: ${enrollment['_id']}, Course ID: ${courseData['_id']}');
-          return Course.fromJson(courseData);
+          final enrollmentMap = enrollment as Map<String, dynamic>;
+          final courseData = enrollmentMap['courseId'] as Map<String, dynamic>?;
+          
+          if (courseData != null) {
+            print('Processing enrollment: ${enrollmentMap['_id']}, Course ID: ${courseData['_id']}, Thumbnail: ${courseData['thumbnail'] ?? 'none'}');
+            return Course.fromJson(courseData);
+          } else {
+            print('Warning: No course data found in enrollment: ${enrollmentMap['_id']}');
+            // Fallback - create a minimal course object
+            return Course(
+              id: enrollmentMap['courseId']?.toString() ?? '',
+              title: 'Unknown Course',
+              description: '',
+              price: 0,
+              duration: 0,
+              level: 'beginner',
+              isPublished: false,
+              createdBy: User(id: '', fullName: 'Unknown', email: '', role: 'user', createdAt: DateTime.now()),
+              createdAt: DateTime.now(),
+            );
+          }
         }).toList();
         
         print('Processed ${courses.length} enrolled courses');

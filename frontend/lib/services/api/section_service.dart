@@ -1,7 +1,6 @@
 import 'dart:convert';
 import '../../models/section.dart';
 import '../../models/lesson.dart';
-import '../../models/api_response.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -10,44 +9,23 @@ class SectionService {
 
   SectionService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
-  /// Get all sections for a course
-  Future<List<Section>> getSectionsByCourse(String courseId) async {
-    try {
-      final response = await _apiClient.get('${ApiConfig.sections}/course/$courseId');
-      response.validateStatus();
-
-      final apiResponse = response.toApiResponse((json) => _parseSectionList(json));
-      
-      if (apiResponse.success && apiResponse.data != null) {
-        return apiResponse.data!;
-      } else {
-        throw ApiException(apiResponse.message);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch sections: $e');
-    }
-  }
-
   /// Create a new section
   Future<Section> createSection({
     required String courseId,
     required String title,
-    required int order,
+    int order = 1,
   }) async {
     try {
-      final requestBody = {
-        'title': title,
-        'order': order,
-      };
-
       final response = await _apiClient.post(
         '${ApiConfig.sections}/course/$courseId',
-        body: requestBody,
+        body: {
+          'title': title,
+          'order': order,
+        },
       );
-
       response.validateStatus();
-      final apiResponse = response.toApiResponse(Section.fromJson);
+
+      final apiResponse = response.toApiResponse((json) => Section.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -60,24 +38,43 @@ class SectionService {
     }
   }
 
-  /// Update a section
+  /// Get sections by course
+  Future<List<Section>> getSectionsByCourse(String courseId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.sections}/course/$courseId');
+      response.validateStatus();
+
+      final apiResponse = response.toApiResponseList((json) => Section.fromJson(json));
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw ApiException(apiResponse.message);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch sections: $e');
+    }
+  }
+
+  /// Update section
   Future<Section> updateSection({
     required String sectionId,
     String? title,
     int? order,
   }) async {
     try {
-      final requestBody = <String, dynamic>{};
-      if (title != null) requestBody['title'] = title;
-      if (order != null) requestBody['order'] = order;
+      final Map<String, dynamic> data = {};
+      if (title != null) data['title'] = title;
+      if (order != null) data['order'] = order;
 
       final response = await _apiClient.put(
         '${ApiConfig.sections}/$sectionId',
-        body: requestBody,
+        body: data,
       );
-
       response.validateStatus();
-      final apiResponse = response.toApiResponse(Section.fromJson);
+
+      final apiResponse = response.toApiResponse((json) => Section.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -90,13 +87,13 @@ class SectionService {
     }
   }
 
-  /// Delete a section
-  Future<void> deleteSection(String id) async {
+  /// Delete section
+  Future<void> deleteSection(String sectionId) async {
     try {
-      final response = await _apiClient.delete('${ApiConfig.sections}/$id');
+      final response = await _apiClient.delete('${ApiConfig.sections}/$sectionId');
       response.validateStatus();
-      
-      final apiResponse = response.toApiResponse((_) => null);
+
+      final apiResponse = response.toApiResponse((json) => json);
       
       if (!apiResponse.success) {
         throw ApiException(apiResponse.message);
@@ -107,37 +104,38 @@ class SectionService {
     }
   }
 
-  /// Reorder sections
-  Future<void> reorderSections(String courseId, List<Map<String, dynamic>> newOrder) async {
+  /// Delete lesson
+  Future<void> deleteLesson(String lessonId) async {
     try {
-      final requestBody = {
-        'sections': newOrder,
-      };
-
-      final response = await _apiClient.post(
-        '${ApiConfig.sections}/course/$courseId/reorder',
-        body: requestBody,
-      );
-
+      final response = await _apiClient.delete('${ApiConfig.lessons}/$lessonId');
       response.validateStatus();
-      final apiResponse = response.toApiResponse((json) => null);
+
+      final apiResponse = response.toApiResponse((json) => json);
       
       if (!apiResponse.success) {
         throw ApiException(apiResponse.message);
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Failed to reorder sections: $e');
+      throw ApiException('Failed to delete lesson: $e');
     }
   }
 
-  /// Get course content (sections with lessons)
-  Future<Map<String, dynamic>> getCourseContent(String courseId) async {
+  /// Reorder sections
+  Future<List<Section>> reorderSections(String courseId, List<Map<String, dynamic>> newOrder) async {
     try {
-      final response = await _apiClient.get('${ApiConfig.lessons}/course/$courseId/content');
+      // Extract section IDs from the newOrder list
+      final sectionIds = newOrder.map((item) => item['_id'] as String).toList();
+
+      final response = await _apiClient.post(
+        '${ApiConfig.sections}/course/$courseId/reorder',
+        body: {
+          'sectionIds': sectionIds,
+        },
+      );
       response.validateStatus();
 
-      final apiResponse = response.toApiResponse((json) => _parseCourseContent(json));
+      final apiResponse = response.toApiResponseList((json) => Section.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -146,17 +144,44 @@ class SectionService {
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch course content: $e');
+      throw ApiException('Failed to reorder sections: $e');
     }
   }
 
-  /// Get all lessons for a section
+  /// Reorder lessons
+  Future<List<Lesson>> reorderLessons(String sectionId, List<Map<String, dynamic>> newOrder) async {
+    try {
+      // Extract lesson IDs from the newOrder list
+      final lessonIds = newOrder.map((item) => item['_id'] as String).toList();
+
+      final response = await _apiClient.post(
+        '${ApiConfig.lessons}/section/$sectionId/reorder',
+        body: {
+          'lessonIds': lessonIds,
+        },
+      );
+      response.validateStatus();
+
+      final apiResponse = response.toApiResponseList((json) => Lesson.fromJson(json));
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw ApiException(apiResponse.message);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to reorder lessons: $e');
+    }
+  }
+
+  /// Get lessons by section
   Future<List<Lesson>> getLessonsBySection(String sectionId) async {
     try {
       final response = await _apiClient.get('${ApiConfig.lessons}/section/$sectionId');
       response.validateStatus();
 
-      final apiResponse = response.toApiResponse((json) => _parseLessonList(json));
+      final apiResponse = response.toApiResponseList((json) => Lesson.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -169,33 +194,33 @@ class SectionService {
     }
   }
 
-  /// Create a new lesson
+  /// Create lesson
   Future<Lesson> createLesson({
     required String sectionId,
+    required String courseId,
     required String title,
     String? description,
     String? videoId,
     String? notes,
-    required int order,
-    required int duration,
+    int order = 1,
+    int duration = 0,
   }) async {
     try {
-      final requestBody = {
-        'title': title,
-        'order': order,
-        'duration': duration,
-      };
-      if (description != null) requestBody['description'] = description;
-      if (videoId != null) requestBody['videoId'] = videoId;
-      if (notes != null) requestBody['notes'] = notes;
-
       final response = await _apiClient.post(
         '${ApiConfig.lessons}/section/$sectionId',
-        body: requestBody,
+        body: {
+          'courseId': courseId,
+          'title': title,
+          'description': description,
+          'videoId': videoId,
+          'notes': notes,
+          'order': order,
+          'duration': duration,
+        },
       );
-
       response.validateStatus();
-      final apiResponse = response.toApiResponse(Lesson.fromJson);
+
+      final apiResponse = response.toApiResponse((json) => Lesson.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -208,7 +233,7 @@ class SectionService {
     }
   }
 
-  /// Update a lesson
+  /// Update lesson
   Future<Lesson> updateLesson({
     required String lessonId,
     String? title,
@@ -219,21 +244,21 @@ class SectionService {
     int? duration,
   }) async {
     try {
-      final requestBody = <String, dynamic>{};
-      if (title != null) requestBody['title'] = title;
-      if (description != null) requestBody['description'] = description;
-      if (videoId != null) requestBody['videoId'] = videoId;
-      if (notes != null) requestBody['notes'] = notes;
-      if (order != null) requestBody['order'] = order;
-      if (duration != null) requestBody['duration'] = duration;
+      final Map<String, dynamic> data = {};
+      if (title != null) data['title'] = title;
+      if (description != null) data['description'] = description;
+      if (videoId != null) data['videoId'] = videoId;
+      if (notes != null) data['notes'] = notes;
+      if (order != null) data['order'] = order;
+      if (duration != null) data['duration'] = duration;
 
       final response = await _apiClient.put(
         '${ApiConfig.lessons}/$lessonId',
-        body: requestBody,
+        body: data,
       );
-
       response.validateStatus();
-      final apiResponse = response.toApiResponse(Lesson.fromJson);
+
+      final apiResponse = response.toApiResponse((json) => Lesson.fromJson(json));
       
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
@@ -246,83 +271,75 @@ class SectionService {
     }
   }
 
-  /// Delete a lesson
-  Future<void> deleteLesson(String id) async {
+  /// Upload document and create lesson
+  Future<Lesson> createLessonWithDocument({
+    required String sectionId,
+    required String courseId,
+    required String title,
+    String? description,
+    String? documentPath,
+    int order = 1,
+    int duration = 0,
+  }) async {
     try {
-      final response = await _apiClient.delete('${ApiConfig.lessons}/$id');
+      final response = await _apiClient.post(
+        '${ApiConfig.lessons}/section/$sectionId',
+        body: {
+          'courseId': courseId,
+          'title': title,
+          'description': description,
+          'videoId': null, // No video for document-based lesson
+          'notes': documentPath, // Store document path as notes
+          'order': order,
+          'duration': duration,
+        },
+      );
       response.validateStatus();
+
+      final apiResponse = response.toApiResponse((json) => Lesson.fromJson(json));
       
-      final apiResponse = response.toApiResponse((_) => null);
-      
-      if (!apiResponse.success) {
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
         throw ApiException(apiResponse.message);
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Failed to delete lesson: $e');
+      throw ApiException('Failed to create lesson with document: $e');
     }
   }
 
-  /// Reorder lessons in a section
-  Future<void> reorderLessons(String sectionId, List<Map<String, dynamic>> newOrder) async {
+  /// Get course content (sections with lessons)
+  Future<Map<String, dynamic>> getCourseContent(String courseId) async {
     try {
-      final requestBody = {
-        'lessons': newOrder,
-      };
-
-      final response = await _apiClient.post(
-        '${ApiConfig.lessons}/section/$sectionId/reorder',
-        body: requestBody,
-      );
-
+      final response = await _apiClient.get('${ApiConfig.lessons}/course/$courseId/content');
       response.validateStatus();
-      final apiResponse = response.toApiResponse((json) => null);
+
+      // Parse the raw response body directly since we need the full structure
+      final responseBody = response.body;
+      final json = jsonDecode(responseBody) as Map<String, dynamic>;
+      final data = json['data'] as Map<String, dynamic>? ?? {};
       
-      if (!apiResponse.success) {
-        throw ApiException(apiResponse.message);
-      }
+      print('SectionService: Raw response data: $data');
+      
+      return data;
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Failed to reorder lessons: $e');
+      throw ApiException('Failed to fetch course content: $e');
     }
   }
 
   // Helper methods to parse lists
-  List<Section> _parseSectionList(dynamic json) {
-    if (json is List) {
-      return json.map((item) => Section.fromJson(item)).toList();
-    } else if (json is Map<String, dynamic>) {
-      final data = json['data'];
-      if (data is Map<String, dynamic>) {
-        final sectionsData = data['sections'];
-        if (sectionsData is List) {
-          return sectionsData.map((item) => Section.fromJson(item)).toList();
-        }
-      }
-    }
-    return [];
-  }
-
-  List<Lesson> _parseLessonList(dynamic json) {
-    if (json is List) {
-      return json.map((item) => Lesson.fromJson(item)).toList();
-    } else if (json is Map<String, dynamic>) {
-      final data = json['data'];
-      if (data is List) {
-        return data.map((item) => Lesson.fromJson(item)).toList();
-      }
-    }
-    return [];
-  }
 
   Map<String, dynamic> _parseCourseContent(dynamic json) {
     if (json is Map<String, dynamic>) {
       final data = json['data'];
       if (data is Map<String, dynamic>) {
+        // Return the entire data object which contains both 'course' and 'sections'
         return data;
       }
     }
-    return {};
+    return {'sections': []}; // Return empty sections array instead of empty map
   }
 
   void dispose() {

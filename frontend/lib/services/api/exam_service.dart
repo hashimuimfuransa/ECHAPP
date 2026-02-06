@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../../models/api_response.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -161,12 +160,12 @@ class ExamService {
       final response = await _apiClient.get('${ApiConfig.exams}/course/$courseId');
       response.validateStatus();
       
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
-      if (jsonBody['success'] == true) {
-        final data = jsonBody['data'] as List;
-        return data.map((item) => Exam.fromJson(item as Map<String, dynamic>)).toList();
+      final apiResponse = response.toApiResponseList(Exam.fromJson);
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
       } else {
-        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch course exams');
+        throw ApiException(apiResponse.message);
       }
     } catch (e) {
       if (e is ApiException) rethrow;

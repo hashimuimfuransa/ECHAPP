@@ -74,7 +74,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               
                               // Popular Courses with responsive grid
                               popularCoursesAsync.when(
-                                data: (popularCourses) => _buildResponsivePopularCourses(context, popularCourses),
+                                data: (popularCourses) {
+                                  print('Dashboard: Received ${popularCourses.length} popular courses');
+                                  if (popularCourses.isNotEmpty) {
+                                    print('Dashboard: First popular course thumbnail: ${popularCourses[0].thumbnail ?? "null"}');
+                                  }
+                                  return _buildResponsivePopularCourses(context, popularCourses);
+                                },
                                 loading: () => _buildLoadingCard(context, 'Popular Courses'),
                                 error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
                               ),
@@ -348,19 +354,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildWelcomeCard(BuildContext context, user) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            color: const Color(0xFF00cdac).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
-        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(25),
@@ -371,34 +377,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: AppTheme.whiteColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.auto_graph_outlined,
+                  child: Icon(
+                    Icons.school,
                     color: AppTheme.whiteColor,
                     size: 28,
                   ),
                 ),
                 const SizedBox(width: 15),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ready to Learn?',
+                        'Welcome Back!',
                         style: TextStyle(
-                          color: AppTheme.blackColor,
-                          fontSize: 20,
+                          color: AppTheme.whiteColor,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         'Continue your learning journey today',
                         style: TextStyle(
-                          color: AppTheme.greyColor,
+                          color: AppTheme.whiteColor.withOpacity(0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -408,28 +414,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.push('/courses');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryGreen,
-                  foregroundColor: AppTheme.whiteColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Ready to learn something new?',
+                    style: TextStyle(
+                      color: AppTheme.whiteColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Start Learning Now',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.whiteColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.arrow_forward,
+                      color: AppTheme.primaryGreen,
+                    ),
+                    onPressed: () {
+                      context.push('/courses');
+                    },
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -440,19 +453,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildAdminAccessButton(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            color: const Color(0xFF00cdac).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
-        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -463,43 +476,52 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: AppTheme.whiteColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.admin_panel_settings,
                     color: AppTheme.whiteColor,
                     size: 28,
                   ),
                 ),
                 const SizedBox(width: 15),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Admin Panel',
                         style: TextStyle(
-                          color: AppTheme.blackColor,
+                          color: AppTheme.whiteColor,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
                         'Manage courses, students, and platform settings',
                         style: TextStyle(
-                          color: AppTheme.greyColor,
+                          color: AppTheme.whiteColor.withOpacity(0.9),
                           fontSize: 14,
                         ),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, color: AppTheme.primaryGreen),
-                  onPressed: () => context.push('/admin'),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.whiteColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.arrow_forward,
+                      color: AppTheme.primaryGreen,
+                    ),
+                    onPressed: () => context.push('/admin'),
+                  ),
                 ),
               ],
             ),
@@ -681,24 +703,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(icon, color: color, size: 32),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 title,
                 style: const TextStyle(
                   color: AppTheme.blackColor,
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 5),
               Text(
                 subtitle,
                 style: const TextStyle(
@@ -716,15 +742,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildResponsiveActionCard(BuildContext context, String title, String subtitle, IconData icon, Color color, Function onTap) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final double iconSize = isDesktop ? 32.0 : 28.0;
-    final double fontSize = isDesktop ? 16.0 : 15.0;
-    final double subtitleFontSize = isDesktop ? 13.0 : 12.0;
+    final double iconSize = isDesktop ? 36.0 : 32.0;
+    final double fontSize = isDesktop ? 17.0 : 16.0;
+    final double subtitleFontSize = isDesktop ? 14.0 : 12.0;
     final double borderRadius = isDesktop ? 18.0 : 15.0;
     final double containerPadding = isDesktop ? 20.0 : 15.0;
-    final double iconContainerPadding = isDesktop ? 14.0 : 12.0;
-    final double iconBorderRadius = isDesktop ? 14.0 : 12.0;
-    final double verticalSpacing = isDesktop ? 12.0 : 10.0;
-    final double subtitleSpacing = isDesktop ? 5.0 : 3.0;
+    final double iconContainerPadding = isDesktop ? 16.0 : 15.0;
+    final double iconBorderRadius = isDesktop ? 16.0 : 16.0;
+    final double verticalSpacing = isDesktop ? 14.0 : 12.0;
+    final double subtitleSpacing = isDesktop ? 6.0 : 5.0;
     
     return Container(
       decoration: BoxDecoration(
@@ -753,7 +779,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Container(
                 padding: EdgeInsets.all(iconContainerPadding),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  gradient: LinearGradient(
+                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(iconBorderRadius),
                 ),
                 child: Icon(icon, color: color, size: iconSize),
@@ -897,98 +927,113 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 15),
           SizedBox(
-            height: 100,
+            height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: enrolledCourses.length,
               itemBuilder: (context, index) {
                 final course = enrolledCourses[index];
-                return Container(
-                  width: 280,
-                  margin: const EdgeInsets.only(right: 15),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardTheme.color,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).shadowColor.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                return Consumer(
+                  builder: (context, ref, child) {
+                    return GestureDetector(
+                      onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                      child: Container(
+                        width: 300,
+                        margin: const EdgeInsets.only(right: 15),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00cdac).withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                      ],
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.play_circle_outline,
-                              color: AppTheme.greyColor,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  course.title,
-                                  style: const TextStyle(
-                                    color: AppTheme.blackColor,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(course.thumbnail!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'In Progress',
-                                  style: TextStyle(
-                                    color: AppTheme.primaryGreen,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Continue',
-                              style: TextStyle(
-                                color: AppTheme.primaryGreen,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                child: course.thumbnail == null || course.thumbnail!.isEmpty
+                                    ? const Icon(
+                                        Icons.play_circle_filled,
+                                        color: AppTheme.whiteColor,
+                                        size: 32,
+                                      )
+                                    : null,
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      course.title ?? 'Untitled Course',
+                                      style: const TextStyle(
+                                        color: AppTheme.whiteColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.whiteColor.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        'In Progress',
+                                        style: TextStyle(
+                                          color: AppTheme.whiteColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.whiteColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.arrow_forward,
+                                  color: AppTheme.primaryGreen,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -1028,107 +1073,126 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 180,
+          height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: popularCourses.length,
             itemBuilder: (context, index) {
               final course = popularCourses[index];
-              return Container(
-                width: 250,
-                margin: EdgeInsets.only(
-                  right: 15,
-                  left: index == 0 ? 0 : 0,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardTheme.color,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).shadowColor.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+              return Consumer(
+                builder: (context, ref, child) {
+                  return GestureDetector(
+                    onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                    child: Container(
+                      width: 250,
+                      margin: EdgeInsets.only(
+                        right: 15,
+                        left: index == 0 ? 0 : 0,
                       ),
-                    ],
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppTheme.greyColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardTheme.color,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).shadowColor.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.play_circle_outline,
-                              color: AppTheme.greyColor,
-                              size: 35,
-                            ),
-                          ),
+                        ],
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor.withOpacity(0.2),
+                          width: 1,
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          course.title,
-                          style: const TextStyle(
-                            color: AppTheme.blackColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'by ${course.createdBy.fullName}',
-                          style: const TextStyle(
-                            color: AppTheme.greyColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const Spacer(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  color: Colors.amber,
-                                  size: 14,
+                            Container(
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                SizedBox(width: 3),
-                                Text(
-                                  '4.8', // In a real app, this would come from the course data
-                                  style: TextStyle(
-                                    color: AppTheme.blackColor,
-                                    fontSize: 12,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.play_circle_filled,
+                                  color: AppTheme.whiteColor,
+                                  size: 35,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              course.title ?? 'Untitled Course',
+                              style: const TextStyle(
+                                color: AppTheme.blackColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'by ${course.createdBy.fullName}',
+                              style: const TextStyle(
+                                color: AppTheme.greyColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 14,
+                                    ),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      '4.8', // In a real app, this would come from the course data
+                                      style: TextStyle(
+                                        color: AppTheme.blackColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '\$${course.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      color: AppTheme.primaryGreen,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            Text(
-                              '\$${course.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                color: AppTheme.primaryGreen,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           ),
@@ -1233,13 +1297,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               itemCount: popularCourses.length,
               itemBuilder: (context, index) {
                 final course = popularCourses[index];
-                return Container(
-                  width: 250,
-                  margin: EdgeInsets.only(
-                    right: 15,
-                    left: index == 0 ? 0 : 0,
-                  ),
-                  child: _buildCourseCard(context, course),
+                return Consumer(
+                  builder: (context, ref, child) {
+                    return GestureDetector(
+                      onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                      child: Container(
+                        width: 250,
+                        margin: EdgeInsets.only(
+                          right: 15,
+                          left: index == 0 ? 0 : 0,
+                        ),
+                        child: _buildCourseCard(context, course),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -1281,18 +1352,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.greyColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(isDesktop ? 12 : 10),
+                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(course.thumbnail!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: AppTheme.greyColor,
-                  size: 35,
-                ),
-              ),
+              child: course.thumbnail == null || course.thumbnail!.isEmpty
+                  ? const Center(
+                      child: Icon(
+                        Icons.play_circle_filled,
+                        color: AppTheme.whiteColor,
+                        size: 35,
+                      ),
+                    )
+                  : null,
             ),
             SizedBox(height: isDesktop ? 12 : 10),
             Text(
-              course.title,
+              course.title ?? 'Untitled Course',
               style: TextStyle(
                 color: AppTheme.blackColor,
                 fontSize: titleFontSize,
@@ -1330,12 +1409,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  '\$${course.price.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: AppTheme.primaryGreen,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '\$${course.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -1373,18 +1462,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.greyColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
+                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(course.thumbnail!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: AppTheme.greyColor,
-                  size: 35,
-                ),
-              ),
+              child: course.thumbnail == null || course.thumbnail!.isEmpty
+                  ? const Center(
+                      child: Icon(
+                        Icons.play_circle_filled,
+                        color: AppTheme.whiteColor,
+                        size: 35,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(height: 10),
             Text(
-              course.title,
+              course.title ?? 'Untitled Course',
               style: const TextStyle(
                 color: AppTheme.blackColor,
                 fontSize: 15,
@@ -1422,12 +1519,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  '\$${course.price.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: AppTheme.primaryGreen,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '\$${course.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

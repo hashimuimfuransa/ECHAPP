@@ -60,6 +60,7 @@ class LessonRepository {
   }
 
   Future<Lesson> createLesson({
+    required String courseId,
     required String sectionId,
     required String title,
     String? description,
@@ -69,6 +70,7 @@ class LessonRepository {
     required int duration,
   }) async {
     return await _sectionService.createLesson(
+      courseId: courseId,
       sectionId: sectionId,
       title: title,
       description: description,

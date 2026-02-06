@@ -1,5 +1,6 @@
 const Section = require('../models/Section');
 const Course = require('../models/Course');
+const Lesson = require('../models/Lesson');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all sections for a course
@@ -73,13 +74,18 @@ const deleteSection = async (req, res) => {
   try {
     const { sectionId } = req.params;
     
+    // First, delete all lessons associated with this section
+    const deletedLessons = await Lesson.deleteMany({ sectionId });
+    console.log(`Deleted ${deletedLessons.deletedCount} lessons associated with section ${sectionId}`);
+    
+    // Then delete the section
     const section = await Section.findByIdAndDelete(sectionId);
     
     if (!section) {
       return sendNotFound(res, 'Section not found');
     }
     
-    sendSuccess(res, null, 'Section deleted successfully');
+    sendSuccess(res, null, `Section deleted successfully along with ${deletedLessons.deletedCount} lessons`);
   } catch (error) {
     sendError(res, 'Failed to delete section', 500, error.message);
   }
@@ -89,7 +95,7 @@ const deleteSection = async (req, res) => {
 const reorderSections = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { sections } = req.body; // Array of {sectionId, order}
+    const { sectionIds } = req.body; // Array of section IDs in new order
     
     // Verify course exists
     const course = await Course.findById(courseId);
@@ -98,8 +104,8 @@ const reorderSections = async (req, res) => {
     }
     
     // Update order for each section
-    const updatePromises = sections.map(({ sectionId, order }) =>
-      Section.findByIdAndUpdate(sectionId, { order }, { new: true })
+    const updatePromises = sectionIds.map((sectionId, index) =>
+      Section.findByIdAndUpdate(sectionId, { order: index + 1 }, { new: true })
     );
     
     await Promise.all(updatePromises);

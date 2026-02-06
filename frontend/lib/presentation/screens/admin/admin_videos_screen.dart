@@ -17,9 +17,9 @@ class _AdminVideosScreenState extends State<AdminVideosScreen> {
   List<Video> _videos = [];
   String? _errorMessage;
   String _filterStatus = 'All';
-  int _currentPage = 1;
-  int _itemsPerPage = 10;
-  int _totalPages = 1;
+  final int _currentPage = 1;
+  final int _itemsPerPage = 10;
+  final int _totalPages = 1;
 
   @override
   void initState() {
@@ -163,7 +163,7 @@ class _AdminVideosScreenState extends State<AdminVideosScreen> {
         const SizedBox(width: 15),
         _buildStatCard('Drafts', draftVideos.toString(), Icons.edit, Colors.orange),
         const SizedBox(width: 15),
-        _buildStatCard('Total Time', '${totalTime} min', Icons.access_time, Colors.purple),
+        _buildStatCard('Total Time', '$totalTime min', Icons.access_time, Colors.purple),
       ],
     );
   }
@@ -589,11 +589,79 @@ class _AdminVideosScreenState extends State<AdminVideosScreen> {
   }
 
   void _uploadVideo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Video upload functionality coming soon'),
-        backgroundColor: AppTheme.primaryGreen,
-      ),
+    // Navigate to upload screen where user can select section
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String? selectedCourseId;
+        String? selectedSectionId;
+        final titleController = TextEditingController();
+        final descriptionController = TextEditingController();
+        
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Upload Video to Section'),
+              content: SizedBox(
+                width: 500,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Select Course and Section:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    // Course selection would go here - for now we'll skip this and let user navigate from course screen
+                    const Text('Select Section:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Video Title',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Note: Select course and section from the course management screen to upload videos directly to specific sections.'),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Close dialog and navigate to upload screen
+                    Navigator.pop(context);
+                    
+                    // Navigate to upload screen with selected course and section
+                    // For now, we'll navigate to the course content screen where users can upload videos to sections
+                    context.push('/admin/courses');
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Navigate to course management to upload videos to specific sections'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

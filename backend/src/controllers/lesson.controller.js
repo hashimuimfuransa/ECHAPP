@@ -112,7 +112,7 @@ const deleteLesson = async (req, res) => {
 const reorderLessons = async (req, res) => {
   try {
     const { sectionId } = req.params;
-    const { lessons } = req.body; // Array of {lessonId, order}
+    const { lessonIds } = req.body; // Array of lesson IDs in new order
     
     // Verify section exists
     const section = await Section.findById(sectionId);
@@ -121,8 +121,8 @@ const reorderLessons = async (req, res) => {
     }
     
     // Update order for each lesson
-    const updatePromises = lessons.map(({ lessonId, order }) =>
-      Lesson.findByIdAndUpdate(lessonId, { order }, { new: true })
+    const updatePromises = lessonIds.map((lessonId, index) =>
+      Lesson.findByIdAndUpdate(lessonId, { order: index + 1 }, { new: true })
     );
     
     await Promise.all(updatePromises);

@@ -13,7 +13,7 @@ class AdminCoursesScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
-  bool _hasLoadedInitialData = false;
+  final bool _hasLoadedInitialData = false;
   String _filterStatus = 'All';
 
   @override
@@ -124,7 +124,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
   }
 
   Widget _buildSearchAndFilter(BuildContext context) {
-    final TextEditingController _searchController = TextEditingController();
+    final TextEditingController searchController = TextEditingController();
     
     return Row(
       children: [
@@ -143,7 +143,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
               ],
             ),
             child: TextField(
-              controller: _searchController,
+              controller: searchController,
               decoration: const InputDecoration(
                 hintText: 'Search courses...',
                 border: InputBorder.none,
@@ -380,7 +380,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  course.title,
+                                  course.title ?? 'Untitled Course',
                                   style: TextStyle(
                                     fontSize: isSmallScreen ? 16 : 18,
                                     fontWeight: FontWeight.bold,
@@ -472,7 +472,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                                       ref.read(adminCourseProvider.notifier)
                                           .toggleCoursePublish(course.id, course.isPublished);
                                     },
-                                    activeColor: AppTheme.primaryGreen,
+                                    activeThumbColor: AppTheme.primaryGreen,
                                   ),
                                   const SizedBox(width: 8),
                                   if (isSmallScreen)
@@ -503,7 +503,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
         return AlertDialog(
           title: const Text('Delete Course'),
           content: Text(
-            'Are you sure you want to delete "${course.title}"? This will permanently remove all associated content including videos, materials, and exams. This action cannot be undone.',
+            'Are you sure you want to delete "${course.title ?? 'Untitled Course'}"? This will permanently remove all associated content including videos, materials, and exams. This action cannot be undone.',
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
@@ -519,7 +519,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                 // Show success snackbar
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Course "${course.title}" deleted successfully'),
+                    content: Text('Course "${course.title ?? 'Untitled Course'}" deleted successfully'),
                     backgroundColor: Colors.green,
                     duration: const Duration(seconds: 3),
                   ),

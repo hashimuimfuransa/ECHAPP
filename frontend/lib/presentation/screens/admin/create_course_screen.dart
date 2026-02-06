@@ -7,7 +7,6 @@ import 'package:excellence_coaching_hub/data/repositories/course_repository.dart
 import 'package:excellence_coaching_hub/services/image_upload_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:math' as math;
 
 
 class AdminCreateCourseScreen extends ConsumerStatefulWidget {
@@ -85,7 +84,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       print('Course loaded successfully: ${course.title}'); // Debug log
       
       // Populate form with course data
-      _titleController.text = course.title;
+      _titleController.text = course.title ?? '';
       _descriptionController.text = course.description;
       _priceController.text = course.price.toString();
       _durationController.text = course.duration.toString();

@@ -1,12 +1,24 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/providers/content_management_provider.dart';
 import 'package:excellence_coaching_hub/models/section.dart';
 import 'package:excellence_coaching_hub/models/lesson.dart';
 import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellence_coaching_hub/data/repositories/video_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart';
+import 'package:excellence_coaching_hub/models/video.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:excellence_coaching_hub/config/api_config.dart';
 
 class AdminCourseContentScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -202,10 +214,18 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           ],
         ),
         const SizedBox(height: 15),
-        if (contentState.isLoading && contentState.sections.isEmpty)
+        if (contentState.isLoading)
           const Padding(
             padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading course content...'),
+                ],
+              ),
+            ),
           )
         else if (contentState.error != null)
           Padding(
@@ -234,7 +254,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                   const Icon(Icons.library_books, size: 60, color: AppTheme.greyColor),
                   const SizedBox(height: 16),
                   const Text(
-                    'No sections yet',
+                    'No sections created yet',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
@@ -243,16 +263,21 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Add your first section to organize your course content',
+                    'Create sections to organize your course content into logical modules',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppTheme.greyColor,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: () => _showAddSectionDialog(context),
-                    child: const Text('Add Section'),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Create First Section'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -268,14 +293,14 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             itemCount: contentState.sections.length,
             itemBuilder: (context, index) {
               final section = contentState.sections[index];
-              return _buildSectionCard(context, section, index);
+              return _buildSectionCard(context, section, index, contentState.lessonsBySection);
             },
           ),
       ],
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, Section section, int index) {
+  Widget _buildSectionCard(BuildContext context, Section section, int index, Map<String, List<Lesson>> lessonsBySection) {
     return Container(
       key: ValueKey(section.id),
       margin: const EdgeInsets.only(bottom: 15),
@@ -364,20 +389,95 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             ),
           ),
           
-          // Lessons List - temporarily showing empty since we don't have lessons data yet
+          // Lessons List
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('No lessons in this section yet'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Lessons in this section',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.greyColor,
+                      ),
+                    ),
+                    if (lessonsBySection[section.id]?.isNotEmpty == true)
+                      Text(
+                        '${lessonsBySection[section.id]?.length ?? 0} lessons',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Display lessons or empty state
+                if (lessonsBySection[section.id]?.isEmpty == true)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.greyColor.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                      ),
+                    ),
+                    child: const Column(
+                      children: [
+                        Icon(Icons.book_outlined, size: 40, color: AppTheme.greyColor),
+                        SizedBox(height: 12),
+                        Text(
+                          'No lessons added yet',
+                          style: TextStyle(
+                            color: AppTheme.greyColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Add lessons to provide course content',
+                          style: TextStyle(
+                            color: AppTheme.greyColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  // Display actual lessons
+                  Column(
+                    children: [
+                      ...(() {
+                        final lessons = lessonsBySection[section.id] ?? [];
+                        return lessons.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final lesson = entry.value;
+                          final isLast = index == lessons.length - 1;
+                          return _buildLessonItem(lesson.toJson(), isLast);
+                        }).toList();
+                      }()),
+                    ],
+                  ),
+                
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
-                  onPressed: () => _showAddLessonDialog(context, section),
+                  onPressed: (section.id.isEmpty || section.id.length < 5) ? null : () => _showAddLessonDialog(context, section),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add New Lesson'),
+                  label: const Text('Add Lesson'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                    foregroundColor: AppTheme.primaryGreen,
+                    backgroundColor: (section.id.isEmpty || section.id.length < 5) 
+                        ? AppTheme.greyColor.withOpacity(0.1) 
+                        : AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
                     elevation: 0,
                   ),
                 ),
@@ -390,6 +490,17 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   }
 
   Widget _buildLessonItem(Map<String, dynamic> lesson, bool isLast) {
+    // Determine lesson type based on available content
+    String getLessonType() {
+      if (lesson['videoId'] != null && lesson['videoId'] != '') {
+        return 'video';
+      } else if (lesson['notes'] != null && lesson['notes'] != '') {
+        return 'notes';
+      } else {
+        return 'lesson'; // default type
+      }
+    }
+
     IconData getIconForType(String type) {
       switch (type) {
         case 'video': return Icons.video_library;
@@ -408,6 +519,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
       }
     }
 
+    String lessonType = getLessonType();
+
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
       child: Container(
@@ -422,12 +535,12 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: getColorForType(lesson['type']).withOpacity(0.1),
+                color: getColorForType(lessonType).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                getIconForType(lesson['type']),
-                color: getColorForType(lesson['type']),
+                getIconForType(lessonType),
+                color: getColorForType(lessonType),
                 size: 20,
               ),
             ),
@@ -445,7 +558,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${lesson['duration']} mins • ${lesson['type'].capitalize()}',
+                    '${lesson['duration']} mins • ${lessonType.capitalize()}',
                     style: const TextStyle(
                       color: AppTheme.greyColor,
                       fontSize: 12,
@@ -546,12 +659,91 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
         _showEditLessonDialog(context, lesson);
         break;
       case 'preview':
-        // Handle preview
+        _showLessonPreviewDialog(context, lesson);
         break;
       case 'delete':
-        _showDeleteConfirmation(context, 'lesson', lesson['title']);
+        _showDeleteConfirmation(context, 'lesson', lesson['title'], lesson: lesson);
         break;
     }
+  }
+
+  void _showLessonPreviewDialog(BuildContext context, Map<String, dynamic> lesson) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lesson Preview'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lesson['title'] ?? 'Untitled Lesson',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (lesson['description'] != null && lesson['description'].toString().isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Description:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(lesson['description'].toString()),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                if (lesson['videoId'] != null && lesson['videoId'].toString().isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Video:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(lesson['videoId'].toString()),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                if (lesson['notes'] != null && lesson['notes'].toString().isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Notes:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(lesson['notes'].toString()),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                Text(
+                  'Duration: ${(lesson['duration'] ?? 0)} minutes',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Order: ${(lesson['order'] ?? 0)}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAddSectionDialog(BuildContext context) {
@@ -607,6 +799,28 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   }
 
   void _showAddLessonDialog(BuildContext context, Section section) {
+    // Ensure both IDs are valid before navigating
+    if (widget.courseId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Course ID is invalid'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    if (section.id.isEmpty || section.id.length < 5) { // MongoDB ObjectIds are typically 24 characters long
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Section ID is invalid (${section.id.length} chars): "${section.id}" for section titled: "${section.title}"'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Navigate to create lesson page with section and course IDs
     context.push('/admin/courses/${widget.courseId}/sections/${section.id}/lessons/create');
   }
 
@@ -658,11 +872,440 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  void _showEditLessonDialog(BuildContext context, Map<String, dynamic> lesson) {
-    // Handle lesson editing
+  Future<void> _showEditLessonDialog(BuildContext context, Map<String, dynamic> lesson) async {
+    final titleController = TextEditingController(text: lesson['title']);
+    final descriptionController = TextEditingController(text: lesson['description'] ?? '');
+    final notesController = TextEditingController(text: lesson['notes'] ?? '');
+    int duration = lesson['duration'] ?? 0;
+    
+    // Get the selected video ID from the lesson
+    String? selectedVideoId = lesson['videoId'];
+    
+    // Track document upload state
+    String? documentPath = lesson['notes']; // If notes contain document path
+    bool isUploadingDocument = false;
+    
+    // Load videos for dropdown first before showing dialog
+    List<Video> videos = [];
+    bool isLoadingVideos = true;
+    String? errorMessage;
+    
+    try {
+      final videoRepo = VideoRepository();
+      // Use course-specific videos instead of all videos to avoid potential issues
+      final loadedVideos = await videoRepo.getVideosByCourse(lesson['courseId']);
+      // Ensure loadedVideos is indeed a List<Video> and not something else
+      videos = loadedVideos is List<Video> ? loadedVideos : [];
+      isLoadingVideos = false;
+    } catch (e) {
+      errorMessage = e.toString();
+      isLoadingVideos = false;
+    }
+    
+    // Show dialog with form
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Lesson'),
+              content: SizedBox(
+                width: 500,
+                child: isLoadingVideos
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMessage != null
+                        ? Text('Error: $errorMessage')
+                        : Form(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Title Field
+                                TextFormField(
+                                  controller: titleController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Lesson Title',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'Enter lesson title',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter a title';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                
+                                // Description Field
+                                TextFormField(
+                                  controller: descriptionController,
+                                  maxLines: 3,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Description',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'Enter lesson description',
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                
+                                // Duration Field
+                                TextFormField(
+                                  initialValue: duration.toString(),
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Duration (minutes)',
+                                    border: OutlineInputBorder(),
+                                    hintText: 'Enter duration in minutes',
+                                  ),
+                                  onChanged: (value) {
+                                    duration = int.tryParse(value) ?? 0;
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                
+                                // Video Selection
+                                const Text(
+                                  'Select Video',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 5),
+                                DropdownButtonFormField<String?>(
+                                  value: selectedVideoId,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: videos != null 
+                                    ? _getUniqueVideoItems(videos.where((video) => video != null).toList())
+                                    : [],
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      selectedVideoId = value;
+                                    });
+                                  },
+                                  hint: const Text('Choose a video'),
+                                ),
+                                const SizedBox(height: 10),
+                                
+                                // Document Upload Section (replaces text notes field)
+                                if (documentPath != null && documentPath!.isNotEmpty && 
+                                    (documentPath!.toLowerCase().contains('.pdf') || 
+                                     documentPath!.toLowerCase().contains('.doc') || 
+                                     documentPath!.toLowerCase().contains('.docx') ||
+                                     documentPath!.toLowerCase().contains('.txt') ||
+                                     documentPath!.toLowerCase().contains('.ppt') ||
+                                     documentPath!.toLowerCase().contains('.pptx') ||
+                                     documentPath!.toLowerCase().contains('.xls') ||
+                                     documentPath!.toLowerCase().contains('.xlsx')))
+                                  // Document display section
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.greyColor.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            // Different icons based on file type
+                                            Icon(
+                                              documentPath!.toLowerCase().contains('.pdf') ? Icons.picture_as_pdf :
+                                              documentPath!.toLowerCase().contains('.doc') || documentPath!.toLowerCase().contains('.docx') ? Icons.insert_drive_file :
+                                              documentPath!.toLowerCase().contains('.ppt') || documentPath!.toLowerCase().contains('.pptx') ? Icons.slideshow :
+                                              documentPath!.toLowerCase().contains('.xls') || documentPath!.toLowerCase().contains('.xlsx') ? Icons.table_chart :
+                                              Icons.insert_drive_file, // default icon
+                                              color: AppTheme.primaryGreen,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                'Document Uploaded: ${documentPath!.split('/').last}',
+                                                style: TextStyle(
+                                                  color: AppTheme.primaryGreen,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            OutlinedButton.icon(
+                                              onPressed: () async {
+                                                // Remove document
+                                                setDialogState(() {
+                                                  documentPath = null;
+                                                  notesController.clear();
+                                                });
+                                              },
+                                              icon: const Icon(Icons.delete, size: 16),
+                                              label: const Text('Remove'),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors.red,
+                                                side: const BorderSide(color: Colors.red),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  const Text(
+                                    'No document uploaded',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                
+                                const SizedBox(height: 10),
+                                
+                                // Document Upload Button (replaces text notes field)
+                                ElevatedButton.icon(
+                                  onPressed: isUploadingDocument ? null : () async {
+                                    // Check if Firebase Auth is ready before proceeding
+                                    try {
+                                      final auth = firebase_auth.FirebaseAuth.instance;
+                                      if (auth.currentUser == null) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Authentication not ready. Please try again.'),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+                                    } catch (authError) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Authentication service not ready. Please try again.'),
+                                            backgroundColor: Colors.orange,
+                                          ),
+                                        );
+                                      }
+                                      return;
+                                    }
+                                    
+                                    setDialogState(() {
+                                      isUploadingDocument = true;
+                                    });
+                                    
+                                    try {
+                                      final result = await FilePicker.platform.pickFiles(
+                                        type: FileType.custom,
+                                        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'],
+                                      );
+                                      
+                                      if (result != null) {
+                                        final file = result.files.single;
+                                        
+                                        // Check if file path is valid before attempting upload
+                                        if (file.path != null) {
+                                          // Upload the document to the backend
+                                          final uploadResult = await _uploadDocument(file.path!, lesson['courseId']);
+                                          
+                                          if (uploadResult != null) {
+                                            // Handle the response - documentUrl might be in different fields
+                                            String? documentUrl = uploadResult['documentUrl'] as String?;
+                                            if (documentUrl == null) {
+                                              // Try alternative field names that might contain the URL
+                                              documentUrl = uploadResult['s3Key'] as String?;
+                                            }
+                                            if (documentUrl == null) {
+                                              // Try the data object structure
+                                              final data = uploadResult['data'];
+                                              if (data != null && data is Map<String, dynamic>) {
+                                                documentUrl = data['documentUrl'] as String?;
+                                                if (documentUrl == null) {
+                                                  documentUrl = data['s3Key'] as String?;
+                                                }
+                                              }
+                                            }
+                                            
+                                            if (documentUrl != null) {
+                                              setDialogState(() {
+                                                documentPath = documentUrl;
+                                                notesController.text = documentUrl!;
+                                                isUploadingDocument = false;
+                                              });
+                                              
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Document uploaded successfully!'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                            } else {
+                                              setDialogState(() {
+                                                isUploadingDocument = false;
+                                              });
+                                              
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Document uploaded but URL not found'),
+                                                    backgroundColor: Colors.orange,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          } else {
+                                            setDialogState(() {
+                                              isUploadingDocument = false;
+                                            });
+                                            
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Failed to upload document'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        } else {
+                                          setDialogState(() {
+                                            isUploadingDocument = false;
+                                          });
+                                          
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Invalid file path'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      } else {
+                                        setDialogState(() {
+                                          isUploadingDocument = false;
+                                        });
+                                      }
+                                    } catch (e) {
+                                      setDialogState(() {
+                                        isUploadingDocument = false;
+                                      });
+                                      
+                                      // Handle the specific late initialization error
+                                      final errorMessage = e.toString();
+                                      if (errorMessage.contains('LateInitializationError')) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Service not ready. Please try again.'),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Document selection failed: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                  icon: isUploadingDocument
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.upload),
+                                  label: Text(isUploadingDocument ? 'Uploading...' : 'Upload Document'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.accent,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    // Validate and update lesson
+                    if (titleController.text.trim().isEmpty) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter a title'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    
+                    try {
+                      // Prepare update data
+                      final updateData = {
+                        'title': titleController.text.trim(),
+                        'description': descriptionController.text.trim(),
+                        'videoId': selectedVideoId,
+                        'notes': documentPath ?? notesController.text.trim(),
+                        'duration': duration,
+                        'sectionId': lesson['sectionId'], // Pass sectionId for local state update
+                      };
+                      
+                      // Use the optimized updateLesson method from provider
+                      await ref.read(contentManagementProvider.notifier).updateLesson(
+                        lesson['id'],
+                        updateData,
+                      );
+                      
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Lesson updated successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to update lesson: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId}) {
+  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Map<String, dynamic>? lesson}) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -674,17 +1317,55 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
               if (type == 'section' && sectionId != null) {
-                ref.read(contentManagementProvider.notifier).deleteSection(sectionId);
+                try {
+                  await ref.read(contentManagementProvider.notifier).deleteSection(sectionId);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Section deleted successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete section: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } else if (type == 'lesson') {
+                // Delete lesson
+                try {
+                  final lessonRepo = LessonRepository();
+                  await lessonRepo.deleteLesson(lesson!['id']);
+                  // Reload sections to update the UI
+                  await ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Lesson deleted successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete lesson: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$type deleted successfully'),
-                  backgroundColor: AppTheme.primaryGreen,
-                ),
-              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -692,6 +1373,113 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
         ],
       ),
     );
+  }
+
+  /// Upload document to backend
+  Future<Map<String, dynamic>?> _uploadDocument(String filePath, String courseId) async {
+    // Retry mechanism for service initialization
+    int retries = 3;
+    Exception? lastError;
+    
+    for (int attempt = 0; attempt < retries; attempt++) {
+      try {
+        // Wait progressively longer between retries
+        if (attempt > 0) {
+          await Future.delayed(Duration(milliseconds: 200 * attempt));
+        }
+        
+        // Verify Firebase Auth is ready
+        final auth = firebase_auth.FirebaseAuth.instance;
+        final currentUser = auth.currentUser;
+        if (currentUser == null) {
+          throw Exception('User not authenticated');
+        }
+        
+        final file = File(filePath);
+        final bytes = await file.readAsBytes();
+        final fileName = path.basename(filePath);
+        
+        final idToken = await currentUser.getIdToken(true);
+        
+        // Create multipart request
+        final uri = Uri.parse('${ApiConfig.upload}/document');
+        final request = http.MultipartRequest('POST', uri);
+        
+        // Add authentication header
+        request.headers.addAll({
+          'Authorization': 'Bearer $idToken',
+        });
+        
+        // Add form fields
+        request.fields['courseId'] = courseId;
+        
+        // Add file
+        final multipartFile = http.MultipartFile.fromBytes(
+          'document',
+          bytes,
+          filename: fileName,
+        );
+        request.files.add(multipartFile);
+        
+        // Send request
+        final response = await request.send();
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final responseBody = await response.stream.bytesToString();
+          final jsonResponse = json.decode(responseBody);
+          
+          if (jsonResponse['success'] == true) {
+            return jsonResponse['data'];
+          } else {
+            print('Document upload failed: ${jsonResponse['message']}');
+            return null;
+          }
+        } else {
+          print('Document upload failed with status: ${response.statusCode}');
+          return null;
+        }
+      } catch (e) {
+        lastError = e as Exception;
+        print('Upload attempt ${attempt + 1} failed: $e');
+        
+        // If it's not a LateInitializationError, don't retry
+        if (!e.toString().contains('LateInitializationError')) {
+          break;
+        }
+        
+        // If this is the last attempt, rethrow
+        if (attempt == retries - 1) {
+          print('All upload attempts failed');
+          return null;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /// Get unique video items for dropdown to avoid duplicate values
+  List<DropdownMenuItem<String?>> _getUniqueVideoItems(List<Video> videos) {
+    final seenValues = <String>{};
+    final uniqueItems = <DropdownMenuItem<String?>>[];
+
+    for (final video in videos) {
+      // Use videoId if available, otherwise fall back to video.id
+      final value = video.videoId ?? video.id;
+      
+      // Skip if we've already seen this value to avoid duplicates
+      if (!seenValues.contains(value)) {
+        seenValues.add(value);
+        uniqueItems.add(
+          DropdownMenuItem(
+            value: value,
+            child: Text(video.title),
+          ),
+        );
+      }
+    }
+
+    return uniqueItems;
   }
 }
 

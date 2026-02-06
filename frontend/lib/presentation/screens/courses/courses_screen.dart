@@ -25,7 +25,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   @override
   void initState() {
     super.initState();
-    _coursesFuture = CourseRepository().getCourses(categoryId: widget.categoryId) as Future<List<Course>>;
+    _coursesFuture = CourseRepository().getCourses(categoryId: widget.categoryId);
   }
 
   @override
@@ -403,12 +403,20 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           decoration: BoxDecoration(
                             color: AppTheme.greyColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
+                            image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage(course.thumbnail!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
-                          child: const Icon(
-                            Icons.play_circle_outline,
-                            color: AppTheme.greyColor,
-                            size: 35,
-                          ),
+                          child: course.thumbnail == null || course.thumbnail!.isEmpty
+                              ? const Icon(
+                                  Icons.play_circle_outline,
+                                  color: AppTheme.greyColor,
+                                  size: 35,
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 15),
                         
@@ -418,7 +426,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                course.title,
+                                course.title ?? 'Untitled Course',
                                 style: const TextStyle(
                                   color: AppTheme.blackColor,
                                   fontSize: 16,
@@ -681,18 +689,26 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.greyColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(isDesktop ? 14.0 : 12.0),
+                  image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(course.thumbnail!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: AppTheme.greyColor,
-                  size: isDesktop ? 40.0 : 35.0,
-                ),
+                child: course.thumbnail == null || course.thumbnail!.isEmpty
+                    ? Icon(
+                        Icons.play_circle_outline,
+                        color: AppTheme.greyColor,
+                        size: isDesktop ? 40.0 : 35.0,
+                      )
+                    : null,
               ),
               SizedBox(height: isDesktop ? 16 : 12),
               
               // Course Title
               Text(
-                course.title,
+                course.title ?? 'Untitled Course',
                 style: TextStyle(
                   color: AppTheme.blackColor,
                   fontSize: isDesktop ? 18 : 16,
@@ -863,12 +879,20 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.greyColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
+                  image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(course.thumbnail!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: const Icon(
-                  Icons.play_circle_outline,
-                  color: AppTheme.greyColor,
-                  size: 35,
-                ),
+                child: course.thumbnail == null || course.thumbnail!.isEmpty
+                    ? const Icon(
+                        Icons.play_circle_outline,
+                        color: AppTheme.greyColor,
+                        size: 35,
+                      )
+                    : null,
               ),
               const SizedBox(width: 15),
               
@@ -878,7 +902,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      course.title,
+                      course.title ?? 'Untitled Course',
                       style: const TextStyle(
                         color: AppTheme.blackColor,
                         fontSize: 16,

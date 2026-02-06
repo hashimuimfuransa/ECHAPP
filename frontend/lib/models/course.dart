@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'user.dart';
 
 class Course {
@@ -37,7 +36,7 @@ class Course {
   factory Course.fromJson(Map<String, dynamic> json) {
     return Course(
       id: json['id'] as String? ?? json['_id']?.toString() ?? '',
-      title: json['title'] as String? ?? '',
+      title: json['title']?.toString() ?? 'Untitled Course',
       description: json['description'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       duration: json['duration'] as int? ?? 0,

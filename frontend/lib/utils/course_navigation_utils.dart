@@ -16,7 +16,7 @@ class CourseNavigationUtils {
     Course course,
   ) async {
     try {
-      print('Smart navigation for course: ${course.id} - ${course.title}');
+      print('Smart navigation for course: ${course.id} - ${course.title ?? "Untitled Course"}');
       
       // First check enrollment status (highest priority)
       final isEnrolled = await ref.read(isEnrolledInCourseProvider(course.id).future);

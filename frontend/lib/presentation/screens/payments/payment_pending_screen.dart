@@ -152,7 +152,7 @@ class PaymentPendingScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      course.title,
+                      course.title ?? 'Untitled Course',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -515,8 +515,8 @@ class PaymentPendingScreen extends StatelessWidget {
       scheme: 'mailto',
       path: email,
       queryParameters: {
-        'subject': 'Payment Confirmation for ${course.title}',
-        'body': 'Transaction ID: $transactionId\nCourse: ${course.title}\nAmount: RWF ${amount.toStringAsFixed(0)}\n\nPlease confirm payment and provide next steps.',
+        'subject': 'Payment Confirmation for ${course.title ?? "Untitled Course"}',
+        'body': 'Transaction ID: $transactionId\nCourse: ${course.title ?? "Untitled Course"}\nAmount: RWF ${amount.toStringAsFixed(0)}\n\nPlease confirm payment and provide next steps.',
       },
     );
     

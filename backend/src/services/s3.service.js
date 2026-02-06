@@ -156,6 +156,11 @@ class S3Service {
     return await this.uploadFile(buffer, originalName, contentType, 'videos');
   }
 
+  // Upload document specifically
+  async uploadDocument(buffer, originalName, contentType = 'application/pdf') {
+    return await this.uploadFile(buffer, originalName, contentType, 'documents');
+  }
+
   // Get public URL (for publicly accessible files)
   getPublicUrl(key) {
     // For public files, we can use the direct S3 URL

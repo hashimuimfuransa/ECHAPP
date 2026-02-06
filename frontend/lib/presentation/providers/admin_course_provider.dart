@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/models/user.dart';
 import 'package:excellence_coaching_hub/services/api/course_service.dart';
 
 // Admin course management state
@@ -50,7 +49,7 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
       final courses = await _courseService.getAllCourses(showUnpublished: true);
       print('Loaded ${courses.length} courses for admin'); // Debug log
       for (var course in courses) {
-        print('Course ID: ${course.id}, Title: ${course.title}'); // Debug log
+        print('Course ID: ${course.id}, Title: ${course.title ?? "Untitled Course"}'); // Debug log
       }
       state = state.copyWith(courses: courses, isLoading: false);
     } catch (error) {

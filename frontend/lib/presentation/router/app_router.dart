@@ -18,6 +18,7 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboa
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_courses_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/create_course_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_course_content_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/admin_create_lesson_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_students_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/course_videos_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/course_materials_screen.dart';
@@ -26,7 +27,6 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/admin_setting
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_payments_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
@@ -134,10 +134,11 @@ class AppRouter {
           GoRoute(
             path: '/admin/courses/:courseId/sections/:sectionId/lessons/create',
             builder: (context, state) {
-              // Would implement lesson creation screen
-              return Scaffold(
-                appBar: AppBar(title: const Text('Create Lesson')),
-                body: const Center(child: Text('Lesson creation screen')),
+              final courseId = state.pathParameters['courseId'] ?? '';
+              final sectionId = state.pathParameters['sectionId'] ?? '';
+              return AdminCreateLessonScreen(
+                courseId: courseId,
+                sectionId: sectionId,
               );
             },
           ),

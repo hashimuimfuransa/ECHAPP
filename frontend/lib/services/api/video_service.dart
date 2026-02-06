@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../models/video.dart';
-import '../../models/api_response.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -59,35 +58,157 @@ class VideoService {
       // Send request and track progress
       final response = await request.send();
       
-      // If the response includes an uploadId, we can track progress
-      final responseBody = await response.stream.bytesToString();
-      
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = json.decode(responseBody);
+      // Track progress in a separate stream if callback is provided
+      if (onProgress != null) {
+        // Listen for upload progress updates
+        // First, we need to get the uploadId from the response
+        final responseBody = await response.stream.bytesToString();
         
-        if (jsonResponse['success'] == true) {
-          final data = jsonResponse['data'];
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonResponse = json.decode(responseBody);
           
-          return Video(
-            id: data['videoId'] ?? data['s3Key'] ?? '',
-            title: title ?? 'Untitled Video',
-            description: description,
-            url: data['videoUrl'] ?? '',
-            duration: 0,
-            courseId: courseId,
-            sectionId: sectionId,
-            thumbnail: null,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
+          if (jsonResponse['success'] == true) {
+            final data = jsonResponse['data'];
+            
+            // If an uploadId is provided in the response, track the progress
+            final uploadId = data['uploadId'];
+            if (uploadId != null) {
+              // Start tracking progress in the background
+              _trackUploadProgress(uploadId, onProgress);
+            }
+            
+            // If a lesson was created during upload, return video info from the lesson
+            if (data['lesson'] != null) {
+              final lesson = data['lesson'];
+              return Video(
+                id: lesson['videoId'] ?? lesson['_id'] ?? data['videoId'] ?? data['s3Key'] ?? '',
+                title: lesson['title'] ?? title ?? 'Untitled Video',
+                description: lesson['description'] ?? description,
+                url: data['videoUrl'] ?? '',
+                duration: lesson['duration'] ?? 0,
+                courseId: lesson['courseId'] ?? courseId,
+                sectionId: lesson['sectionId'] ?? sectionId,
+                videoId: lesson['videoId'] ?? data['videoId'],
+                thumbnail: null,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+            } else {
+              return Video(
+                id: data['videoId'] ?? data['s3Key'] ?? '',
+                title: title ?? 'Untitled Video',
+                description: description,
+                url: data['videoUrl'] ?? '',
+                duration: 0,
+                courseId: courseId,
+                sectionId: sectionId,
+                thumbnail: null,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+            }
+          } else {
+            throw Exception('Upload failed: ${jsonResponse['message']}');
+          }
         } else {
-          throw Exception('Upload failed: ${jsonResponse['message']}');
+          throw Exception('Upload failed with status: ${response.statusCode}');
         }
       } else {
-        throw Exception('Upload failed with status: ${response.statusCode}');
+        // If no progress callback, just wait for the response normally
+        final responseBody = await response.stream.bytesToString();
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonResponse = json.decode(responseBody);
+          
+          if (jsonResponse['success'] == true) {
+            final data = jsonResponse['data'];
+            
+            // If a lesson was created during upload, return video info from the lesson
+            if (data['lesson'] != null) {
+              final lesson = data['lesson'];
+              return Video(
+                id: lesson['videoId'] ?? lesson['_id'] ?? data['videoId'] ?? data['s3Key'] ?? '',
+                title: lesson['title'] ?? title ?? 'Untitled Video',
+                description: lesson['description'] ?? description,
+                url: data['videoUrl'] ?? '',
+                duration: lesson['duration'] ?? 0,
+                courseId: lesson['courseId'] ?? courseId,
+                sectionId: lesson['sectionId'] ?? sectionId,
+                videoId: lesson['videoId'] ?? data['videoId'],
+                thumbnail: null,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+            } else {
+              return Video(
+                id: data['videoId'] ?? data['s3Key'] ?? '',
+                title: title ?? 'Untitled Video',
+                description: description,
+                url: data['videoUrl'] ?? '',
+                duration: 0,
+                courseId: courseId,
+                sectionId: sectionId,
+                thumbnail: null,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+            }
+          } else {
+            throw Exception('Upload failed: ${jsonResponse['message']}');
+          }
+        } else {
+          throw Exception('Upload failed with status: ${response.statusCode}');
+        }
       }
     } catch (e) {
       throw Exception('Video upload failed: $e');
+    }
+  }
+
+  /// Track upload progress in the background
+  Future<void> _trackUploadProgress(String uploadId, Function(double) onProgress) async {
+    try {
+      final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final idToken = await currentUser.getIdToken(true);
+      final uri = Uri.parse('${ApiConfig.upload}/progress/$uploadId');
+      
+      // Poll for progress updates
+      while (true) {
+        final response = await http.get(
+          uri,
+          headers: {'Authorization': 'Bearer $idToken'},
+        );
+        
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          if (responseData['success']) {
+            final data = responseData['data'];
+            final progress = data['progress'].toDouble();
+            onProgress(progress);
+            
+            // If upload is complete or failed, stop tracking
+            final status = data['status'];
+            if (status == 'completed' || status == 'error') {
+              break;
+            }
+          }
+        } else {
+          // If there's an error getting progress, report as error
+          onProgress(-1);
+          break;
+        }
+        
+        // Wait 1 second before checking progress again
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    } catch (e) {
+      print('Error tracking upload progress: $e');
+      // Report error through the callback
+      onProgress(-1);
     }
   }
 
@@ -147,28 +268,27 @@ class VideoService {
 
       response.validateStatus();
       
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = jsonBody['data'] as List;
+      print('Video Service: getAllVideos raw response: ${response.body}');
+      print('Video Service: getAllVideos status code: ${response.statusCode}');
       
-      final videos = data
-          .map((item) => Video.fromJson(item as Map<String, dynamic>))
-          .toList();
+      // Parse the response manually to see what's happening
+      final responseBody = response.body;
+      final json = jsonDecode(responseBody) as Map<String, dynamic>;
+      print('Video Service: getAllVideos parsed JSON: $json');
+      print('Video Service: getAllVideos data field type: ${json['data']?.runtimeType}');
+      print('Video Service: getAllVideos data field value: ${json['data']}');
       
-      final apiResponse = ApiResponse<List<Video>>(
-        success: jsonBody['success'] as bool? ?? false,
-        message: jsonBody['message'] as String? ?? '',
-        data: videos,
-        error: jsonBody['error'] != null 
-            ? ApiError.fromJson(jsonBody['error'] as Map<String, dynamic>)
-            : null,
-      );
+      final apiResponse = response.toApiResponseList(Video.fromJson);
 
+      print('Video Service: getAllVideos parsed response - Success: ${apiResponse.success}, Data type: ${apiResponse.data?.runtimeType}, Length: ${apiResponse.data?.length}');
+      
       if (apiResponse.success && apiResponse.data != null) {
         return apiResponse.data!;
       } else {
         throw ApiException(apiResponse.message);
       }
     } catch (e) {
+      print('Video Service: Error in getAllVideos: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch videos: $e');
     }
@@ -177,21 +297,41 @@ class VideoService {
   /// Get all videos for a specific course
   Future<List<Video>> getVideosByCourse(String courseId) async {
     try {
-      // For now, return empty list since we don't have a dedicated endpoint
-      // This would need to be implemented in the backend
-      return [];
+      final response = await _apiClient.get('${ApiConfig.videos}/course/$courseId');
+      response.validateStatus();
+      
+      print('Video Service: Raw response body: ${response.body}');
+      
+      final apiResponse = response.toApiResponseList(Video.fromJson);
+      
+      print('Video Service: Parsed response - Success: ${apiResponse.success}, Data type: ${apiResponse.data?.runtimeType}, Length: ${apiResponse.data?.length}');
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw ApiException(apiResponse.message);
+      }
     } catch (e) {
-      throw Exception('Failed to fetch videos: $e');
+      print('Video Service: Error fetching videos: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch videos: $e');
     }
   }
 
-  /// Delete a video (stub implementation)
+  /// Delete a video
   Future<void> deleteVideo(String videoId) async {
     try {
-      // This would need backend implementation
-      // For now, just simulate success
+      final response = await _apiClient.delete('${ApiConfig.videos}/delete/$videoId');
+      response.validateStatus();
+      
+      final apiResponse = response.toApiResponse((_) => null);
+      
+      if (!apiResponse.success) {
+        throw ApiException(apiResponse.message);
+      }
     } catch (e) {
-      throw Exception('Failed to delete video: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete video: $e');
     }
   }
 

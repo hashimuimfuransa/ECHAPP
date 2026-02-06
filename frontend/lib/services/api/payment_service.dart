@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../../models/api_response.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -191,13 +190,12 @@ class PaymentService {
       );
 
       response.validateStatus();
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final apiResponse = response.toApiResponseList(Payment.fromJson);
       
-      if (jsonBody['success'] == true) {
-        final data = jsonBody['data'] as List<dynamic>;
-        return data.map((item) => Payment.fromJson(item as Map<String, dynamic>)).toList();
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
       } else {
-        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch payments');
+        throw ApiException(apiResponse.message);
       }
     } catch (e) {
       if (e is ApiException) rethrow;

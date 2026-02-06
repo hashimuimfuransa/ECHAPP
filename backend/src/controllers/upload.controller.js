@@ -6,7 +6,7 @@ const { sendSuccess, sendError } = require('../utils/response.utils');
 // Configure multer for memory storage (files stored in memory as Buffer)
 const storage = multer.memoryStorage();
 
-// File filter to accept images and videos with expanded video support
+// File filter to accept images, videos, and documents with expanded support
 const fileFilter = (req, file, cb) => {
   // Extract the file extension to determine type
   const fileExtension = file.originalname.toLowerCase().split('.').pop();
@@ -25,16 +25,28 @@ const fileFilter = (req, file, cb) => {
     'image/webp', 'image/bmp', 'image/svg+xml', 'image/tiff'
   ];
   
+  // Common document extensions and their MIME types
+  const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx', 'rtf', 'odt', 'ods', 'odp'];
+  const documentMimeTypes = [
+    'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/rtf', 'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet',
+    'application/vnd.oasis.opendocument.presentation'
+  ];
+  
   // Check if it's an accepted video format
   const isVideo = file.mimetype.startsWith('video/') || videoExtensions.includes(fileExtension);
   // Check if it's an accepted image format
   const isImage = file.mimetype.startsWith('image/') || imageMimeTypes.includes(file.mimetype);
+  // Check if it's an accepted document format
+  const isDocument = documentMimeTypes.includes(file.mimetype) || documentExtensions.includes(fileExtension);
   
-  if (isImage || isVideo) {
+  if (isImage || isVideo || isDocument) {
     cb(null, true);
   } else {
     console.log(`Rejected file: ${file.originalname}, MIME: ${file.mimetype}, Extension: ${fileExtension}`);
-    cb(new Error('Only image and video files are allowed!'), false);
+    cb(new Error('Only image, video, and document files are allowed!'), false);
   }
 };
 
@@ -260,6 +272,30 @@ const uploadVideo = async (req, res) => {
         // Update progress to indicate completion
         UploadProgressService.updateProgress(uploadId, 100, 'completed', 'Upload completed successfully!');
 
+        // If courseId and sectionId are provided, create a lesson with the video
+        let lesson = null;
+        if (req.body.courseId && req.body.sectionId) {
+          const Lesson = require('../models/Lesson');
+          const Section = require('../models/Section');
+          
+          // Get the section to get the courseId (in case it wasn't provided separately)
+          const section = await Section.findById(req.body.sectionId);
+          if (section) {
+            const order = await Lesson.countDocuments({ sectionId: req.body.sectionId }) + 1;
+            
+            lesson = await Lesson.create({
+              sectionId: req.body.sectionId,
+              courseId: req.body.courseId || section.courseId.toString(), // Use provided courseId or section's courseId
+              title: req.body.title || req.file.originalname.split('.')[0], // Use provided title or filename without extension
+              description: req.body.description,
+              videoId: result.key, // Store the S3 key as videoId
+              notes: null, // Initially no notes
+              order: order,
+              duration: 0 // Initially unknown, can be updated later
+            });
+          }
+        }
+
         sendSuccess(res, {
           videoUrl: result.url,
           s3Key: result.key,
@@ -269,6 +305,7 @@ const uploadVideo = async (req, res) => {
           size: req.file.size,
           mimetype: req.file.mimetype,
           uploadId: uploadId, // Include upload ID for progress tracking
+          lesson: lesson, // Return the created lesson if applicable
           // Include any additional fields from the request body
           ...(req.body.courseId && { courseId: req.body.courseId }),
           ...(req.body.sectionId && { sectionId: req.body.sectionId }),
@@ -285,6 +322,139 @@ const uploadVideo = async (req, res) => {
   } catch (error) {
     console.error('Video upload error:', error);
     sendError(res, 'Video upload failed', 500, error.message);
+  }
+};
+
+// Upload document controller
+const uploadDocument = async (req, res) => {
+  try {
+    // Log initial request
+    console.log('Document upload request received with headers:', req.headers);
+    
+    // Generate upload ID for progress tracking
+    const uploadId = UploadProgressService.generateUploadId();
+    
+    // Set initial progress to 0%
+    UploadProgressService.updateProgress(uploadId, 0, 'preparing', 'Preparing for upload...');
+    
+    // Use multer middleware
+    upload.single('document')(req, res, async function (err) {
+      if (err instanceof multer.MulterError) {
+        console.error('Multer error:', err);
+        // Update progress with error
+        UploadProgressService.updateProgress(uploadId, 0, 'error', `Upload error: ${err.message}`);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return sendError(res, 'File too large. Maximum size is 100MB.', 400);
+        } else if (err.code === 'LIMIT_FIELD_KEY' || err.code === 'LIMIT_FIELD_VALUE' || err.code === 'LIMIT_FIELDS') {
+          return sendError(res, `Upload field limit exceeded: ${err.message}`, 400);
+        } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return sendError(res, `Unexpected file field: ${err.field}`, 400);
+        }
+        return sendError(res, `Upload error: ${err.message}`, 400);
+      } else if (err) {
+        console.error('General upload error:', err);
+        // Update progress with error
+        UploadProgressService.updateProgress(uploadId, 0, 'error', `Upload failed: ${err.message}`);
+        return sendError(res, `Upload failed: ${err.message}`, 400);
+      }
+
+      // Check if file was uploaded
+      if (!req.file) {
+        console.error('No file received in upload request');
+        // Update progress with error
+        UploadProgressService.updateProgress(uploadId, 0, 'error', 'No document file provided');
+        return sendError(res, 'No document file provided', 400);
+      }
+
+      // Log the received fields for debugging
+      console.log('Received document upload with fields:', Object.keys(req.body));
+      console.log('File details:', {
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        encoding: req.file.encoding,
+        fieldname: req.file.fieldname,
+        destination: req.file.destination, // Will be undefined for memory storage
+        filename: req.file.filename // Will be undefined for memory storage
+      });
+
+      // Check if it's actually a document - allow both document MIME types and files with generic MIME but valid document extensions
+      const fileExtension = req.file.originalname.toLowerCase().split('.').pop();
+      const validDocumentExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx', 'rtf', 'odt', 'ods', 'odp'];
+      
+      if (!req.file.mimetype.startsWith('application/') && 
+          !req.file.mimetype.startsWith('text/') && 
+          !validDocumentExtensions.includes(fileExtension)) {
+        // Update progress with error
+        UploadProgressService.updateProgress(uploadId, 0, 'error', `Only document files are allowed. Received: ${req.file.mimetype} (${req.file.originalname})`);
+        return sendError(res, `Only document files are allowed for this endpoint. Received: ${req.file.mimetype} (${req.file.originalname})`, 400);
+      }
+
+      try {
+        // Update progress to indicate upload started
+        UploadProgressService.updateProgress(uploadId, 10, 'uploading_to_s3', 'Uploading to S3...');
+        
+        // Upload to AWS S3
+        const result = await s3Service.uploadDocument(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
+        
+        // Update progress to indicate completion
+        UploadProgressService.updateProgress(uploadId, 100, 'completed', 'Upload completed successfully!');
+
+        // If courseId and sectionId are provided, create a lesson with the document as notes
+        let lesson = null;
+        if (req.body.courseId && req.body.sectionId) {
+          const Lesson = require('../models/Lesson');
+          const Section = require('../models/Section');
+          
+          // Get the section to get the courseId (in case it wasn't provided separately)
+          const section = await Section.findById(req.body.sectionId);
+          if (section) {
+            const order = await Lesson.countDocuments({ sectionId: req.body.sectionId }) + 1;
+            
+            lesson = await Lesson.create({
+              sectionId: req.body.sectionId,
+              courseId: req.body.courseId || section.courseId.toString(), // Use provided courseId or section's courseId
+              title: req.body.title || req.file.originalname.split('.')[0], // Use provided title or filename without extension
+              description: req.body.description,
+              videoId: null, // No video initially
+              notes: result.key, // Store the S3 key as notes (document path)
+              order: order,
+              duration: req.body.duration || 0 // Use provided duration or default to 0
+            });
+          }
+        }
+
+        sendSuccess(res, {
+          documentUrl: result.url,
+          s3Key: result.key,
+          bucket: result.bucket,
+          documentId: result.key, // For compatibility with existing lesson model
+          originalName: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype,
+          uploadId: uploadId, // Include upload ID for progress tracking
+          lesson: lesson, // Return the created lesson if applicable
+          // Include any additional fields from the request body
+          ...(req.body.courseId && { courseId: req.body.courseId }),
+          ...(req.body.sectionId && { sectionId: req.body.sectionId }),
+          ...(req.body.title && { title: req.body.title }),
+          ...(req.body.description && { description: req.body.description }),
+          ...(req.body.duration && { duration: req.body.duration })
+        }, 'Document uploaded successfully');
+      } catch (s3Error) {
+        // Update progress with error
+        UploadProgressService.updateProgress(uploadId, 0, 'error', `S3 upload failed: ${s3Error.message}`);
+        console.error('S3 upload error:', s3Error);
+        sendError(res, 'Failed to upload document to storage', 500, s3Error.message);
+      }
+    });
+  } catch (error) {
+    console.error('Document upload error:', error);
+    sendError(res, 'Document upload failed', 500, error.message);
   }
 };
 
@@ -313,6 +483,7 @@ const getUploadProgress = async (req, res) => {
 module.exports = {
   uploadImage,
   uploadVideo,
+  uploadDocument,
   generatePresignedUrl,
   getUploadProgress
 };

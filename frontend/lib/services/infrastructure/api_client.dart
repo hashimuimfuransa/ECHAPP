@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../models/api_response.dart';
+import '../../models/course.dart';
 
 /// Centralized HTTP client with interceptors and error handling
 class ApiClient {
@@ -98,6 +99,38 @@ class ApiClient {
     ));
   }
 
+  /// Make HTTP POST request for file uploads (multipart form data)
+  Future<http.Response> postFile(
+    String url, {
+    required String filePath,
+    required String fieldName,
+    Map<String, String>? additionalFields,
+    Map<String, String>? headers,
+  }) async {
+    final authHeaders = await _getAuthHeaders();
+    final mergedHeaders = {...authHeaders, ...?headers};
+
+    // Remove Content-Type header as it will be set automatically for multipart
+    mergedHeaders.remove('Content-Type');
+
+    var request = http.MultipartRequest('POST', Uri.parse(url));
+    
+    // Add auth headers
+    request.headers.addAll(mergedHeaders);
+    
+    // Add additional fields if provided
+    if (additionalFields != null) {
+      request.fields.addAll(additionalFields);
+    }
+    
+    // Add file
+    final file = await http.MultipartFile.fromPath(fieldName, filePath);
+    request.files.add(file);
+
+    final streamedResponse = await _httpClient.send(request);
+    return http.Response.fromStream(streamedResponse);
+  }
+
   /// Execute HTTP request with error handling and timeout
   Future<http.Response> _makeRequest(
     Future<http.Response> Function() requestFn,
@@ -164,20 +197,71 @@ extension ApiResponseExtension on http.Response {
   /// Parse successful response into ApiResponse<List<T>>
   ApiResponse<List<T>> toApiResponseList<T>(T Function(Map<String, dynamic>) fromJsonT) {
     try {
+      print('API Client: Parsing response body: $body');
       final json = jsonDecode(body) as Map<String, dynamic>;
+      print('API Client: JSON parsed, success: ${json['success']}, data type: ${json['data']?.runtimeType}');
+      List<T>? dataList;
+      
+      if (json['data'] != null) {
+        if (json['data'] is List) {
+          // Direct array response
+          print('API Client: Data is direct list, length: ${(json['data'] as List).length}');
+          dataList = (json['data'] as List)
+              .map((item) => fromJsonT(item as Map<String, dynamic>))
+              .toList();
+        } else if (json['data'] is Map<String, dynamic>) {
+          // Nested object response (like { courses: [...] })
+          final dataMap = json['data'] as Map<String, dynamic>;
+          print('API Client: Data is map, keys: ${dataMap.keys}');
+          // Look for common list properties
+          final listData = dataMap['courses'] ?? dataMap['data'] ?? dataMap['items'];
+          if (listData != null && listData is List) {
+            print('API Client: Found list data in courses/data/items, length: ${listData.length}');
+            dataList = listData
+                .map((item) => fromJsonT(item as Map<String, dynamic>))
+                .toList();
+          } else {
+            print('API Client: No list data found in expected keys');
+          }
+        } else if (json['data'] is int || json['data'] is double || json['data'] is num) {
+          // If data is a number (like a count), return empty list instead of crashing
+          print('API Client: Data is a number (${json['data']}) instead of array, returning empty list');
+          dataList = []; // Return empty list instead of crashing
+        } else {
+          // If data is neither a List nor a Map, it's probably an unexpected type like int
+          print('API Client: Unexpected data type: ${json['data'].runtimeType}, value: ${json['data']}');
+          dataList = []; // Return empty list instead of crashing
+        }
+      } else {
+        print('API Client: No data found in response');
+        dataList = []; // Return empty list if no data
+      }
+      
+      // Additional safety check: if somehow dataList is still null after processing
+      if (dataList == null) {
+        print('API Client: dataList is null, setting to empty list');
+        dataList = [];
+      }
+      
+      print('API Client: Final dataList length: ${dataList?.length ?? 0}');
+      if (dataList != null && dataList.isNotEmpty) {
+        // Print first item's thumbnail if it exists
+        if (dataList[0] is Course) {
+          final firstCourse = dataList[0] as Course;
+          print('API Client: First course thumbnail: ${firstCourse.thumbnail ?? "null"}');
+        }
+      }
+      
       return ApiResponse<List<T>>(
         success: json['success'] as bool? ?? false,
         message: json['message'] as String? ?? '',
-        data: json['data'] != null && json['data'] is List
-            ? (json['data'] as List)
-                .map((item) => fromJsonT(item as Map<String, dynamic>))
-                .toList()
-            : null,
+        data: dataList,
         error: json['error'] != null 
             ? ApiError.fromJson(json['error'] as Map<String, dynamic>)
             : null,
       );
     } catch (e) {
+      print('API Client: Error parsing response: $e');
       throw ApiException('Failed to parse response: $e', statusCode);
     }
   }

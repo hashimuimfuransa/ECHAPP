@@ -19,12 +19,22 @@ final coursesProvider = FutureProvider<List<Course>>((ref) async {
 });
 
 final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
+  print('PopularCoursesProvider: Starting to fetch courses');
   final repository = ref.read(courseRepositoryProvider);
   final allCourses = await repository.getCourses();
+  print('PopularCoursesProvider: Got ${allCourses.length} courses');
+  if (allCourses.isNotEmpty) {
+    print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
+  }
   // Sort by rating or popularity (assuming higher price/quality correlates with popularity)
   // In a real scenario, you'd probably have a popularity field from the backend
   final sortedCourses = List<Course>.from(allCourses)..sort((a, b) => b.price.compareTo(a.price));
-  return sortedCourses.take(3).toList();
+  final result = sortedCourses.take(3).toList();
+  print('PopularCoursesProvider: Returning ${result.length} popular courses');
+  if (result.isNotEmpty) {
+    print('PopularCoursesProvider: First popular course thumbnail: ${result[0].thumbnail ?? "null"}');
+  }
+  return result;
 });
 
 final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {

@@ -23,13 +23,13 @@ class Lesson {
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
     return Lesson(
-      id: json['id'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
       sectionId: json['sectionId'] ?? '',
       courseId: json['courseId'] ?? '',
       title: json['title'] ?? '',
-      description: json['description'],
-      videoId: json['videoId'],
-      notes: json['notes'],
+      description: json['description'] as String?,
+      videoId: json['videoId'] as String?,
+      notes: json['notes'] as String?,
       order: json['order'] ?? 0,
       duration: json['duration'] ?? 0,
     );

@@ -29,18 +29,18 @@ class Video {
 
   factory Video.fromJson(Map<String, dynamic> json) {
     return Video(
-      id: json['_id'] ?? json['id'],
-      title: json['title'],
+      id: json['_id'] ?? json['id'] ?? '',
+      title: json['title'] ?? '',
       description: json['description'],
       url: json['url'],
       duration: json['duration'] as int? ?? 0,
-      courseId: json['courseId'],
+      courseId: json['courseId'] ?? '',
       courseTitle: json['courseTitle'],
       videoId: json['videoId'],
       sectionId: json['sectionId'],
       thumbnail: json['thumbnail'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'].toString()) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'].toString()) : DateTime.now(),
     );
   }
 

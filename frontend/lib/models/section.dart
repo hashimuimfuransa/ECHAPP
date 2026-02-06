@@ -13,7 +13,7 @@ class Section {
 
   factory Section.fromJson(Map<String, dynamic> json) {
     return Section(
-      id: json['id'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
       courseId: json['courseId'] ?? '',
       title: json['title'] ?? '',
       order: json['order'] ?? 0,

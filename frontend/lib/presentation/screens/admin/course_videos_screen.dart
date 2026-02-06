@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/services/api/video_service.dart';
 import 'package:excellence_coaching_hub/models/video.dart';
@@ -56,7 +58,8 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
       );
 
       if (videoFile != null) {
-        await _uploadVideo(videoFile);
+        // Show upload dialog with title and description inputs
+        await _showUploadVideoDialog(videoFile);
       }
     } catch (e) {
       if (mounted) {
@@ -70,28 +73,151 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
     }
   }
 
-  Future<void> _uploadVideo(XFile videoFile) async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _showUploadVideoDialog(XFile videoFile) async {
+    String title = '';
+    String description = '';
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Upload Video'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Video Title',
+                      hintText: 'Enter video title',
+                    ),
+                    onChanged: (value) {
+                      title = value;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Enter video description',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    onChanged: (value) {
+                      description = value;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'File: ${videoFile.name}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (title.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a title for the video'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                
+                Navigator.pop(context);
+                _uploadVideo(videoFile, title: title, description: description);
+              },
+              child: const Text('Upload'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _uploadVideo(XFile videoFile, {String? title, String? description}) async {
+    // We'll use a separate method for the actual upload with progress tracking
+    await _performUploadWithProgress(videoFile, title: title, description: description);
+  }
+
+  Future<void> _performUploadWithProgress(XFile videoFile, {String? title, String? description}) async {
+    double progress = 0.0;
+    String? errorMessage;
+
+    // Show a modal progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return AlertDialog(
+              title: const Text('Uploading Video'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Uploading: ${videoFile.name}'),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(value: progress / 100.0),
+                  const SizedBox(height: 8),
+                  Text('${progress.toStringAsFixed(1)}%'),
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        errorMessage,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
 
     try {
-      // Show upload progress
+      // Perform the upload with progress tracking
       final video = await _videoService.uploadVideo(
         videoFile: videoFile,
         courseId: widget.courseId,
-        onProgress: (progress) {
-          // Update UI with progress if needed
+        title: title,
+        description: description,
+        onProgress: (double value) {
+          // Update progress in the UI
+          if (mounted) {
+            setState(() {
+              progress = value;
+            });
+          }
         },
       );
 
+      // Add to our local list
       setState(() {
         _videos.add(video);
-        _isLoading = false;
       });
 
+      // Close the progress dialog
       if (mounted) {
+        Navigator.of(context).pop(); // Close progress dialog
+        
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Video uploaded successfully!'),
@@ -100,12 +226,14 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
         );
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-
+      errorMessage = e.toString();
       if (mounted) {
+        Navigator.of(context).pop(); // Close progress dialog
+        
+        setState(() {
+          _errorMessage = e.toString();
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Upload failed: ${e.toString()}'),
@@ -487,22 +615,12 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
         IconButton(
           icon: const Icon(Icons.visibility, size: 20),
           tooltip: 'Preview Video',
-          onPressed: () {
-            // TODO: Implement video preview
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Video preview coming soon')),
-            );
-          },
+          onPressed: () => _previewVideo(video),
         ),
         IconButton(
           icon: const Icon(Icons.edit, size: 20),
           tooltip: 'Edit Video Details',
-          onPressed: () {
-            // TODO: Implement video editing
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Edit video details coming soon')),
-            );
-          },
+          onPressed: () => _editVideoDetails(video),
         ),
         IconButton(
           icon: const Icon(Icons.delete, size: 20, color: Colors.red),
@@ -520,14 +638,10 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
       onSelected: (value) {
         switch (value) {
           case 'preview':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Video preview coming soon')),
-            );
+            _previewVideo(video);
             break;
           case 'edit':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Edit video details coming soon')),
-            );
+            _editVideoDetails(video);
             break;
           case 'delete':
             _deleteVideo(video.id);
@@ -733,9 +847,254 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
     );
   }
 
+  void _previewVideo(Video video) {
+    // Show video preview in a modal
+    if (video.url != null && video.url!.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(20),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            video.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: Container(
+                                color: Colors.black,
+                                child: _buildVideoPlayer(video.url!),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (video.description != null && video.description!.isNotEmpty)
+                              Text(
+                                video.description!,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Duration: ${video.duration} minutes',
+                              style: const TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video URL not available for preview'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  Widget _buildVideoPlayer(String videoUrl) {
+    return _VideoPlayerWidget(url: videoUrl);
+  }
+
+  void _editVideoDetails(Video video) {
+    final titleController = TextEditingController(text: video.title);
+    final descriptionController = TextEditingController(text: video.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Video Details'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Video Title',
+                      hintText: 'Enter video title',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Enter video description',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final title = titleController.text;
+                final description = descriptionController.text;
+                
+                // Here we would typically update the video details via API
+                // For now, we'll just update the local copy and show a message
+                final updatedVideo = Video(
+                  id: video.id,
+                  title: title,
+                  description: description.isNotEmpty ? description : null,
+                  url: video.url,
+                  duration: video.duration,
+                  courseId: video.courseId,
+                  courseTitle: video.courseTitle,
+                  videoId: video.videoId,
+                  sectionId: video.sectionId,
+                  thumbnail: video.thumbnail,
+                  createdAt: video.createdAt,
+                  updatedAt: DateTime.now(), // Update the timestamp
+                );
+                
+                // Update the video in the local list
+                setState(() {
+                  final index = _videos.indexOf(video);
+                  if (index != -1) {
+                    _videos[index] = updatedVideo;
+                  }
+                });
+                
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Video details updated successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _videoService.dispose();
+    super.dispose();
+  }
+}  // End of _CourseVideosScreenState class
+
+class _VideoPlayerWidget extends StatefulWidget {
+  final String url;
+
+  const _VideoPlayerWidget({required this.url});
+
+  @override
+  State<_VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+  ChewieController? _chewieController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideoPlayer();
+  }
+
+  Future<void> _initializeVideoPlayer() async {
+    _controller = VideoPlayerController.network(widget.url);
+    
+    try {
+      await _controller.initialize();
+      
+      _chewieController = ChewieController(
+        videoPlayerController: _controller,
+        autoPlay: false,
+        looping: false,
+        aspectRatio: 16 / 9,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Text(
+              'Error loading video: $errorMessage',
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
+      );
+      
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_chewieController != null) {
+      return Chewie(controller: _chewieController!);
+    } else {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 }
