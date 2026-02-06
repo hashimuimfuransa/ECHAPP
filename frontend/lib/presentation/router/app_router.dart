@@ -11,8 +11,11 @@ import 'package:excellence_coaching_hub/presentation/screens/courses/courses_scr
 import 'package:excellence_coaching_hub/presentation/screens/courses/course_detail_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/profile/profile_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/settings/settings_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/certificates/certificates_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/privacy/privacy_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/categories/categories_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/learning/learning_path_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/enrolled/enrolled_courses_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/help/help_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboard_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_courses_screen.dart';
@@ -276,30 +279,15 @@ class AppRouter {
   }
 
   Widget _buildMyCoursesScreen() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Courses')),
-      body: const Center(
-        child: Text('My enrolled courses'),
-      ),
-    );
+    return const EnrolledCoursesScreen();
   }
 
   Widget _buildCertificatesScreen() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Certificates')),
-      body: const Center(
-        child: Text('Your certificates'),
-      ),
-    );
+    return const CertificatesScreen();
   }
 
   Widget _buildLearningPathScreen() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Learning Path')),
-      body: const Center(
-        child: Text('Your learning path'),
-      ),
-    );
+    return const LearningPathScreen();
   }
 
   Widget _buildSettingsScreen() {

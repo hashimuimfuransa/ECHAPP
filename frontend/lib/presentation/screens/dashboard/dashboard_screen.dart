@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 import 'package:excellence_coaching_hub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
+import 'package:excellence_coaching_hub/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/courses/course_detail_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/categories/categories_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -85,6 +89,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
                               ),
                               
+                              const SizedBox(height: 25),
+                              
+                              // My Wishlist Section
+                              _buildWishlistSection(context),
+                              
                               // Add some bottom padding
                               const SizedBox(height: 40),
                             ],
@@ -146,6 +155,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         loading: () => _buildLoadingCard(context, 'Popular Courses'),
                         error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
                       ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // My Wishlist Section
+                      _buildWishlistSection(context),
                       
                       // Add some bottom padding to ensure content isn't cut off
                       const SizedBox(height: 20),
@@ -1799,5 +1813,271 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   void _navigateToCategories(BuildContext context) {
     context.push('/categories');
+  }
+
+  Widget _buildWishlistSection(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final wishlistAsync = ref.watch(wishlistProvider);
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'My Wishlist',
+              style: TextStyle(
+                color: AppTheme.blackColor,
+                fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 15),
+            wishlistAsync.when(
+              data: (courses) {
+                if (courses.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.bookmark_border,
+                          size: 48,
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Your wishlist is empty',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Start adding courses you\'re interested in',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Navigate to courses screen
+                            Navigator.push(
+                              context, 
+                              MaterialPageRoute(
+                                builder: (context) => const CategoriesScreen()
+                              )
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Browse Courses'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                // Show preview of wishlist courses
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor.withOpacity(0.1),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Header with view all button
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Saved Courses (${courses.length})',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const WishlistScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'View All',
+                                style: TextStyle(
+                                  color: AppTheme.primaryGreen,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Course previews
+                      SizedBox(
+                        height: 120,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: courses.length,
+                          itemBuilder: (context, index) {
+                            final course = courses[index];
+                            return _buildWishlistCoursePreview(context, course, ref);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => _buildLoadingCard(context, 'My Wishlist'),
+              error: (error, stack) => _buildErrorCard(context, 'My Wishlist', error.toString()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWishlistCoursePreview(BuildContext context, Course course, WidgetRef ref) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CourseDetailScreen(courseId: course.id),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Course thumbnail
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(course.thumbnail!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: course.thumbnail == null || course.thumbnail!.isEmpty
+                  ? Icon(
+                      Icons.play_circle_outline,
+                      color: Colors.grey[400],
+                      size: 24,
+                    )
+                  : null,
+            ),
+            // Course info
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    course.title ?? 'Untitled Course',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.blackColor,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'by ${course.createdBy.fullName}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: course.price == 0 ? Colors.green : AppTheme.blackColor,
+                        ),
+                      ),
+                      // Remove button
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                        ),
+                        onPressed: () {
+                          final wishlistNotifier = ref.read(wishlistNotifierProvider.notifier);
+                          wishlistNotifier.removeCourse(course.id);
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

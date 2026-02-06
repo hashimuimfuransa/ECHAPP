@@ -4,7 +4,10 @@ const {
   enrollInCourse,
   getMyCourses,
   getEnrollmentProgress,
-  updateEnrollmentProgress
+  updateEnrollmentProgress,
+  getCertificates,
+  checkCertificateEligibility,
+  downloadCertificate
 } = require('../controllers/enrollment.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -13,5 +16,10 @@ router.post('/', protect, enrollInCourse);
 router.get('/my-courses', protect, getMyCourses);
 router.get('/:id/progress', protect, getEnrollmentProgress);
 router.put('/:id/progress', protect, updateEnrollmentProgress);
+
+// Certificate routes
+router.get('/certificates', protect, getCertificates);
+router.get('/:courseId/certificate-eligibility', protect, checkCertificateEligibility);
+router.get('/:courseId/certificate/download', protect, downloadCertificate);
 
 module.exports = router;

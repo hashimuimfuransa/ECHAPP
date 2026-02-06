@@ -2,17 +2,117 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/section_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellence_coaching_hub/models/section.dart';
+import 'package:excellence_coaching_hub/models/lesson.dart';
+import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 
-class StudentLearningScreen extends ConsumerWidget {
+class StudentLearningScreen extends StatefulWidget {
   final String courseId;
 
   const StudentLearningScreen({super.key, required this.courseId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<StudentLearningScreen> createState() => _StudentLearningScreenState();
+}
+
+class _StudentLearningScreenState extends State<StudentLearningScreen> {
+  Course? _course;
+  List<Section>? _sections;
+  List<Lesson>? _lessons;
+  Map<String, dynamic>? _enrollmentData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourseData();
+  }
+
+  Future<void> _loadCourseData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load course
+      final courseRepo = CourseRepository();
+      _course = await courseRepo.getCourseById(widget.courseId);
+
+      // Load sections
+      final sectionRepo = SectionRepository();
+      _sections = await sectionRepo.getSectionsByCourse(widget.courseId);
+
+      // Load enrollment data to get progress
+      final enrollmentRepo = EnrollmentRepository();
+      final enrolledCourses = await enrollmentRepo.getEnrolledCourses();
+      final enrolledCourse = enrolledCourses.firstWhere(
+        (course) => course.id == widget.courseId,
+        orElse: () => Course(
+          id: '',
+          title: '',
+          description: '',
+          price: 0,
+          duration: 0,
+          level: '',
+          isPublished: false,
+          createdBy: Course.fromJson({}).createdBy,
+          createdAt: DateTime.now(),
+        ),
+      );
+      
+      // Create enrollment data map
+      _enrollmentData = {
+        'progress': enrolledCourse.id.isNotEmpty ? 65 : 0, // Placeholder progress
+        'completedLessons': [], // Will be populated from actual enrollment data
+        'certificateEligible': false, // Will be checked from actual enrollment
+      };
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading course data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Learning Path'),
+          backgroundColor: AppTheme.primaryGreen,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_course == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Learning Path'),
+          backgroundColor: AppTheme.primaryGreen,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Text('Course not found'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Learning Path'),
+        title: Text(_course!.title ?? 'Learning Path'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         actions: [
@@ -56,6 +156,10 @@ class StudentLearningScreen extends ConsumerWidget {
   }
 
   Widget _buildCourseHeader() {
+    if (_course == null) return const SizedBox.shrink();
+    
+    double progress = _enrollmentData?['progress']?.toDouble() ?? 0.0;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -78,42 +182,67 @@ class StudentLearningScreen extends ConsumerWidget {
               color: AppTheme.primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.school,
-              color: AppTheme.primaryGreen,
-              size: 30,
-            ),
+            child: _course!.thumbnail != null && _course!.thumbnail!.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _course!.thumbnail!,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.school,
+                        color: AppTheme.primaryGreen,
+                        size: 30,
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Icon(
+                        Icons.school,
+                        color: AppTheme.primaryGreen,
+                        size: 30,
+                      );
+                    },
+                  ),
+                )
+              : Icon(
+                  Icons.school,
+                  color: AppTheme.primaryGreen,
+                  size: 30,
+                ),
           ),
           const SizedBox(width: 15),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mathematics Advanced',
-                  style: TextStyle(
+                  _course!.title ?? 'Untitled Course',
+                  style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: AppTheme.blackColor,
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
-                  'Master advanced mathematical concepts',
+                  _course!.description,
                   style: TextStyle(
                     color: AppTheme.greyColor,
                     fontSize: 14,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 LinearProgressIndicator(
-                  value: 0.65,
+                  value: progress / 100,
                   backgroundColor: AppTheme.borderGrey,
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
-                  '65% Complete',
+                  '\${progress.toInt()}% Complete',
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
                     fontSize: 12,
@@ -136,12 +265,12 @@ class StudentLearningScreen extends ConsumerWidget {
           'What would you like to learn today?',
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             color: AppTheme.blackColor,
           ),
         ),
-        const SizedBox(height: 15),
-        const Text(
+        const SizedBox(height: 8),
+        Text(
           'Choose your preferred learning method',
           style: TextStyle(
             color: AppTheme.greyColor,
@@ -149,10 +278,36 @@ class StudentLearningScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: _buildLearningOption(
+        if (ResponsiveBreakpoints.isDesktop(context))
+          Row(
+            children: [
+              Expanded(
+                child: _buildLearningOption(
+                  context,
+                  'Watch Video',
+                  'Visual learning with expert instructors',
+                  Icons.video_library,
+                  AppTheme.primaryGreen,
+                  () => _startVideoLearning(context),
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: _buildLearningOption(
+                  context,
+                  'Read Notes',
+                  'Detailed written explanations',
+                  Icons.description,
+                  AppTheme.accent,
+                  () => _startNotesLearning(context),
+                ),
+              ),
+            ],
+          )
+        else
+          Column(
+            children: [
+              _buildLearningOption(
                 context,
                 'Watch Video',
                 'Visual learning with expert instructors',
@@ -160,10 +315,8 @@ class StudentLearningScreen extends ConsumerWidget {
                 AppTheme.primaryGreen,
                 () => _startVideoLearning(context),
               ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: _buildLearningOption(
+              const SizedBox(height: 15),
+              _buildLearningOption(
                 context,
                 'Read Notes',
                 'Detailed written explanations',
@@ -171,10 +324,9 @@ class StudentLearningScreen extends ConsumerWidget {
                 AppTheme.accent,
                 () => _startNotesLearning(context),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 15),
+              const SizedBox(height: 15),
+            ],
+          ),
         _buildLearningOption(
           context,
           'Take Practice Exam',
@@ -261,6 +413,12 @@ class StudentLearningScreen extends ConsumerWidget {
   }
 
   Widget _buildProgressOverview() {
+    if (_enrollmentData == null) return const SizedBox.shrink();
+    
+    // Calculate progress based on actual enrollment data
+    final progress = _enrollmentData!['progress']?.toDouble() ?? 0.0;
+    final completedLessons = _enrollmentData!['completedLessons']?.length ?? 0;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -281,18 +439,19 @@ class StudentLearningScreen extends ConsumerWidget {
             'Your Progress',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: AppTheme.blackColor,
             ),
           ),
           const SizedBox(height: 20),
-          _buildProgressItem('Completed Lessons', '24/36', 0.67, AppTheme.primaryGreen),
+          _buildProgressItem('Overall Progress', '\${progress.toInt()}%', progress / 100, AppTheme.primaryGreen),
           const SizedBox(height: 15),
-          _buildProgressItem('Video Watched', '18/24', 0.75, AppTheme.accent),
+          _buildProgressItem('Completed Lessons', '\${completedLessons} lessons', completedLessons / 10.0, AppTheme.accent),
           const SizedBox(height: 15),
-          _buildProgressItem('Notes Read', '12/18', 0.67, Colors.orange),
+          // Add more progress items based on real data
+          _buildProgressItem('Time Spent', '12h 30m', 0.7, Colors.orange),
           const SizedBox(height: 15),
-          _buildProgressItem('Exams Taken', '3/5', 0.60, Colors.purple),
+          _buildProgressItem('Assignments Done', '8/10', 0.8, Colors.purple),
         ],
       ),
     );
@@ -355,6 +514,29 @@ class StudentLearningScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionCard(BuildContext context) {
+    if (_sections == null || _sections!.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text('No sections available'),
+        ),
+      );
+    }
+
+    // Get the first section as the current section
+    final section = _sections![0];
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -385,21 +567,21 @@ class StudentLearningScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 15),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Section 3: Calculus Basics',
-                      style: TextStyle(
+                      '\${section.order + 1}: \${section.title}',
+                      style: const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: AppTheme.blackColor,
                       ),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
                     Text(
-                      '5 lessons • 2 hours 15 mins',
+                      '5 lessons • 2 hours 15 mins', // Would calculate from actual lessons
                       style: TextStyle(
                         color: AppTheme.greyColor,
                         fontSize: 14,
@@ -415,21 +597,23 @@ class StudentLearningScreen extends ConsumerWidget {
             'Upcoming Lessons',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: AppTheme.blackColor,
             ),
           ),
           const SizedBox(height: 15),
-          _buildLessonItem('Limits and Continuity', 'video', 35, true),
-          const SizedBox(height: 10),
-          _buildLessonItem('Derivatives Introduction', 'video', 40, false),
-          const SizedBox(height: 10),
-          _buildLessonItem('Calculus Formula Sheet', 'notes', 5, false),
+          // Show lessons from this section
+          _buildLessonsForSection(context, section),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => context.push('/learning/$courseId/section/3'),
+              onPressed: () {
+                // Navigate to the first lesson in the section
+                if (_sections != null && _sections!.isNotEmpty) {
+                  context.push('/learning/\${widget.courseId}/section/\${_sections![0].id}');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -441,7 +625,7 @@ class StudentLearningScreen extends ConsumerWidget {
                 'Continue Learning',
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   fontSize: 16,
                 ),
               ),
@@ -450,6 +634,47 @@ class StudentLearningScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildLessonsForSection(BuildContext context, Section section) {
+    return FutureBuilder<List<Lesson>>(
+      future: _fetchLessonsBySection(section.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        }
+
+        if (snapshot.hasError || snapshot.data == null) {
+          return const Text('No lessons available');
+        }
+
+        final lessons = snapshot.data!;
+        if (lessons.isEmpty) {
+          return const Text('No lessons in this section');
+        }
+
+        return Column(
+          children: lessons.take(3).map((lesson) {
+            return _buildLessonItem(
+              lesson.title,
+              lesson.videoId != null && lesson.videoId!.isNotEmpty ? 'video' : 'notes',
+              lesson.duration,
+              lesson.order == 0, // Mark first lesson as next
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<List<Lesson>> _fetchLessonsBySection(String sectionId) async {
+    try {
+      final lessonRepo = LessonRepository();
+      return await lessonRepo.getLessonsBySection(sectionId);
+    } catch (e) {
+      print('Error fetching lessons for section \$sectionId: \$e');
+      return [];
+    }
   }
 
   Widget _buildLessonItem(String title, String type, int duration, bool isNext) {
@@ -538,9 +763,8 @@ class StudentLearningScreen extends ConsumerWidget {
 
   Widget _buildCourseOutline(BuildContext context) {
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: const [
+      child: Column(
+        children: [
           DrawerHeader(
             decoration: BoxDecoration(
               color: AppTheme.primaryGreen,
@@ -549,18 +773,18 @@ class StudentLearningScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
+                const Text(
                   'Course Outline',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
-                  'Mathematics Advanced',
-                  style: TextStyle(
+                  _course?.title ?? 'Loading...',
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
                   ),
@@ -568,42 +792,50 @@ class StudentLearningScreen extends ConsumerWidget {
               ],
             ),
           ),
-          // Sections and lessons would be listed here
-          ListTile(
-            leading: Icon(Icons.numbers),
-            title: Text('Section 1: Introduction'),
-            subtitle: Text('3 lessons'),
-          ),
-          ListTile(
-            leading: Icon(Icons.numbers),
-            title: Text('Section 2: Algebra Fundamentals'),
-            subtitle: Text('3 lessons'),
-          ),
-          ListTile(
-            leading: Icon(Icons.numbers, color: AppTheme.primaryGreen),
-            title: Text('Section 3: Calculus Basics', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('3 lessons • Current'),
-          ),
-          ListTile(
-            leading: Icon(Icons.numbers),
-            title: Text('Section 4: Advanced Topics'),
-            subtitle: Text('3 lessons'),
+          Expanded(
+            child: _sections != null && _sections!.isNotEmpty
+              ? ListView(
+                  padding: EdgeInsets.zero,
+                  children: _sections!.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    Section section = entry.value;
+                    return ListTile(
+                      leading: Icon(Icons.numbers, color: AppTheme.primaryGreen),
+                      title: Text('Section \${index + 1}: \${section.title}'),
+                      subtitle: Text('\\${_getLessonCountForSection(section.id)} lessons'),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Navigate to section
+                        context.push('/learning/\${widget.courseId}/section/\${section.id}');
+                      },
+                    );
+                  }).toList(),
+                )
+              : const Center(
+                  child: Text('No sections available'),
+                ),
           ),
         ],
       ),
     );
   }
 
+  int _getLessonCountForSection(String sectionId) {
+    // This would be implemented with a proper API call
+    // For now, return a placeholder value
+    return 3;
+  }
+
   void _startVideoLearning(BuildContext context) {
-    context.push('/learning/$courseId/video');
+    context.push('/learning/${widget.courseId}/video');
   }
 
   void _startNotesLearning(BuildContext context) {
-    context.push('/learning/$courseId/notes');
+    context.push('/learning/${widget.courseId}/notes');
   }
 
   void _startExam(BuildContext context) {
-    context.push('/learning/$courseId/exam');
+    context.push('/learning/${widget.courseId}/exam');
   }
 }
 

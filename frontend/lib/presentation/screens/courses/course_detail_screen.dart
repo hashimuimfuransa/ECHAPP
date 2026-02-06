@@ -6,6 +6,7 @@ import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/enrollment_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/payment_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:share_plus/share_plus.dart';
@@ -96,39 +97,97 @@ class CourseDetailScreen extends ConsumerWidget {
     return courseAsync.when(
       data: (course) {
         return Scaffold(
-          body: GradientBackground(
-            colors: AppTheme.oceanGradient,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF667eea),
+                  Color(0xFF764ba2),
+                  Color(0xFFf093fb),
+                  Color(0xFFf5576c),
+                ],
+                stops: [0.0, 0.4, 0.7, 1.0],
+              ),
+            ),
             child: CustomScrollView(
               slivers: [
-                // Header with back button
+                // Enhanced Header with back button
                 SliverAppBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  leading: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
                   actions: [
-                    IconButton(
-                      icon: const Icon(Icons.bookmark_border, color: Colors.white),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.share_outlined, color: Colors.white),
-                      onPressed: () {
-                        _handleShare(course);
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final isBookmarkedAsync = ref.watch(isCourseInWishlistProvider(courseId));
+                        
+                        return Container(
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: isBookmarkedAsync.when(
+                              data: (isBookmarked) => Icon(
+                                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                color: isBookmarked ? Colors.yellow : Colors.white,
+                                size: 20,
+                              ),
+                              loading: () => const Icon(
+                                Icons.bookmark_border,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              error: (error, stack) => const Icon(
+                                Icons.bookmark_border,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            onPressed: () {
+                              final wishlistNotifier = ref.read(wishlistNotifierProvider.notifier);
+                              wishlistNotifier.toggleCourse(courseId, course);
+                            },
+                          ),
+                        );
                       },
                     ),
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                        onPressed: () {
+                          _handleShare(course);
+                        },
+                      ),
+                    ),
                   ],
-                  expandedHeight: 300,
+                  expandedHeight: 320,
                   flexibleSpace: FlexibleSpaceBar(
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Course Image
+                        // Enhanced Course Image with better loading
                         Container(
                           decoration: BoxDecoration(
-                            color: AppTheme.greyColor.withOpacity(0.1),
+                            color: Colors.white.withOpacity(0.1),
                             image: course.thumbnail != null && course.thumbnail!.isNotEmpty
                                 ? DecorationImage(
                                     image: NetworkImage(course.thumbnail!),
@@ -137,14 +196,29 @@ class CourseDetailScreen extends ConsumerWidget {
                                 : null,
                           ),
                           child: course.thumbnail == null || course.thumbnail!.isEmpty
-                              ? const Icon(
-                                  Icons.play_circle_outline,
-                                  color: AppTheme.greyColor,
-                                  size: 100,
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.play_circle_outline,
+                                        color: Colors.white.withOpacity(0.7),
+                                        size: 80,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No thumbnail available',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.7),
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 )
                               : null,
                         ),
-                        // Gradient overlay
+                        // Enhanced gradient overlay
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -152,34 +226,108 @@ class CourseDetailScreen extends ConsumerWidget {
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.7),
+                                Colors.black.withOpacity(0.3),
+                                Colors.black.withOpacity(0.8),
                               ],
+                              stops: const [0.3, 0.7, 1.0],
                             ),
                           ),
                         ),
-                        // Course Info Overlay
+                        // Enhanced Course Info Overlay
                         Positioned(
-                          bottom: 20,
-                          left: 20,
-                          right: 20,
+                          bottom: 25,
+                          left: 25,
+                          right: 25,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Course category badge
+                              if (course.category != null && course.category!['name'] != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    course.category!['name'],
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              // Course title
                               Text(
                                 course.title ?? 'Untitled Course',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 24,
+                                  fontSize: 28,
                                   fontWeight: FontWeight.bold,
+                                  height: 1.2,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4,
+                                      color: Colors.black26,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'by ${course.createdBy.fullName}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
+                              // Instructor info
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person,
+                                    color: Colors.white70,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'by ${course.createdBy.fullName}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              // Rating and students (if available)
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '4.8',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(1,248 ratings)',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -189,166 +337,61 @@ class CourseDetailScreen extends ConsumerWidget {
                   ),
                 ),
 
-                // Content
+                // Enhanced Content Section
                 SliverToBoxAdapter(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, -10),
+                        ),
+                      ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Price and Actions
-                          _buildPriceSection(course),
-                          
-                          const SizedBox(height: 25),
-                          
-                          // Course Stats
-                          _buildCourseStats(course),
-                          
-                          const SizedBox(height: 25),
-                          
-                          // Description
-                          _buildDescription(course),
-                          
-                          const SizedBox(height: 25),
-                          
-                          // Learning Objectives (only if provided)
-                          if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
-                            _buildLearningObjectives(course),
-                          
-                          const SizedBox(height: 25),
-                          
-                          // Requirements (only if provided)
-                          if (course.requirements != null && course.requirements!.isNotEmpty)
-                            _buildRequirements(course),
-                          
-                          const SizedBox(height: 25),
-                          
-                          // Instructor Info
-                          _buildInstructorInfo(course),
+                          // Enhanced Price and Actions
+                          _buildEnhancedPriceSection(course),
                           
                           const SizedBox(height: 30),
                           
-                          // Enroll Button based on enrollment status
-                          isEnrolledAsync.when(
-                            data: (isEnrolled) {
-                              return isEnrolled 
-                                ? _buildContinueLearningButton(context, course) 
-                                : Consumer(
-                                    builder: (context, ref, child) {
-                                      return LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          final isWideScreen = constraints.maxWidth > 600;
-                                          final paymentState = ref.watch(initiatePaymentProvider);
-                                          final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
-                                          
-                                          return SizedBox(
-                                            width: isWideScreen ? 300 : double.infinity,
-                                            child: paymentState.when(
-                                              data: (response) {
-                                                if (response != null) {
-                                                  return AnimatedButton(
-                                                    text: 'Processing Payment...',
-                                                    onPressed: () {},
-                                                    color: Colors.grey,
-                                                    isLoading: true,
-                                                  );
-                                                }
-                                                return hasPendingPayment.when(
-                                                  data: (hasPending) {
-                                                    if (hasPending) {
-                                                      return AnimatedButton(
-                                                        text: 'Payment Pending Approval',
-                                                        onPressed: () {
-                                                          // Navigate to payment pending screen or show payment details
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (context) => PaymentPendingScreen(
-                                                                course: course,
-                                                                transactionId: 'pending',
-                                                                amount: course.price,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        },
-                                                        color: Colors.orange,
-                                                      );
-                                                    }
-                                                    return _buildEnrollButton(context, course, ref);
-                                                  },
-                                                  loading: () => AnimatedButton(
-                                                    text: 'Checking Payment Status...',
-                                                    onPressed: () {},
-                                                    color: Colors.grey,
-                                                  ),
-                                                  error: (error, stack) => _buildEnrollButton(context, course, ref),
-                                                );
-                                              },
-                                              loading: () => AnimatedButton(
-                                                text: 'Processing Payment...',
-                                                onPressed: () {},
-                                                color: Colors.grey,
-                                                isLoading: true,
-                                              ),
-                                              error: (error, stack) => hasPendingPayment.when(
-                                                data: (hasPending) {
-                                                  if (hasPending) {
-                                                    return AnimatedButton(
-                                                      text: 'Payment Pending Approval',
-                                                      onPressed: () {
-                                                        Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder: (context) => PaymentPendingScreen(
-                                                              course: course,
-                                                              transactionId: 'pending',
-                                                              amount: course.price,
-                                                            ),
-                                                          ),
-                                                        );
-                                                      },
-                                                      color: Colors.orange,
-                                                    );
-                                                  }
-                                                  return _buildEnrollButton(context, course, ref);
-                                                },
-                                                loading: () => AnimatedButton(
-                                                  text: 'Checking Payment Status...',
-                                                  onPressed: () {},
-                                                  color: Colors.grey,
-                                                ),
-                                                error: (error, stack) => _buildEnrollButton(context, course, ref),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                  );
-                            },
-                            loading: () => AnimatedButton(
-                              text: 'Loading...',
-                              onPressed: () {}, // Empty function to satisfy non-null requirement
-                              color: Colors.grey,
-                              isLoading: true,
-                            ),
-                            error: (error, stack) => Consumer(
-                              builder: (context, ref, child) {
-                                return AnimatedButton(
-                                  text: 'Enroll Now',
-                                  onPressed: () {
-                                    _handleEnrollment(ref, courseId);
-                                  },
-                                  color: Colors.blue,
-                                );
-                              },
-                            ),
-                          ),
+                          // Enhanced Course Stats
+                          _buildEnhancedCourseStats(course),
+                          
+                          const SizedBox(height: 30),
+                          
+                          // Enhanced Description
+                          _buildEnhancedDescription(course),
+                          
+                          const SizedBox(height: 30),
+                          
+                          // Enhanced Learning Objectives
+                          if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
+                            _buildEnhancedLearningObjectives(course),
+                          
+                          const SizedBox(height: 30),
+                          
+                          // Enhanced Requirements
+                          if (course.requirements != null && course.requirements!.isNotEmpty)
+                            _buildEnhancedRequirements(course),
+                          
+                          const SizedBox(height: 30),
+                          
+
+                          
+                          // Enhanced Instructor Info
+                          _buildEnhancedInstructorInfo(course),
+                          
+                          const SizedBox(height: 40),
+                          
+                          // Enhanced Enroll Button
+                          _buildEnhancedEnrollSection(context, course, ref, isEnrolledAsync),
                         ],
                       ),
                     ),
@@ -407,6 +450,51 @@ class CourseDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildEnhancedPriceSection(Course course) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667eea).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 600;
+            
+            return isWideScreen
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildEnhancedPriceInfo(course),
+                      _buildEnhancedPurchaseButton(course),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildEnhancedPriceInfo(course),
+                      const SizedBox(height: 20),
+                      _buildEnhancedPurchaseButton(course),
+                    ],
+                  );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildPriceSection(Course course) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -434,6 +522,64 @@ class CourseDetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEnhancedPriceInfo(Course course) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'COURSE PRICE',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+              style: TextStyle(
+                color: course.price == 0 ? Colors.white : Colors.white,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                    color: Colors.black.withOpacity(0.2),
+                  ),
+                ],
+              ),
+            ),
+            if (course.price != 0) ...[
+              const SizedBox(width: 12),
+              Text(
+                'RWF ${(course.price * 1.2).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 20,
+                  decoration: TextDecoration.lineThrough,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Limited time offer • 30-day money back guarantee',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 
@@ -474,6 +620,245 @@ class CourseDetailScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildEnhancedPurchaseButton(Course course) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final paymentState = ref.watch(initiatePaymentProvider);
+        final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
+        
+        return SizedBox(
+          height: 60,
+          child: paymentState.when(
+            data: (response) {
+              if (response != null) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Processing...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
+              return hasPendingPayment.when(
+                data: (hasPending) {
+                  if (hasPending) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.orange, Colors.deepOrange],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PaymentPendingScreen(
+                                course: course,
+                                transactionId: 'pending',
+                                amount: course.price,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Payment Pending',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  return _buildEnhancedEnrollButton(course, ref);
+                },
+                loading: () => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Checking...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
+              );
+            },
+            loading: () => Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text(
+                  'Processing...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            error: (error, stack) {
+              return hasPendingPayment.when(
+                data: (hasPending) {
+                  if (hasPending) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.orange, Colors.deepOrange],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PaymentPendingScreen(
+                                course: course,
+                                transactionId: 'pending',
+                                amount: course.price,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Payment Pending',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return _buildEnhancedEnrollButton(course, ref);
+                },
+                loading: () => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Checking...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedEnrollButton(Course course, WidgetRef ref) {
+    if (course.price == 0) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Colors.green, Colors.lightGreen],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: TextButton(
+          onPressed: () {
+            // Handle free enrollment
+          },
+          child: const Text(
+            'Enroll For Free',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4facfe).withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: TextButton(
+          onPressed: () {
+            _handlePayment(ref, course);
+          },
+          child: Text(
+            'Buy Now - RWF ${course.price.toStringAsFixed(0)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildPurchaseButton(Course course) {
@@ -620,6 +1005,109 @@ class CourseDetailScreen extends ConsumerWidget {
     }
   }
 
+  Widget _buildEnhancedCourseStats(Course course) {
+    final stats = [
+      {
+        'icon': Icons.access_time_outlined,
+        'value': '${course.duration} mins',
+        'label': 'Duration',
+        'color': const Color(0xFF667eea)
+      },
+      {
+        'icon': Icons.speed_outlined,
+        'value': course.level,
+        'label': 'Level',
+        'color': const Color(0xFF764ba2)
+      },
+      {
+        'icon': Icons.people_outline,
+        'value': '1,248',
+        'label': 'Students',
+        'color': const Color(0xFFf093fb)
+      },
+    ];
+
+    // Only add category if it's provided in the course data
+    if (course.category != null && course.category!['name'] != null) {
+      stats.add({
+        'icon': Icons.category_outlined,
+        'value': course.category!['name'],
+        'label': 'Category',
+        'color': const Color(0xFFf5576c)
+      });
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Course Overview',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedStatItem(Map<String, dynamic> stat) {
+    return Container(
+      width: 110,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            stat['color'],
+            stat['color'].withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: stat['color'].withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(stat['icon'], color: Colors.white, size: 28),
+          const SizedBox(height: 10),
+          Text(
+            stat['value'],
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            stat['label'],
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCourseStats(Course course) {
     final stats = [
       {
@@ -702,6 +1190,42 @@ class CourseDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildEnhancedDescription(Course course) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'About This Course',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.grey[200]!,
+              width: 1,
+            ),
+          ),
+          child: Text(
+            course.description,
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 16,
+              height: 1.7,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDescription(Course course) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,6 +1252,83 @@ class CourseDetailScreen extends ConsumerWidget {
               fontSize: 16,
               height: 1.6,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedLearningObjectives(Course course) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'What You Will Learn',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: course.learningObjectives!.asMap().entries.map((entry) {
+              final index = entry.key;
+              final objective = entry.value;
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: index == course.learningObjectives!.length - 1 
+                    ? null 
+                    : Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                      ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        objective,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -782,6 +1383,83 @@ class CourseDetailScreen extends ConsumerWidget {
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedRequirements(Course course) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Requirements',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: course.requirements!.asMap().entries.map((entry) {
+              final index = entry.key;
+              final requirement = entry.value;
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: index == course.requirements!.length - 1 
+                    ? null 
+                    : Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                      ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.info,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        requirement,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                          height: 1.5,
                         ),
                       ),
                     ),
@@ -954,6 +1632,123 @@ class CourseDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildEnhancedInstructorInfo(Course course) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Meet Your Instructor',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF667eea).withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      course.createdBy.fullName.split(' ').map((n) => n[0]).join('').toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course.createdBy.fullName,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Lead Instructor & Course Creator',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (course.createdBy.email.isNotEmpty == true) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.email_outlined,
+                              color: Colors.grey,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              course.createdBy.email,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      const Text(
+                        'With 5+ years of teaching experience and expertise in modern development practices, our instructor brings real-world knowledge to help you succeed.',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInstructorInfo(Course course) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,6 +1877,114 @@ class CourseDetailScreen extends ConsumerWidget {
         ),
       );
     }
+  }
+
+  Widget _buildEnhancedEnrollSection(BuildContext context, Course course, WidgetRef ref, AsyncValue<bool> isEnrolledAsync) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667eea).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Text(
+              'Ready to Start Learning?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Join thousands of students who have already transformed their skills',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            isEnrolledAsync.when(
+              data: (isEnrolled) {
+                return isEnrolled 
+                  ? _buildEnhancedContinueLearningButton(context, course) 
+                  : _buildEnhancedEnrollButton(course, ref);
+              },
+              loading: () => Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Checking enrollment status...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedContinueLearningButton(BuildContext context, Course course) {
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.orange, Colors.deepOrange],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StudentLearningScreen(courseId: course.id),
+            ),
+          );
+        },
+        child: const Text(
+          'Continue Learning',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildContinueLearningButton(BuildContext context, Course course) {

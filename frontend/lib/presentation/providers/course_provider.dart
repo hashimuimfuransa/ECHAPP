@@ -3,6 +3,8 @@ import 'package:excellence_coaching_hub/data/repositories/course_repository.dart
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
 import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/category_repository.dart';
+import 'package:excellence_coaching_hub/models/category.dart';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
@@ -47,6 +49,16 @@ final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
 final allCategoriesProvider = Provider<List<dynamic>>((ref) {
   // Note: This returns the mock categories for now, but could be updated to fetch from backend
   return CategoriesService.getAllCategories();
+});
+
+// Backend category providers
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  return CategoryRepository();
+});
+
+final backendCategoriesProvider = FutureProvider<List<Category>>((ref) async {
+  final repository = ref.read(categoryRepositoryProvider);
+  return await repository.getAllCategories();
 });
 
 final popularCategoriesProvider = Provider<List<dynamic>>((ref) {

@@ -128,9 +128,96 @@ const updateEnrollmentProgress = async (req, res) => {
   }
 };
 
+// Get user's certificates
+const getCertificates = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const enrollments = await Enrollment.find({ 
+      userId, 
+      certificateEligible: true 
+    })
+      .populate({
+        path: 'courseId',
+        select: 'title description duration level thumbnail isPublished createdBy',
+        populate: {
+          path: 'createdBy',
+          select: 'fullName'
+        }
+      })
+      .sort({ updatedAt: -1 });
+
+    sendSuccess(res, enrollments, 'Certificates retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve certificates', 500, error.message);
+  }
+};
+
+// Check if user is eligible for certificate for a specific course
+const checkCertificateEligibility = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+    
+    const enrollment = await Enrollment.findOne({ 
+      userId, 
+      courseId 
+    });
+    
+    if (!enrollment) {
+      return sendNotFound(res, 'Enrollment not found');
+    }
+    
+    const isEligible = enrollment.certificateEligible && enrollment.completionStatus === 'completed';
+    
+    sendSuccess(res, { 
+      eligible: isEligible,
+      completionStatus: enrollment.completionStatus,
+      progress: enrollment.progress,
+      certificateEligible: enrollment.certificateEligible
+    }, 'Certificate eligibility checked successfully');
+  } catch (error) {
+    sendError(res, 'Failed to check certificate eligibility', 500, error.message);
+  }
+};
+
+// Download certificate for a course (placeholder)
+const downloadCertificate = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+    
+    const enrollment = await Enrollment.findOne({ 
+      userId, 
+      courseId,
+      certificateEligible: true
+    }).populate('courseId', 'title');
+    
+    if (!enrollment) {
+      return sendNotFound(res, 'Certificate not found or not eligible');
+    }
+    
+    // In a real implementation, this would generate and return a PDF certificate
+    // For now, we'll return a placeholder download URL
+    const downloadUrl = `${req.protocol}://${req.get('host')}/api/enrollments/${courseId}/certificate/download/file`;
+    
+    sendSuccess(res, { 
+      downloadUrl,
+      courseTitle: enrollment.courseId.title,
+      completionDate: enrollment.updatedAt,
+      studentName: req.user.fullName || req.user.email
+    }, 'Certificate download URL generated');
+  } catch (error) {
+    sendError(res, 'Failed to generate certificate download', 500, error.message);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
   getEnrollmentProgress,
-  updateEnrollmentProgress
+  updateEnrollmentProgress,
+  getCertificates,
+  checkCertificateEligibility,
+  downloadCertificate
 };
