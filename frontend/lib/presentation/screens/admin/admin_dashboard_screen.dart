@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/notification_provider.dart';
 import 'package:excellence_coaching_hub/services/admin_service.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -70,7 +71,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(adminDashboardProvider);
-    
+      
     // Load dashboard data only once when screen opens
     if (!_hasLoadedInitialData && dashboardState.stats == null && !dashboardState.isLoading) {
       _hasLoadedInitialData = true;
@@ -78,7 +79,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ref.read(adminDashboardProvider.notifier).loadDashboardData();
       });
     }
-    
+      
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
@@ -99,16 +100,111 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(adminDashboardProvider.notifier).loadDashboardData(),
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // Handle notifications
+          Consumer(
+            builder: (context, ref, child) {
+              final notificationState = ref.watch(notificationProvider);
+              final unreadCount = notificationState.notifications.where((n) => !n.isRead).length;
+              
+              return IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined, size: 24),
+                    // Notification badge - show if there are unread notifications
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  // Handle notifications
+                  _showNotificationCenter(context);
+                },
+              );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            onPressed: () {
-              // Handle profile
+          // Profile menu with popup options
+          Consumer(
+            builder: (context, ref, child) {
+              final user = ref.watch(authProvider).user;
+              return PopupMenuButton(
+                icon: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppTheme.primaryGreen,
+                  child: Text(
+                    user?.fullName.substring(0, 1).toUpperCase() ?? 'A',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                color: AppTheme.whiteColor,
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    _showLogoutDialog(context);
+                  }
+                },
+                itemBuilder: (context) {
+                  return <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      child: const Row(
+                        children: [
+                          Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
+                          SizedBox(width: 10),
+                          Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
+                        ],
+                      ),
+                      onTap: () => context.push('/profile'),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'settings',
+                      child: const Row(
+                        children: [
+                          Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
+                          SizedBox(width: 10),
+                          Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
+                        ],
+                      ),
+                      onTap: () => context.push('/settings'),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, color: Colors.red, size: 18),
+                          SizedBox(width: 10),
+                          Text('Logout', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+              );
             },
           ),
         ],
@@ -117,7 +213,268 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       body: _buildDashboardContent(context, ref, dashboardState),
     );
   }
-
+  
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.whiteColor,
+          title: const Text(
+            'Logout',
+            style: TextStyle(color: AppTheme.blackColor),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(color: AppTheme.greyColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppTheme.greyColor),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(authProvider.notifier).logout();
+                context.go('/login');
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _showNotificationCenter(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final notificationState = ref.watch(notificationProvider);
+            final notificationNotifier = ref.read(notificationProvider.notifier);
+              
+            // Load notifications when dialog opens
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (notificationState.notifications.isEmpty && !notificationState.isLoading) {
+                notificationNotifier.loadNotifications();
+              }
+            });
+              
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 400,
+                height: 500,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primaryGreen,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Notifications',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                      
+                    // Notifications list
+                    Expanded(
+                      child: notificationState.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : notificationState.error != null
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.error,
+                                    size: 60,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error loading notifications',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      notificationNotifier.loadNotifications();
+                                    },
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : notificationState.notifications.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_none,
+                                      size: 60,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'No new notifications',
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: notificationState.notifications.length,
+                                itemBuilder: (context, index) {
+                                  final notification = notificationState.notifications[index];
+                                  Color iconColor = Colors.grey;
+                                  switch (notification.type) {
+                                    case 'success':
+                                      iconColor = Colors.green;
+                                      break;
+                                    case 'info':
+                                      iconColor = AppTheme.primaryGreen;
+                                      break;
+                                    case 'achievement':
+                                      iconColor = Colors.orange;
+                                      break;
+                                    case 'warning':
+                                      iconColor = Colors.orange;
+                                      break;
+                                    case 'error':
+                                      iconColor = Colors.red;
+                                      break;
+                                    default:
+                                      iconColor = AppTheme.primaryGreen;
+                                  }
+                                    
+                                  String timeAgo = _getTimeAgo(notification.timestamp);
+                                    
+                                  return ListTile(
+                                    leading: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: iconColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        notification.type == 'success' ? Icons.payment : 
+                                        notification.type == 'info' ? Icons.person_add : 
+                                        notification.type == 'achievement' ? Icons.school : 
+                                        notification.type == 'warning' ? Icons.warning : 
+                                        notification.type == 'error' ? Icons.error : 
+                                        Icons.notifications,
+                                        color: iconColor,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      notification.title,
+                                      style: TextStyle(
+                                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                                      ),
+                                    ),
+                                    subtitle: Text(notification.message),
+                                    trailing: Text(
+                                      timeAgo,
+                                      style: const TextStyle(color: Colors.grey),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    onTap: () {
+                                      notificationNotifier.markAsRead(notification.id);
+                                    },
+                                    tileColor: notification.isRead ? null : Colors.grey[50],
+                                  );
+                                },
+                              ),
+                    ),
+                      
+                    // Footer with mark all as read
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: notificationState.notifications.isNotEmpty ? () {
+                          notificationNotifier.markAllAsRead();
+                        } : null,
+                        icon: const Icon(Icons.check, size: 16),
+                        label: const Text('Mark All as Read'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+    
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+      
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+  
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(

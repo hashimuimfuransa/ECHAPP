@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/presentation/providers/payment_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/course_payment_providers.dart';
 import 'package:excellence_coaching_hub/presentation/providers/enrollment_provider.dart';
+import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
 
 /// Utility class for handling smart course navigation
 /// Checks if user has pending payment and navigates accordingly
 class CourseNavigationUtils {
   /// Navigates to the appropriate screen based on payment status
   /// Priority order: 1. Already enrolled -> Continue Learning, 2. Pending payment -> Payment screen, 3. New course -> Course detail
+  /// After payment approval, automatically redirects to learning screen
   static Future<void> navigateToCourse(
     BuildContext context,
     WidgetRef ref,
     Course course,
   ) async {
     try {
-      print('Smart navigation for course: ${course.id} - ${course.title ?? "Untitled Course"}');
+      print('Smart navigation for course: ${course.id} - ${course.title}');
       
       // First check enrollment status (highest priority)
       final isEnrolled = await ref.read(isEnrolledInCourseProvider(course.id).future);
@@ -33,14 +36,28 @@ class CourseNavigationUtils {
       
       // If not enrolled, check for pending payments
       try {
-        final hasPendingPayment = await ref.read(hasPendingPaymentProvider(course.id).future);
-        print('Pending payment check result: $hasPendingPayment');
+        print('🔍 Checking for pending payments for course ID: ${course.id}');
+        final hasPendingPaymentFuture = ref.read(hasPendingPaymentProvider(course.id));
+        final hasPendingPayment = await hasPendingPaymentFuture;
+        print('✅ Pending payment check result: $hasPendingPayment');
         
-        if (hasPendingPayment) {
-          // Navigate to payment pending screen
+        if (hasPendingPayment == true) {
+          // Navigate to payment pending screen and start listener
           print('User has pending payment - navigating to payment screen');
           if (context.mounted) {
-            context.push('/payments/pending?courseId=${course.id}');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PaymentPendingScreen(
+                  course: course,
+                  transactionId: 'pending',
+                  amount: course.price,
+                ),
+              ),
+            ).then((_) {
+              // After returning from payment screen, check if enrolled
+              _checkPostPaymentStatus(context, ref, course);
+            });
           }
         } else {
           // Navigate to course detail screen
@@ -66,6 +83,34 @@ class CourseNavigationUtils {
     }
   }
   
+  /// Check enrollment status after returning from payment flow
+  static Future<void> _checkPostPaymentStatus(
+    BuildContext context,
+    WidgetRef ref,
+    Course course,
+  ) async {
+    try {
+      print('Checking post-payment status for course: ${course.id}');
+      final isEnrolled = await ref.read(isEnrolledInCourseProvider(course.id).future);
+      
+      if (isEnrolled && context.mounted) {
+        print('User is now enrolled after payment - redirecting to learning screen');
+        context.push('/learning/${course.id}');
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 Payment approved! Welcome to "${course.title}"'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error checking post-payment status: $e');
+    }
+  }
+  
   /// Alternative method that works with BuildContext
   static Future<void> navigateToCourseWithContext(
     BuildContext context,
@@ -73,11 +118,22 @@ class CourseNavigationUtils {
     Course course,
   ) async {
     try {
-      final hasPendingPayment = await ref.read(hasPendingPaymentProvider(course.id).future);
+      print('🔍 Checking for pending payments (context method) for course ID: ${course.id}');
+      final hasPendingPaymentFuture = ref.read(hasPendingPaymentProvider(course.id));
+      final hasPendingPayment = await hasPendingPaymentFuture;
       
-      if (hasPendingPayment) {
+      if (hasPendingPayment == true) {
         if (context.mounted) {
-          context.push('/payments/pending?courseId=${course.id}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentPendingScreen(
+                course: course,
+                transactionId: 'pending',
+                amount: course.price,
+              ),
+            ),
+          );
         }
       } else {
         if (context.mounted) {

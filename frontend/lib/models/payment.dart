@@ -1,3 +1,5 @@
+import 'payment_status.dart';
+
 class Payment {
   final String id;
   final String userId;
@@ -6,12 +8,16 @@ class Payment {
   final String currency;
   final String paymentMethod;
   final String transactionId;
-  final String status;
+  final PaymentStatus status;
   final String contactInfo;
   final DateTime? paymentDate;
   final PaymentAdminApproval? adminApproval;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Populated fields (optional)
+  final PaymentUser? user;
+  final PaymentCourse? course;
 
   Payment({
     required this.id,
@@ -27,6 +33,8 @@ class Payment {
     this.adminApproval,
     required this.createdAt,
     required this.updatedAt,
+    this.user,
+    this.course,
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) {
@@ -55,10 +63,10 @@ class Payment {
       userId: userIdValue,
       courseId: courseIdValue,
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? '',
+      currency: json['currency'] as String? ?? 'RWF',
       paymentMethod: json['paymentMethod'] as String? ?? '',
       transactionId: json['transactionId'] as String? ?? '',
-      status: json['status'] as String? ?? '',
+      status: PaymentStatus.fromString(json['status'] as String? ?? 'pending'),
       contactInfo: json['contactInfo'] as String? ?? '',
       paymentDate: json['paymentDate'] != null 
           ? DateTime.parse(json['paymentDate'].toString()) 
@@ -68,6 +76,12 @@ class Payment {
           : null,
       createdAt: DateTime.parse(json['createdAt']?.toString() ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(json['updatedAt']?.toString() ?? DateTime.now().toIso8601String()),
+      user: json['userId'] is Map<String, dynamic> 
+          ? PaymentUser.fromJson(json['userId'] as Map<String, dynamic>)
+          : null,
+      course: json['courseId'] is Map<String, dynamic>
+          ? PaymentCourse.fromJson(json['courseId'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -80,13 +94,70 @@ class Payment {
       'currency': currency,
       'paymentMethod': paymentMethod,
       'transactionId': transactionId,
-      'status': status,
+      'status': status.value,
       'contactInfo': contactInfo,
       'paymentDate': paymentDate?.toIso8601String(),
       'adminApproval': adminApproval?.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+
+  /// Get status display name
+  String get statusDisplayName => status.displayName;
+
+  /// Get status color
+  String get statusColor => status.color;
+
+  /// Check if payment can be cancelled
+  bool get canBeCancelled => status == PaymentStatus.pending;
+
+  /// Check if payment can be approved (admin)
+  bool get canBeApproved => status == PaymentStatus.pending || status == PaymentStatus.adminReview;
+
+  /// Check if payment is completed
+  bool get isCompleted => status == PaymentStatus.completed || status == PaymentStatus.approved;
+}
+
+/// Simplified user model for payment display
+class PaymentUser {
+  final String id;
+  final String fullName;
+  final String email;
+
+  PaymentUser({
+    required this.id,
+    required this.fullName,
+    required this.email,
+  });
+
+  factory PaymentUser.fromJson(Map<String, dynamic> json) {
+    return PaymentUser(
+      id: (json['id'] as String?) ?? (json['_id'] as String?) ?? '',
+      fullName: json['fullName'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+    );
+  }
+}
+
+/// Simplified course model for payment display
+class PaymentCourse {
+  final String id;
+  final String title;
+  final double price;
+
+  PaymentCourse({
+    required this.id,
+    required this.title,
+    required this.price,
+  });
+
+  factory PaymentCourse.fromJson(Map<String, dynamic> json) {
+    return PaymentCourse(
+      id: (json['id'] as String?) ?? (json['_id'] as String?) ?? '',
+      title: json['title'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+    );
   }
 }
 

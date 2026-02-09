@@ -18,19 +18,26 @@ class ApiClient {
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       print('ApiClient: Current user: ${user?.uid ?? 'null'}');
+      print('ApiClient: Current user email: ${user?.email ?? 'null'}');
+      
       if (user != null) {
-        // Only force refresh if we haven't recently refreshed
-        final token = await user.getIdToken(false); // Don't force refresh every time
-        print('ApiClient: Token acquired successfully');
+        print('ApiClient: Attempting to get ID token...');
+        // Force refresh to ensure we have a valid token
+        final token = await user.getIdToken(true); // Force refresh
+        print('ApiClient: Token acquired successfully, length: ${token?.length ?? 0}');
+        if (token != null) {
+          print('ApiClient: Token preview: ${token.substring(0, token.length > 50 ? 50 : token.length)}...');
+        }
         return {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'Authorization': token != null ? 'Bearer $token' : '',
         };
       } else {
-        print('ApiClient: No current user found');
+        print('ApiClient: No current user found - request will be unauthenticated');
       }
     } catch (e) {
-      print('Error getting auth token: $e');
+      print('ApiClient: Error getting auth token: $e');
+      print('ApiClient: Stack trace: ${e is Error ? e.stackTrace : 'No stack trace'}');
     }
     
     return {
@@ -44,7 +51,14 @@ class ApiClient {
     Map<String, String>? headers,
     Map<String, dynamic>? queryParams,
   }) async {
-    final uri = Uri.parse(url).replace(queryParameters: queryParams);
+    // Convert all query parameters to strings to avoid Uri parsing errors
+    final stringQueryParams = queryParams?.map(
+      (key, value) => MapEntry(key, value.toString()),
+    ) ?? {};
+    
+    print('ApiClient: Query parameters converted to strings: $stringQueryParams');
+    
+    final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
     final authHeaders = await _getAuthHeaders();
     final mergedHeaders = {...authHeaders, ...?headers};
     
@@ -131,29 +145,52 @@ class ApiClient {
     return http.Response.fromStream(streamedResponse);
   }
 
-  /// Execute HTTP request with error handling and timeout
+  /// Execute HTTP request with error handling, timeout, and retry mechanism
   Future<http.Response> _makeRequest(
     Future<http.Response> Function() requestFn,
   ) async {
-    try {
-      final response = await requestFn().timeout(
-        Duration(seconds: _timeoutSeconds),
-      );
-      
-      // Log request for debugging
-      print('API Request: ${response.request?.method} ${response.request?.url}');
-      print('Response Status: ${response.statusCode}');
-      
-      return response;
-    } on http.ClientException catch (e) {
-      print('Network error: $e');
-      throw ApiException.network('Network connection failed: $e');
-    } on TimeoutException catch (e) {
-      print('Request timeout: $e');
-      throw ApiException.timeout('Request timed out after $_timeoutSeconds seconds');
-    } catch (e) {
-      print('Unexpected error: $e');
-      throw ApiException.unknown('An unexpected error occurred: $e');
+    int maxRetries = 2;
+    int retryCount = 0;
+    
+    while (true) {
+      try {
+        final response = await requestFn().timeout(
+          Duration(seconds: _timeoutSeconds),
+        );
+        
+        // Log request for debugging
+        print('API Request: ${response.request?.method} ${response.request?.url}');
+        print('Response Status: ${response.statusCode}');
+        
+        return response;
+      } on http.ClientException catch (e) {
+        print('Network error: $e');
+        
+        // Retry logic for network errors
+        if (retryCount < maxRetries) {
+          retryCount++;
+          print('Retrying request... Attempt $retryCount of $maxRetries');
+          await Future.delayed(Duration(milliseconds: 1000 * retryCount)); // Exponential backoff
+          continue;
+        }
+        
+        throw ApiException.network('Network connection failed: $e');
+      } on TimeoutException catch (e) {
+        print('Request timeout: $e');
+        
+        // Retry logic for timeouts
+        if (retryCount < maxRetries) {
+          retryCount++;
+          print('Retrying request due to timeout... Attempt $retryCount of $maxRetries');
+          await Future.delayed(Duration(milliseconds: 1000 * retryCount)); // Exponential backoff
+          continue;
+        }
+        
+        throw ApiException.timeout('Request timed out after $_timeoutSeconds seconds');
+      } catch (e) {
+        print('Unexpected error: $e');
+        throw ApiException.unknown('An unexpected error occurred: $e');
+      }
     }
   }
 
@@ -243,8 +280,8 @@ extension ApiResponseExtension on http.Response {
         dataList = [];
       }
       
-      print('API Client: Final dataList length: ${dataList?.length ?? 0}');
-      if (dataList != null && dataList.isNotEmpty) {
+      print('API Client: Final dataList length: ${dataList.length ?? 0}');
+      if (dataList.isNotEmpty) {
         // Print first item's thumbnail if it exists
         if (dataList[0] is Course) {
           final firstCourse = dataList[0] as Course;

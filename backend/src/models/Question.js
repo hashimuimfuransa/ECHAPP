@@ -17,8 +17,8 @@ const questionSchema = new mongoose.Schema({
     maxlength: [500, 'Option cannot exceed 500 characters']
   }],
   correctAnswer: {
-    type: Number,
-    required: [true, 'Correct answer index is required']
+    type: mongoose.Schema.Types.Mixed, // Can be either string (answer text) or number (option index)
+    required: [true, 'Correct answer is required']
   },
   points: {
     type: Number,

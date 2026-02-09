@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/login_screen.dart';
@@ -27,10 +27,11 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/course_videos
 import 'package:excellence_coaching_hub/presentation/screens/admin/course_materials_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/course_exams_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_settings_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_payments_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/admin/payment_management_screen_riverpod.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_analytics_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/exams/create_exam_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/learning/modern_student_learning_screen.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
@@ -155,12 +156,20 @@ class AppRouter {
             builder: (context, state) => const CourseExamsScreen(courseId: 'all'),
           ),
           GoRoute(
+            path: '/admin/courses/:courseId/sections/:sectionId/exams/create',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              final sectionId = state.pathParameters['sectionId'] ?? '';
+              return CreateExamScreen(courseId: courseId, sectionId: sectionId);
+            },
+          ),
+          GoRoute(
             path: '/admin/students',
             builder: (context, state) => const AdminStudentsScreen(),
           ),
           GoRoute(
             path: '/admin/payments',
-            builder: (context, state) => const AdminPaymentsScreen(),
+            builder: (context, state) => const PaymentManagementScreen(),
           ),
           GoRoute(
             path: '/admin/settings',
@@ -176,7 +185,7 @@ class AppRouter {
             path: '/learning/:courseId',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return StudentLearningScreen(courseId: courseId);
+              return ModernStudentLearningScreen(courseId: courseId);
             },
           ),
           GoRoute(
@@ -265,14 +274,6 @@ class AppRouter {
       );
 
   // Placeholder screens - would be implemented in next phases
-  Widget _buildLearningScreen(String courseId) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Learning')),
-      body: Center(
-        child: Text('Learning screen for course: $courseId'),
-      ),
-    );
-  }
 
   Widget _buildProfileScreen() {
     return const ProfileScreen();

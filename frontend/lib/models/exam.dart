@@ -1,6 +1,7 @@
 class Exam {
   final String id;
   final String courseId;
+  final String sectionId; // Added sectionId field
   final String title;
   final String type;
   final int passingScore;
@@ -18,6 +19,7 @@ class Exam {
   Exam({
     required this.id,
     required this.courseId,
+    required this.sectionId, // Added sectionId parameter
     required this.title,
     required this.type,
     required this.passingScore,
@@ -35,6 +37,9 @@ class Exam {
       courseId: json['courseId'] is String 
           ? json['courseId'] as String
           : (json['courseId'] as Map<String, dynamic>)['_id'] as String,
+      sectionId: json['sectionId'] is String 
+          ? json['sectionId'] as String
+          : (json['sectionId'] is Map<String, dynamic>) ? (json['sectionId'] as Map<String, dynamic>)['_id'] as String : '',
       title: json['title'] as String,
       type: json['type'] as String,
       passingScore: json['passingScore'] as int,
@@ -51,6 +56,7 @@ class Exam {
     return {
       '_id': id,
       'courseId': courseId,
+      'sectionId': sectionId, // Added sectionId to JSON
       'title': title,
       'type': type,
       'passingScore': passingScore,

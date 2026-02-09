@@ -87,7 +87,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       // Apply search filter
       if (_searchController.text.isNotEmpty) {
         filtered = filtered.where((course) =>
-          course.title!.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+          course.title.toLowerCase().contains(_searchController.text.toLowerCase()) ||
           course.description.toLowerCase().contains(_searchController.text.toLowerCase())
         ).toList();
       }
@@ -638,10 +638,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   ),
                 ),
                 child: InkWell(
-                  onTap: () {
-                    // Navigate to course details
-                    context.push('/course/${course.id}');
-                  },
+                  onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
                   borderRadius: BorderRadius.circular(15),
                   child: Padding(
                     padding: const EdgeInsets.all(15),
@@ -773,7 +770,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '\$${course.price}',
+                              'RWF ${course.price}',
                               style: const TextStyle(
                                 color: AppTheme.primaryGreen,
                                 fontSize: 18,
@@ -984,9 +981,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () {
-          context.push('/course/${course.id}');
-        },
+        onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         child: Padding(
           padding: EdgeInsets.all(isDesktop ? 18 : 14),
@@ -1146,7 +1141,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '\$${course.price.toStringAsFixed(0)}',
+                    'RWF ${course.price.toStringAsFixed(0)}',
                     style: TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: isDesktop ? 18 : 16,
@@ -1355,7 +1350,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${course.price}',
+                    'RWF ${course.price}',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 18,

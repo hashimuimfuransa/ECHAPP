@@ -6,6 +6,11 @@ const examSchema = new mongoose.Schema({
     ref: 'Course',
     required: [true, 'Course ID is required']
   },
+  sectionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Section',
+    required: [true, 'Section ID is required']
+  },
   title: {
     type: String,
     required: [true, 'Exam title is required'],
@@ -15,7 +20,7 @@ const examSchema = new mongoose.Schema({
   type: {
     type: String,
     required: [true, 'Exam type is required'],
-    enum: ['quiz', 'final']
+    enum: ['quiz', 'pastpaper', 'final']
   },
   passingScore: {
     type: Number,
@@ -30,6 +35,10 @@ const examSchema = new mongoose.Schema({
   isPublished: {
     type: Boolean,
     default: false
+  },
+  questionsCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -38,5 +47,6 @@ const examSchema = new mongoose.Schema({
 // Index for better performance
 examSchema.index({ courseId: 1 });
 examSchema.index({ type: 1 });
+examSchema.index({ sectionId: 1 }); // Add index for section-based queries
 
 module.exports = mongoose.model('Exam', examSchema);

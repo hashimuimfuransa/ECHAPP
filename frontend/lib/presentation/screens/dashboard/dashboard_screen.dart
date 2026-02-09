@@ -1225,7 +1225,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
-                                    '\$${course.price.toStringAsFixed(0)}',
+                                    'RWF ${course.price.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       color: AppTheme.primaryGreen,
                                       fontSize: 11,
@@ -1489,7 +1489,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '\$${course.price.toStringAsFixed(0)}',
+                    'RWF ${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 12,
@@ -1621,7 +1621,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '\$${course.price.toStringAsFixed(0)}',
+                    'RWF ${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 12,

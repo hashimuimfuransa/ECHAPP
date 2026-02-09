@@ -241,24 +241,31 @@ const getCourseStats = async (req, res) => {
 // Get payment statistics
 const getPaymentStats = async (req, res) => {
   try {
-    const totalPayments = await Payment.countDocuments({ status: 'completed' });
+    console.log('Admin getPaymentStats called by user:', req.user?.id);
+    
+    const totalPayments = await Payment.countDocuments({ status: { $in: ['completed', 'approved'] } });
     const totalRevenue = await Payment.aggregate([
-      { $match: { status: 'completed' } },
+      { $match: { status: { $in: ['completed', 'approved'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     
-    const recentPayments = await Payment.find({ status: 'completed' })
+    const recentPayments = await Payment.find({ status: { $in: ['completed', 'approved'] } })
       .populate('userId', 'fullName email')
       .populate('courseId', 'title')
       .sort({ paymentDate: -1 })
       .limit(10);
     
-    sendSuccess(res, {
+    const responseData = {
       totalPayments,
       totalRevenue: totalRevenue[0]?.total || 0,
       recentPayments
-    }, 'Payment statistics retrieved successfully');
+    };
+    
+    console.log('Admin getPaymentStats response:', responseData);
+    
+    sendSuccess(res, responseData, 'Payment statistics retrieved successfully');
   } catch (error) {
+    console.error('Error in admin getPaymentStats:', error);
     sendError(res, 'Failed to retrieve payment statistics', 500, error.message);
   }
 };

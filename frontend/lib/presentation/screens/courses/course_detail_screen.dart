@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/enrollment_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/payment_provider.dart';
+import 'package:excellence_coaching_hub/presentation/providers/course_payment_providers.dart';
+import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:share_plus/share_plus.dart';
 
-class CourseDetailScreen extends ConsumerWidget {
+class CourseDetailScreen extends ConsumerStatefulWidget {
   final String courseId;
 
   const CourseDetailScreen({super.key, required this.courseId});
+
+  @override
+  _CourseDetailScreenState createState() => _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
+  bool _hasRedirected = false;
 
   // Provider for fetching a single course by ID - this ensures the API call is cached per course ID
   static final _courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
@@ -33,13 +42,13 @@ class CourseDetailScreen extends ConsumerWidget {
     print('Initiating payment for course: ${course.title ?? "Untitled Course"} (ID: ${course.id})');
     print('Course price: ${course.price}');
     
-    final paymentNotifier = ref.read(initiatePaymentProvider.notifier);
+    final paymentNotifier = ref.read(paymentProvider.notifier);
     print('Payment notifier obtained');
     
     try {
       await paymentNotifier.initiatePayment(
         courseId: course.id,
-        paymentMethod: 'mtn_momo', // Changed to valid payment method
+        paymentMethod: 'mtn_momo',
         contactInfo: 'Student initiated payment for ${course.title ?? "Untitled Course"}',
       );
       print('Payment initiation completed');
@@ -53,7 +62,34 @@ class CourseDetailScreen extends ConsumerWidget {
         if (e.toString().contains('already enrolled')) {
           errorMessage = 'You are already enrolled in this course!';
         } else if (e.toString().contains('pending')) {
-          errorMessage = 'You have a pending payment for this course. Please check your payment status.';
+          errorMessage = 'You have a pending payment for this course. Redirecting to payment status...';
+          
+          // Show snackbar and navigate to payment pending screen
+          ScaffoldMessenger.of(ref.context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          
+          // Navigate to payment pending screen after a short delay
+          await Future.delayed(const Duration(seconds: 2));
+          
+          // Navigate to payment pending screen
+          if (ref.context.mounted) {
+            Navigator.push(
+              ref.context,
+              MaterialPageRoute(
+                builder: (context) => PaymentPendingScreen(
+                  course: course,
+                  transactionId: 'pending',
+                  amount: course.price,
+                ),
+              ),
+            );
+          }
+          return; // Exit early since we're navigating
         }
         
         ScaffoldMessenger.of(ref.context).showSnackBar(
@@ -80,19 +116,59 @@ class CourseDetailScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = context as WidgetRef;
     // Fetch the course data using a provider that's scoped to the widget instance
-    final courseAsync = ref.watch(_courseProvider(courseId));
-    final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(courseId));
+    final courseAsync = ref.watch(_courseProvider(widget.courseId));
+    final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(widget.courseId));
     
-    // Debug logging
+    // Automatic redirect to learning screen if already enrolled
     isEnrolledAsync.when(
       data: (isEnrolled) {
-        print('Course Detail Screen - Course ID: $courseId, Is Enrolled: $isEnrolled');
+        print('Course Detail Screen - Course ID: ${widget.courseId}, Is Enrolled: $isEnrolled');
+        if (isEnrolled && context.mounted && !_hasRedirected) {
+          print('User is already enrolled - redirecting to learning screen');
+          setState(() {
+            _hasRedirected = true;
+          });
+          // Show a brief message before redirecting
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('You are already enrolled! Redirecting to learning...'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              // Navigate to learning screen
+              context.push('/learning/${widget.courseId}');
+            }
+          });
+        }
       },
       loading: () => print('Course Detail Screen - Checking enrollment status...'),
       error: (error, stack) => print('Course Detail Screen - Enrollment check error: $error'),
     );
+    
+    // Manual pending payment check and refresh user payments
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      print('🕒 Manual pending payment check triggered');
+      try {
+        // Refresh user payments before checking pending status
+        await ref.read(paymentProvider.notifier).loadUserPayments();
+        
+        final hasPending = await ref.read(hasPendingPaymentProvider(widget.courseId).future);
+        print('🕒 Manual pending payment check result: $hasPending');
+        
+        // If there's a pending payment, consider auto-navigating to payment pending screen
+        if (hasPending && context.mounted && !_hasRedirected) {
+          print('🟡 Pending payment detected - should show payment pending button');
+        }
+      } catch (e) {
+        print('❌ Manual pending payment check error: $e');
+      }
+    });
 
     return courseAsync.when(
       data: (course) {
@@ -125,13 +201,13 @@ class CourseDetailScreen extends ConsumerWidget {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.pop(),
                     ),
                   ),
                   actions: [
                     Consumer(
                       builder: (context, ref, child) {
-                        final isBookmarkedAsync = ref.watch(isCourseInWishlistProvider(courseId));
+                        final isBookmarkedAsync = ref.watch(isCourseInWishlistProvider(widget.courseId));
                         
                         return Container(
                           margin: const EdgeInsets.all(8),
@@ -159,7 +235,7 @@ class CourseDetailScreen extends ConsumerWidget {
                             ),
                             onPressed: () {
                               final wishlistNotifier = ref.read(wishlistNotifierProvider.notifier);
-                              wishlistNotifier.toggleCourse(courseId, course);
+                              wishlistNotifier.toggleCourse(widget.courseId, course);
                             },
                           ),
                         );
@@ -436,7 +512,7 @@ class CourseDetailScreen extends ConsumerWidget {
                     // Refresh by rebuilding the widget
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
-                        builder: (context) => CourseDetailScreen(courseId: courseId),
+                        builder: (context) => CourseDetailScreen(courseId: widget.courseId),
                       ),
                     );
                   },
@@ -481,13 +557,15 @@ class CourseDetailScreen extends ConsumerWidget {
                       _buildEnhancedPurchaseButton(course),
                     ],
                   )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildEnhancedPriceInfo(course),
-                      const SizedBox(height: 20),
-                      _buildEnhancedPurchaseButton(course),
-                    ],
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildEnhancedPriceInfo(course),
+                        const SizedBox(height: 20),
+                        _buildEnhancedPurchaseButton(course),
+                      ],
+                    ),
                   );
           },
         ),
@@ -623,24 +701,60 @@ class CourseDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildEnhancedPurchaseButton(Course course) {
+    print('🔨 Building purchase button for course: ${course.id} - ${course.title}');
+    print('🆔 Course ID type: ${course.id.runtimeType}, value: ${course.id}');
+    
+    // Force refresh the pending payment provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('🔄 Forcing refresh of pending payment provider');
+    });
+    
     return Consumer(
       builder: (context, ref, child) {
+        print('👀 Consumer rebuilding...');
         final paymentState = ref.watch(initiatePaymentProvider);
         final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
         
+        print('💳 Payment state: ${paymentState.runtimeType}');
+        print('⏰ Pending payment state: ${hasPendingPayment.runtimeType}');
+        print('🆔 Watching courseId: ${course.id}');
+        
         return SizedBox(
           height: 60,
-          child: paymentState.when(
-            data: (response) {
-              if (response != null) {
+          child: hasPendingPayment.when(
+            data: (hasPending) {
+              print('🎯 Has pending payment result: $hasPending');
+              if (hasPending) {
+                print('🟠 Showing Payment Pending button');
                 return Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    gradient: const LinearGradient(
+                      colors: [Colors.orange, Colors.deepOrange],
+                    ),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Processing...',
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentPendingScreen(
+                            course: course,
+                            transactionId: 'pending',
+                            amount: course.price,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Payment Pending',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -651,67 +765,27 @@ class CourseDetailScreen extends ConsumerWidget {
                 );
               }
               
-              return hasPendingPayment.when(
-                data: (hasPending) {
-                  if (hasPending) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.orange, Colors.deepOrange],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orange.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PaymentPendingScreen(
-                                course: course,
-                                transactionId: 'pending',
-                                amount: course.price,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Payment Pending',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  
-                  return _buildEnhancedEnrollButton(course, ref);
+              // Show regular payment button
+              return ElevatedButton(
+                onPressed: () {
+                  print('💳 Initiating payment for course: ${course.id}');
+                  _handlePayment(ref, course);
                 },
-                loading: () => Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Checking...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                ),
+                child: Text(
+                  'Pay ${course.price.toStringAsFixed(0)} RWF',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
               );
             },
             loading: () => Container(
@@ -721,7 +795,7 @@ class CourseDetailScreen extends ConsumerWidget {
               ),
               child: const Center(
                 child: Text(
-                  'Processing...',
+                  'Checking...',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -731,66 +805,28 @@ class CourseDetailScreen extends ConsumerWidget {
               ),
             ),
             error: (error, stack) {
-              return hasPendingPayment.when(
-                data: (hasPending) {
-                  if (hasPending) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.orange, Colors.deepOrange],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orange.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PaymentPendingScreen(
-                                course: course,
-                                transactionId: 'pending',
-                                amount: course.price,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Payment Pending',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return _buildEnhancedEnrollButton(course, ref);
+              print('⚠️ Pending payment check error: $error');
+              // Show regular payment button as fallback
+              return ElevatedButton(
+                onPressed: () {
+                  print('💳 Initiating payment for course: ${course.id}');
+                  _handlePayment(ref, course);
                 },
-                loading: () => Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Checking...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                ),
+                child: Text(
+                  'Pay ${course.price.toStringAsFixed(0)} RWF',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
               );
             },
           ),
@@ -867,19 +903,23 @@ class CourseDetailScreen extends ConsumerWidget {
         final paymentState = ref.watch(initiatePaymentProvider);
         final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
         
-        return paymentState.when(
-          data: (response) {
-            if (response != null) {
-              return AnimatedButton(
-                text: 'Processing...',
-                onPressed: () {},
-                color: Colors.grey,
-                isLoading: true,
-              );
-            }
-            
-            return hasPendingPayment.when(
-              data: (hasPending) {
+        if (paymentState.response != null) {
+          return AnimatedButton(
+            text: 'Processing...',
+            onPressed: () {},
+            color: Colors.grey,
+            isLoading: true,
+          );
+        } else if (paymentState.isLoading) {
+          return AnimatedButton(
+            text: 'Processing...',
+            onPressed: () {},
+            color: Colors.grey,
+            isLoading: true,
+          );
+        } else {
+          return hasPendingPayment.when(
+            data: (hasPending) {
                 if (hasPending) {
                   return AnimatedButton(
                     text: 'Payment Pending',
@@ -940,49 +980,11 @@ class CourseDetailScreen extends ConsumerWidget {
                     color: const Color(0xFF4facfe),
                   );
                 }
-              },
+              }
             );
-          },
-          loading: () => AnimatedButton(
-            text: 'Processing...',
-            onPressed: () {},
-            color: Colors.grey,
-            isLoading: true,
-          ),
-          error: (error, stack) {
-            return hasPendingPayment.when(
-              data: (hasPending) {
-                if (hasPending) {
-                  return AnimatedButton(
-                    text: 'Payment Pending',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PaymentPendingScreen(
-                            course: course,
-                            transactionId: 'pending',
-                            amount: course.price,
-                          ),
-                        ),
-                      );
-                    },
-                    color: Colors.orange,
-                  );
-                }
-                return _buildEnrollButtonFallback(course);
-              },
-              loading: () => AnimatedButton(
-                text: 'Checking...',
-                onPressed: () {},
-                color: Colors.grey,
-              ),
-              error: (error, stack) => _buildEnrollButtonFallback(course),
-            );
-          },
-        );
-      },
-    );
+          }
+        },
+      );
   }
 
   Widget _buildEnrollButtonFallback(Course course) {
@@ -1826,55 +1828,17 @@ class CourseDetailScreen extends ConsumerWidget {
       return AnimatedButton(
         text: 'Enroll for Free',
         onPressed: () async {
-          _handleEnrollment(ref, courseId);
+          _handleEnrollment(ref, widget.courseId);
         },
         color: Colors.green,
       );
     } else {
-      final paymentState = ref.watch(initiatePaymentProvider);
-      
-      return paymentState.when(
-        data: (response) {
-          if (response != null) {
-            // Payment initiated successfully, show pending screen
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentPendingScreen(
-                    course: course,
-                    transactionId: response.transactionId,
-                    amount: response.amount,
-                  ),
-                ),
-              );
-            });
-            return AnimatedButton(
-              text: 'Processing...',
-              onPressed: () {}, // Empty function to satisfy non-null requirement
-              color: Colors.grey,
-            );
-          }
-          return AnimatedButton(
-            text: 'Buy Course - RWF ${course.price.toStringAsFixed(0)}',
-            onPressed: () {
-              _handlePayment(ref, course);
-            },
-            color: const Color(0xFF4facfe),
-          );
+      return AnimatedButton(
+        text: 'Buy Course - RWF ${course.price.toStringAsFixed(0)}',
+        onPressed: () {
+          _handlePayment(ref, course);
         },
-        loading: () => AnimatedButton(
-          text: 'Processing Payment...',
-          onPressed: () {}, // Empty function to satisfy non-null requirement
-          color: Colors.grey,
-        ),
-        error: (error, stack) => AnimatedButton(
-          text: 'Buy Course - RWF ${course.price.toStringAsFixed(0)}',
-          onPressed: () {
-            _handlePayment(ref, course);
-          },
-          color: const Color(0xFF4facfe),
-        ),
+        color: const Color(0xFF4facfe),
       );
     }
   }

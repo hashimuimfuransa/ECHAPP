@@ -1,42 +1,31 @@
-require('dotenv').config();
-const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+const mongoose = require('mongoose');
+require('./src/config/database');
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+const User = require('./src/models/User');
 
 async function checkUsers() {
   try {
-    console.log('Checking Firebase users...');
-    const result = await admin.auth().listUsers();
+    console.log('=== Checking Users in Database ===');
     
-    console.log('\nFirebase users:');
-    result.users.forEach((user, index) => {
-      console.log(`${index + 1}. ${user.displayName || 'No name'} (${user.email}) - Role: ${user.customClaims?.role || 'student'}`);
-    });
+    const users = await User.find({}).select('email fullName role');
     
-    console.log(`\nTotal Firebase users: ${result.users.length}`);
+    console.log('Total users found:', users.length);
     
-    // Filter out admin users
-    const studentUsers = result.users.filter(user => user.customClaims?.role !== 'admin');
-    console.log(`Student users (excluding admins): ${studentUsers.length}`);
+    if (users.length === 0) {
+      console.log('No users found in database');
+    } else {
+      users.forEach((user, index) => {
+        console.log(`\n--- User ${index + 1} ---`);
+        console.log('Email:', user.email);
+        console.log('Full Name:', user.fullName);
+        console.log('Role:', user.role);
+      });
+    }
     
-    // Check MongoDB users
-    const mongoose = require('mongoose');
-    await mongoose.connect(process.env.MONGODB_URI);
-    
-    const User = require('./src/models/User');
-    const mongoUsers = await User.countDocuments({ role: 'student' });
-    console.log(`MongoDB student users: ${mongoUsers}`);
-    
-    const totalUsers = studentUsers.length + mongoUsers;
-    console.log(`Total student users: ${totalUsers}`);
-    
-    await mongoose.connection.close();
-    
+    process.exit(0);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error checking users:', error);
+    process.exit(1);
   }
 }
 

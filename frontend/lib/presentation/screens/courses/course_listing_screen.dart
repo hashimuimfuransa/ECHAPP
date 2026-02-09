@@ -317,7 +317,7 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    course['price'] == 0 ? 'Free' : '\$${course['price']}',
+                    course['price'] == 0 ? 'Free' : 'RWF ${course['price']}',
                     style: TextStyle(
                       color: course['price'] == 0 ? Colors.green : Colors.white,
                       fontSize: 16,

@@ -2,7 +2,9 @@ const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Result = require('../models/Result');
 const Course = require('../models/Course');
+const Section = require('../models/Section');
 const Enrollment = require('../models/Enrollment');
+const GeminiAIService = require('../services/gemini_ai_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all exams for admin
@@ -38,7 +40,8 @@ const getExamById = async (req, res) => {
     const { id } = req.params;
     
     const exam = await Exam.findById(id)
-      .populate('courseId', 'title');
+      .populate('courseId', 'title')
+      .populate('sectionId', 'title');
     
     if (!exam) {
       return sendNotFound(res, 'Exam not found');
@@ -60,7 +63,8 @@ const updateExam = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('courseId', 'title');
+    ).populate('courseId', 'title')
+      .populate('sectionId', 'title');
     
     if (!exam) {
       return sendNotFound(res, 'Exam not found');
@@ -103,11 +107,65 @@ const getCourseExams = async (req, res) => {
     }
 
     const exams = await Exam.find({ courseId, isPublished: true })
-      .select('title type passingScore timeLimit');
+      .select('title type passingScore timeLimit sectionId');
 
     sendSuccess(res, exams, 'Course exams retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve course exams', 500, error.message);
+  }
+};
+
+// Get exams by section
+const getExamsBySection = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    const userId = req.user.id;
+
+    // Get the section to verify user enrollment
+    const section = await Section.findById(sectionId).populate('courseId');
+    if (!section) {
+      return sendNotFound(res, 'Section not found');
+    }
+
+    // Check if user is enrolled in the course
+    const enrollment = await Enrollment.findOne({ 
+      userId, 
+      courseId: section.courseId._id 
+    });
+    if (!enrollment) {
+      return sendError(res, 'You must be enrolled in this course to access exams', 403);
+    }
+
+    const exams = await Exam.find({ 
+      sectionId: sectionId, 
+      isPublished: true 
+    }).select('title type passingScore timeLimit');
+
+    sendSuccess(res, exams, 'Section exams retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve section exams', 500, error.message);
+  }
+};
+
+// Get all exams for a section (admin only - includes unpublished exams)
+const getSectionExamsAdmin = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    
+    // Verify section exists
+    const section = await Section.findById(sectionId);
+    if (!section) {
+      return sendNotFound(res, 'Section not found');
+    }
+    
+    const exams = await Exam.find({ sectionId: sectionId })
+      .populate('courseId', 'title')
+      .populate('sectionId', 'title')
+      .sort({ createdAt: -1 });
+    
+    sendSuccess(res, exams, 'Section exams retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve section exams', 500, error.message);
   }
 };
 
@@ -238,29 +296,91 @@ const getExamResults = async (req, res) => {
 // Create exam (admin only)
 const createExam = async (req, res) => {
   try {
-    const { courseId, title, type, passingScore, timeLimit, questions } = req.body;
+    const { courseId, sectionId, title, type, passingScore, timeLimit, questions, documentPath } = req.body;
+
+    // If documentPath is provided, process it with Gemini AI to extract questions
+    let processedQuestions = questions || [];
+    let generatedTitle = title;
+    
+    if (documentPath) {
+      if (GeminiAIService.isConfigured()) {
+        try {
+          // Read the document content (assuming it's stored in S3 or locally)
+          // In a real implementation, you'd fetch the document from storage
+          // For now, I'll simulate getting the document content
+          
+          // For demonstration purposes, I'll create a mock document processing
+          // In a real implementation, you would fetch the actual document content
+          const documentContent = `Sample document content for ${type} exam. 
+            What is the capital of France? A) London B) Paris C) Berlin D) Madrid. 
+            What is 2+2? A) 3 B) 4 C) 5 D) 6.`;
+          
+          // If you have the actual document content from storage, use it
+          // Otherwise, generate questions based on the document
+          if (documentContent) {
+            // Use Gemini AI to extract and organize questions from the document
+            processedQuestions = await GeminiAIService.extractQuestionsFromDocument(documentContent, type);
+            
+            // If title wasn't provided, generate one from the document
+            if (!generatedTitle) {
+              generatedTitle = await GeminiAIService.generateExamTitle(documentContent);
+            }
+          }
+        } catch (aiError) {
+          console.error('Error processing document with Gemini AI:', aiError);
+          // Continue with original questions if AI processing fails
+          processedQuestions = questions || [];
+        }
+      } else {
+        // If Gemini AI is not configured, return an error if document processing is required
+        if (documentPath) {
+          return sendError(res, 'Gemini AI is not configured. Please set GEMINI_API_KEY in environment variables.', 400);
+        }
+      }
+    }
 
     // Create exam
     const exam = await Exam.create({
       courseId,
-      title,
+      sectionId,
+      title: generatedTitle,
       type,
       passingScore,
       timeLimit,
-      isPublished: false
+      isPublished: false // Default to unpublished until reviewed
     });
 
-    // Create questions
-    if (questions && questions.length > 0) {
-      const questionsWithExamId = questions.map(q => ({
-        ...q,
-        examId: exam._id
-      }));
+    // Create questions if any exist
+    if (processedQuestions && processedQuestions.length > 0) {
+      const questionsWithExamId = processedQuestions.map(q => {
+        // Find the index of the correct answer in the options
+        const correctAnswerIndex = q.options.indexOf(q.correctAnswer);
+        
+        return {
+          question: q.question,
+          options: q.options,
+          correctAnswer: correctAnswerIndex !== -1 ? correctAnswerIndex : 0, // Store index of correct answer
+          points: q.points || 1,
+          examId: exam._id
+        };
+      });
       await Question.insertMany(questionsWithExamId);
     }
 
-    sendSuccess(res, exam, 'Exam created successfully', 201);
+    // Update the exam with the question count
+    const questionCount = processedQuestions ? processedQuestions.length : 0;
+    await Exam.findByIdAndUpdate(exam._id, { 
+      questionsCount: questionCount 
+    });
+
+    // Fetch the updated exam with question count
+    const updatedExam = await Exam.findById(exam._id)
+      .populate('courseId', 'title')
+      .populate('sectionId', 'title');
+
+    sendSuccess(res, updatedExam, 'Exam created successfully', 201);
   } catch (error) {
+    console.error('Error creating exam:', error);
     sendError(res, 'Failed to create exam', 500, error.message);
   }
 };
@@ -271,6 +391,8 @@ module.exports = {
   updateExam,
   deleteExam,
   getCourseExams,
+  getExamsBySection,
+  getSectionExamsAdmin,
   getExamQuestions,
   submitExam,
   getExamResults,

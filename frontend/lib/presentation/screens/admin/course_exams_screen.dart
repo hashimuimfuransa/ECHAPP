@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
 
 class CourseExamsScreen extends StatefulWidget {
@@ -15,10 +16,10 @@ class CourseExamsScreen extends StatefulWidget {
 class _CourseExamsScreenState extends State<CourseExamsScreen> {
   final ExamService _examService = ExamService();
   bool _isLoading = false;
-  List<Exam> _exams = [];
+  List<exam_model.Exam> _exams = [];
   String? _errorMessage;
   String _filterStatus = 'All';
-  int _currentPage = 1;
+  final int _currentPage = 1;
   int _totalPages = 1;
 
   @override
@@ -53,15 +54,21 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
   }
 
   Future<void> _createNewExam() async {
-    // Navigate to exam creation screen
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Exam creation wizard coming soon'),
-          backgroundColor: AppTheme.primaryGreen,
-        ),
-      );
+    // Navigate to course content page to create exam within a section
+    if (widget.courseId == 'all') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a specific course to create an exam'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
     }
+    
+    // Navigate to course content page where exams can be created within sections
+    context.push('/admin/courses/${widget.courseId}/content');
   }
 
   Future<void> _toggleExamStatus(String examId) async {
@@ -150,7 +157,7 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
     }
   }
 
-  List<Exam> _getFilteredExams() {
+  List<exam_model.Exam> _getFilteredExams() {
     if (_filterStatus == 'All') return _exams;
     final isActive = _filterStatus == 'Active';
     return _exams.where((exam) => exam.isPublished == isActive).toList();
@@ -408,7 +415,7 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
     );
   }
 
-  Widget _buildExamCard(Exam exam, bool isSmallScreen) {
+  Widget _buildExamCard(exam_model.Exam exam, bool isSmallScreen) {
     final isActive = exam.isPublished;
     
     return Card(
@@ -551,7 +558,7 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
     );
   }
 
-  Widget _buildFullExamActions(Exam exam) {
+  Widget _buildFullExamActions(exam_model.Exam exam) {
     final isActive = exam.isPublished;
     
     return Row(
@@ -596,7 +603,7 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
     );
   }
 
-  Widget _buildCompactExamActions(Exam exam) {
+  Widget _buildCompactExamActions(exam_model.Exam exam) {
     final isActive = exam.isPublished;
     
     return PopupMenuButton<String>(

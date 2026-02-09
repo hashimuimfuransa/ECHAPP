@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_theme.dart';
+import '../../../models/course.dart';
+import '../../providers/payment_riverpod_provider.dart';
 
-class PaymentPendingScreen extends StatelessWidget {
+class PaymentPendingScreen extends ConsumerWidget {
   final Course course;
   final String transactionId;
   final double amount;
@@ -16,519 +17,255 @@ class PaymentPendingScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Load user payments to check status
+    final paymentState = ref.watch(paymentProvider);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (paymentState.userPayments.isEmpty) {
+        ref.read(paymentProvider.notifier).loadUserPayments();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Payment Pending Approval'),
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.primaryGreen.withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Success Icon
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.hourglass_bottom,
-                  size: 60,
-                  color: Colors.orange,
-                ),
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Title
-              const Text(
-                'Payment Submitted for Review',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.blackColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 10),
-              
-              // Subtitle
-              const Text(
-                'Your payment is pending administrator approval',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.greyColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Course Card
-              _buildCourseCard(),
-              
-              const SizedBox(height: 30),
-              
-              // Contact Information
-              _buildContactSection(),
-              
-              const SizedBox(height: 30),
-              
-              // Instructions
-              _buildInstructions(),
-              
-              const SizedBox(height: 30),
-              
-              // Action Buttons
-              _buildActionButtons(context),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCourseCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Course Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
-            ),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.school,
-                  color: AppTheme.primaryGreen,
-                  size: 30,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.title ?? 'Untitled Course',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Amount: RWF ${amount.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.primaryGreen,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Transaction ID: $transactionId',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.greyColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Contact Administrator for Payment',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
-            ),
-          ),
-          const SizedBox(height: 15),
-          
-          // Phone Numbers
-          const Text(
-            'Phone Numbers:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
-            ),
-          ),
-          const SizedBox(height: 10),
-          
-          _buildContactButton(
-            icon: Icons.phone,
-            title: '078535156',
-            subtitle: 'Call or WhatsApp',
-            onTap: () => _launchPhone('078535156'),
-            isWhatsApp: true,
-          ),
-          
-          const SizedBox(height: 10),
-          
-          _buildContactButton(
-            icon: Icons.phone,
-            title: '0793828834',
-            subtitle: 'Call or WhatsApp',
-            onTap: () => _launchPhone('0793828834'),
-            isWhatsApp: true,
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // Email
-          const Text(
-            'Email:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
-            ),
-          ),
-          const SizedBox(height: 10),
-          
-          _buildContactButton(
-            icon: Icons.email,
-            title: 'info@excellencecoachinghub.com',
-            subtitle: 'Send email',
-            onTap: () => _launchEmail('info@excellencecoachinghub.com'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactButton({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isWhatsApp = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryGreen.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppTheme.primaryGreen.withOpacity(0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppTheme.primaryGreen,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.blackColor,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.greyColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isWhatsApp)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Text(
-                  'WhatsApp',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 600;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
+                
+                // Title
+                Text(
+                  'Payment Pending Approval',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
+                    fontSize: isWideScreen ? 28 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-          ],
+                
+                const SizedBox(height: 16),
+                
+                // Description
+                Text(
+                  'Your payment for "${course.title}" is currently pending admin approval.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isWideScreen ? 18 : 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Contact Information Card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.contact_phone, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Text(
+                              'Need Help?',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'To complete your payment:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildContactInstruction(
+                          '1. contact for payment via:',
+                          'MTN Mobile Money: 0793828834',
+                          Icons.phone,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildContactInstruction(
+                          '2. Also available via:',
+                          ' 0788535156',
+                          Icons.phone,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildContactInstruction(
+                          '3. Contact via email:',
+                          'info@excellencecoachinghub.com',
+                          Icons.email,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildContactInstruction(
+                          '4. Or contact us on WhatsApp:',
+                          '0793828834',
+                          Icons.chat,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber, color: Colors.amber, size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Important: Keep your transaction ID for reference and send proof of payment to admin.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber[800]!,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Action Buttons
+                isWideScreen
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Back to Course'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Refresh payment status
+                              ref.read(paymentProvider.notifier).loadUserPayments();
+                            },
+                            child: const Text('Check Status'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Back to Course'),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Refresh payment status
+                            ref.read(paymentProvider.notifier).loadUserPayments();
+                          },
+                          child: const Text('Check Status'),
+                        ),
+                      ],
+                    ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildInstructions() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
-      child: Column(
+    );
+  }
+  
+  Widget _buildContactInstruction(String instruction, String contact, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Next Steps',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  instruction,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    contact,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 15),
-          
-          _buildInstructionItem(
-            1,
-            'Contact the administrator using the provided phone numbers or email',
-          ),
-          
-          const SizedBox(height: 10),
-          
-          _buildInstructionItem(
-            2,
-            'Provide your transaction ID: $transactionId',
-          ),
-          
-          const SizedBox(height: 10),
-          
-          _buildInstructionItem(
-            3,
-            'Follow the administrator\'s instructions for payment completion',
-          ),
-          
-          const SizedBox(height: 10),
-          
-          _buildInstructionItem(
-            4,
-            'Once approved, you\'ll receive a notification and gain access to the course',
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildInstructionItem(int number, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 25,
-          height: 25,
-          decoration: const BoxDecoration(
-            color: AppTheme.primaryGreen,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              number.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppTheme.blackColor,
-              height: 1.4,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGreen,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Back to Home',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 15),
-        
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: OutlinedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Go back to course details
-            },
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppTheme.primaryGreen),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'View Course Details',
-              style: TextStyle(
-                color: AppTheme.primaryGreen,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Helper methods for launching contacts
-  void _launchPhone(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    final Uri whatsappUri = Uri(scheme: 'sms', path: phoneNumber);
-    
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    } else if (await canLaunchUrl(whatsappUri)) {
-      await launchUrl(whatsappUri);
-    } else {
-      // Show dialog with phone number
-      _showContactDialog('Phone', phoneNumber);
-    }
-  }
-
-  void _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-      queryParameters: {
-        'subject': 'Payment Confirmation for ${course.title ?? "Untitled Course"}',
-        'body': 'Transaction ID: $transactionId\nCourse: ${course.title ?? "Untitled Course"}\nAmount: RWF ${amount.toStringAsFixed(0)}\n\nPlease confirm payment and provide next steps.',
-      },
-    );
-    
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      // Show dialog with email
-      _showContactDialog('Email', email);
-    }
-  }
-
-  void _showContactDialog(String type, String contact) {
-    // Implementation for showing contact dialog
   }
 }

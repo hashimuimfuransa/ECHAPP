@@ -1,10 +1,10 @@
 const admin = require('firebase-admin');
 const mongoose = require('mongoose');
-const User = require('./src/models/User');
+const User = require('../src/models/User');
 require('dotenv').config();
 
 // Load service account key
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = require('../serviceAccountKey.json');
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -36,11 +36,8 @@ async function syncExistingUsers() {
     // Process each user
     for (const firebaseUser of userList.users) {
       try {
-        // Skip admin users
-        if (firebaseUser.customClaims?.role === 'admin') {
-          console.log(`⏭️ Skipping admin user: ${firebaseUser.email}`);
-          continue;
-        }
+        // Process all users including admins
+        // Admin users will be processed normally
         
         // Check if user already exists in MongoDB
         let existingUser = await User.findOne({ firebaseUid: firebaseUser.uid });

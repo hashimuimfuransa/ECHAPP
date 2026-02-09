@@ -1,89 +1,316 @@
-import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/data/repositories/payment_repository.dart';
-import 'package:excellence_coaching_hub/models/payment.dart' as model;
-import 'package:excellence_coaching_hub/services/api/payment_service.dart' show PaymentInitiationResponse;
+import 'package:flutter/foundation.dart';
+import '../../services/api/payment_api_service.dart';
+import '../../models/payment.dart';
+import '../../models/payment_status.dart';
+import '../../services/infrastructure/api_client.dart';
 
-final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
-  return PaymentRepository();
-});
-
-// Provider for initiating payment
-final initiatePaymentProvider = AsyncNotifierProvider<PaymentInitiationNotifier, PaymentInitiationResponse?>(
-  () => PaymentInitiationNotifier(),
-);
-
-class PaymentInitiationNotifier extends AsyncNotifier<PaymentInitiationResponse?> {
-  @override
-  FutureOr<PaymentInitiationResponse?> build() => null;
-
-  Future<void> initiatePayment({
+/// Payment state management provider
+class PaymentProvider with ChangeNotifier {
+  final PaymentApiService _apiService = PaymentApiService();
+  
+  // State variables
+  List<Payment> _payments = [];
+  List<Payment> _userPayments = [];
+  PaymentStatsResponse? _stats;
+  bool _isLoading = false;
+  bool _isProcessing = false;
+  String? _error;
+  
+  // Track ongoing payment initiation to prevent duplicates
+  String? _ongoingPaymentCourseId;
+  
+  // Filter and pagination
+  PaymentStatus? _filterStatus;
+  String _searchQuery = '';
+  int _currentPage = 1;
+  int _itemsPerPage = 10;
+  int _totalPages = 1;
+  int _totalItems = 0;
+  
+  // Getters
+  List<Payment> get payments => _payments;
+  List<Payment> get userPayments => _userPayments;
+  PaymentStatsResponse? get stats => _stats;
+  bool get isLoading => _isLoading;
+  bool get isProcessing => _isProcessing;
+  String? get error => _error;
+  PaymentStatus? get filterStatus => _filterStatus;
+  String get searchQuery => _searchQuery;
+  int get currentPage => _currentPage;
+  int get itemsPerPage => _itemsPerPage;
+  int get totalPages => _totalPages;
+  int get totalItems => _totalItems;
+  
+  // Computed getters
+  List<Payment> get filteredPayments {
+    List<Payment> filtered = _payments;
+    
+    // Apply status filter
+    if (_filterStatus != null) {
+      filtered = filtered.where((p) => p.status == _filterStatus).toList();
+    }
+    
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((p) => 
+        p.transactionId.toLowerCase().contains(query) ||
+        p.user?.fullName.toLowerCase().contains(query) == true ||
+        p.user?.email.toLowerCase().contains(query) == true ||
+        p.course?.title.toLowerCase().contains(query) == true
+      ).toList();
+    }
+    
+    return filtered;
+  }
+  
+  List<Payment> get filteredUserPayments {
+    List<Payment> filtered = _userPayments;
+    
+    if (_filterStatus != null) {
+      filtered = filtered.where((p) => p.status == _filterStatus).toList();
+    }
+    
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((p) => 
+        p.transactionId.toLowerCase().contains(query) ||
+        p.course?.title.toLowerCase().contains(query) == true
+      ).toList();
+    }
+    
+    return filtered;
+  }
+  
+  // Admin Methods
+  Future<void> loadPayments({
+    PaymentStatus? status,
+    String? courseId,
+    String? userId,
+    int page = 1,
+  }) async {
+    _setLoading(true);
+    _setError(null);
+    
+    try {
+      final response = await _apiService.getAllPayments(
+        status: status,
+        courseId: courseId,
+        userId: userId,
+        page: page,
+        limit: _itemsPerPage,
+      );
+      
+      // Update pagination info
+      _currentPage = response.currentPage;
+      _totalPages = response.totalPages;
+      _totalItems = response.total;
+      _payments = response.payments;
+      
+      notifyListeners();
+    } catch (e) {
+      _setError(e.toString());
+      // Clear payments on error to show empty state
+      _payments = [];
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  Future<void> loadPaymentStats() async {
+    _setLoading(true);
+    _setError(null);
+    
+    try {
+      _stats = await _apiService.getPaymentStats();
+      notifyListeners();
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  Future<void> verifyPayment({
+    required String paymentId,
+    required PaymentStatus status,
+    String? adminNotes,
+  }) async {
+    _setProcessing(true);
+    _setError(null);
+    
+    try {
+      await _apiService.verifyPayment(
+        paymentId: paymentId,
+        status: status,
+        adminNotes: adminNotes,
+      );
+      
+      // Refresh payments list
+      await loadPayments(status: _filterStatus, page: _currentPage);
+      // Don't call loadPaymentStats() here to avoid infinite loop
+    } catch (e) {
+      _setError(e.toString());
+    } finally {
+      _setProcessing(false);
+    }
+  }
+  
+  // User Methods
+  Future<void> loadUserPayments({PaymentStatus? status}) async {
+    _setLoading(true);
+    _setError(null);
+    
+    try {
+      _userPayments = await _apiService.getMyPayments(status: status);
+      notifyListeners();
+    } catch (e) {
+      _setError(e.toString());
+      _userPayments = [];
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  Future<PaymentInitiationResponse> initiatePayment({
     required String courseId,
     required String paymentMethod,
     required String contactInfo,
   }) async {
-    print('PaymentInitiationNotifier: Initiating payment for course: $courseId');
-    print('PaymentInitiationNotifier: Payment method: $paymentMethod');
-    print('PaymentInitiationNotifier: Contact info: $contactInfo');
+    // Prevent duplicate payment initiations for the same course
+    if (_ongoingPaymentCourseId == courseId) {
+      throw ApiException('Payment initiation already in progress for this course');
+    }
     
-    final repository = ref.read(paymentRepositoryProvider);
-    state = const AsyncValue.loading();
-    print('PaymentInitiationNotifier: Set state to loading');
+    _ongoingPaymentCourseId = courseId;
+    _setProcessing(true);
+    _setError(null);
     
     try {
-      final response = await repository.initiatePayment(
+      final response = await _apiService.initiatePayment(
         courseId: courseId,
         paymentMethod: paymentMethod,
         contactInfo: contactInfo,
       );
-      print('PaymentInitiationNotifier: Payment initiated successfully');
-      print('PaymentInitiationNotifier: Transaction ID: ${response.transactionId}');
-      state = AsyncValue.data(response);
+      
+      // Refresh user payments
+      await loadUserPayments();
+      
+      return response;
     } catch (e) {
-      print('PaymentInitiationNotifier: Payment initiation failed: $e');
-      state = AsyncValue.error(e, StackTrace.current);
+      // If it's a 'payment already initiated' error, still refresh user payments
+      // so the UI can detect the pending payment
+      if (e.toString().contains('already initiated')) {
+        await loadUserPayments();
+      }
+      
+      _setError(e.toString());
+      rethrow;
+    } finally {
+      _ongoingPaymentCourseId = null;
+      _setProcessing(false);
     }
   }
-}
-
-// Provider for user's payments
-final userPaymentsProvider = FutureProvider<List<model.Payment>>((ref) async {
-  final repository = ref.read(paymentRepositoryProvider);
-  return await repository.getMyPayments();
-});
-
-// Provider for specific payment
-final paymentByIdProvider = FutureProvider.family<model.Payment, String>((ref, paymentId) async {
-  final repository = ref.read(paymentRepositoryProvider);
-  return await repository.getPaymentById(paymentId);
-});
-
-// Async notifier for payment actions
-final paymentActionNotifierProvider = AsyncNotifierProvider<PaymentActionNotifier, void>(
-  () => PaymentActionNotifier(),
-);
-
-class PaymentActionNotifier extends AsyncNotifier<void> {
-  @override
-  FutureOr<void> build() {}
-
+  
   Future<void> cancelPayment(String paymentId) async {
-    final repository = ref.read(paymentRepositoryProvider);
-    state = const AsyncValue.loading();
+    _setProcessing(true);
+    _setError(null);
     
     try {
-      await repository.cancelPayment(paymentId);
-      state = const AsyncValue.data(null);
-      // Refresh payments list
-      ref.invalidate(userPaymentsProvider);
+      await _apiService.cancelPayment(paymentId);
+      
+      // Refresh payments lists
+      await loadUserPayments(status: _filterStatus);
+      if (_payments.isNotEmpty) {
+        await loadPayments(status: _filterStatus, page: _currentPage);
+      }
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      _setError(e.toString());
+    } finally {
+      _setProcessing(false);
     }
   }
+  
+  Future<Payment> getPaymentDetails(String paymentId) async {
+    _setLoading(true);
+    _setError(null);
+    
+    try {
+      final payment = await _apiService.getPaymentById(paymentId);
+      return payment;
+    } catch (e) {
+      _setError(e.toString());
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // UI Helper Methods
+  void setFilterStatus(PaymentStatus? status) {
+    _filterStatus = status;
+    _currentPage = 1; // Reset to first page
+    notifyListeners();
+  }
+  
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    _currentPage = 1; // Reset to first page
+    notifyListeners();
+  }
+  
+  void setItemsPerPage(int itemsPerPage) {
+    _itemsPerPage = itemsPerPage;
+    _currentPage = 1; // Reset to first page
+    notifyListeners();
+  }
+  
+  // Reset methods
+  void resetFilters() {
+    _filterStatus = null;
+    _searchQuery = '';
+    _currentPage = 1;
+    notifyListeners();
+  }
+  
+  void resetError() {
+    _setError(null);
+  }
+  
+  void reset() {
+    _payments = [];
+    _userPayments = [];
+    _stats = null;
+    _filterStatus = null;
+    _searchQuery = '';
+    _currentPage = 1;
+    _totalPages = 1;
+    _totalItems = 0;
+    _setError(null);
+    notifyListeners();
+  }
+  
+  // Private helper methods
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+  
+  void _setProcessing(bool value) {
+    _isProcessing = value;
+    notifyListeners();
+  }
+  
+  void _setError(String? error) {
+    _error = error;
+    notifyListeners();
+  }
+  
+  @override
+  void dispose() {
+    _apiService.dispose();
+    super.dispose();
+  }
 }
-
-// Provider for checking if user has pending payment for a course
-final hasPendingPaymentProvider = FutureProvider.family<bool, String>((ref, courseId) async {
-  final repository = ref.read(paymentRepositoryProvider);
-  return await repository.hasPendingPaymentForCourse(courseId);
-});

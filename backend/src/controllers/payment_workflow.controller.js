@@ -79,49 +79,114 @@ const verifyPayment = async (req, res) => {
     }
 
     // Find payment
+    console.log('Verifying payment with ID:', paymentId);
     const payment = await Payment.findById(paymentId)
       .populate('userId', 'fullName email')
       .populate('courseId', 'title price');
+    
+    if (!payment) {
+      console.log('Payment not found with ID:', paymentId);
+    } else {
+      console.log('Payment found:', payment.transactionId, 'Current status:', payment.status);
+    }
 
     if (!payment) {
       return sendNotFound(res, 'Payment not found');
     }
 
-    // Update payment status
-    const adminId = req.user.id;
-    payment.status = status;
-    payment.adminApproval = {
-      approvedBy: adminId,
-      approvedAt: new Date(),
-      adminNotes: adminNotes || ''
-    };
-
-    if (status === 'approved') {
-      payment.paymentDate = new Date();
+    try {
+      // Store populated values before updating
+      const userIdInfo = {
+        id: payment.userId?._id || payment.userId,
+        fullName: payment.userId?.fullName || 'Unknown User',
+        email: payment.userId?.email || 'unknown@example.com'
+      };
       
-      // Create enrollment for the user
-      await Enrollment.create({
-        userId: payment.userId,
-        courseId: payment.courseId,
-        completionStatus: 'in-progress',
-        paymentId: payment._id
-      });
-    }
+      const courseIdInfo = {
+        id: payment.courseId?._id || payment.courseId,
+        title: payment.courseId?.title || 'Unknown Course'
+      };
+      
+      // Update payment status
+      const adminId = req.user.id;
+      console.log('Setting payment status to:', status);
+      console.log('Admin ID:', adminId);
+      
+      payment.status = status;
+      payment.adminApproval = {
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        adminNotes: adminNotes || ''
+      };
+      
+      console.log('Admin approval object created:', payment.adminApproval);
 
-    sendSuccess(res, {
-      paymentId: payment._id,
-      transactionId: payment.transactionId,
-      status: payment.status,
-      userId: payment.userId._id,
-      userName: payment.userId.fullName,
-      userEmail: payment.userId.email,
-      courseId: payment.courseId._id,
-      courseTitle: payment.courseId.title,
-      amount: payment.amount,
-      approvedBy: adminId,
-      approvedAt: payment.adminApproval.approvedAt,
-      adminNotes: payment.adminApproval.adminNotes
-    }, `Payment ${status} successfully`);
+      if (status === 'approved') {
+        payment.paymentDate = new Date();
+        
+        console.log('Checking for existing enrollment for user:', userIdInfo.id, 'course:', courseIdInfo.id);
+        
+        // Check if enrollment already exists for this user and course
+        const existingEnrollment = await Enrollment.findOne({
+          userId: userIdInfo.id,
+          courseId: courseIdInfo.id
+        });
+        
+        if (!existingEnrollment) {
+          console.log('Creating new enrollment for user:', userIdInfo.id, 'course:', courseIdInfo.id);
+          
+          // Create enrollment for the user
+          await Enrollment.create({
+            userId: userIdInfo.id,
+            courseId: courseIdInfo.id,
+            completionStatus: 'in-progress',
+            paymentId: payment._id
+          });
+          
+          console.log('Enrollment created successfully');
+        } else {
+          console.log('Enrollment already exists for user:', userIdInfo.id, 'course:', courseIdInfo.id);
+          
+          // Update existing enrollment with the new payment ID if it doesn't have one
+          if (!existingEnrollment.paymentId) {
+            existingEnrollment.paymentId = payment._id;
+            await existingEnrollment.save();
+            console.log('Updated existing enrollment with payment ID');
+          }
+        }
+      }
+
+      // Save the updated payment to the database
+      console.log('Saving updated payment with new status:', status);
+      await payment.save();
+      console.log('Payment saved successfully');
+
+      // Construct response using preserved values
+      console.log('Preparing response data...');
+      const responseData = {
+        paymentId: payment._id,
+        transactionId: payment.transactionId,
+        status: payment.status,
+        userId: userIdInfo.id,
+        userName: userIdInfo.fullName,
+        userEmail: userIdInfo.email,
+        courseId: courseIdInfo.id,
+        courseTitle: courseIdInfo.title,
+        amount: payment.amount,
+        approvedBy: adminId,
+        approvedAt: payment.adminApproval.approvedAt,
+        adminNotes: payment.adminApproval.adminNotes
+      };
+      
+      console.log('Response data prepared:', responseData);
+      
+      sendSuccess(res, responseData, `Payment ${status} successfully`);
+      
+    } catch (updateError) {
+      console.error('Error in verifyPayment update process:', updateError);
+      console.error('Error stack:', updateError.stack);
+      return sendError(res, 'Failed to verify payment due to internal error', 500, updateError.message);
+    }
 
   } catch (error) {
     sendError(res, 'Failed to verify payment', 500, error.message);
@@ -200,6 +265,10 @@ const getPaymentById = async (req, res) => {
 const getAllPayments = async (req, res) => {
   try {
     const { status, courseId, userId, page = 1, limit = 10 } = req.query;
+    
+    console.log('getAllPayments called with params:', { status, courseId, userId, page, limit });
+    console.log('User ID:', req.user?.id);
+    console.log('User role:', req.user?.role);
 
     const filter = {};
     if (status) filter.status = status;
@@ -215,15 +284,32 @@ const getAllPayments = async (req, res) => {
       .sort({ createdAt: -1 });
 
     const total = await Payment.countDocuments(filter);
-
-    sendSuccess(res, {
+    
+    const responseData = {
       payments,
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
       total
-    }, 'Payments retrieved successfully');
+    };
+    
+    console.log('getAllPayments response structure:', {
+      paymentsLength: payments.length,
+      paymentsType: typeof payments,
+      isArray: Array.isArray(payments),
+      paymentsSample: payments.length > 0 ? payments[0] : 'empty array',
+      totalPages: responseData.totalPages,
+      currentPage: responseData.currentPage,
+      total: responseData.total,
+      responseDataPaymentsType: typeof responseData.payments,
+      responseDataPaymentsIsArray: Array.isArray(responseData.payments)
+    });
+
+    console.log('Sending response data:', JSON.stringify(responseData, null, 2));
+
+    sendSuccess(res, responseData, 'Payments retrieved successfully');
 
   } catch (error) {
+    console.error('Error in getAllPayments:', error);
     sendError(res, 'Failed to retrieve payments', 500, error.message);
   }
 };
@@ -268,6 +354,8 @@ const cancelPayment = async (req, res) => {
 // Get payment statistics (admin only)
 const getPaymentStats = async (req, res) => {
   try {
+    console.log('getPaymentStats called by user:', req.user?.id);
+    
     const totalPayments = await Payment.countDocuments();
     const pendingPayments = await Payment.countDocuments({ status: 'pending' });
     const adminReviewPayments = await Payment.countDocuments({ status: 'admin_review' });
@@ -277,17 +365,17 @@ const getPaymentStats = async (req, res) => {
     const cancelledPayments = await Payment.countDocuments({ status: 'cancelled' });
 
     const totalRevenue = await Payment.aggregate([
-      { $match: { status: 'completed' } },
+      { $match: { status: { $in: ['completed', 'approved'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
-    const recentPayments = await Payment.find({ status: 'completed' })
+    const recentPayments = await Payment.find({ status: { $in: ['completed', 'approved'] } })
       .populate('userId', 'fullName email')
       .populate('courseId', 'title')
-      .sort({ paymentDate: -1 })
+      .sort({ updatedAt: -1, paymentDate: -1 })
       .limit(10);
 
-    sendSuccess(res, {
+    const responseData = {
       totalPayments,
       pendingPayments,
       adminReviewPayments,
@@ -297,9 +385,14 @@ const getPaymentStats = async (req, res) => {
       cancelledPayments,
       totalRevenue: totalRevenue[0]?.total || 0,
       recentPayments
-    }, 'Payment statistics retrieved successfully');
+    };
+    
+    console.log('getPaymentStats response data:', responseData);
+    
+    sendSuccess(res, responseData, 'Payment statistics retrieved successfully');
 
   } catch (error) {
+    console.error('Error in getPaymentStats:', error);
     sendError(res, 'Failed to retrieve payment statistics', 500, error.message);
   }
 };

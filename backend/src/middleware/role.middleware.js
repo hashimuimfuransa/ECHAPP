@@ -4,6 +4,7 @@ const authorize = (...roles) => {
   return (req, res, next) => {
     console.log('=== ROLE MIDDLEWARE CHECK ===');
     console.log('Requested roles:', roles);
+    console.log('Request URL:', req.url);
     console.log('User in request:', !!req.user);
     console.log('User role:', req.user?.role);
     console.log('User email:', req.user?.email);

@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/providers/content_management_provider.dart';
 import 'package:excellence_coaching_hub/models/section.dart';
@@ -13,8 +13,10 @@ import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/data/repositories/video_repository.dart';
 import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart';
 import 'package:excellence_coaching_hub/models/video.dart';
+import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
+import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'package:excellence_coaching_hub/services/infrastructure/api_client.dart'; // For ApiException
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -34,6 +36,9 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   Course? _course;
   bool _courseLoading = true;
   String? _courseError;
+  final Map<String, List<exam_model.Exam>> _examsBySection = {};
+  final Map<String, bool> _examsLoading = {};
+  final ExamService _examService = ExamService();
 
   @override
   void initState() {
@@ -66,6 +71,76 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     }
   }
 
+  Future<void> _loadSectionExams(String sectionId) async {
+    print('LoadSectionExams called for: $sectionId, currently loading: ${_examsLoading[sectionId] ?? false}');
+    
+    if (_examsLoading[sectionId] == true) {
+      print('Already loading exams for section: $sectionId, skipping');
+      return;
+    }
+    
+    print('Starting exam load for section: $sectionId');
+    
+    setState(() {
+      _examsLoading[sectionId] = true;
+    });
+    
+    try {
+      // Add timeout to prevent infinite loading
+      print('Making API call for section: $sectionId');
+      final exams = await _examService.getSectionExamsAdmin(sectionId).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('Timeout loading exams for section: $sectionId');
+          return <exam_model.Exam>[];
+        },
+      );
+      print('API call successful, received ${exams.length} exams for section: $sectionId');
+      if (mounted) {
+        setState(() {
+          _examsBySection[sectionId] = exams;
+          _examsLoading[sectionId] = false;
+        });
+        print('State updated successfully for section: $sectionId');
+      } else {
+        print('Widget not mounted, skipping state update for section: $sectionId');
+      }
+    } catch (e) {
+      print('Error loading exams for section $sectionId: $e');
+      if (mounted) {
+        setState(() {
+          _examsLoading[sectionId] = false;
+        });
+        print('Error state updated for section: $sectionId');
+        
+        // Show user-friendly error message
+        if (context.mounted) {
+          String errorMessage = 'Failed to load exams';
+          if (e is ApiException) {
+            if (e.statusCode == 401) {
+              errorMessage = 'Authentication required. Please log in again.';
+            } else if (e.statusCode == 403) {
+              errorMessage = 'Access denied. Check your permissions.';
+            } else {
+              errorMessage = e.message;
+            }
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Retry',
+                onPressed: () => _loadSectionExams(sectionId),
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final contentState = ref.watch(contentManagementProvider);
@@ -76,6 +151,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _courseLoading ? null : _refreshAllExams,
+            tooltip: 'Refresh All Exams',
+          ),
           IconButton(
             icon: Icon(_isReordering ? Icons.check : Icons.reorder),
             onPressed: () {
@@ -301,8 +381,30 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   }
 
   Widget _buildSectionCard(BuildContext context, Section section, int index, Map<String, List<Lesson>> lessonsBySection) {
+      // Schedule exam loading for after the build phase
+      if (!_examsBySection.containsKey(section.id) && 
+          _examsLoading[section.id] != true) {
+        print('Scheduling exam load for section: ${section.id}');
+        // Use addPostFrameCallback to schedule after build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _loadSectionExams(section.id);
+          }
+        });
+      } else {
+        print('Exams already loaded or loading for section: ${section.id}');
+        print('Current exam state - Loaded: ${_examsBySection.containsKey(section.id)}, Loading: ${_examsLoading[section.id] ?? false}');
+        if (_examsBySection.containsKey(section.id)) {
+          print('Exams count: ${_examsBySection[section.id]?.length ?? 0}');
+        }
+      }
+      
+      final exams = _examsBySection[section.id] ?? [];
+      final examsLoading = _examsLoading[section.id] ?? false;
+      
+      print('Building section card - Exams: ${exams.length}, Loading: $examsLoading');
     return Container(
-      key: ValueKey(section.id),
+      key: ValueKey('section-${section.id}-exams-${exams.length}-loading-${examsLoading}'),
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -370,6 +472,16 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                           Icon(Icons.add, size: 20),
                           SizedBox(width: 10),
                           Text('Add Lesson'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'add_exam',
+                      child: Row(
+                        children: [
+                          Icon(Icons.quiz, size: 20),
+                          SizedBox(width: 10),
+                          Text('Add Exam'),
                         ],
                       ),
                     ),
@@ -468,6 +580,94 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                     ],
                   ),
                 
+                // Exams Section
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Exams in this section',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.greyColor,
+                      ),
+                    ),
+                    if (exams.isNotEmpty)
+                      Text(
+                        '${exams.length} exams',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.primaryGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Display exams or loading state
+                if (examsLoading)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 8),
+                          Text('Loading exams... (${exams.length} loaded)', style: const TextStyle(fontSize: 12, color: AppTheme.greyColor)),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (exams.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.greyColor.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.quiz_outlined, size: 40, color: AppTheme.greyColor),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No exams added yet',
+                          style: TextStyle(
+                            color: AppTheme.greyColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add exams to assess student knowledge',
+                          style: TextStyle(
+                            color: AppTheme.greyColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _loadSectionExams(section.id),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Refresh Exams'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primaryGreen,
+                            side: const BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  // Display actual exams
+                  Column(
+                    children: exams.map((exam) => _buildExamItem(exam, false)).toList(),
+                  ),
+                
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
                   onPressed: (section.id.isEmpty || section.id.length < 5) ? null : () => _showAddLessonDialog(context, section),
@@ -479,6 +679,22 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                         : AppTheme.primaryGreen,
                     foregroundColor: Colors.white,
                     elevation: 0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: (section.id.isEmpty || section.id.length < 5) ? null : () => _showAddExamDialog(context, section),
+                  icon: const Icon(Icons.quiz, size: 18),
+                  label: const Text('Add Exam'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: (section.id.isEmpty || section.id.length < 5) 
+                        ? AppTheme.greyColor 
+                        : AppTheme.primaryGreen,
+                    side: BorderSide(
+                      color: (section.id.isEmpty || section.id.length < 5) 
+                          ? AppTheme.greyColor 
+                          : AppTheme.primaryGreen,
+                    ),
                   ),
                 ),
               ],
@@ -609,6 +825,140 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
+  Widget _buildExamItem(exam_model.Exam exam, bool isLast) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.borderGrey),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.quiz,
+                color: Colors.orange,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exam.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.blackColor,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${exam.questionsCount} questions • ${exam.type} • ${exam.isPublished ? 'Published' : 'Draft'}',
+                    style: const TextStyle(
+                      color: AppTheme.greyColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) => _handleExamAction(value, exam),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      SizedBox(width: 10),
+                      Text('Edit Exam'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'publish',
+                  child: Row(
+                    children: [
+                      Icon(Icons.publish, size: 20),
+                      SizedBox(width: 10),
+                      Text('Publish Exam'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 10),
+                      Text('Delete Exam', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleExamAction(String action, exam_model.Exam exam) {
+    switch (action) {
+      case 'edit':
+        // TODO: Implement edit exam
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Edit exam functionality coming soon')),
+        );
+        break;
+      case 'publish':
+        // TODO: Implement publish exam
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Publish exam functionality coming soon')),
+        );
+        break;
+      case 'delete':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Delete exam functionality coming soon')),
+        );
+        break;
+    }
+  }
+
+  void _refreshAllExams() {
+    print('Refreshing all exams');
+    final contentState = ref.read(contentManagementProvider);
+    
+    // Clear all exam state and reload
+    setState(() {
+      _examsBySection.clear();
+      _examsLoading.clear();
+    });
+    
+    // Trigger reload for all sections
+    for (var section in contentState.sections) {
+      _loadSectionExams(section.id);
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing all exams...'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
   void _handleReorder(int oldIndex, int newIndex) {
     // Handle section reordering
     if (newIndex > oldIndex) {
@@ -646,6 +996,9 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
         break;
       case 'add_lesson':
         _showAddLessonDialog(context, section);
+        break;
+      case 'add_exam':
+        _showAddExamDialog(context, section);
         break;
       case 'delete':
         _showDeleteConfirmation(context, 'section', section.title, sectionId: section.id);
@@ -824,6 +1177,32 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     context.push('/admin/courses/${widget.courseId}/sections/${section.id}/lessons/create');
   }
 
+  void _showAddExamDialog(BuildContext context, Section section) {
+    // Ensure both IDs are valid before navigating
+    if (widget.courseId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Course ID is invalid'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    if (section.id.isEmpty || section.id.length < 5) { // MongoDB ObjectIds are typically 24 characters long
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Section ID is invalid (${section.id.length} chars): "${section.id}" for section titled: "${section.title}"'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Navigate to create exam page with section and course IDs
+    context.push('/admin/courses/${widget.courseId}/sections/${section.id}/exams/create');
+  }
+
   void _showEditSectionDialog(BuildContext context, Section section) {
     final titleController = TextEditingController(text: section.title);
     
@@ -895,7 +1274,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
       // Use course-specific videos instead of all videos to avoid potential issues
       final loadedVideos = await videoRepo.getVideosByCourse(lesson['courseId']);
       // Ensure loadedVideos is indeed a List<Video> and not something else
-      videos = loadedVideos is List<Video> ? loadedVideos : [];
+      videos = loadedVideos;
       isLoadingVideos = false;
     } catch (e) {
       errorMessage = e.toString();
@@ -972,13 +1351,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                 ),
                                 const SizedBox(height: 5),
                                 DropdownButtonFormField<String?>(
-                                  value: selectedVideoId,
+                                  initialValue: selectedVideoId,
                                   decoration: const InputDecoration(
                                     border: OutlineInputBorder(),
                                   ),
-                                  items: videos != null 
-                                    ? _getUniqueVideoItems(videos.where((video) => video != null).toList())
-                                    : [],
+                                  items: _getUniqueVideoItems(videos.where((video) => video != null).toList()),
                                   onChanged: (value) {
                                     setDialogState(() {
                                       selectedVideoId = value;
@@ -1116,18 +1493,13 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                           if (uploadResult != null) {
                                             // Handle the response - documentUrl might be in different fields
                                             String? documentUrl = uploadResult['documentUrl'] as String?;
-                                            if (documentUrl == null) {
-                                              // Try alternative field names that might contain the URL
-                                              documentUrl = uploadResult['s3Key'] as String?;
-                                            }
+                                            documentUrl ??= uploadResult['s3Key'] as String?;
                                             if (documentUrl == null) {
                                               // Try the data object structure
                                               final data = uploadResult['data'];
                                               if (data != null && data is Map<String, dynamic>) {
                                                 documentUrl = data['documentUrl'] as String?;
-                                                if (documentUrl == null) {
-                                                  documentUrl = data['s3Key'] as String?;
-                                                }
+                                                documentUrl ??= data['s3Key'] as String?;
                                               }
                                             }
                                             

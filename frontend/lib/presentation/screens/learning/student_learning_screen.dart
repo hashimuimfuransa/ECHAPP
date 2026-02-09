@@ -3,28 +3,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/section_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/section_repository.dart' as section_repo;
+import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart' as lesson_repo;
 import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/models/section.dart';
 import 'package:excellence_coaching_hub/models/lesson.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 
-class StudentLearningScreen extends StatefulWidget {
+class StudentLearningScreen extends ConsumerStatefulWidget {
   final String courseId;
 
   const StudentLearningScreen({super.key, required this.courseId});
 
   @override
-  State<StudentLearningScreen> createState() => _StudentLearningScreenState();
+  ConsumerState<StudentLearningScreen> createState() => _StudentLearningScreenState();
 }
 
-class _StudentLearningScreenState extends State<StudentLearningScreen> {
+class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
   Course? _course;
   List<Section>? _sections;
-  List<Lesson>? _lessons;
   Map<String, dynamic>? _enrollmentData;
+  Map<String, bool> _sectionCompletionStatus = {};
   bool _isLoading = true;
+  bool _isCompletingSection = false;
 
   @override
   void initState() {
@@ -43,8 +45,11 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
       _course = await courseRepo.getCourseById(widget.courseId);
 
       // Load sections
-      final sectionRepo = SectionRepository();
+      final sectionRepo = section_repo.SectionRepository();
       _sections = await sectionRepo.getSectionsByCourse(widget.courseId);
+      
+      // Sort sections by order
+      _sections?.sort((a, b) => a.order.compareTo(b.order));
 
       // Load enrollment data to get progress
       final enrollmentRepo = EnrollmentRepository();
@@ -70,6 +75,9 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
         'completedLessons': [], // Will be populated from actual enrollment data
         'certificateEligible': false, // Will be checked from actual enrollment
       };
+      
+      // Initialize section completion status
+      _initializeSectionCompletionStatus();
 
       setState(() {
         _isLoading = false;
@@ -79,6 +87,20 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+  
+  void _initializeSectionCompletionStatus() {
+    if (_sections == null) return;
+    
+    // First section is always unlocked
+    if (_sections!.isNotEmpty) {
+      _sectionCompletionStatus[_sections![0].id] = true;
+    }
+    
+    // Other sections are locked initially
+    for (int i = 1; i < _sections!.length; i++) {
+      _sectionCompletionStatus[_sections![i].id] = false;
     }
   }
 
@@ -112,7 +134,7 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_course!.title ?? 'Learning Path'),
+        title: Text(_course!.title),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         actions: [
@@ -148,8 +170,8 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
           
           const SizedBox(height: 30),
           
-          // Current Section
-          _buildCurrentSection(context),
+          // Course Sections
+          _buildCourseSections(context),
         ],
       ),
     );
@@ -219,7 +241,7 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _course!.title ?? 'Untitled Course',
+                  _course!.title,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -495,25 +517,7 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
     );
   }
 
-  Widget _buildCurrentSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Current Section',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
-          ),
-        ),
-        const SizedBox(height: 15),
-        _buildSectionCard(context),
-      ],
-    );
-  }
-
-  Widget _buildSectionCard(BuildContext context) {
+  Widget _buildCourseSections(BuildContext context) {
     if (_sections == null || _sections!.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -534,9 +538,6 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
       );
     }
 
-    // Get the first section as the current section
-    final section = _sections![0];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -553,95 +554,137 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryGreen,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                child: const Icon(
-                  Icons.numbers,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '\${section.order + 1}: \${section.title}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '5 lessons • 2 hours 15 mins', // Would calculate from actual lessons
-                      style: TextStyle(
-                        color: AppTheme.greyColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
           const Text(
-            'Upcoming Lessons',
+            'Course Sections',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
               color: AppTheme.blackColor,
             ),
           ),
-          const SizedBox(height: 15),
-          // Show lessons from this section
-          _buildLessonsForSection(context, section),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Navigate to the first lesson in the section
-                if (_sections != null && _sections!.isNotEmpty) {
-                  context.push('/learning/\${widget.courseId}/section/\${_sections![0].id}');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Continue Learning',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
-                ),
-              ),
-            ),
+          Column(
+            children: _sections!.map((section) {
+              final isUnlocked = _sectionCompletionStatus[section.id] ?? false;
+              return _buildSectionItem(context, section, isUnlocked);
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLessonsForSection(BuildContext context, Section section) {
+  Widget _buildSectionItem(BuildContext context, Section section, bool isUnlocked) {
+    final isCurrentSection = _sectionCompletionStatus[section.id] == true && 
+                           (_sections!.indexOf(section) == 0 || 
+                            _sectionCompletionStatus[_sections![_sections!.indexOf(section) - 1].id] == true);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(
+        color: isUnlocked ? Colors.white : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isUnlocked ? AppTheme.primaryGreen : Colors.grey.shade300,
+          width: isCurrentSection ? 2 : 1,
+        ),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: isCurrentSection,
+        enabled: isUnlocked,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            isUnlocked ? Icons.lock_open : Icons.lock,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          'Section ${section.order + 1}: ${section.title}',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isUnlocked ? AppTheme.blackColor : Colors.grey,
+          ),
+        ),
+        subtitle: Text(
+          '${_getLessonCountForSection(section.id)} lessons',
+          style: TextStyle(
+            color: isUnlocked ? AppTheme.greyColor : Colors.grey,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _buildLessonsForSection(context, section, isUnlocked),
+          ),
+          if (isUnlocked && isCurrentSection)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isCompletingSection ? null : () => _completeSection(section),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isCompletingSection
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text('Completing...', style: TextStyle(color: Colors.white)),
+                        ],
+                      )
+                    : const Text(
+                        'Mark Section as Completed',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonsForSection(BuildContext context, Section section, bool isUnlocked) {
+    if (!isUnlocked) {
+      return const Center(
+        child: Text(
+          'Complete previous section to unlock lessons',
+          style: TextStyle(
+            color: Colors.grey,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
     return FutureBuilder<List<Lesson>>(
       future: _fetchLessonsBySection(section.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (snapshot.hasError || snapshot.data == null) {
@@ -654,12 +697,12 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
         }
 
         return Column(
-          children: lessons.take(3).map((lesson) {
+          children: lessons.map((lesson) {
             return _buildLessonItem(
               lesson.title,
               lesson.videoId != null && lesson.videoId!.isNotEmpty ? 'video' : 'notes',
               lesson.duration,
-              lesson.order == 0, // Mark first lesson as next
+              false, // Not showing next indicator in section view
             );
           }).toList(),
         );
@@ -667,12 +710,64 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
     );
   }
 
+  Future<void> _completeSection(Section section) async {
+    if (_isCompletingSection) return;
+    
+    setState(() {
+      _isCompletingSection = true;
+    });
+    
+    try {
+      // Simulate API call to mark section as completed
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Find next section and unlock it
+      final currentIndex = _sections!.indexOf(section);
+      if (currentIndex < _sections!.length - 1) {
+        final nextSection = _sections![currentIndex + 1];
+        setState(() {
+          _sectionCompletionStatus[nextSection.id] = true;
+        });
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Section "${section.title}" completed! Next section unlocked.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing section: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCompletingSection = false;
+        });
+      }
+    }
+  }
+
+  
+
+
   Future<List<Lesson>> _fetchLessonsBySection(String sectionId) async {
     try {
-      final lessonRepo = LessonRepository();
+      final lessonRepo = lesson_repo.LessonRepository();
       return await lessonRepo.getLessonsBySection(sectionId);
     } catch (e) {
-      print('Error fetching lessons for section \$sectionId: \$e');
+      print('Error fetching lessons for section $sectionId: $e');
       return [];
     }
   }
@@ -797,7 +892,6 @@ class _StudentLearningScreenState extends State<StudentLearningScreen> {
               ? ListView(
                   padding: EdgeInsets.zero,
                   children: _sections!.asMap().entries.map((entry) {
-                    int index = entry.key;
                     Section section = entry.value;
                     return ListTile(
                       leading: Icon(Icons.numbers, color: AppTheme.primaryGreen),
