@@ -1,0 +1,25 @@
+{
+  "root": ".",
+  "clean_urls": false,
+  "routes": {
+    "/**": "index.html"
+  },
+  "https_only": true,
+  "headers": {
+    "/**": {
+      "Cache-Control": "public, max-age=0, must-revalidate"
+    },
+    "/!(.*)": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/flutter_bootstrap.js": {
+      "Content-Type": "application/javascript"
+    },
+    "/flutter.js": {
+      "Content-Type": "application/javascript"
+    },
+    "/main.dart.js": {
+      "Content-Type": "application/javascript"
+    }
+  }
+}
