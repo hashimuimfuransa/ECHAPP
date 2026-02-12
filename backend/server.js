@@ -11,11 +11,18 @@ require('./src/config/firebase');
 // Load environment variables
 dotenv.config();
 
-// Connect to database
-connectDB();
 console.log('🚀 Excellence Coaching Hub Backend Server Starting...');
 
 const app = express();
+
+// Basic health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'success', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Configure CORS to allow all origins (for development)
 const corsOptions = {
@@ -78,6 +85,20 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
+// Start server and connect to database asynchronously
+const server = app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`);
+  try {
+    await connectDB();
+    console.log('✅ Database connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    process.exit(1);
+  }
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  process.exit(1);
 });
