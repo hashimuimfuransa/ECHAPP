@@ -12,6 +12,7 @@ import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
 import 'package:excellence_coaching_hub/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/courses/course_detail_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/categories/categories_screen.dart';
+import 'package:excellence_coaching_hub/widgets/downloads_section.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -37,7 +38,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             // Main Content Area
             Expanded(
               child: Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFF0F9FF), // Light blue
+                      Color(0xFFE0F2FE), // Lighter blue
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
                 child: SafeArea(
                   child: Column(
                     children: [
@@ -62,17 +72,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 const SizedBox(height: 25),
                               ],
                               
-                              // Quick Actions with responsive grid
-                              _buildResponsiveQuickActions(context),
-                              
-                              const SizedBox(height: 25),
-                              
                               // Continue Learning
                               enrolledCoursesAsync.when(
                                 data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
                                 loading: () => _buildLoadingCard(context, 'Continue Learning'),
                                 error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
                               ),
+                              
+                              const SizedBox(height: 25),
+                              
+                              // Downloads Section
+                              const DownloadsSection(),
                               
                               const SizedBox(height: 25),
                               
@@ -112,7 +122,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // Mobile layout (existing code)
       return Scaffold(
         body: SafeArea(
-          child: Column(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFF0F9FF), // Light blue
+                  Color(0xFFE0F2FE), // Lighter blue
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: Column(
             children: [
               // Header
               _buildHeader(context, user),
@@ -135,11 +156,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         const SizedBox(height: 25),
                       ],
                                     
-                      // Quick Actions
-                      _buildQuickActions(context),
-                                    
-                      const SizedBox(height: 25),
-                                    
                       // Continue Learning
                       enrolledCoursesAsync.when(
                         data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
@@ -149,6 +165,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     
                       const SizedBox(height: 25),
                                     
+                      // Downloads Section
+                      const DownloadsSection(),
+                      
+                      const SizedBox(height: 25),
+                      
                       // Popular Courses
                       popularCoursesAsync.when(
                         data: (popularCourses) => _buildPopularCourses(context, popularCourses),
@@ -170,8 +191,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: _buildBottomNavBar(context),
-        drawer: ResponsiveNavigationDrawer(currentPage: 'dashboard'),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(context),
+      drawer: ResponsiveNavigationDrawer(currentPage: 'dashboard'),
       );
     }
   }
@@ -368,54 +390,61 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildWelcomeCard(BuildContext context, user) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF6366F1), // Indigo
+            Color(0xFF8B5CF6), // Purple
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF6366F1).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.whiteColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
                     Icons.school,
                     color: AppTheme.whiteColor,
-                    size: 24,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome Back!',
+                        'Welcome Back, ${user?.fullName ?? 'Student'}!',
                         style: TextStyle(
                           color: AppTheme.whiteColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
-                        'Continue your learning journey',
+                        'Continue your learning journey and achieve your goals',
                         style: TextStyle(
                           color: AppTheme.whiteColor.withOpacity(0.9),
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -423,33 +452,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            // Action Buttons
             Row(
               children: [
+                // Continue Learning Button
                 Expanded(
-                  child: Text(
-                    'Ready to learn something new?',
-                    style: TextStyle(
-                      color: AppTheme.whiteColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Navigate to my courses if user has enrolled courses, otherwise to all courses
+                      ref.read(enrolledCoursesProvider).maybeWhen(
+                        data: (courses) {
+                          if (courses.isNotEmpty) {
+                            context.push('/my-courses');
+                          } else {
+                            context.push('/courses');
+                          }
+                        },
+                        orElse: () {
+                          context.push('/courses');
+                        },
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.whiteColor,
+                      foregroundColor: const Color(0xFF6366F1),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      'Continue Learning',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.whiteColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.arrow_forward,
-                      color: AppTheme.primaryGreen,
-                      size: 20,
+                const SizedBox(width: 16),
+                // View Courses Button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.push('/courses'),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppTheme.whiteColor, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    onPressed: () {
-                      context.push('/courses');
-                    },
+                    child: Text(
+                      'View Courses',
+                      style: TextStyle(
+                        color: AppTheme.whiteColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],

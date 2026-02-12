@@ -32,6 +32,7 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/modern_student_learning_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/downloads/downloads_screen.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
@@ -86,6 +87,12 @@ class AppRouter {
               final courseId = state.pathParameters['id'] ?? '';
               return CourseDetailScreen(courseId: courseId);
             },
+          ),
+          
+          // Downloads Route
+          GoRoute(
+            path: '/downloads',
+            builder: (context, state) => const DownloadsScreen(),
           ),
           
           // Admin Routes
@@ -209,9 +216,11 @@ class AppRouter {
             },
           ),
           GoRoute(
-            path: '/learning/:courseId/exam',
+            path: '/learning/:courseId/exam/:examId',
             builder: (context, state) {
-              // Would implement exam screen
+              final examId = state.pathParameters['examId'] ?? '';
+              // This route would be used when navigating directly to an exam
+              // For now, we'll use it to pass exam data to the exam taking screen
               return Scaffold(
                 appBar: AppBar(title: const Text('Practice Exam')),
                 body: const Center(child: Text('Exam screen')),
