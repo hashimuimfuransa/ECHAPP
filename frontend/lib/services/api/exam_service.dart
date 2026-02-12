@@ -149,7 +149,20 @@ class ExamService {
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
         print('ExamService: Successfully fetched ${data.length} exams for section: $sectionId');
-        return data.map((json) => exam_model.Exam.fromJson(json as Map<String, dynamic>)).toList();
+        
+        final validExams = <exam_model.Exam>[];
+        for (final item in data) {
+          if (item != null && item is Map<String, dynamic>) {
+            try {
+              validExams.add(exam_model.Exam.fromJson(item));
+            } catch (e) {
+              print('ExamService: Error parsing exam data: $e');
+              continue;
+            }
+          }
+        }
+        print('ExamService: Converted ${validExams.length} valid exams from ${data.length} total items');
+        return validExams;
       } else {
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch exams for section');
       }
@@ -196,7 +209,20 @@ class ExamService {
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
         print('ExamService: Successfully parsed ${data.length} exams');
-        return data.map((json) => exam_model.Exam.fromJson(json as Map<String, dynamic>)).toList();
+        
+        final validExams = <exam_model.Exam>[];
+        for (final item in data) {
+          if (item != null && item is Map<String, dynamic>) {
+            try {
+              validExams.add(exam_model.Exam.fromJson(item));
+            } catch (e) {
+              print('ExamService (admin): Error parsing exam data: $e');
+              continue;
+            }
+          }
+        }
+        print('ExamService: Converted ${validExams.length} valid exams from ${data.length} total items (admin)');
+        return validExams;
       } else {
         print('ExamService: API returned error: ${jsonBody['message']}');
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch section exams');

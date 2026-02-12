@@ -19,7 +19,7 @@ class Exam {
   Exam({
     required this.id,
     required this.courseId,
-    required this.sectionId, // Added sectionId parameter
+    required this.sectionId,
     required this.title,
     required this.type,
     required this.passingScore,
@@ -32,14 +32,30 @@ class Exam {
   });
 
   factory Exam.fromJson(Map<String, dynamic> json) {
+    // Handle courseId - can be String, Map, or null
+    String courseId = '';
+    if (json['courseId'] != null) {
+      if (json['courseId'] is String) {
+        courseId = json['courseId'] as String;
+      } else if (json['courseId'] is Map<String, dynamic>) {
+        courseId = (json['courseId'] as Map<String, dynamic>)['_id'] as String? ?? '';
+      }
+    }
+    
+    // Handle sectionId - can be String, Map, or null
+    String sectionId = '';
+    if (json['sectionId'] != null) {
+      if (json['sectionId'] is String) {
+        sectionId = json['sectionId'] as String;
+      } else if (json['sectionId'] is Map<String, dynamic>) {
+        sectionId = (json['sectionId'] as Map<String, dynamic>)['_id'] as String? ?? '';
+      }
+    }
+    
     return Exam(
       id: json['_id'] as String,
-      courseId: json['courseId'] is String 
-          ? json['courseId'] as String
-          : (json['courseId'] as Map<String, dynamic>)['_id'] as String,
-      sectionId: json['sectionId'] is String 
-          ? json['sectionId'] as String
-          : (json['sectionId'] is Map<String, dynamic>) ? (json['sectionId'] as Map<String, dynamic>)['_id'] as String : '',
+      courseId: courseId,
+      sectionId: sectionId,
       title: json['title'] as String,
       type: json['type'] as String,
       passingScore: json['passingScore'] as int,
@@ -47,8 +63,8 @@ class Exam {
       isPublished: json['isPublished'] as bool? ?? false,
       questionsCount: json['questionsCount'] as int? ?? 0,
       attempts: json['attempts'] as int? ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now(),
     );
   }
 
