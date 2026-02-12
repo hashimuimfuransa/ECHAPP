@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:excellence_coaching_hub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/login_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/register_screen.dart';
@@ -35,15 +37,22 @@ import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_s
 import 'package:excellence_coaching_hub/presentation/screens/learning/modern_student_learning_screen.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/presentation/screens/downloads/downloads_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/landing/landing_screen.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
-        initialLocation: '/',
+        initialLocation: kIsWeb ? '/landing' : '/',
         routes: [
           // Splash Screen
           GoRoute(
             path: '/',
             builder: (context, state) => const SplashScreen(),
+          ),
+          
+          // Landing Page (Web Only)
+          GoRoute(
+            path: '/landing',
+            builder: (context, state) => const LandingScreen(),
           ),
           
           // Authentication Routes
@@ -287,6 +296,7 @@ class AppRouter {
           // Handle authentication redirects
           // We'll handle auth redirects in the widgets themselves rather than here
           // because accessing Riverpod providers in the router redirect is complex
+          // Web-specific routing handled in SplashScreen
           return null;
         },
       );
