@@ -11,6 +11,7 @@ import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
 import 'package:excellence_coaching_hub/widgets/lesson_viewer.dart';
 import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/exams/exam_history_screen.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -42,13 +43,17 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     });
 
     try {
+      print('Loading course data for course ID: ${widget.courseId}');
+      
       // Load course
       final courseRepo = CourseRepository();
       _course = await courseRepo.getCourseById(widget.courseId);
+      print('Course loaded: ${_course?.title}');
 
       // Load sections
       final sectionRepo = section_repo.SectionRepository();
       _sections = await sectionRepo.getSectionsByCourse(widget.courseId);
+      print('Sections loaded: ${_sections?.length}');
       
       // Sort sections by order
       _sections?.sort((a, b) => a.order.compareTo(b.order));
@@ -125,6 +130,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       elevation: 0,
       centerTitle: false,
       actions: [
+        IconButton(
+          icon: const Icon(Icons.history),
+          onPressed: _navigateToExamHistory,
+          tooltip: 'Exam History',
+        ),
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
           onPressed: () {},
@@ -408,13 +418,46 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       future: ExamService().getExamsBySection(sectionId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Loading exams...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.greyColor,
+                  ),
+                ),
+              ],
+            ),
           );
         }
         
-        if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+        if (snapshot.hasError) {
+          print('Error loading exams for section $sectionId: ${snapshot.error}');
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                'Unable to load exams',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.red.shade600,
+                ),
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.data == null || snapshot.data!.isEmpty) {
           // No exams available for this section
           return const SizedBox.shrink();
         }
@@ -915,5 +958,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         });
       }
     }
+  }
+
+  void _navigateToExamHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ExamHistoryScreen(),
+      ),
+    );
   }
 }

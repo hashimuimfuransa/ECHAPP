@@ -138,6 +138,7 @@ class ExamService {
   /// Get exams by section
   Future<List<exam_model.Exam>> getExamsBySection(String sectionId) async {
     try {
+      print('ExamService: Fetching exams for section: $sectionId');
       final response = await _apiClient.get(
         '${ApiConfig.exams}/section/$sectionId',
       );
@@ -147,12 +148,26 @@ class ExamService {
       
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
+        print('ExamService: Successfully fetched ${data.length} exams for section: $sectionId');
         return data.map((json) => exam_model.Exam.fromJson(json as Map<String, dynamic>)).toList();
       } else {
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch exams for section');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
+      print('ExamService: Error fetching exams for section $sectionId: $e');
+      if (e is ApiException) {
+        // Handle specific error cases
+        if (e.statusCode == 403) {
+          print('ExamService: User not enrolled in course (403)');
+          // Return empty list instead of throwing for 403 - this is expected behavior
+          return [];
+        }
+        if (e.statusCode == 404) {
+          print('ExamService: Section not found (404)');
+          return [];
+        }
+        rethrow;
+      }
       throw ApiException('Failed to fetch exams for section: $e');
     }
   }
@@ -231,6 +246,27 @@ class ExamService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch exam results: $e');
+    }
+  }
+
+  /// Get user's exam history
+  Future<List<ExamResult>> getUserExamHistory() async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.exams}/history');
+      response.validateStatus();
+      
+      final apiResponse = response.toApiResponse(
+        (json) => (json as List).map((item) => ExamResult.fromJson(item)).toList()
+      );
+      
+      if (apiResponse.success) {
+        return apiResponse.data ?? [];
+      } else {
+        throw ApiException(apiResponse.message);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch exam history: $e');
     }
   }
 
@@ -331,29 +367,46 @@ class ExamListResponse {
 // Exam result model
 class ExamResult {
   final String resultId;
+  final String? examId;
   final int score;
   final int totalPoints;
-  final double percentage;
+  final double? percentage;
   final bool passed;
   final String message;
+  final DateTime? submittedAt;
+  final exam_model.Exam? examDetails;
 
   ExamResult({
     required this.resultId,
+    this.examId,
     required this.score,
     required this.totalPoints,
-    required this.percentage,
+    this.percentage,
     required this.passed,
     required this.message,
+    this.submittedAt,
+    this.examDetails,
   });
 
   factory ExamResult.fromJson(Map<String, dynamic> json) {
     return ExamResult(
-      resultId: json['resultId'] ?? '',
+      resultId: json['_id'] ?? json['resultId'] ?? '',
+      examId: json['examId'] is String 
+          ? json['examId'] as String
+          : (json['examId'] is Map<String, dynamic>) 
+              ? (json['examId'] as Map<String, dynamic>)['_id'] as String
+              : null,
       score: json['score'] ?? 0,
       totalPoints: json['totalPoints'] ?? 0,
-      percentage: (json['percentage'] ?? 0.0).toDouble(),
+      percentage: json['percentage'] != null ? json['percentage'].toDouble() : null,
       passed: json['passed'] ?? false,
       message: json['message'] ?? 'Exam completed',
+      submittedAt: json['submittedAt'] != null 
+          ? DateTime.parse(json['submittedAt'] as String)
+          : null,
+      examDetails: json['examId'] is Map<String, dynamic>
+          ? exam_model.Exam.fromJson(json['examId'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

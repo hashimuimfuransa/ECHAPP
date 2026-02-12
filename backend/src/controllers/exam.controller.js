@@ -293,6 +293,28 @@ const getExamResults = async (req, res) => {
   }
 };
 
+// Get user's exam history
+const getUserExamHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const results = await Result.find({ userId })
+      .populate({
+        path: 'examId',
+        select: 'title type courseId sectionId',
+        populate: [
+          { path: 'courseId', select: 'title' },
+          { path: 'sectionId', select: 'title' }
+        ]
+      })
+      .sort({ submittedAt: -1 });
+    
+    sendSuccess(res, results, 'Exam history retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve exam history', 500, error.message);
+  }
+};
+
 // Create exam (admin only)
 const createExam = async (req, res) => {
   try {
@@ -396,5 +418,6 @@ module.exports = {
   getExamQuestions,
   submitExam,
   getExamResults,
+  getUserExamHistory,
   createExam
 };

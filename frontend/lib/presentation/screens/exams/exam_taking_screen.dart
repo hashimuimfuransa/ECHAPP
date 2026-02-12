@@ -518,7 +518,7 @@ class ExamResultsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${result.percentage.toStringAsFixed(1)}%',
+                      '${(result.percentage ?? 0.0).toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 16,
                         color: result.passed ? Colors.green : Colors.red,
@@ -527,7 +527,7 @@ class ExamResultsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
-                      value: result.percentage / 100,
+                      value: (result.percentage ?? 0.0) / 100,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         result.passed ? Colors.green : Colors.red,

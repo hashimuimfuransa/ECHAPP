@@ -11,6 +11,7 @@ const {
   getExamQuestions,
   submitExam,
   getExamResults,
+  getUserExamHistory, // Added new function
   createExam
 } = require('../controllers/exam.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -27,6 +28,7 @@ router.post('/', protect, roleAuthorize('admin'), createExam);
 // Student routes
 router.get('/course/:courseId', protect, getCourseExams);
 router.get('/section/:sectionId', protect, getExamsBySection); // Added new route
+router.get('/history', protect, getUserExamHistory); // Added new route
 router.get('/:examId/questions', protect, getExamQuestions);
 router.post('/:examId/submit', protect, submitExam);
 router.get('/:examId/results', protect, getExamResults);

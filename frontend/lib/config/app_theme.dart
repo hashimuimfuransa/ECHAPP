@@ -70,6 +70,8 @@ class AppTheme {
 
   // Additional colors
   static const Color lightGreen = Color(0xFFE0F2E9);
+  static const Color successColor = Color(0xFF10B981); // Green for success
+  static const Color errorColor = Color(0xFFEF4444); // Red for errors
 
   /* =========================
      LIGHT THEME
