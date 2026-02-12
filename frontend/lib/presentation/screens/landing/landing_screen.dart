@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -147,7 +148,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       // Download section
                       const Center(
                         child: Text(
-                          'Download Now',
+                          'Install Now',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -189,7 +190,7 @@ class _LandingScreenState extends State<LandingScreen> {
                               Icon(Icons.android, size: 24),
                               SizedBox(width: 10),
                               Text(
-                                'Download APK',
+                                'Install Now',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -223,11 +224,14 @@ class _LandingScreenState extends State<LandingScreen> {
                             ),
                             const SizedBox(height: 10),
                             const Text(
-                              '1. Click the "Download APK" button above\n'
-                              '2. Allow installation from unknown sources in your device settings\n'
-                              '3. Open the downloaded APK file\n'
-                              '4. Tap "Install" and wait for installation to complete\n'
-                              '5. Open the app and start learning!',
+                              'For Web/Desktop:\n'
+                              '1. Click the "Install Now" button above\n'
+                              '2. The APK will download automatically\n'
+                              '3. Open the downloaded file and install\n\n'
+                              'For Mobile:\n'
+                              '1. Visit https://echappdownload.onrender.com on your mobile browser\n'
+                              '2. Click the "Install Now" button on the web page\n'
+                              '3. Follow your device\'s installation prompts',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF856404),
@@ -434,17 +438,51 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  void _downloadApk() {
-    // In a real implementation, this would trigger the actual APK download
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Downloading Excellence Coaching Hub APK...'),
-        backgroundColor: Color(0xFF4CAF50),
-      ),
-    );
-    
-    // For now, we'll simulate the download by showing a message
-    // In reality, you'd implement the actual download functionality here
+  void _downloadApk() async {
+    try {
+      // Show downloading message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Starting download...'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+      
+      // For web: try to download directly
+      if (kIsWeb) {
+        final downloadUrl = 'https://echappdownload.onrender.com/downloads/app-release.apk';
+        if (await launchUrl(Uri.parse(downloadUrl))) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Download started! Check your browser downloads.'),
+              backgroundColor: Color(0xFF4CAF50),
+            ),
+          );
+        } else {
+          // Fallback: open in new tab
+          await launchUrl(
+            Uri.parse(downloadUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      } else {
+        // For mobile: show instructions
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please visit the web version at https://echappdownload.onrender.com to download the APK'),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Download failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _openWebVersion(BuildContext context) {
