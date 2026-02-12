@@ -31,7 +31,9 @@ import 'package:excellence_coaching_hub/presentation/screens/admin/payment_manag
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/exams/create_exam_screen.dart';
+import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/learning/modern_student_learning_screen.dart';
+import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/presentation/screens/downloads/downloads_screen.dart';
 
 class AppRouter {
@@ -219,12 +221,19 @@ class AppRouter {
             path: '/learning/:courseId/exam/:examId',
             builder: (context, state) {
               final examId = state.pathParameters['examId'] ?? '';
-              // This route would be used when navigating directly to an exam
-              // For now, we'll use it to pass exam data to the exam taking screen
-              return Scaffold(
-                appBar: AppBar(title: const Text('Practice Exam')),
-                body: const Center(child: Text('Exam screen')),
-              );
+              final courseId = state.pathParameters['courseId'] ?? '';
+              // Get exam data from state.extra if passed
+              final exam = state.extra as exam_model.Exam?;
+              
+              if (exam != null) {
+                return ExamTakingScreen(exam: exam);
+              } else {
+                // Fallback if exam data not passed
+                return Scaffold(
+                  appBar: AppBar(title: const Text('Exam')),  
+                  body: const Center(child: Text('Exam not found')),
+                );
+              }
             },
           ),
           GoRoute(

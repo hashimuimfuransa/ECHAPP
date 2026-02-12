@@ -431,34 +431,7 @@ class Question {
   }
 }
 
-class ExamResult {
-  final String resultId;
-  final int score;
-  final int totalPoints;
-  final double percentage;
-  final bool passed;
-  final String message;
 
-  ExamResult({
-    required this.resultId,
-    required this.score,
-    required this.totalPoints,
-    required this.percentage,
-    required this.passed,
-    required this.message,
-  });
-
-  factory ExamResult.fromJson(Map<String, dynamic> json) {
-    return ExamResult(
-      resultId: json['resultId'] ?? '',
-      score: json['score'] ?? 0,
-      totalPoints: json['totalPoints'] ?? 0,
-      percentage: (json['percentage'] ?? 0.0).toDouble(),
-      passed: json['passed'] ?? false,
-      message: json['message'] ?? 'Exam completed',
-    );
-  }
-}
 
 class ExamResultsScreen extends StatelessWidget {
   final exam_model.Exam exam;

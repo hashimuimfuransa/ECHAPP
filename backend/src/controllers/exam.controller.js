@@ -139,7 +139,7 @@ const getExamsBySection = async (req, res) => {
     const exams = await Exam.find({ 
       sectionId: sectionId, 
       isPublished: true 
-    }).select('title type passingScore timeLimit');
+    }).select('title type passingScore timeLimit questionsCount attempts');
 
     sendSuccess(res, exams, 'Section exams retrieved successfully');
   } catch (error) {

@@ -10,6 +10,7 @@ import 'package:excellence_coaching_hub/models/lesson.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
 import 'package:excellence_coaching_hub/widgets/lesson_viewer.dart';
+import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_screen.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -406,10 +407,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     return FutureBuilder<List<exam_model.Exam>>(
       future: ExamService().getExamsBySection(sectionId),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting || 
-            snapshot.hasError || 
-            snapshot.data == null ||
-            snapshot.data!.isEmpty) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
           // No exams available for this section
           return const SizedBox.shrink();
         }
@@ -417,84 +422,237 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         final exams = snapshot.data!;
         
         return Column(
-          children: exams.map((exam) {
-            Color examColor;
-            IconData examIcon;
-            
-            switch (exam.type?.toLowerCase() ?? '') {
-              case 'quiz':
-                examColor = Colors.blue;
-                examIcon = Icons.quiz_outlined;
-                break;
-              case 'pastpaper':
-                examColor = Colors.orange;
-                examIcon = Icons.article_outlined;
-                break;
-              case 'final':
-                examColor = Colors.red;
-                examIcon = Icons.school_outlined;
-                break;
-              default:
-                examColor = Colors.grey;
-                examIcon = Icons.help_outline;
-            }
-            
-            return Container(
-              margin: const EdgeInsets.only(top: 8),
-              child: ElevatedButton.icon(
-                onPressed: () => _takeExam(exam),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: examColor.withOpacity(0.1),
-                  foregroundColor: examColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: examColor.withOpacity(0.3)),
-                  ),
-                ),
-                icon: Icon(examIcon, size: 20),
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Take ${(exam.type ?? '').toUpperCase()} Exam',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: examColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${exam.questionsCount} Qs',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 16, bottom: 8, left: 4),
+              child: Text(
+                'Section Exams',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.greyColor,
                 ),
               ),
-            );
-          }).toList(),
+            ),
+            ...exams.map((exam) {
+              Color examColor;
+              IconData examIcon;
+              String examTypeLabel;
+              
+              switch (exam.type?.toLowerCase() ?? '') {
+                case 'quiz':
+                  examColor = Colors.blue;
+                  examIcon = Icons.quiz_outlined;
+                  examTypeLabel = 'Quiz';
+                  break;
+                case 'pastpaper':
+                  examColor = Colors.orange;
+                  examIcon = Icons.article_outlined;
+                  examTypeLabel = 'Past Paper';
+                  break;
+                case 'final':
+                  examColor = Colors.red;
+                  examIcon = Icons.school_outlined;
+                  examTypeLabel = 'Final Exam';
+                  break;
+                default:
+                  examColor = Colors.grey;
+                  examIcon = Icons.help_outline;
+                  examTypeLabel = 'Exam';
+              }
+              
+              return Container(
+                margin: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  color: examColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: examColor.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: examColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: examColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      examIcon,
+                      color: examColor,
+                      size: 24,
+                    ),
+                  ),
+                  title: Text(
+                    exam.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.blackColor,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: examColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              examTypeLabel,
+                              style: TextStyle(
+                                color: examColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.question_mark, size: 14, color: AppTheme.greyColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${exam.questionsCount} questions',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyColor,
+                            ),
+                          ),
+                          if (exam.timeLimit > 0) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.timer, size: 14, color: AppTheme.greyColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${exam.timeLimit} min',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.greyColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (exam.passingScore > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Passing score: ${exam.passingScore}%',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyColor,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    color: examColor,
+                    size: 16,
+                  ),
+                  onTap: () => _takeExam(exam),
+                ),
+              );
+            }).toList(),
+          ],
         );
       },
     );
   }
 
   void _takeExam(exam_model.Exam exam) {
-    // Navigate to the exam screen
-    // TODO: Implement exam taking screen
+    // Show confirmation dialog with exam details
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        String examTypeLabel;
+        Color examColor;
+        IconData examIcon;
+        
+        switch (exam.type?.toLowerCase() ?? '') {
+          case 'quiz':
+            examTypeLabel = 'Quiz';
+            examColor = Colors.blue;
+            examIcon = Icons.quiz_outlined;
+            break;
+          case 'pastpaper':
+            examTypeLabel = 'Past Paper';
+            examColor = Colors.orange;
+            examIcon = Icons.article_outlined;
+            break;
+          case 'final':
+            examTypeLabel = 'Final Exam';
+            examColor = Colors.red;
+            examIcon = Icons.school_outlined;
+            break;
+          default:
+            examTypeLabel = 'Exam';
+            examColor = Colors.grey;
+            examIcon = Icons.help_outline;
+        }
+        
         return AlertDialog(
-          title: Text('Start ${(exam.type ?? '').toUpperCase()} Exam'),
-          content: Text('Would you like to start the "${exam.title}" exam? You will have ${exam.timeLimit} minutes to complete it.'),
+          title: Row(
+            children: [
+              Icon(examIcon, color: examColor, size: 24),
+              const SizedBox(width: 12),
+              Text('${examTypeLabel}: ${exam.title}'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You are about to start the "${exam.title}" exam.',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: examColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: examColor.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildExamInfoRow(Icons.question_mark, '${exam.questionsCount} Questions'),
+                    if (exam.timeLimit > 0)
+                      _buildExamInfoRow(Icons.timer, '${exam.timeLimit} Minutes'),
+                    if (exam.passingScore > 0)
+                      _buildExamInfoRow(Icons.check_circle, '${exam.passingScore}% to Pass'),
+                    _buildExamInfoRow(Icons.repeat, '${exam.attempts} Attempts Allowed'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Important:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '• Make sure you have a stable internet connection\n'
+                '• Close other applications to avoid distractions\n'
+                '• Once started, the timer cannot be paused',
+                style: TextStyle(fontSize: 12, color: AppTheme.greyColor),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -503,11 +661,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to exam taking screen
                 _navigateToExamTakingScreen(exam);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: examColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Start Exam'),
@@ -517,14 +674,28 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       },
     );
   }
+  
+  Widget _buildExamInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppTheme.greyColor),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _navigateToExamTakingScreen(exam_model.Exam exam) {
-    // Placeholder for exam taking screen navigation
-    // In a real implementation, you would navigate to the exam taking screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navigating to ${exam.type ?? ""} exam: ${exam.title}'),
-        backgroundColor: AppTheme.primaryGreen,
+    // Navigate to the exam taking screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ExamTakingScreen(exam: exam),
       ),
     );
   }

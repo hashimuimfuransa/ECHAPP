@@ -39,6 +39,10 @@ const examSchema = new mongoose.Schema({
   questionsCount: {
     type: Number,
     default: 0
+  },
+  attempts: {
+    type: Number,
+    default: 1
   }
 }, {
   timestamps: true
