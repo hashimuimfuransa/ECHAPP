@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     <title>Download Excellence Coaching Hub App</title>
     <meta name="description" content="Download Excellence Coaching Hub - Your comprehensive e-learning platform for Android and iOS">
     
@@ -168,6 +172,28 @@
             cursor: pointer;
             max-width: 300px;
             margin: 0 auto;
+            /* Mobile touch optimizations */
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 56px; /* Minimum touch target size */
+        }
+        
+        .download-btn:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+        }
+        
+        .download-btn:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.5);
+            outline-offset: 2px;
+        }
+        
+        /* Mobile-specific button states */
+        .download-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         .download-btn:hover {
@@ -367,29 +393,29 @@
 
         <div class="hero">
             <div class="app-info">
-                <h2>Transform Your Learning Journey</h2>
-                <p>Access premium courses, interactive exams, and video lessons anytime, anywhere with our mobile app.</p>
-                
+                <h2>Learn Anywhere, Anytime</h2>
+                <p>Download our app and access premium educational content on your Android device.</p>
+                                
                 <div class="features">
                     <div class="feature">
                         <div class="feature-icon">📚</div>
                         <div>
-                            <strong>Comprehensive Courses</strong>
-                            <p>Access hundreds of courses across various subjects</p>
+                            <strong>Hundreds of Courses</strong>
+                            <p>Wide range of subjects and topics</p>
                         </div>
                     </div>
                     <div class="feature">
-                        <div class="feature-icon">🎥</div>
+                        <div class="feature-icon">📱</div>
                         <div>
-                            <strong>Video Streaming</strong>
-                            <p>Watch lessons offline and online with HD quality</p>
+                            <strong>Offline Learning</strong>
+                            <p>Study without internet connection</p>
                         </div>
                     </div>
                     <div class="feature">
-                        <div class="feature-icon">📝</div>
+                        <div class="feature-icon">🏆</div>
                         <div>
-                            <strong>Interactive Exams</strong>
-                            <p>Test your knowledge with quizzes and practice exams</p>
+                            <strong>Certificate Ready</strong>
+                            <p>Earn certificates upon completion</p>
                         </div>
                     </div>
                 </div>
@@ -400,36 +426,47 @@
                 <p>Get Excellence Coaching Hub on your Android device</p>
                                 
                 <div class="download-buttons">
-                    <button class="download-btn android-btn" onclick="downloadAndroid()">
-                        <span>📱</span>&nbsp;&nbsp;Download APK
+                    <button class="download-btn android-btn" onclick="downloadAndroid()" id="downloadBtn">
+                        <span>📱</span>&nbsp;&nbsp;Install Now
                     </button>
                 </div>
                                 
                 <div style="margin-top: 30px;">
-                    <p style="font-size: 0.9rem; color: #666;">
-                        Direct APK download for Android devices
+                    <p style="font-size: 0.9rem; color: #666; text-align: center; margin-top: 15px;">
+                        <strong>One-click installation</strong> - Works on all Android devices<br>
+                        File size: 60MB • Download time: 1-5 minutes
                     </p>
                 </div>
             </div>
         </div>
 
         <div class="instructions">
-            <h2>Quick Installation</h2>
+            <h2>Mobile Installation Guide</h2>
             <div class="instruction-steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <div class="step-title">Download</div>
-                    <p>Click the download button above</p>
+                    <div class="step-title">Tap Download</div>
+                    <p>Press the green download button</p>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
-                    <div class="step-title">Install</div>
-                    <p>Open and install the APK file</p>
+                    <div class="step-title">Check Notifications</div>
+                    <p>Watch download progress in your notification bar</p>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
+                    <div class="step-title">Enable Installation</div>
+                    <p>Allow "Install unknown apps" in settings if prompted</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Complete Install</div>
+                    <p>Tap the APK file and press "Install"</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
                     <div class="step-title">Start Learning</div>
-                    <p>Open the app and enjoy!</p>
+                    <p>Open Excellence Coaching Hub and begin your journey!</p>
                 </div>
             </div>
         </div>
@@ -438,15 +475,23 @@
             <h2>How to Install on Android</h2>
             <p>Follow these simple steps to install Excellence Coaching Hub on your Android device:</p>
             
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 10px; padding: 20px; margin-top: 20px;">
-                <h3 style="color: #856404; margin-top: 0;">📱 Android Installation Steps</h3>
-                <ol style="color: #856404; text-align: left; padding-left: 20px;">
-                    <li>Click the "Download APK" button above</li>
-                    <li>Allow installation from unknown sources in your device settings</li>
-                    <li>Open the downloaded APK file</li>
-                    <li>Tap "Install" and wait for installation to complete</li>
-                    <li>Open the app and start learning!</li>
-                </ol>
+            <div style="background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 10px; padding: 20px; margin-top: 20px;">
+                <h3 style="color: #1976d2; margin-top: 0;">📱 Mobile Download Tips</h3>
+                <ul style="color: #1976d2; text-align: left; padding-left: 20px;">
+                    <li><strong>WiFi Recommended:</strong> For faster downloads, use WiFi connection</li>
+                    <li><strong>Storage Space:</strong> Ensure 50MB+ free space on your device</li>
+                    <li><strong>Unknown Sources:</strong> Enable in Settings > Security > Unknown Sources</li>
+                    <li><strong>Download Location:</strong> Check Downloads folder or notification panel</li>
+                    <li><strong>Troubleshooting:</strong> If download fails, try again or use a different browser</li>
+                </ul>
+                
+                <div style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                    <h4 style="color: #2e7d32; margin: 0 0 10px 0;">🔄 Download Progress</h4>
+                    <p style="color: #2e7d32; margin: 0; font-size: 14px;">
+                        After clicking download, you'll see progress in your browser and notification bar. 
+                        The file is approximately 60MB and may take 1-5 minutes depending on your connection speed.
+                    </p>
+                </div>
             </div>
         </div>
         
@@ -480,16 +525,228 @@
 
     <script>
         function downloadAndroid() {
-            // Direct download of the APK file
-            const link = document.createElement('a');
-            link.href = 'downloads/app-release.apk';
-            link.download = 'ExcellenceCoachingHub.apk';
-            link.click();
+            // Prevent multiple clicks
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (downloadBtn.disabled) return;
+            
+            const originalText = downloadBtn.innerHTML;
+            
+            // Update button for mobile touch feedback
+            downloadBtn.innerHTML = '<span>📥</span>&nbsp;&nbsp;Starting Download...';
+            downloadBtn.disabled = true;
+            downloadBtn.style.opacity = '0.7';
+            downloadBtn.style.transform = 'scale(0.98)';
+            
+            // Show immediate feedback
+            showMessage('Preparing download... Please wait', 'info');
+            
+            // Small delay to show button state change
+            setTimeout(() => {
+                // Create and trigger download
+                const link = document.createElement('a');
+                link.href = 'downloads/app-release.apk';
+                link.download = 'ExcellenceCoachingHub.apk';
+                link.target = '_blank'; // Open in new tab for mobile browsers
+                
+                // Add mobile-specific attributes
+                link.setAttribute('rel', 'noopener noreferrer');
+                link.setAttribute('download', 'ExcellenceCoachingHub.apk');
+                
+                // Mobile browser compatibility fixes
+                if (isMobileDevice()) {
+                    // Force download in mobile browsers
+                    link.setAttribute('data-downloadurl', `application/vnd.android.package-archive:ExcellenceCoachingHub.apk:${link.href}`);
+                    
+                    // Try alternative download methods for problematic browsers
+                    if (/SamsungBrowser|MiuiBrowser/i.test(navigator.userAgent)) {
+                        // Samsung and Xiaomi browsers sometimes need special handling
+                        link.onclick = function(e) {
+                            e.preventDefault();
+                            window.location.href = link.href;
+                            return false;
+                        };
+                    }
+                }
+                
+                // Track download attempt
+                let downloadStarted = false;
+                
+                // Handle download start
+                link.addEventListener('click', function(e) {
+                    downloadStarted = true;
+                    showMessage('✅ Download started! Check your browser downloads or notification panel.', 'success');
+                });
+                
+                // Handle potential errors
+                link.addEventListener('error', function(e) {
+                    showMessage('❌ Download failed. Please try again or use a different browser.', 'error');
+                    resetButton();
+                });
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Update button state
+                downloadBtn.innerHTML = '<span>⏳</span>&nbsp;&nbsp;Download Started';
+                
+                // Reset button after delay
+                setTimeout(resetButton, 5000);
+                
+                // Fallback reset in case download doesn't trigger
+                setTimeout(() => {
+                    if (!downloadStarted) {
+                        showMessage('Download may have been blocked. Try enabling pop-ups or use a different browser.', 'warning');
+                        resetButton();
+                    }
+                }, 8000);
+                
+            }, 500);
+            
+            function resetButton() {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                downloadBtn.style.opacity = '1';
+                downloadBtn.style.transform = 'scale(1)';
+            }
         }
 
         function downloadIOS() {
-            alert('Currently, we only offer the Android version for direct download.\n\nFor iOS users, please use the web version or contact your institution for assistance.');
+            showMessage('iOS version coming soon! For now, please use the web version or contact support.', 'info');
         }
+        
+        function showMessage(message, type) {
+            // Remove existing message if any
+            const existingMsg = document.querySelector('.download-message');
+            if (existingMsg) existingMsg.remove();
+            
+            // Create message element
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `download-message message-${type}`;
+            msgDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>${type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '⚠️'}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            // Style the message
+            Object.assign(msgDiv.style, {
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                color: 'white',
+                fontWeight: '500',
+                zIndex: '1000',
+                maxWidth: '300px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                animation: 'slideIn 0.3s ease-out'
+            });
+            
+            // Set background color based on type
+            if (type === 'success') {
+                msgDiv.style.backgroundColor = '#4CAF50';
+            } else if (type === 'info') {
+                msgDiv.style.backgroundColor = '#2196F3';
+            } else {
+                msgDiv.style.backgroundColor = '#f44336';
+            }
+            
+            // Add to document
+            document.body.appendChild(msgDiv);
+            
+            // Remove after delay
+            setTimeout(() => {
+                msgDiv.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (msgDiv.parentNode) {
+                        msgDiv.parentNode.removeChild(msgDiv);
+                    }
+                }, 300);
+            }, 5000);
+        }
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+            
+            /* Mobile-specific improvements */
+            @media (max-width: 768px) {
+                .download-btn {
+                    width: 100%;
+                    max-width: none;
+                    padding: 25px 20px;
+                    font-size: 1.2rem;
+                }
+                
+                .container {
+                    margin: 10px;
+                    border-radius: 15px;
+                }
+                
+                .hero {
+                    padding: 20px;
+                    flex-direction: column;
+                }
+                
+                .platform-section {
+                    width: 100%;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Mobile-specific enhancements
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        
+        // Prevent accidental double taps on mobile
+        let lastTap = 0;
+        document.addEventListener('touchend', function(e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                e.preventDefault();
+            }
+            lastTap = currentTime;
+        }, false);
+        
+        // Enhanced mobile download handling
+        function handleMobileDownload() {
+            if (isMobileDevice()) {
+                // Add mobile-specific instructions
+                const mobileTips = document.createElement('div');
+                mobileTips.innerHTML = `
+                    <div style="background: #fff3e0; border: 1px solid #ffcc80; border-radius: 10px; padding: 15px; margin: 20px 0; text-align: center;">
+                        <h4 style="color: #ef6c00; margin: 0 0 10px 0;">📱 Mobile User?</h4>
+                        <p style="color: #ef6c00; margin: 0; font-size: 14px;">
+                            Tap and hold the download button if the download doesn't start automatically.
+                        </p>
+                    </div>
+                `;
+                
+                const heroSection = document.querySelector('.hero');
+                if (heroSection && !document.querySelector('.mobile-tips')) {
+                    mobileTips.className = 'mobile-tips';
+                    heroSection.parentNode.insertBefore(mobileTips, heroSection.nextSibling);
+                }
+            }
+        }
+        
+        // Initialize mobile enhancements when page loads
+        document.addEventListener('DOMContentLoaded', handleMobileDownload);
 
         // Add smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
