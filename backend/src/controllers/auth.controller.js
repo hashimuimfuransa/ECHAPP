@@ -2,7 +2,7 @@ const User = require('../models/User');
 const { generateToken, generateRefreshToken } = require('../utils/jwt.utils');
 const { sendSuccess, sendError, sendUnauthorized } = require('../utils/response.utils');
 const { OAuth2Client } = require('google-auth-library');
-const admin = require('firebase-admin');
+const admin = require('../config/firebase');
 
 // Google OAuth is handled by Firebase, so we don't need separate Google OAuth client
 // const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;

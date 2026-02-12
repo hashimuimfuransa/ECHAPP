@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const { verifyToken } = require('../utils/jwt.utils');
 const { sendUnauthorized } = require('../utils/response.utils');
-const admin = require('firebase-admin');
+const admin = require('../config/firebase');
 
 const protect = async (req, res, next) => {
   console.log('=== AUTH MIDDLEWARE CALLED ===');

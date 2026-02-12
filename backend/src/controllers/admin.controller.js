@@ -4,7 +4,7 @@ const Enrollment = require('../models/Enrollment');
 const Payment = require('../models/Payment');
 const Result = require('../models/Result');
 const { sendSuccess, sendError } = require('../utils/response.utils');
-const admin = require('firebase-admin');
+const admin = require('../config/firebase');
 
 // Sync Firebase user to MongoDB
 const syncFirebaseUser = async (req, res) => {
