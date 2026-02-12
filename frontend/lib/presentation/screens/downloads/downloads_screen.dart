@@ -3,6 +3,8 @@ import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/services/download_service.dart';
 import 'package:excellence_coaching_hub/models/download.dart';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
+import 'dart:io';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -79,6 +81,20 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     }
   }
 
+  // Play downloaded video from local storage
+  void _playDownloadedVideo(Download download) {
+    // Navigate to video player with local file path
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _LocalVideoPlayer(
+          filePath: download.localPath,
+          title: download.fileName,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,9 +157,14 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: InkWell(
+        onTap: download.status == DownloadStatus.completed 
+            ? () => _playDownloadedVideo(download)
+            : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -292,7 +313,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Color _getStatusColor(DownloadStatus status) {
@@ -324,6 +346,226 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       case DownloadStatus.pending:
       default:
         return 'Pending';
+    }
+  }
+}
+
+// Local Video Player Widget
+class _LocalVideoPlayer extends StatefulWidget {
+  final String filePath;
+  final String title;
+
+  const _LocalVideoPlayer({
+    required this.filePath,
+    required this.title,
+  });
+
+  @override
+  State<_LocalVideoPlayer> createState() => _LocalVideoPlayerState();
+}
+
+class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
+  late VideoPlayerController _controller;
+  late Future<void> _initializeVideoPlayerFuture;
+  bool _isPlaying = false;
+  bool _showControls = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(File(widget.filePath));
+    _initializeVideoPlayerFuture = _controller.initialize().then((_) {
+      setState(() {});
+      _controller.addListener(() {
+        setState(() {
+          _isPlaying = _controller.value.isPlaying;
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: AppTheme.primaryGreen,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.fullscreen),
+            onPressed: _toggleFullscreen,
+          ),
+        ],
+      ),
+      body: _buildVideoPlayer(),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    return FutureBuilder(
+      future: _initializeVideoPlayerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _showControls = !_showControls;
+              });
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: VideoPlayer(_controller),
+                ),
+                if (!_isPlaying && !_showControls)
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black26,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 60,
+                    ),
+                  ),
+                if (_showControls) _buildVideoControls(),
+              ],
+            ),
+          );
+        } else {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildVideoControls() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black54,
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Progress bar
+          Row(
+            children: [
+              Text(
+                _formatDuration(_controller.value.position),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: VideoProgressIndicator(
+                  _controller,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: AppTheme.primaryGreen,
+                    bufferedColor: Colors.white30,
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                _formatDuration(_controller.value.duration),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Control buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.replay_10, color: Colors.white, size: 30),
+                onPressed: () => _seekBackward(10),
+              ),
+              const SizedBox(width: 20),
+              Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    _isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: AppTheme.primaryGreen,
+                    size: 40,
+                  ),
+                  onPressed: _togglePlayPause,
+                ),
+              ),
+              const SizedBox(width: 20),
+              IconButton(
+                icon: const Icon(Icons.forward_10, color: Colors.white, size: 30),
+                onPressed: () => _seekForward(10),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      if (_controller.value.isPlaying) {
+        _controller.pause();
+      } else {
+        _controller.play();
+      }
+    });
+  }
+
+  void _toggleFullscreen() {
+    // Handle fullscreen toggle
+  }
+
+  void _seekForward(int seconds) {
+    final newPosition = _controller.value.position + Duration(seconds: seconds);
+    _controller.seekTo(newPosition);
+  }
+
+  void _seekBackward(int seconds) {
+    final newPosition = _controller.value.position - Duration(seconds: seconds);
+    _controller.seekTo(newPosition);
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    
+    if (duration.inHours > 0) {
+      return '$hours:$minutes:$seconds';
+    } else {
+      return '$minutes:$seconds';
     }
   }
 }
