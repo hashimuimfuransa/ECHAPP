@@ -12,6 +12,7 @@ import 'package:excellence_coaching_hub/data/repositories/course_repository.dart
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/data/repositories/video_repository.dart';
 import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart';
+import 'package:excellence_coaching_hub/data/repositories/exam_repository.dart';
 import 'package:excellence_coaching_hub/models/video.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
@@ -917,23 +918,223 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   void _handleExamAction(String action, exam_model.Exam exam) {
     switch (action) {
       case 'edit':
-        // TODO: Implement edit exam
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Edit exam functionality coming soon')),
-        );
+        _showEditExamDialog(exam);
         break;
       case 'publish':
-        // TODO: Implement publish exam
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Publish exam functionality coming soon')),
-        );
+        _toggleExamPublishStatus(exam);
         break;
       case 'delete':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Delete exam functionality coming soon')),
-        );
+        _confirmDeleteExam(exam);
         break;
     }
+  }
+
+  void _showEditExamDialog(exam_model.Exam exam) {
+    final titleController = TextEditingController(text: exam.title);
+    final passingScoreController = TextEditingController(text: exam.passingScore.toString());
+    final timeLimitController = TextEditingController(text: exam.timeLimit.toString());
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Exam'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Exam Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passingScoreController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Passing Score (%)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: timeLimitController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Time Limit (minutes)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Validation
+                if (titleController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Exam title is required')),
+                  );
+                  return;
+                }
+                
+                final passingScore = int.tryParse(passingScoreController.text);
+                if (passingScore == null || passingScore < 0 || passingScore > 100) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Passing score must be between 0 and 100')),
+                  );
+                  return;
+                }
+                
+                final timeLimit = int.tryParse(timeLimitController.text);
+                if (timeLimit == null || timeLimit <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Time limit must be a positive number')),
+                  );
+                  return;
+                }
+                
+                Navigator.pop(context);
+                
+                try {
+                  final examRepo = ExamRepository();
+                  await examRepo.updateExam(
+                    examId: exam.id,
+                    title: titleController.text.trim(),
+                    passingScore: passingScore,
+                    timeLimit: timeLimit,
+                  );
+                  
+                  // Refresh the exams for this section
+                  _loadSectionExams(exam.sectionId);
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Exam updated successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update exam: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _toggleExamPublishStatus(exam_model.Exam exam) async {
+    try {
+      final examRepo = ExamRepository();
+      final updatedExam = await examRepo.toggleExamPublish(exam.id, exam.isPublished);
+      
+      // Update the local state
+      setState(() {
+        final sectionExams = _examsBySection[exam.sectionId] ?? [];
+        final index = sectionExams.indexWhere((e) => e.id == exam.id);
+        if (index != -1) {
+          sectionExams[index] = updatedExam;
+          _examsBySection[exam.sectionId] = sectionExams;
+        }
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              updatedExam.isPublished 
+                ? 'Exam published successfully' 
+                : 'Exam unpublished successfully'
+            ),
+            backgroundColor: AppTheme.primaryGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to toggle exam status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _confirmDeleteExam(exam_model.Exam exam) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Exam'),
+          content: Text('Are you sure you want to delete "${exam.title}"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                
+                try {
+                  final examRepo = ExamRepository();
+                  await examRepo.deleteExam(exam.id);
+                  
+                  // Remove from local state
+                  setState(() {
+                    final sectionExams = _examsBySection[exam.sectionId] ?? [];
+                    sectionExams.removeWhere((e) => e.id == exam.id);
+                    _examsBySection[exam.sectionId] = sectionExams;
+                  });
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Exam deleted successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete exam: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _refreshAllExams() {

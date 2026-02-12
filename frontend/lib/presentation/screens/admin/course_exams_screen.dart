@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'package:excellence_coaching_hub/data/repositories/exam_repository.dart';
 
 class CourseExamsScreen extends StatefulWidget {
   final String courseId;
@@ -155,6 +156,125 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
         }
       }
     }
+  }
+
+  void _showEditExamDialog(exam_model.Exam exam) {
+    final titleController = TextEditingController(text: exam.title);
+    final passingScoreController = TextEditingController(text: exam.passingScore.toString());
+    final timeLimitController = TextEditingController(text: exam.timeLimit.toString());
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Exam'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Exam Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passingScoreController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Passing Score (%)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: timeLimitController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Time Limit (minutes)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Validation
+                if (titleController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Exam title is required')),
+                  );
+                  return;
+                }
+                
+                final passingScore = int.tryParse(passingScoreController.text);
+                if (passingScore == null || passingScore < 0 || passingScore > 100) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Passing score must be between 0 and 100')),
+                  );
+                  return;
+                }
+                
+                final timeLimit = int.tryParse(timeLimitController.text);
+                if (timeLimit == null || timeLimit <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Time limit must be a positive number')),
+                  );
+                  return;
+                }
+                
+                Navigator.pop(context);
+                
+                try {
+                  final examRepo = ExamRepository();
+                  final updatedExam = await examRepo.updateExam(
+                    examId: exam.id,
+                    title: titleController.text.trim(),
+                    passingScore: passingScore,
+                    timeLimit: timeLimit,
+                  );
+                  
+                  // Update the local state
+                  setState(() {
+                    final index = _exams.indexWhere((e) => e.id == exam.id);
+                    if (index != -1) {
+                      _exams[index] = updatedExam;
+                    }
+                  });
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Exam updated successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update exam: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   List<exam_model.Exam> _getFilteredExams() {
@@ -618,9 +738,7 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
             _viewResults(exam.id);
             break;
           case 'edit':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Edit exam functionality coming soon')),
-            );
+            _showEditExamDialog(exam);
             break;
           case 'duplicate':
             ScaffoldMessenger.of(context).showSnackBar(
@@ -805,4 +923,8 @@ class _CourseExamsScreenState extends State<CourseExamsScreen> {
       ),
     );
   }
+}
+
+class _showEditExamDialog {
+  _showEditExamDialog(exam_model.Exam exam);
 }

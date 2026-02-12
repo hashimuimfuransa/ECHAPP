@@ -4,7 +4,7 @@ const Result = require('../models/Result');
 const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Enrollment = require('../models/Enrollment');
-const GeminiAIService = require('../services/gemini_ai_service');
+const GroqService = require('../services/groq_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all exams for admin
@@ -298,12 +298,12 @@ const createExam = async (req, res) => {
   try {
     const { courseId, sectionId, title, type, passingScore, timeLimit, questions, documentPath } = req.body;
 
-    // If documentPath is provided, process it with Gemini AI to extract questions
+    // If documentPath is provided, process it with Groq AI to extract questions
     let processedQuestions = questions || [];
     let generatedTitle = title;
     
     if (documentPath) {
-      if (GeminiAIService.isConfigured()) {
+      if (GroqService.isConfigured()) {
         try {
           // Read the document content (assuming it's stored in S3 or locally)
           // In a real implementation, you'd fetch the document from storage
@@ -318,23 +318,23 @@ const createExam = async (req, res) => {
           // If you have the actual document content from storage, use it
           // Otherwise, generate questions based on the document
           if (documentContent) {
-            // Use Gemini AI to extract and organize questions from the document
-            processedQuestions = await GeminiAIService.extractQuestionsFromDocument(documentContent, type);
+            // Use Groq AI to extract and organize questions from the document
+            processedQuestions = await GroqService.extractQuestionsFromDocument(documentContent, type);
             
             // If title wasn't provided, generate one from the document
             if (!generatedTitle) {
-              generatedTitle = await GeminiAIService.generateExamTitle(documentContent);
+              generatedTitle = await GroqService.generateExamTitle(documentContent);
             }
           }
         } catch (aiError) {
-          console.error('Error processing document with Gemini AI:', aiError);
+          console.error('Error processing document with Groq AI:', aiError);
           // Continue with original questions if AI processing fails
           processedQuestions = questions || [];
         }
       } else {
-        // If Gemini AI is not configured, return an error if document processing is required
+        // If Groq AI is not configured, return an error if document processing is required
         if (documentPath) {
-          return sendError(res, 'Gemini AI is not configured. Please set GEMINI_API_KEY in environment variables.', 400);
+          return sendError(res, 'Groq AI is not configured. Please set GROQ_API_KEY in environment variables.', 400);
         }
       }
     }

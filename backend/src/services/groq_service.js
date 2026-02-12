@@ -103,7 +103,7 @@ class GroqService {
    * Process a single chunk with Groq
    */
   async processChunkWithGroq(chunk, examType, fileName, chunkNumber, totalChunks) {
-    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. Return exactly 2-3 high-quality questions in JSON format only:
+    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. Return 5-8 high-quality questions in JSON format only:
 
 [
   {
@@ -123,7 +123,7 @@ Requirements:
 - Multiple choice with 4 options
 - Clear and unambiguous questions
 - JSON format only, no extra text
-- Maximum 3 questions per section`;
+- Generate 5-8 comprehensive questions per section`;
 
     try {
       const completion = await this.groq.chat.completions.create({
@@ -135,7 +135,7 @@ Requirements:
           }
         ],
         temperature: 0.3,
-        max_tokens: 2000
+        max_tokens: 4000
       });
 
       const response = completion.choices[0].message.content;
@@ -350,10 +350,71 @@ Requirements:
         options: ["Understanding A", "Understanding B", "Understanding C", "Understanding D"],
         correctAnswer: "Understanding A",
         points: 1
+      },
+      {
+        question: `What methodology or approach is emphasized in this ${examType}?`,
+        options: ["Method A", "Method B", "Method C", "Method D"],
+        correctAnswer: "Method A",
+        points: 1
+      },
+      {
+        question: `Which theory or framework is central to this content?`,
+        options: ["Theory X", "Theory Y", "Theory Z", "Theory W"],
+        correctAnswer: "Theory X",
+        points: 1
+      },
+      {
+        question: `What practical application is highlighted in the material?`,
+        options: ["Application 1", "Application 2", "Application 3", "Application 4"],
+        correctAnswer: "Application 1",
+        points: 1
+      },
+      {
+        question: `What critical thinking skill is developed through this content?`,
+        options: ["Skill Alpha", "Skill Beta", "Skill Gamma", "Skill Delta"],
+        correctAnswer: "Skill Alpha",
+        points: 1
+      },
+      {
+        question: `What real-world scenario is addressed in this educational material?`,
+        options: ["Scenario One", "Scenario Two", "Scenario Three", "Scenario Four"],
+        correctAnswer: "Scenario One",
+        points: 1
+      },
+      {
+        question: `What problem-solving technique is taught in this section?`,
+        options: ["Technique P", "Technique Q", "Technique R", "Technique S"],
+        correctAnswer: "Technique P",
+        points: 1
+      },
+      {
+        question: `What analytical approach is recommended for understanding this content?`,
+        options: ["Approach I", "Approach II", "Approach III", "Approach IV"],
+        correctAnswer: "Approach I",
+        points: 1
+      },
+      {
+        question: `What evaluation criteria are established in this material?`,
+        options: ["Criteria 1", "Criteria 2", "Criteria 3", "Criteria 4"],
+        correctAnswer: "Criteria 1",
+        points: 1
+      },
+      {
+        question: `What learning outcome is expected from mastering this content?`,
+        options: ["Outcome X", "Outcome Y", "Outcome Z", "Outcome W"],
+        correctAnswer: "Outcome X",
+        points: 1
+      },
+      {
+        question: `What foundational knowledge is assumed for this ${examType}?`,
+        options: ["Knowledge Base A", "Knowledge Base B", "Knowledge Base C", "Knowledge Base D"],
+        correctAnswer: "Knowledge Base A",
+        points: 1
       }
     ];
     
-    const questionCount = Math.min(Math.max(Math.floor(documentText.length / 1000), 2), 5);
+    // Generate more questions based on document length - minimum 5, maximum 15
+    const questionCount = Math.min(Math.max(Math.floor(documentText.length / 800), 5), 15);
     return templates.slice(0, questionCount).map((template, index) => ({
       id: `template_q_${Date.now()}_${index}`,
       question: template.question,
