@@ -501,29 +501,9 @@ const uploadDocument = async (req, res) => {
         console.log('AI exam creation failed, continuing with normal document upload');
       }
 
-      // If courseId and sectionId are provided, create a lesson with the document as notes
-      let lesson = null;
-      if (req.body.courseId && req.body.sectionId) {
-        const Lesson = require('../models/Lesson');
-        const Section = require('../models/Section');
-        
-        // Get the section to get the courseId (in case it wasn't provided separately)
-        const section = await Section.findById(req.body.sectionId);
-        if (section) {
-          const order = await Lesson.countDocuments({ sectionId: req.body.sectionId }) + 1;
-          
-          lesson = await Lesson.create({
-            sectionId: req.body.sectionId,
-            courseId: req.body.courseId || section.courseId.toString(), // Use provided courseId or section's courseId
-            title: req.body.title || result.originalname.split('.')[0], // Use provided title or filename without extension
-            description: req.body.description,
-            videoId: null, // No video initially
-            notes: uploadResult.key, // Store the S3 key as notes (document path)
-            order: order,
-            duration: req.body.duration || 0 // Use provided duration or default to 0
-          });
-        }
-      }
+      // Note: Lessons are no longer automatically created with document uploads.
+      // The organized notes functionality is available but lessons must be created separately
+      // through the lesson creation endpoint to maintain proper workflow.
 
       return sendSuccess(res, {
         documentUrl: uploadResult.url,
@@ -534,7 +514,6 @@ const uploadDocument = async (req, res) => {
         size: result.size,
         mimetype: result.mimetype,
         uploadId: uploadId, // Include upload ID for progress tracking
-        lesson: lesson, // Return the created lesson if applicable
         // Include any additional fields from the request body
         ...(req.body.courseId && { courseId: req.body.courseId }),
         ...(req.body.sectionId && { sectionId: req.body.sectionId }),

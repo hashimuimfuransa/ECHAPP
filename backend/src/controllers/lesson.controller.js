@@ -52,13 +52,53 @@ const createLesson = async (req, res) => {
       return sendNotFound(res, 'Section not found');
     }
     
+    // If notes field looks like a document path, process it with AI to organize notes
+    let processedNotes = notes;
+    if (notes && (notes.includes('documents/') || notes.includes('.pdf') || notes.includes('.doc') || notes.includes('.docx'))) {
+      try {
+        const S3Service = require('../services/s3_service');
+        const DocumentProcessingService = require('../services/document_processing_service');
+        const GroqService = require('../services/groq_service');
+        
+        if (GroqService.isConfigured()) {
+          // Fetch the document from S3
+          const documentBuffer = await S3Service.getFileBuffer(notes);
+          
+          if (documentBuffer) {
+            // Determine MIME type based on file extension
+            let mimeType = 'application/pdf'; // default
+            if (notes.toLowerCase().includes('.docx')) {
+              mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } else if (notes.toLowerCase().includes('.doc')) {
+              mimeType = 'application/msword';
+            } else if (notes.toLowerCase().includes('.txt')) {
+              mimeType = 'text/plain';
+            }
+            
+            // Organize the notes using Groq AI
+            processedNotes = await GroqService.organizeNotes({
+              buffer: documentBuffer,
+              mimetype: mimeType,
+              originalname: notes.split('/').pop()
+            }, mimeType);
+            
+            console.log('Successfully organized notes using Groq AI for lesson');
+          }
+        }
+      } catch (aiError) {
+        console.error('Error processing document for notes organization:', aiError);
+        // Fall back to using the original notes
+        processedNotes = notes;
+      }
+    }
+    
     const lesson = await Lesson.create({
       sectionId,
       courseId: section.courseId,
       title,
       description,
       videoId,
-      notes,
+      notes: processedNotes, // Use processed notes instead of original
       order,
       duration
     });

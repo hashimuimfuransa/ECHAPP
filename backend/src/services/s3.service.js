@@ -223,6 +223,29 @@ class S3Service {
       return this.getPublicUrl(key);
     }
   }
+  
+  // Get file buffer from S3
+  async getFileBuffer(key) {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key
+      });
+      
+      const response = await this.client.send(command);
+      
+      // Convert the response body to buffer
+      const chunks = [];
+      for await (const chunk of response.Body) {
+        chunks.push(chunk);
+      }
+      
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error('Error fetching file from S3:', error.message);
+      throw new Error(`Failed to fetch file from S3: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new S3Service();

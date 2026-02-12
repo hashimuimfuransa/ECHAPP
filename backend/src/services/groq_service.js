@@ -522,6 +522,160 @@ Requirements:
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  /**
+   * Organize and structure document notes using Groq AI
+   * @param {string|Buffer} documentInput - Document text or buffer
+   * @param {string} mimeType - MIME type of document
+   * @returns {Promise<string>} - Organized notes in markdown format
+   */
+  async organizeNotes(documentInput, mimeType = 'text/plain') {
+    if (!this.isConfigured()) {
+      throw new Error("Groq is not configured. Please set GROQ_API_KEY in environment variables.");
+    }
+
+    try {
+      let documentText;
+      
+      // Extract text content first
+      if (typeof documentInput === 'string') {
+        documentText = documentInput;
+      } else if (documentInput.buffer) {
+        documentText = await this.extractTextFromBuffer(documentInput.buffer, mimeType);
+      } else {
+        throw new Error("Invalid document input. Must be text string or buffer object.");
+      }
+
+      if (!documentText || documentText.trim().length < 50) {
+        return "Document content too short to organize.";
+      }
+
+      console.log(`Organizing notes from document (first 200 chars): ${documentText.substring(0, 200)}...`);
+      
+      // Process document in chunks for better organization
+      const chunks = this.splitTextIntoChunks(documentText, 6000);
+      let organizedContent = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`Organizing chunk ${i + 1}/${chunks.length}...`);
+        
+        try {
+          const chunkContent = await this.organizeChunk(chunk, i + 1, chunks.length);
+          organizedContent.push(chunkContent);
+          console.log(`✓ Successfully organized chunk ${i + 1}`);
+        } catch (chunkError) {
+          console.warn(`⚠ Warning: Failed to organize chunk ${i + 1}:`, chunkError.message);
+          // Add raw content as fallback
+          organizedContent.push(`## Section ${i + 1}
+${chunk}
+`);
+        }
+        
+        // Small delay between chunks
+        if (i < chunks.length - 1) {
+          await this.delay(500);
+        }
+      }
+
+      // Combine all organized content
+      const finalContent = organizedContent.join('\n\n');
+      
+      if (finalContent.trim().length === 0) {
+        // Fallback to basic organization
+        return this.createBasicOrganization(documentText);
+      }
+      
+      console.log(`Successfully organized notes with ${organizedContent.length} sections`);
+      return finalContent;
+      
+    } catch (error) {
+      console.error("Error organizing notes with Groq:", error);
+      throw new Error(`Failed to organize notes with Groq: ${error.message}`);
+    }
+  }
+
+  /**
+   * Organize a single chunk of document content
+   */
+  async organizeChunk(chunk, chunkNumber, totalChunks) {
+    const prompt = `Organize and structure this educational content into well-structured, AI-organized notes. Format the response in markdown with proper headings, subheadings, bullet points, and clear organization:
+
+${chunk}
+
+Requirements:
+- Use markdown formatting with # for main headings and ## for subheadings
+- Organize content into logical sections
+- Use bullet points (-) for key points
+- Highlight important concepts
+- Make it educational and easy to study from
+- Keep the original meaning and key information
+- Structure it for optimal learning
+
+Return only the organized markdown content without any extra text or explanations.`;
+
+    try {
+      const completion = await this.groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.4,
+        max_tokens: 4000
+      });
+
+      const response = completion.choices[0].message.content;
+      return response.trim();
+      
+    } catch (error) {
+      console.error("Error organizing chunk with Groq:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create basic organization when AI fails
+   */
+  createBasicOrganization(documentText) {
+    // Simple organization based on common patterns
+    const lines = documentText.split('\n').filter(line => line.trim().length > 0);
+    
+    let organized = '# Course Notes\n\n';
+    let currentSection = 1;
+    let sectionContent = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Create new section every 10-15 lines or when we detect a topic change
+      if (sectionContent.length >= 10 || 
+          (line.length > 3 && line === line.toUpperCase()) ||
+          (i > 0 && lines[i-1].trim().length === 0 && line.length > 20)) {
+        
+        if (sectionContent.length > 0) {
+          organized += `## Section ${currentSection}\n`;
+          organized += sectionContent.map(item => `- ${item}`).join('\n') + '\n\n';
+          currentSection++;
+          sectionContent = [];
+        }
+      }
+      
+      if (line.length > 3) {
+        sectionContent.push(line);
+      }
+    }
+    
+    // Add remaining content
+    if (sectionContent.length > 0) {
+      organized += `## Section ${currentSection}\n`;
+      organized += sectionContent.map(item => `- ${item}`).join('\n') + '\n';
+    }
+    
+    return organized;
+  }
 }
 
 module.exports = new GroqService();
