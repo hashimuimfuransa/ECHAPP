@@ -41,3 +41,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android build intermediates that cause line ending warnings
+/build/
+/android/app/build/
+*.xml
+*.json
+*.txt
+*.map

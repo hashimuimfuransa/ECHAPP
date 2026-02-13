@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
@@ -65,7 +66,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     });
 
     try {
-      // Get lesson content from API
+      // Get fresh lesson content from API to ensure we have the latest extracted notes
       _lessonContent = await _videoService.getLessonContent(widget.lesson.id);
       
       // If there's video content, initialize video player
@@ -589,8 +590,64 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Widget _buildNotesContent() {
-    // Parse the AI-organized notes from the content
+    // Parse the organized notes from the content
     String notesContent = _lessonContent!.notes ?? '';
+    
+    // Debug: Print the notes content to console
+    print('DEBUG: Notes content for lesson ${widget.lesson.id}:');
+    print('Content length: ${notesContent.length}');
+    print('Content preview: ${notesContent.substring(0, min(200, notesContent.length))}');
+    
+    // Check if content looks like an S3 link
+    if (notesContent.contains('documents/') || notesContent.contains('.pdf') || notesContent.contains('.doc')) {
+      print('WARNING: Notes still contain S3 document link instead of extracted content');
+      // Show a user-friendly message instead of the S3 link
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.borderGrey,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  color: AppTheme.primaryGreen,
+                  size: 24,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Notes Processing',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.blackColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'The notes for this lesson are currently being processed. Please check back later to see the extracted content.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: AppTheme.greyColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,44 +655,13 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              const Text(
-                'Lesson Notes',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.blackColor,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      size: 14,
-                      color: Colors.blue[700],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'AI Organized',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: const Text(
+            'Lesson Notes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.blackColor,
+            ),
           ),
         ),
         Container(
