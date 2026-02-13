@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellence_coaching_hub/models/exam.dart';
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'exam_question_details_screen.dart';
 
 /// Screen to display user's exam history with detailed results
 class ExamHistoryScreen extends ConsumerStatefulWidget {
@@ -353,6 +355,43 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
                   ),
                 ],
               ),
+              
+              const SizedBox(height: 16),
+              
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _showExamDetails(result),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: const Text('View Details'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _showQuestionDetails(result),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: const Text('Question Review'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -366,6 +405,15 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _ExamDetailsSheet(result: result),
+    );
+  }
+
+  void _showQuestionDetails(ExamResult result) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExamQuestionDetailsScreen(examResult: result),
+      ),
     );
   }
 

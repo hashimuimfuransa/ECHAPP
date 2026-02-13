@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/models/lesson.dart';
+import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/services/api/video_api_service.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
@@ -11,6 +12,7 @@ import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:go_router/go_router.dart';
 import 'package:excellence_coaching_hub/services/download_service.dart';
 import 'package:excellence_coaching_hub/models/download.dart';
+import 'package:excellence_coaching_hub/widgets/ai_floating_chat_button.dart';
 import 'dart:io';
 
 /// Comprehensive lesson viewer that handles both video and notes content
@@ -298,35 +300,46 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Lesson title and info
-            _buildLessonHeader(),
-            
-            const SizedBox(height: 24),
-            
-            // Video content (if available)
-            if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty)
-              _buildVideoContent(),
-            
-            // Notes content (if available)
-            if (_lessonContent?.notes != null && _lessonContent!.notes!.isNotEmpty)
-              _buildNotesContent(),
-            
-            // Exams section (if available)
-            _buildExamsSection(),
-            
-            // Empty state if no content
-            if ((_lessonContent?.videoUrl == null || _lessonContent!.videoUrl!.isEmpty) &&
-                (_lessonContent?.notes == null || _lessonContent!.notes!.isEmpty) &&
-                (_sectionExams == null || _sectionExams!.isEmpty))
-              _buildEmptyContent(),
-          ],
-        ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Lesson title and info
+                _buildLessonHeader(),
+                
+                const SizedBox(height: 24),
+                
+                // Video content (if available)
+                if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty)
+                  _buildVideoContent(),
+                
+                // Notes content (if available)
+                if (_lessonContent?.notes != null && _lessonContent!.notes!.isNotEmpty)
+                  _buildNotesContent(),
+                
+                // Exams section (if available)
+                if (_sectionExams != null && _sectionExams!.isNotEmpty)
+                  _buildExamsSection(),
+                
+                // Empty state
+                if ((_lessonContent?.videoUrl == null || _lessonContent!.videoUrl!.isEmpty) &&
+                    (_lessonContent?.notes == null || _lessonContent!.notes!.isEmpty) &&
+                    (_sectionExams == null || _sectionExams!.isEmpty))
+                  _buildEmptyContent(),
+              ],
+            ),
+          ),
+          
+          // AI Floating Chat Button
+          AIFloatingChatButton(
+            currentLesson: widget.lesson,
+            currentCourse: null,
+          ),
+        ],
       ),
     );
   }
@@ -923,6 +936,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   void _scrollToVideo() {
     // In a real implementation, we would use GlobalKey to locate the video section
     // For now, just animate to top
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // Scroll to top method
+  void _scrollToTop() {
     _scrollController.animateTo(
       0,
       duration: const Duration(milliseconds: 300),

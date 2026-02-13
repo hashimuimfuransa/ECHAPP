@@ -419,6 +419,8 @@ class ExamResult {
   final String message;
   final DateTime? submittedAt;
   final exam_model.Exam? examDetails;
+  final List<QuestionResult> questions;
+  final ExamStatistics statistics;
 
   ExamResult({
     required this.resultId,
@@ -430,6 +432,8 @@ class ExamResult {
     required this.message,
     this.submittedAt,
     this.examDetails,
+    required this.questions,
+    required this.statistics,
   });
 
   factory ExamResult.fromJson(Map<String, dynamic> json) {
@@ -451,6 +455,25 @@ class ExamResult {
       }
     }
     
+    // Parse questions
+    List<QuestionResult> questions = [];
+    if (json['questions'] != null && json['questions'] is List) {
+      questions = (json['questions'] as List)
+          .map((item) => QuestionResult.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    
+    // Parse statistics
+    ExamStatistics statistics = ExamStatistics(
+      totalQuestions: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      accuracy: 0.0,
+    );
+    if (json['statistics'] != null && json['statistics'] is Map<String, dynamic>) {
+      statistics = ExamStatistics.fromJson(json['statistics'] as Map<String, dynamic>);
+    }
+    
     return ExamResult(
       resultId: json['_id'] ?? json['resultId'] ?? '',
       examId: examId,
@@ -463,6 +486,74 @@ class ExamResult {
           ? DateTime.parse(json['submittedAt'] as String)
           : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null),
       examDetails: examDetails,
+      questions: questions,
+      statistics: statistics,
+    );
+  }
+}
+
+// Question result model
+class QuestionResult {
+  final String questionId;
+  final String questionText;
+  final List<String> options;
+  final int selectedOption;
+  final String selectedOptionText;
+  final dynamic correctAnswer;
+  final String correctAnswerText;
+  final bool isCorrect;
+  final int points;
+  final int earnedPoints;
+
+  QuestionResult({
+    required this.questionId,
+    required this.questionText,
+    required this.options,
+    required this.selectedOption,
+    required this.selectedOptionText,
+    required this.correctAnswer,
+    required this.correctAnswerText,
+    required this.isCorrect,
+    required this.points,
+    required this.earnedPoints,
+  });
+
+  factory QuestionResult.fromJson(Map<String, dynamic> json) {
+    return QuestionResult(
+      questionId: json['questionId'] as String? ?? '',
+      questionText: json['questionText'] as String? ?? '',
+      options: (json['options'] as List?)?.map((e) => e as String).toList() ?? [],
+      selectedOption: json['selectedOption'] as int? ?? 0,
+      selectedOptionText: json['selectedOptionText'] as String? ?? '',
+      correctAnswer: json['correctAnswer'],
+      correctAnswerText: json['correctAnswerText'] as String? ?? '',
+      isCorrect: json['isCorrect'] as bool? ?? false,
+      points: json['points'] as int? ?? 0,
+      earnedPoints: json['earnedPoints'] as int? ?? 0,
+    );
+  }
+}
+
+// Exam statistics model
+class ExamStatistics {
+  final int totalQuestions;
+  final int correctAnswers;
+  final int incorrectAnswers;
+  final double accuracy;
+
+  ExamStatistics({
+    required this.totalQuestions,
+    required this.correctAnswers,
+    required this.incorrectAnswers,
+    required this.accuracy,
+  });
+
+  factory ExamStatistics.fromJson(Map<String, dynamic> json) {
+    return ExamStatistics(
+      totalQuestions: json['totalQuestions'] as int? ?? 0,
+      correctAnswers: json['correctAnswers'] as int? ?? 0,
+      incorrectAnswers: json['incorrectAnswers'] as int? ?? 0,
+      accuracy: (json['accuracy'] is num) ? json['accuracy'].toDouble() : json['accuracy']?.toDouble() ?? 0.0,
     );
   }
 }

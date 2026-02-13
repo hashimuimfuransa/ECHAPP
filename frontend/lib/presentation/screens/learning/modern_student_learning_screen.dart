@@ -10,6 +10,7 @@ import 'package:excellence_coaching_hub/models/lesson.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
 import 'package:excellence_coaching_hub/widgets/lesson_viewer.dart';
+import 'package:excellence_coaching_hub/widgets/ai_floating_chat_button.dart';
 import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/exams/exam_history_screen.dart';
 
@@ -145,24 +146,34 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildMainContent() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Progress header
-            _buildProgressHeader(),
-            
-            const SizedBox(height: 24),
-            
-            // Sections list
-            Expanded(
-              child: _buildSectionsList(),
+    return Stack(
+      children: [
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Progress header
+                _buildProgressHeader(),
+                
+                const SizedBox(height: 24),
+                
+                // Sections list
+                Expanded(
+                  child: _buildSectionsList(),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        
+        // AI Floating Chat Button
+        AIFloatingChatButton(
+          currentCourse: _course,
+          currentLesson: null,
+        ),
+      ],
     );
   }
 
@@ -404,7 +415,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               final index = entry.key;
               final lesson = entry.value;
               return _buildLessonItem(lesson, index == 0); // First lesson marked as next
-            }).toList(),
+            }),
             // Add exam button after lessons
             _buildExamButton(sectionId),
           ],
@@ -483,7 +494,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               IconData examIcon;
               String examTypeLabel;
               
-              switch (exam.type?.toLowerCase() ?? '') {
+              switch (exam.type.toLowerCase() ?? '') {
                 case 'quiz':
                   examColor = Colors.blue;
                   examIcon = Icons.quiz_outlined;
@@ -608,7 +619,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   onTap: () => _takeExam(exam),
                 ),
               );
-            }).toList(),
+            }),
           ],
         );
       },
@@ -624,7 +635,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         Color examColor;
         IconData examIcon;
         
-        switch (exam.type?.toLowerCase() ?? '') {
+        switch (exam.type.toLowerCase() ?? '') {
           case 'quiz':
             examTypeLabel = 'Quiz';
             examColor = Colors.blue;
@@ -651,7 +662,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             children: [
               Icon(examIcon, color: examColor, size: 24),
               const SizedBox(width: 12),
-              Text('${examTypeLabel}: ${exam.title}'),
+              Text('$examTypeLabel: ${exam.title}'),
             ],
           ),
           content: Column(

@@ -293,7 +293,7 @@ const getExamResults = async (req, res) => {
   }
 };
 
-// Get user's exam history
+// Get user's exam history with detailed question results
 const getUserExamHistory = async (req, res) => {
   try {
     console.log('=== EXAM HISTORY REQUEST ===');
@@ -319,19 +319,74 @@ const getUserExamHistory = async (req, res) => {
     console.log('Found', results.length, 'results for user');
     console.log('Results:', JSON.stringify(results, null, 2));
     
-    // Transform the results to match the expected frontend structure
-    const formattedResults = results.map(result => ({
-      _id: result._id,
-      resultId: result._id,
-      examId: result.examId,
-      score: result.score,
-      totalPoints: result.totalPoints,
-      percentage: result.percentage,
-      passed: result.passed,
-      message: result.passed ? 'Passed' : 'Failed',
-      submittedAt: result.submittedAt,
-      createdAt: result.createdAt,
-      updatedAt: result.updatedAt
+    // Transform the results to include detailed question information
+    const formattedResults = await Promise.all(results.map(async (result) => {
+      // Get questions for this exam
+      const questions = await Question.find({ examId: result.examId?._id })
+        .select('question options correctAnswer points');
+      
+      // Process each answer to determine if it was correct
+      const questionResults = result.answers.map(userAnswer => {
+        const question = questions.find(q => q._id.toString() === userAnswer.questionId);
+        if (!question) return null;
+        
+        // Determine if the answer was correct
+        let isCorrect = false;
+        if (typeof question.correctAnswer === 'number') {
+          // Correct answer is an index
+          isCorrect = userAnswer.selectedOption === question.correctAnswer;
+        } else {
+          // Correct answer is a string/value
+          isCorrect = userAnswer.selectedOption < question.options.length && 
+                     question.options[userAnswer.selectedOption] === question.correctAnswer;
+        }
+        
+        return {
+          questionId: userAnswer.questionId,
+          questionText: question.question,
+          options: question.options,
+          selectedOption: userAnswer.selectedOption,
+          selectedOptionText: userAnswer.selectedOption < question.options.length 
+            ? question.options[userAnswer.selectedOption] 
+            : 'Invalid option',
+          correctAnswer: question.correctAnswer,
+          correctAnswerText: typeof question.correctAnswer === 'number' 
+            ? (question.correctAnswer < question.options.length 
+                ? question.options[question.correctAnswer] 
+                : 'Invalid correct answer')
+            : question.correctAnswer,
+          isCorrect: isCorrect,
+          points: question.points,
+          earnedPoints: isCorrect ? question.points : 0
+        };
+      }).filter(q => q !== null);
+      
+      // Calculate statistics
+      const totalQuestions = questionResults.length;
+      const correctAnswers = questionResults.filter(q => q.isCorrect).length;
+      const incorrectAnswers = totalQuestions - correctAnswers;
+      
+      return {
+        _id: result._id,
+        resultId: result._id,
+        examId: result.examId,
+        score: result.score,
+        totalPoints: result.totalPoints,
+        percentage: result.percentage,
+        passed: result.passed,
+        message: result.passed ? 'Passed' : 'Failed',
+        submittedAt: result.submittedAt,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        // Detailed question results
+        questions: questionResults,
+        statistics: {
+          totalQuestions: totalQuestions,
+          correctAnswers: correctAnswers,
+          incorrectAnswers: incorrectAnswers,
+          accuracy: totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0
+        }
+      };
     }));
     
     sendSuccess(res, formattedResults, 'Exam history retrieved successfully');
