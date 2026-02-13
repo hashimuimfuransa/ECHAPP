@@ -19,6 +19,8 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Excellence Coaching Hub - Your e-learning platform">
+  <!-- Google Sign-In Client ID for web -->
+  <meta name="google-signin-client_id" content="216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,8 +33,29 @@
 
   <title>Excellence Coaching Hub</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Google Identity Services script for web -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+  <!-- Google Identity Services initialization -->
+  <div id="g_id_onload"
+    data-client_id="216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com"
+    data-context="signin"
+    data-ux_mode="popup"
+    data-auto_prompt="false">
+  </div>
+  
+  <!-- The Google Sign-In button will be rendered here if needed -->
+  <div class="g_id_signin"
+    data-type="standard"
+    data-shape="rectangular"
+    data-theme="outline"
+    data-text="signin_with"
+    data-size="large"
+    data-logo_alignment="left">
+  </div>
+  
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

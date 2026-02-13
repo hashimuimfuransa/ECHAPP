@@ -79,7 +79,7 @@ console.log('3. Confirm S3 bucket exists and is accessible');
 console.log('4. Ensure server accepts multipart/form-data');
 console.log('5. Verify authentication tokens are valid');
 console.log('6. Check if additional form fields are causing issues');
-console.log('7. Confirm file size is within limits (currently 100MB)');
+console.log('7. Confirm file size is within limits (currently 2GB)');
 console.log('8. Verify content-type matches expected video/image types');
 
 console.log('\n💡 TROUBLESHOOTING TIPS:');

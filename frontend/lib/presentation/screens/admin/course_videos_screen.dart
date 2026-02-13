@@ -363,7 +363,7 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Upload and manage videos for this course. Supported formats: MP4, MOV, AVI. Maximum file size: 500MB.',
+          'Upload and manage videos for this course. Supported formats: MP4, MOV, AVI. Maximum file size: 2GB.',
           style: TextStyle(
             fontSize: isSmallScreen ? 14 : 16,
             color: AppTheme.greyColor,
@@ -728,7 +728,7 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
               _buildGuidelineItem('Aspect Ratio', '16:9 recommended'),
               _buildGuidelineItem('Bitrate', '5-10 Mbps for HD quality'),
               _buildGuidelineItem('Duration', 'Maximum 30 minutes per video'),
-              _buildGuidelineItem('File Size', 'Maximum 500MB per file'),
+              _buildGuidelineItem('File Size', 'Maximum 2GB per file'),
               const SizedBox(height: 20),
               const Text(
                 'Best Practices:',
@@ -855,7 +855,7 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
         builder: (BuildContext context) {
           return Dialog(
             insetPadding: const EdgeInsets.all(20),
-            child: Container(
+            child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
               height: MediaQuery.of(context).size.height * 0.7,
               child: Column(

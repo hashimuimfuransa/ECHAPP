@@ -54,7 +54,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit for videos, images will be smaller
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB limit for videos, images will be smaller
     fields: 10,  // Allow up to 10 additional fields
     fieldSize: 1 * 1024 * 1024,  // 1MB max size for each field
     parts: 50  // Allow up to 50 parts (fields + files)
@@ -72,7 +72,7 @@ const uploadImage = async (req, res) => {
       if (err instanceof multer.MulterError) {
         console.error('Multer error:', err);
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return sendError(res, 'File too large. Maximum size is 100MB.', 400);
+          return sendError(res, 'File too large. Maximum size is 2GB.', 400);
         } else if (err.code === 'LIMIT_FIELD_KEY' || err.code === 'LIMIT_FIELD_VALUE' || err.code === 'LIMIT_FIELDS') {
           return sendError(res, `Upload field limit exceeded: ${err.message}`, 400);
         } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -214,7 +214,7 @@ const uploadVideo = async (req, res) => {
         // Update progress with error
         UploadProgressService.updateProgress(uploadId, 0, 'error', `Upload error: ${err.message}`);
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return sendError(res, 'File too large. Maximum size is 100MB.', 400);
+          return sendError(res, 'File too large. Maximum size is 2GB.', 400);
         } else if (err.code === 'LIMIT_FIELD_KEY' || err.code === 'LIMIT_FIELD_VALUE' || err.code === 'LIMIT_FIELDS') {
           return sendError(res, `Upload field limit exceeded: ${err.message}`, 400);
         } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -345,7 +345,7 @@ const uploadDocument = async (req, res) => {
           // Update progress with error
           UploadProgressService.updateProgress(uploadId, 0, 'error', `Upload error: ${err.message}`);
           if (err.code === 'LIMIT_FILE_SIZE') {
-            return reject(new Error('File too large. Maximum size is 100MB.'));
+            return reject(new Error('File too large. Maximum size is 2GB.'));
           } else if (err.code === 'LIMIT_FIELD_KEY' || err.code === 'LIMIT_FIELD_VALUE' || err.code === 'LIMIT_FIELDS') {
             return reject(new Error(`Upload field limit exceeded: ${err.message}`));
           } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
