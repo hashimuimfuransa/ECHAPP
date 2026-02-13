@@ -26,7 +26,6 @@ class AIFloatingChatButton extends ConsumerStatefulWidget {
 class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isExpanded = false;
@@ -37,11 +36,6 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
-    );
-    
-    _scaleAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
     );
     
     // Pulse animation for attention
@@ -92,72 +86,112 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
 
     return Stack(
       children: [
-        // Attractive label above the button
+        // Modern gradient label with animation
         Positioned(
-          right: 10,
-          bottom: 90,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+          right: 12,
+          bottom: 85,
+          child: AnimatedOpacity(
+            opacity: _isExpanded ? 0.0 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    AppTheme.primary.withOpacity(0.95),
+                    AppTheme.accent.withOpacity(0.95),
+                  ],
                 ),
-              ],
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Learning Support',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Chat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         
-        // Floating chat button - Make it more visible with pulse animation
+        // Modern floating chat button with gradient and micro-interactions
         Positioned(
-          right: 20,
-          bottom: 20,
+          right: 12,
+          bottom: 12,
           child: ScaleTransition(
             scale: _pulseAnimation,
             child: Container(
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primary,
+                    AppTheme.primaryDark,
+                  ],
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 10,
+                    color: AppTheme.primary.withOpacity(0.4),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: AppTheme.accent.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: FloatingActionButton(
                 onPressed: _toggleChat,
-                backgroundColor: AppTheme.primary,
+                backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
-                elevation: 12,
-                mini: false, // Make it full size
+                elevation: 0,
+                hoverElevation: 0,
+                focusElevation: 0,
+                highlightElevation: 0,
+                mini: true,
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(
+                      scale: animation,
+                      child: RotationTransition(
+                        turns: Tween<double>(
+                          begin: 0.0,
+                          end: 0.25,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
                   child: _isExpanded
-                      ? const Icon(Icons.close, key: ValueKey('close'), size: 28)
-                      : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 28),
+                      ? const Icon(Icons.close, key: ValueKey('close'), size: 20)
+                      : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 20),
                 ),
               ),
             ),
@@ -174,7 +208,7 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                 child: Center(
                   child: GestureDetector(
                     onTap: () {}, // Prevent closing when tapping on dialog
-                    child: AIChatDialog(
+                    child: ModernAIChatDialog(
                       currentCourse: widget.currentCourse,
                       currentLesson: widget.currentLesson,
                       chatService: aiChatService,
