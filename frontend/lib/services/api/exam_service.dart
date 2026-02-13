@@ -282,16 +282,21 @@ class ExamService {
       final response = await _apiClient.get('${ApiConfig.exams}/student/history');
       response.validateStatus();
       
+      print('ExamService: Raw response status: ${response.statusCode}');
+      print('ExamService: Raw response body: ${response.body}');
+      
       final apiResponse = response.toApiResponse(
         (json) => (json as List).map((item) => ExamResult.fromJson(item)).toList()
       );
       
       if (apiResponse.success) {
+        print('ExamService: Successfully parsed ${apiResponse.data?.length ?? 0} exam results');
         return apiResponse.data ?? [];
       } else {
         throw ApiException(apiResponse.message);
       }
     } catch (e) {
+      print('ExamService: Error fetching exam history: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch exam history: $e');
     }

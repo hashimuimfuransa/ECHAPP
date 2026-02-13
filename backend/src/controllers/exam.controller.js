@@ -319,7 +319,22 @@ const getUserExamHistory = async (req, res) => {
     console.log('Found', results.length, 'results for user');
     console.log('Results:', JSON.stringify(results, null, 2));
     
-    sendSuccess(res, results, 'Exam history retrieved successfully');
+    // Transform the results to match the expected frontend structure
+    const formattedResults = results.map(result => ({
+      _id: result._id,
+      resultId: result._id,
+      examId: result.examId,
+      score: result.score,
+      totalPoints: result.totalPoints,
+      percentage: result.percentage,
+      passed: result.passed,
+      message: result.passed ? 'Passed' : 'Failed',
+      submittedAt: result.submittedAt,
+      createdAt: result.createdAt,
+      updatedAt: result.updatedAt
+    }));
+    
+    sendSuccess(res, formattedResults, 'Exam history retrieved successfully');
   } catch (error) {
     console.error('Error in getUserExamHistory:', error);
     sendError(res, 'Failed to retrieve exam history', 500, error.message);
