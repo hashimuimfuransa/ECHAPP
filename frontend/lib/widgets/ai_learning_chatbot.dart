@@ -396,7 +396,7 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
               child: Text(
                 message.text,
                 style: TextStyle(
-                  color: isUser ? Colors.white : AppTheme.blackColor,
+                  color: isUser ? Colors.white : AppTheme.getTextColor(context),
                   fontSize: 14,
                   height: 1.4,
                 ),

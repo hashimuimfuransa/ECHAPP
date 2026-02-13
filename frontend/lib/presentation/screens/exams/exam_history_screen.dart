@@ -48,14 +48,17 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Exam History',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.getTextColor(context)
+          ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.blackColor,
+        backgroundColor: AppTheme.getCardColor(context),
+        foregroundColor: AppTheme.getTextColor(context),
         elevation: 0,
         centerTitle: false,
         actions: [
@@ -84,7 +87,7 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: AppTheme.errorColor,
+              color: AppTheme.getTextColor(context),
             ),
             const SizedBox(height: 16),
             Text(
@@ -92,7 +95,7 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.errorColor,
+                color: AppTheme.getTextColor(context),
               ),
             ),
             const SizedBox(height: 8),

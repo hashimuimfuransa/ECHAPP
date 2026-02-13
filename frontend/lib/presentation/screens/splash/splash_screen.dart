@@ -25,12 +25,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
   
   void _navigateBasedOnAuth() {
-    // For web, go to landing page first
-    if (kIsWeb) {
-      context.go('/landing');
-      return;
-    }
-    
     final authState = ref.read(authProvider);
     
     if (authState.user != null && !authState.isLoading) {
@@ -41,10 +35,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _checkAuthAndNavigate() {
-    // For web, we don't need to listen for auth state
-    if (kIsWeb) return;
-    
-    // Listen for auth state changes (mobile only)
+    // Listen for auth state changes
     ref.listen(authProvider, (previous, current) {
       debugPrint('Splash: Auth state changed - User: ${current.user != null}, Loading: ${current.isLoading}');
       
@@ -60,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     });
     
-    // Also check initial state after delay (mobile only)
+    // Also check initial state after delay
     Future.delayed(const Duration(milliseconds: 2500), () {
       final authState = ref.read(authProvider);
       debugPrint('Splash: Initial check - User: ${authState.user != null}, Loading: ${authState.isLoading}');

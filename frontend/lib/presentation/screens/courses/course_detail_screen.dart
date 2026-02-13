@@ -9,7 +9,6 @@ import 'package:excellence_coaching_hub/presentation/providers/enrollment_provid
 import 'package:excellence_coaching_hub/presentation/providers/course_payment_providers.dart';
 import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
-import 'package:excellence_coaching_hub/presentation/screens/learning/student_learning_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -1932,12 +1931,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       ),
       child: TextButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StudentLearningScreen(courseId: course.id),
-            ),
-          );
+          // Navigate directly to the learning screen using GoRouter
+          context.push('/learning/${course.id}');
         },
         child: const Text(
           'Continue Learning',
@@ -1955,13 +1950,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return AnimatedButton(
       text: 'Continue Learning',
       onPressed: () {
-        // Navigate to the learning screen for this course
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => StudentLearningScreen(courseId: course.id),
-          ),
-        );
+        // Navigate directly to the learning screen using GoRouter
+        context.push('/learning/${course.id}');
       },
       color: Colors.orange,
     );

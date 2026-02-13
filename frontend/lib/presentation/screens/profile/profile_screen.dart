@@ -64,19 +64,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-              Color(0xFFf093fb),
-              Color(0xFFf5576c),
-            ],
-            stops: [0.0, 0.4, 0.7, 1.0],
-          ),
-        ),
+        color: AppTheme.getBackgroundColor(context),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -130,10 +118,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: (Theme.of(context).cardTheme.color ?? Colors.white).withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -144,13 +132,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
                 onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back, 
-                  color: Colors.white, 
+                icon: Icon(Icons.arrow_back, 
+                  color: Theme.of(context).iconTheme.color, 
                   size: 24),
               ),
             ),
@@ -171,14 +159,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
                 onPressed: _toggleEdit,
                 icon: Icon(
                   _isEditing ? Icons.close : Icons.edit_outlined,
-                  color: Colors.white,
+                  color: Theme.of(context).iconTheme.color,
                   size: 24,
                 ),
               ),
@@ -213,7 +201,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: _toggleEdit,
             icon: Icon(
               _isEditing ? Icons.close : Icons.edit_outlined,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
               size: 28,
             ),
           ),
@@ -225,13 +213,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildEnhancedProfilePicture(user) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Theme.of(context).shadowColor.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -297,8 +285,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 20),
             Text(
               user?.fullName ?? 'User Name',
-              style: const TextStyle(
-                color: AppTheme.blackColor,
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -306,18 +294,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 5),
             Text(
               user?.email ?? 'user@example.com',
-              style: const TextStyle(
-                color: AppTheme.greyColor,
+              style: TextStyle(
+                color: AppTheme.getSecondaryTextColor(context),
                 fontSize: 16,
               ),
             ),
             if (_isEditing)
-              const Padding(
-                padding: EdgeInsets.only(top: 15),
+              Padding(
+                padding: const EdgeInsets.only(top: 15),
                 child: Text(
                   'Tap to change photo',
                   style: TextStyle(
-                    color: AppTheme.greyColor,
+                    color: AppTheme.getSecondaryTextColor(context),
                     fontSize: 14,
                   ),
                 ),
@@ -395,10 +383,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Personal Information',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
@@ -463,8 +451,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppTheme.greyColor,
+          style: TextStyle(
+            color: AppTheme.getSecondaryTextColor(context),
             fontSize: 14,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -474,25 +462,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         if (isEditable)
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFf8f9fa),
+              color: Theme.of(context).cardTheme.color,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFe9ecef),
+                color: Theme.of(context).dividerColor,
                 width: 1,
               ),
             ),
             child: TextField(
               controller: controller,
-              style: const TextStyle(
-                color: AppTheme.blackColor,
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
                 fontSize: 16,
               ),
               decoration: InputDecoration(
-                prefixIcon: Icon(icon, color: const Color(0xFF6c757d), size: 20),
+                prefixIcon: Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 20),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                 hintText: 'Enter $label',
-                hintStyle: const TextStyle(color: Color(0xFFadb5bd)),
+                hintStyle: TextStyle(color: AppTheme.getSecondaryTextColor(context)),
               ),
             ),
           )
@@ -500,22 +488,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             decoration: BoxDecoration(
-              color: const Color(0xFFf8f9fa),
+              color: Theme.of(context).cardTheme.color,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFFe9ecef),
+                color: Theme.of(context).dividerColor,
                 width: 1,
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: const Color(0xFF6c757d), size: 20),
+                Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     controller.text,
-                    style: const TextStyle(
-                      color: AppTheme.blackColor,
+                    style: TextStyle(
+                      color: AppTheme.getTextColor(context),
                       fontSize: 16,
                     ),
                   ),
@@ -534,13 +522,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Theme.of(context).shadowColor.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -549,10 +537,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Personal Information',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -656,8 +644,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Expanded(
                   child: Text(
                     controller.text,
-                    style: const TextStyle(
-                      color: AppTheme.blackColor,
+                    style: TextStyle(
+                      color: AppTheme.getTextColor(context),
                       fontSize: 16,
                     ),
                   ),
@@ -722,10 +710,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Learning Statistics',
                   style: TextStyle(
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context),
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -745,10 +733,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     final stat = statData[index];
                     return Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.greyColor.withOpacity(0.05),
+                        color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppTheme.greyColor.withOpacity(0.2),
+                          color: Theme.of(context).dividerColor.withOpacity(0.3),
                           width: 1,
                         ),
                       ),
@@ -772,8 +760,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const SizedBox(height: 8),
                             Text(
                               stat['value'] as String,
-                              style: const TextStyle(
-                                color: AppTheme.blackColor,
+                              style: TextStyle(
+                                color: AppTheme.getTextColor(context),
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -840,7 +828,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Center(
           child: Text(
             'Error loading stats: $error',
-            style: const TextStyle(color: Colors.red),
+            style: TextStyle(color: AppTheme.getErrorColor(context)),
           ),
         ),
       ),
@@ -891,15 +879,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 25),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Theme.of(context).shadowColor.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              width: 1,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(15),
@@ -913,7 +905,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.push('/settings');
                   },
                 ),
-                const Divider(color: Color(0xFFe9ecef), height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 _buildEnhancedActionButton(
                   icon: Icons.privacy_tip_outlined,
                   title: 'Privacy & Security',
@@ -922,7 +914,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.push('/privacy');
                   },
                 ),
-                const Divider(color: Color(0xFFe9ecef), height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 _buildEnhancedActionButton(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
@@ -931,7 +923,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.push('/help');
                   },
                 ),
-                const Divider(color: Color(0xFFe9ecef), height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 _buildEnhancedActionButton(
                   icon: Icons.logout_outlined,
                   title: 'Sign Out',
@@ -964,10 +956,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFf8f9fa),
+                color: Theme.of(context).cardTheme.color,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFF6c757d), size: 24),
+              child: Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 24),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -976,8 +968,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppTheme.blackColor,
+                    style: TextStyle(
+                      color: AppTheme.getTextColor(context),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -985,17 +977,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: AppTheme.greyColor,
+                    style: TextStyle(
+                      color: AppTheme.getSecondaryTextColor(context),
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: AppTheme.greyColor,
+              color: AppTheme.getSecondaryTextColor(context),
               size: 16,
             ),
           ],
@@ -1058,7 +1050,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.push('/settings');
                   },
                 ),
-                const Divider(color: AppTheme.greyColor, height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 _buildActionButton(
                   icon: Icons.privacy_tip_outlined,
                   title: 'Privacy & Security',
@@ -1067,7 +1059,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.push('/privacy');
                   },
                 ),
-                const Divider(color: AppTheme.greyColor, height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 _buildActionButton(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
@@ -1100,10 +1092,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppTheme.greyColor.withOpacity(0.1),
+                color: AppTheme.getSecondaryTextColor(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppTheme.greyColor, size: 24),
+              child: Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 24),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -1112,8 +1104,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppTheme.blackColor,
+                    style: TextStyle(
+                      color: AppTheme.getTextColor(context),
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1129,9 +1121,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: AppTheme.greyColor,
+              color: AppTheme.getSecondaryTextColor(context),
               size: 16,
             ),
           ],

@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:excellence_coaching_hub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/auth/login_screen.dart';
@@ -16,7 +15,6 @@ import 'package:excellence_coaching_hub/presentation/screens/settings/settings_s
 import 'package:excellence_coaching_hub/presentation/screens/certificates/certificates_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/privacy/privacy_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/categories/categories_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/learning/learning_path_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/enrolled/enrolled_courses_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/help/help_screen.dart';
 import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboard_screen.dart';
@@ -41,7 +39,7 @@ import 'package:excellence_coaching_hub/presentation/screens/landing/landing_scr
 
 class AppRouter {
   GoRouter get router => GoRouter(
-        initialLocation: kIsWeb ? '/landing' : '/',
+        initialLocation: '/',
         routes: [
           // Splash Screen
           GoRoute(
@@ -287,10 +285,6 @@ class AppRouter {
             path: '/certificates',
             builder: (context, state) => _buildCertificatesScreen(),
           ),
-          GoRoute(
-            path: '/learning-path',
-            builder: (context, state) => _buildLearningPathScreen(),
-          ),
         ],
         redirect: (context, state) {
           // Handle authentication redirects
@@ -310,13 +304,9 @@ class AppRouter {
   Widget _buildMyCoursesScreen() {
     return const EnrolledCoursesScreen();
   }
-
+  
   Widget _buildCertificatesScreen() {
     return const CertificatesScreen();
-  }
-
-  Widget _buildLearningPathScreen() {
-    return const LearningPathScreen();
   }
 
   Widget _buildSettingsScreen() {

@@ -101,7 +101,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
     if (_course == null) {
       return Scaffold(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.getBackgroundColor(context),
         appBar: AppBar(
           title: const Text('Learning'),
           backgroundColor: AppTheme.primaryGreen,
@@ -114,7 +114,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: _buildAppBar(),
       body: _buildMainContent(),
     );
@@ -126,8 +126,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         _course!.title,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      backgroundColor: Colors.white,
-      foregroundColor: AppTheme.blackColor,
+      backgroundColor: AppTheme.getCardColor(context),
+      foregroundColor: AppTheme.getTextColor(context),
       elevation: 0,
       centerTitle: false,
       actions: [
@@ -183,60 +183,62 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     final progress = totalSections > 0 ? completedSections / totalSections : 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.getCardColor(context),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
+            color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.black26 
+              : Colors.grey.withOpacity(0.05),
             spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Your Progress',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
                     value: progress,
                     backgroundColor: AppTheme.borderGrey,
                     valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-                    minHeight: 8,
+                    minHeight: 6,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.primaryGreen,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            '$completedSections of $totalSections sections completed',
+            '$completedSections/$totalSections sections',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               color: AppTheme.greyColor,
             ),
           ),
@@ -285,7 +287,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Widget _buildSectionCard(Section section, bool isUnlocked, bool isCurrent, int index) {
     return Container(
       decoration: BoxDecoration(
-        color: isUnlocked ? Colors.white : Colors.grey.shade50,
+        color: isUnlocked 
+          ? AppTheme.getCardColor(context) 
+          : (Theme.of(context).brightness == Brightness.dark 
+              ? Colors.grey.shade800 
+              : Colors.grey.shade50),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCurrent 
@@ -332,7 +338,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: isUnlocked ? AppTheme.blackColor : Colors.grey,
+              color: isUnlocked 
+                ? AppTheme.getTextColor(context) 
+                : (Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey.shade400 
+                    : Colors.grey),
             ),
           ),
           subtitle: FutureBuilder<List<Lesson>>(
@@ -547,10 +557,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   ),
                   title: Text(
                     exam.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context),
                     ),
                   ),
                   subtitle: Column(
@@ -755,90 +765,198 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildLessonItem(Lesson lesson, bool isNext) {
+    // Determine lesson type and styling
+    final bool isVideoLesson = lesson.videoId != null && lesson.videoId!.isNotEmpty;
+    final Color lessonTypeColor = isVideoLesson ? AppTheme.primaryGreen : AppTheme.accent;
+    final Color lessonBgColor = isVideoLesson 
+        ? AppTheme.primaryGreen.withOpacity(0.08) 
+        : AppTheme.accent.withOpacity(0.08);
+    final IconData lessonIcon = isVideoLesson ? Icons.play_circle_fill : Icons.article;
+    final String lessonTypeLabel = isVideoLesson ? 'Video' : 'Notes';
+    
     return InkWell(
       onTap: () => _viewLesson(lesson),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isNext 
-            ? AppTheme.primaryGreen.withOpacity(0.05) 
-            : Colors.transparent,
+            ? AppTheme.primaryGreen.withOpacity(0.1) 
+            : lessonBgColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isNext 
-              ? AppTheme.primaryGreen.withOpacity(0.2) 
-              : Colors.transparent,
+              ? AppTheme.primaryGreen.withOpacity(0.3) 
+              : lessonTypeColor.withOpacity(0.2),
+            width: 1.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isNext 
+                ? AppTheme.primaryGreen.withOpacity(0.1) 
+                : lessonTypeColor.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
+            // Lesson type indicator circle
             Container(
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: lesson.videoId != null && lesson.videoId!.isNotEmpty
-                  ? AppTheme.primaryGreen.withOpacity(0.1)
-                  : AppTheme.accent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: lessonTypeColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: lessonTypeColor.withOpacity(0.3),
+                  width: 2,
+                ),
               ),
               child: Center(
                 child: Icon(
-                  lesson.videoId != null && lesson.videoId!.isNotEmpty
-                    ? Icons.play_arrow
-                    : Icons.description,
-                  color: lesson.videoId != null && lesson.videoId!.isNotEmpty
-                    ? AppTheme.primaryGreen
-                    : AppTheme.accent,
-                  size: 20,
+                  lessonIcon,
+                  color: lessonTypeColor,
+                  size: 24,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
+            // Lesson content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    lesson.title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isNext ? AppTheme.primaryGreen : AppTheme.blackColor,
-                    ),
+                  // Lesson title with type badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lesson.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isNext 
+                              ? AppTheme.primaryGreen 
+                              : AppTheme.getTextColor(context),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Type badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: lessonTypeColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: lessonTypeColor.withOpacity(0.4),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          lessonTypeLabel,
+                          style: TextStyle(
+                            color: lessonTypeColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${lesson.duration} mins',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.greyColor,
-                    ),
+                  const SizedBox(height: 6),
+                  // Duration and additional info
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppTheme.greyColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${lesson.duration} mins',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.greyColor,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (isVideoLesson) ...[
+                        Icon(
+                          Icons.hd_outlined,
+                          size: 14,
+                          color: AppTheme.greyColor,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'HD Video',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.greyColor,
+                          ),
+                        ),
+                      ] else ...[
+                        Icon(
+                          Icons.text_snippet_outlined,
+                          size: 14,
+                          color: AppTheme.greyColor,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Text Content',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.greyColor,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
-            if (isNext)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Next',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 12),
+            // Next indicator and arrow
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isNext) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryGreen.withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'NEXT',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: isNext ? AppTheme.primaryGreen : AppTheme.greyColor,
+                  size: 18,
                 ),
-              ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: AppTheme.greyColor,
-              size: 16,
+              ],
             ),
           ],
         ),

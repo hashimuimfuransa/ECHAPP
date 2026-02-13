@@ -8,7 +8,6 @@ import 'package:excellence_coaching_hub/services/categories_service.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
 import 'package:excellence_coaching_hub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
-import 'package:excellence_coaching_hub/models/category.dart';
 import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
@@ -235,7 +234,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: (_) => _filterCourses(),
-              style: TextStyle(color: AppTheme.blackColor),
+              style: TextStyle(color: AppTheme.getTextColor(context)),
               decoration: InputDecoration(
                 hintText: 'Search courses...',
                 hintStyle: TextStyle(color: AppTheme.greyColor),
@@ -316,7 +315,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: (_) => _filterCourses(),
-              style: TextStyle(color: AppTheme.blackColor),
+              style: TextStyle(color: AppTheme.getTextColor(context)),
               decoration: InputDecoration(
                 hintText: 'Search courses...',
                 hintStyle: TextStyle(color: AppTheme.greyColor),
@@ -367,10 +366,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Categories',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -426,10 +425,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Categories',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -471,10 +470,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Categories',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -537,10 +536,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -595,10 +594,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Courses',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -675,8 +674,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             children: [
                               Text(
                                 course.title ?? 'Untitled Course',
-                                style: const TextStyle(
-                                  color: AppTheme.blackColor,
+                                style: TextStyle(
+                                  color: AppTheme.getTextColor(context),
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -732,10 +731,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                     size: 16,
                                   ),
                                   const SizedBox(width: 4),
-                                  const Text(
+                                  Text(
                                     '4.5 ', // This would come from the API
                                     style: TextStyle(
-                                      color: AppTheme.blackColor,
+                                      color: AppTheme.getTextColor(context),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -825,7 +824,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               Text(
                 'Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: isDesktop ? 24 : 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -886,7 +885,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               Text(
                 'Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -926,10 +925,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1039,7 +1038,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               Text(
                 course.title ?? 'Untitled Course',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: isDesktop ? 17 : 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1104,10 +1103,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         size: 15,
                       ),
                       const SizedBox(width: 4),
-                      const Text(
+                      Text(
                         '4.5',
                         style: TextStyle(
-                          color: AppTheme.blackColor,
+                          color: AppTheme.getTextColor(context),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1255,8 +1254,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   children: [
                     Text(
                       course.title ?? 'Untitled Course',
-                      style: const TextStyle(
-                        color: AppTheme.blackColor,
+                      style: TextStyle(
+                        color: AppTheme.getTextColor(context),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1312,10 +1311,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           size: 16,
                         ),
                         const SizedBox(width: 4),
-                        const Text(
+                        Text(
                           '4.5 ',
                           style: TextStyle(
-                            color: AppTheme.blackColor,
+                            color: AppTheme.getTextColor(context),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),

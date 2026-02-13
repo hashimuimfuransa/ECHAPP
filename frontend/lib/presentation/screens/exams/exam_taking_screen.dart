@@ -177,7 +177,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               end: Alignment.bottomCenter,
               colors: [
                 AppTheme.primary.withOpacity(0.1),
-                AppTheme.surface,
+                AppTheme.getBackgroundColor(context),
               ],
             ),
           ),
@@ -199,21 +199,21 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Preparing Your Exam',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context)
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Loading questions and setting up your test environment',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppTheme.greyColor,
+                    color: AppTheme.getTextColor(context).withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -236,7 +236,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppTheme.surface,
+                AppTheme.getBackgroundColor(context),
                 AppTheme.primary.withOpacity(0.05),
               ],
             ),
@@ -261,19 +261,19 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'No Questions Available',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context)
                     ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'This exam doesn\'t have any questions configured yet. Please contact your instructor or try again later.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: AppTheme.greyColor,
                       height: 1.5,
@@ -317,7 +317,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.surface,
+              AppTheme.getBackgroundColor(context),
               AppTheme.primary.withOpacity(0.03),
             ],
           ),
@@ -442,12 +442,12 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           // Progress bar with percentage
           Row(
             children: [
-              const Text(
+              Text(
                 'Progress',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context)
                 ),
               ),
               const Spacer(),
@@ -608,11 +608,11 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             // Question text
             Text(
               question.question,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 height: 1.4,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context)
               ),
             ),
             
@@ -874,7 +874,7 @@ class ExamResultsScreen extends StatelessWidget {
               isPassed 
                 ? AppTheme.primary.withOpacity(0.1) 
                 : Colors.red.shade50.withOpacity(0.3),
-              AppTheme.surface,
+              AppTheme.getBackgroundColor(context),
             ],
           ),
         ),
@@ -888,15 +888,15 @@ class ExamResultsScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: AppTheme.blackColor),
+                      icon: Icon(Icons.arrow_back, color: AppTheme.getIconColor(context)),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Exam Results',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context)
                       ),
                     ),
                   ],
@@ -933,9 +933,9 @@ class ExamResultsScreen extends StatelessWidget {
                           Text(
                             result.message,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
-                              color: AppTheme.greyColor,
+                              color: AppTheme.getTextColor(context).withOpacity(0.7),
                               height: 1.5,
                             ),
                           ),
@@ -1025,7 +1025,7 @@ class ExamResultsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.greyColor,
+                color: AppTheme.blackColor
               ),
             ),
             const SizedBox(height: 16),
@@ -1033,10 +1033,10 @@ class ExamResultsScreen extends StatelessWidget {
             // Large score display
             Text(
               '${result.score}/${result.totalPoints}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
+                color: AppTheme.blackColor
               ),
             ),
             
@@ -1125,12 +1125,12 @@ class ExamResultsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Performance Summary',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
+                color: AppTheme.blackColor
               ),
             ),
             const SizedBox(height: 16),
@@ -1172,7 +1172,7 @@ class ExamResultsScreen extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 16,
-              color: AppTheme.greyColor,
+              color: AppTheme.greyColor
             ),
           ),
         ),

@@ -162,7 +162,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           bufferedColor: AppTheme.greyColor.withOpacity(0.3),
         ),
         placeholder: Container(
-          color: Colors.black,
+          color: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.grey.shade900 
+            : Colors.black,
           child: const Center(
             child: CircularProgressIndicator(
               color: AppTheme.primaryGreen,
@@ -255,12 +257,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   size: 64,
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Failed to load lesson content',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -384,6 +386,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Widget _buildLessonHeader() {
+    // Determine lesson type and styling
+    final bool isVideoLesson = _lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty;
+    final Color lessonTypeColor = isVideoLesson ? AppTheme.primaryGreen : AppTheme.accent;
+    final Color lessonBgColor = isVideoLesson 
+        ? AppTheme.primaryGreen.withOpacity(0.1) 
+        : AppTheme.accent.withOpacity(0.1);
+    final IconData lessonIcon = isVideoLesson ? Icons.play_circle_fill : Icons.article;
+    final String lessonTypeLabel = isVideoLesson ? 'VIDEO LESSON' : 'NOTES LESSON';
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -397,47 +408,90 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             offset: const Offset(0, 2),
           ),
         ],
+        border: Border.all(
+          color: lessonTypeColor.withOpacity(0.2),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Lesson type banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: lessonTypeColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: lessonTypeColor.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  lessonIcon,
+                  color: lessonTypeColor,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  lessonTypeLabel,
+                  style: TextStyle(
+                    color: lessonTypeColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Main header content
           Row(
             children: [
+              // Enhanced lesson type icon
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: lessonBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: lessonTypeColor.withOpacity(0.3),
+                    width: 2,
+                  ),
                 ),
                 child: Icon(
-                  _lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty
-                      ? Icons.video_library
-                      : Icons.description,
-                  color: AppTheme.primaryGreen,
-                  size: 24,
+                  lessonIcon,
+                  color: lessonTypeColor,
+                  size: 28,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.lesson.title,
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: TextStyle(
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                       ),
                     ),
                     if (widget.lesson.description != null && widget.lesson.description!.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           widget.lesson.description!,
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppTheme.greyColor,
+                            height: 1.4,
                           ),
                         ),
                       ),
@@ -446,23 +500,62 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(
-                Icons.access_time,
-                size: 16,
-                color: AppTheme.greyColor,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${widget.lesson.duration} minutes',
-                style: const TextStyle(
-                  fontSize: 14,
+          const SizedBox(height: 16),
+          
+          // Lesson metadata
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: 16,
                   color: AppTheme.greyColor,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  '${widget.lesson.duration} minutes',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.greyColor,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                if (isVideoLesson) ...[
+                  Icon(
+                    Icons.hd_outlined,
+                    size: 16,
+                    color: AppTheme.greyColor,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'HD Video Content',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                ] else ...[
+                  Icon(
+                    Icons.text_snippet_outlined,
+                    size: 16,
+                    color: AppTheme.greyColor,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Text-based Content',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -477,17 +570,40 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              const Text(
-                'Video Content',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.blackColor,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.play_circle_fill,
+                      color: AppTheme.primaryGreen,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'VIDEO CONTENT',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(12),
@@ -703,12 +819,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   size: 24,
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Notes Processing',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -733,12 +849,35 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: const Text(
-            'Lesson Notes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppTheme.accent.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.article,
+                  color: AppTheme.accent,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'LESSON NOTES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accent,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -779,10 +918,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       // Regular text content
       return SelectableText(
         notesContent,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           height: 1.6,
-          color: AppTheme.blackColor,
+          color: AppTheme.getTextColor(context)
         ),
       );
     }
@@ -803,10 +942,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             padding: const EdgeInsets.only(top: 16, bottom: 8),
             child: Text(
               line.substring(3), // Remove '## '
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context)
               ),
             ),
           ),
@@ -845,10 +984,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 Expanded(
                   child: Text(
                     line.substring(2), // Remove '- ' or '* '
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       height: 1.5,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context)
                     ),
                   ),
                 ),
@@ -863,10 +1002,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               line,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 height: 1.5,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context)
               ),
             ),
           ),
@@ -894,12 +1033,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: const Text(
+          child: Text(
             'Exams',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
         ),
@@ -929,10 +1068,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 children: [
                   Text(
                     exam.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context)
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1219,12 +1358,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             color: AppTheme.greyColor.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No Content Available',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 8),

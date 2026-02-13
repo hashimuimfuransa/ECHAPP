@@ -24,7 +24,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
   Course? _course;
   List<Section>? _sections;
   Map<String, dynamic>? _enrollmentData;
-  Map<String, bool> _sectionCompletionStatus = {};
+  final Map<String, bool> _sectionCompletionStatus = {};
   bool _isLoading = true;
   bool _isCompletingSection = false;
 
@@ -245,7 +245,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context)
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -288,7 +288,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context)
           ),
         ),
         const SizedBox(height: 8),
@@ -406,7 +406,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 5),
@@ -462,7 +462,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 20),
@@ -490,7 +490,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
                 title,
                 style: const TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context)
                 ),
               ),
               const SizedBox(height: 5),
@@ -559,7 +559,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 20),

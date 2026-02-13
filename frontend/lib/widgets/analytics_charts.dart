@@ -60,10 +60,10 @@ class BarChartWidget extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 20),
@@ -131,7 +131,7 @@ class BarChartWidget extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -195,10 +195,10 @@ class PieChartWidget extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 20),
@@ -334,10 +334,10 @@ class LineChartWidget extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context)
             ),
           ),
           const SizedBox(height: 20),

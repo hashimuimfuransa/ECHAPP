@@ -32,9 +32,6 @@ class FirebaseAuthService {
         await userCredential.user!.reload();
       }
       
-      // Send email verification
-      await userCredential.user?.sendEmailVerification();
-      
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Registration Error: ${e.code} - ${e.message}');
@@ -106,11 +103,6 @@ class FirebaseAuthService {
     }
   }
 
-  // Check if email is verified
-  static bool isEmailVerified() {
-    return _auth.currentUser?.emailVerified ?? false;
-  }
-
   // Get user's custom claims (including role)
   static Future<Map<String, dynamic>?> getUserCustomClaims() async {
     try {
@@ -137,26 +129,35 @@ class FirebaseAuthService {
     }
   }
 
-  // Send email verification
-  static Future<void> sendEmailVerification() async {
-    try {
-      await _auth.currentUser?.sendEmailVerification();
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      debugPrint('Email Verification Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
-    } catch (e) {
-      debugPrint('Email Verification Error: $e');
-      throw Exception('Failed to send verification email. Please try again.');
-    }
-  }
-
   // Google Sign-In
   static Future<firebase_auth.UserCredential?> signInWithGoogle() async {
     debugPrint('Starting Google Sign-In process...');
     try {
+      GoogleSignIn googleSignIn;
+      
+      // Configure GoogleSignIn differently for web vs mobile
+      if (kIsWeb) {
+        // For web, we need to specify the client ID explicitly
+        googleSignIn = GoogleSignIn(
+          clientId: '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com',
+          scopes: [
+            'email',
+            'profile',
+          ],
+        );
+      } else {
+        // For mobile platforms, use the default configuration
+        googleSignIn = GoogleSignIn(
+          scopes: [
+            'email',
+            'profile',
+          ],
+        );
+      }
+      
       // Trigger the authentication flow
       debugPrint('Showing Google Sign-In dialog...');
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       
       if (googleUser == null) {
         // User canceled the sign-in
@@ -198,6 +199,20 @@ class FirebaseAuthService {
       throw _mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Google Sign-In Error: $e');
+      // For web-specific errors, provide more descriptive messages
+      if (kIsWeb) {
+        debugPrint('This error occurred on web platform. Make sure:');
+        debugPrint('- The domain is authorized in Firebase Console Authentication settings');
+        debugPrint('- The Firebase project is properly configured for web');
+        debugPrint('- CORS is properly configured if applicable');
+        debugPrint('- Popup blockers are disabled for this site');
+        
+        // Check for specific web errors
+        String errorStr = e.toString().toLowerCase();
+        if (errorStr.contains('popup_closed') || errorStr.contains('popup') && errorStr.contains('closed')) {
+          throw Exception('Google Sign-In popup was closed. Please try again and complete the sign-in process.');
+        }
+      }
       throw Exception('Google Sign-In failed. Please try again. Error: $e');
     }
   }

@@ -39,11 +39,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF0F9FF), // Light blue
-                      Color(0xFFE0F2FE), // Lighter blue
-                    ],
+                  gradient: LinearGradient(
+                    colors: Theme.of(context).brightness == Brightness.dark
+                      ? [
+                          Color(0xFF0F172A), // Dark blue background
+                          Color(0xFF1E293B), // Slightly lighter dark blue
+                        ]
+                      : [
+                          Color(0xFFF0F9FF), // Light blue
+                          Color(0xFFE0F2FE), // Lighter blue
+                        ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -124,11 +129,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         body: SafeArea(
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFF0F9FF), // Light blue
-                  Color(0xFFE0F2FE), // Lighter blue
-                ],
+              gradient: LinearGradient(
+                colors: Theme.of(context).brightness == Brightness.dark
+                  ? [
+                      Color(0xFF0F172A), // Dark blue background
+                      Color(0xFF1E293B), // Slightly lighter dark blue
+                    ]
+                  : [
+                      Color(0xFFF0F9FF), // Light blue
+                      Color(0xFFE0F2FE), // Lighter blue
+                    ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -231,14 +241,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
               child: Text(
                 user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.primaryGreen,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            color: AppTheme.whiteColor,
+            color: Theme.of(context).cardColor,
             onSelected: (value) {
               if (value == 'logout') {
                 _showLogoutDialog(context);
@@ -248,34 +258,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               return <PopupMenuEntry<String>>[
                 PopupMenuItem<String>(
                   value: 'profile',
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
+                      Icon(Icons.person_outline, color: AppTheme.getIconColor(context), size: 18),
                       SizedBox(width: 10),
-                      Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
+                      Text('Profile', style: TextStyle(color: AppTheme.getTextColor(context),)),
                     ],
                   ),
                   onTap: () => context.push('/profile'),
                 ),
                 PopupMenuItem<String>(
                   value: 'settings',
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
+                      Icon(Icons.settings_outlined, color: AppTheme.getIconColor(context), size: 18),
                       SizedBox(width: 10),
-                      Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
+                      Text('Settings', style: TextStyle(color: AppTheme.getTextColor(context),)),
                     ],
                   ),
                   onTap: () => context.push('/settings'),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout, color: Colors.red, size: 18),
+                      Icon(Icons.logout, color: AppTheme.getErrorColor(context), size: 18),
                       SizedBox(width: 10),
-                      Text('Logout', style: TextStyle(color: Colors.red)),
+                      Text('Logout', style: TextStyle(color: AppTheme.getErrorColor(context))),
                     ],
                   ),
                 ),
@@ -329,14 +339,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
                   child: Text(
                     user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                color: AppTheme.whiteColor,
+                color: Theme.of(context).cardColor,
                 onSelected: (value) {
                   if (value == 'logout') {
                     _showLogoutDialog(context);
@@ -346,34 +356,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
                       value: 'profile',
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
+                          Icon(Icons.person_outline, color: AppTheme.getIconColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
+                          Text('Profile', style: TextStyle(color: AppTheme.getTextColor(context),)),
                         ],
                       ),
                       onTap: () => context.push('/profile'),
                     ),
                     PopupMenuItem<String>(
                       value: 'settings',
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
+                          Icon(Icons.settings_outlined, color: AppTheme.getIconColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
+                          Text('Settings', style: TextStyle(color: AppTheme.getTextColor(context),)),
                         ],
                       ),
                       onTap: () => context.push('/settings'),
                     ),
                     const PopupMenuDivider(),
-                    const PopupMenuItem<String>(
+                    PopupMenuItem<String>(
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(Icons.logout, color: Colors.red, size: 18),
+                          Icon(Icons.logout, color: AppTheme.getErrorColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Logout', style: TextStyle(color: Colors.red)),
+                          Text('Logout', style: TextStyle(color: AppTheme.getErrorColor(context))),
                         ],
                       ),
                     ),
@@ -475,8 +485,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.whiteColor,
-                      foregroundColor: const Color(0xFF6366F1),
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: AppTheme.whiteColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -626,13 +636,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         'color': const Color(0xFFfa709a),
         'onTap': () => context.push('/certificates'),
       },
-      {
-        'title': 'Learning Path',
-        'subtitle': 'Track progress',
-        'icon': Icons.timeline_outlined,
-        'color': const Color(0xFFf093fb),
-        'onTap': () => context.push('/learning-path'),
-      },
     ];
 
     return Column(
@@ -641,7 +644,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Text(
           'Quick Actions',
           style: TextStyle(
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
             fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
             fontWeight: FontWeight.w600,
           ),
@@ -700,13 +703,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         'color': const Color(0xFFfa709a),
         'onTap': () => context.push('/certificates'),
       },
-      {
-        'title': 'Learning Path',
-        'subtitle': 'Track progress',
-        'icon': Icons.timeline_outlined,
-        'color': const Color(0xFFf093fb),
-        'onTap': () => context.push('/learning-path'),
-      },
     ];
 
     final gridCount = ResponsiveGridCount(context);
@@ -717,7 +713,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Text(
           'Quick Actions',
           style: TextStyle(
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
             fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
             fontWeight: FontWeight.w600,
           ),
@@ -785,8 +781,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppTheme.blackColor,
+                style: TextStyle(
+                  color: AppTheme.getTextColor(context),
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -795,7 +791,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.greyColor,
                   fontSize: 11,
                 ),
@@ -856,7 +852,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Text(
                 title,
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: fontSize,
                   fontWeight: FontWeight.w600,
                 ),
@@ -886,7 +882,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(
             'Continue Learning',
             style: TextStyle(
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
               fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
               fontWeight: FontWeight.w600,
             ),
@@ -928,14 +924,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ),
                       const SizedBox(width: 15),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'No courses in progress',
                               style: TextStyle(
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -984,7 +980,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(
             'Continue Learning',
             style: TextStyle(
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
               fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
               fontWeight: FontWeight.w600,
             ),
@@ -1071,7 +1067,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   children: [
                                     Text(
                                       course.title ?? 'Untitled Course',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: AppTheme.whiteColor,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -1137,7 +1133,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               'Popular Courses',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
                 fontWeight: FontWeight.w600,
               ),
@@ -1240,8 +1236,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const SizedBox(height: 10),
                             Text(
                               course.title ?? 'Untitled Course',
-                              style: const TextStyle(
-                                color: AppTheme.blackColor,
+                              style: TextStyle(
+                                color: AppTheme.getTextColor(context),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1251,7 +1247,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'by ${course.createdBy.fullName}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppTheme.greyColor,
                                 fontSize: 11,
                               ),
@@ -1260,7 +1256,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
                                     Icon(
                                       Icons.star,
@@ -1271,7 +1267,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     Text(
                                       '4.8',
                                       style: TextStyle(
-                                        color: AppTheme.blackColor,
+                                        color: AppTheme.getTextColor(context),
                                         fontSize: 10,
                                       ),
                                     ),
@@ -1288,7 +1284,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   ),
                                   child: Text(
                                     'RWF ${course.price.toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppTheme.primaryGreen,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -1326,7 +1322,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Text(
                 'Popular Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1381,7 +1377,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Text(
                 'Popular Courses',
                 style: TextStyle(
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1505,7 +1501,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               course.title ?? 'Untitled Course',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: titleFontSize,
                 fontWeight: FontWeight.w600,
               ),
@@ -1524,7 +1520,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(
                       Icons.star,
@@ -1535,7 +1531,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Text(
                       '4.8',
                       style: TextStyle(
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                         fontSize: 11,
                       ),
                     ),
@@ -1552,7 +1548,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   child: Text(
                     'RWF ${course.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1636,8 +1632,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 10),
             Text(
               course.title ?? 'Untitled Course',
-              style: const TextStyle(
-                color: AppTheme.blackColor,
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -1647,7 +1643,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 4),
             Text(
               'by ${course.createdBy.fullName}',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.greyColor,
                 fontSize: 12,
               ),
@@ -1656,7 +1652,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(
                       Icons.star,
@@ -1667,7 +1663,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Text(
                       '4.8',
                       style: TextStyle(
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                         fontSize: 11,
                       ),
                     ),
@@ -1684,7 +1680,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   child: Text(
                     'RWF ${course.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1703,7 +1699,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       height: 80,
       decoration: BoxDecoration(
-        color: AppTheme.whiteColor,
+        color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? AppTheme.getCardColor(context),
         border: Border(
           top: BorderSide(
             color: AppTheme.greyColor.withOpacity(0.2),
@@ -1724,6 +1720,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildNavItem(BuildContext context, IconData icon, String label, bool isSelected, Function onTap) {
+    final theme = Theme.of(context);
+    
     return InkWell(
       onTap: () => onTap(),
       child: Column(
@@ -1731,14 +1729,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: [
           Icon(
             icon,
-            color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
+            color: isSelected 
+              ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
+              : (theme.bottomNavigationBarTheme.unselectedItemColor ?? AppTheme.getSecondaryTextColor(context)),
             size: 28,
           ),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
+              color: isSelected 
+                ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
+                : (theme.bottomNavigationBarTheme.unselectedItemColor ?? AppTheme.getSecondaryTextColor(context)),
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
@@ -1793,8 +1795,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppTheme.blackColor,
+          style: TextStyle(
+            color: AppTheme.getTextColor(context),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -1833,8 +1835,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppTheme.blackColor,
+          style: TextStyle(
+            color: AppTheme.getTextColor(context),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -1861,7 +1863,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Center(
               child: Text(
                 'Error loading data: $errorMessage',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.red,
                   fontSize: 14,
                 ),
@@ -1888,7 +1890,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Text(
               'My Wishlist',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
                 fontWeight: FontWeight.w600,
               ),
@@ -1983,7 +1985,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           children: [
                             Text(
                               'Saved Courses (${courses.length})',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -2088,10 +2090,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   Text(
                     course.title ?? 'Untitled Course',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

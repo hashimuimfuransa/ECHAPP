@@ -161,7 +161,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-                color: AppTheme.whiteColor,
+                color: Theme.of(context).cardColor,
                 onSelected: (value) {
                   if (value == 'logout') {
                     _showLogoutDialog(context);
@@ -171,34 +171,34 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   return <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
                       value: 'profile',
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.person_outline, color: AppTheme.blackColor, size: 18),
+                          Icon(Icons.person_outline, color: AppTheme.getIconColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Profile', style: TextStyle(color: AppTheme.blackColor)),
+                          Text('Profile', style: TextStyle(color: AppTheme.getTextColor(context))),
                         ],
                       ),
                       onTap: () => context.push('/profile'),
                     ),
                     PopupMenuItem<String>(
                       value: 'settings',
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.settings_outlined, color: AppTheme.blackColor, size: 18),
+                          Icon(Icons.settings_outlined, color: AppTheme.getIconColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Settings', style: TextStyle(color: AppTheme.blackColor)),
+                          Text('Settings', style: TextStyle(color: AppTheme.getTextColor(context))),
                         ],
                       ),
                       onTap: () => context.push('/settings'),
                     ),
                     const PopupMenuDivider(),
-                    const PopupMenuItem<String>(
+                    PopupMenuItem<String>(
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(Icons.logout, color: Colors.red, size: 18),
+                          Icon(Icons.logout, color: AppTheme.getErrorColor(context), size: 18),
                           SizedBox(width: 10),
-                          Text('Logout', style: TextStyle(color: Colors.red)),
+                          Text('Logout', style: TextStyle(color: AppTheme.getErrorColor(context))),
                         ],
                       ),
                     ),
@@ -220,9 +220,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppTheme.whiteColor,
-          title: const Text(
+          title: Text(
             'Logout',
-            style: TextStyle(color: AppTheme.blackColor),
+            style: TextStyle(color: AppTheme.getTextColor(context)),
           ),
           content: const Text(
             'Are you sure you want to logout?',
@@ -634,12 +634,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Welcome back, Admin!',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
             ),
           ),
           const SizedBox(height: 5),
@@ -715,12 +715,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Statistics Overview',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
           ),
         ),
         const SizedBox(height: 20),
@@ -777,10 +777,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             const SizedBox(height: 15),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
               ),
             ),
             const SizedBox(height: 5),
@@ -801,12 +801,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
           ),
         ),
         const SizedBox(height: 20),
@@ -897,10 +897,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             const SizedBox(height: 15),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -923,12 +923,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Recent Activity',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
           ),
         ),
         const SizedBox(height: 20),
@@ -1022,9 +1022,9 @@ class _ActivityItem extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.blackColor,
+                  color: AppTheme.getTextColor(context),
                 ),
               ),
               Text(

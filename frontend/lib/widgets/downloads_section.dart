@@ -31,7 +31,7 @@ class DownloadsSection extends StatelessWidget {
             Text(
               'My Downloads',
               style: TextStyle(
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
                 fontWeight: FontWeight.w600,
               ),
@@ -115,8 +115,8 @@ class DownloadsSection extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               download.originalTitle,
-              style: const TextStyle(
-                color: AppTheme.blackColor,
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),

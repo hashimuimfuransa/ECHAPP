@@ -30,6 +30,43 @@ class AppTheme {
   static const Color surface = Color(0xFFF8FAFC); // Soft surface
   static const Color card = Color(0xFFFFFFFF); // Card background
 
+  // Theme-aware color getters
+  static Color getTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkTextPrimary 
+      : blackColor;
+  }
+
+  static Color getSecondaryTextColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkTextSecondary 
+      : greyColor;
+  }
+
+  static Color getBackgroundColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkBg 
+      : surface;
+  }
+
+  static Color getCardColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkCard 
+      : card;
+  }
+
+  static Color getIconColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkTextPrimary 
+      : blackColor;
+  }
+
+  static Color getErrorColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? Colors.red.shade300  // Lighter red for dark mode
+      : errorColor;          // Original red for light mode
+  }
+
   // Dark mode neutrals
   static const Color darkBg = Color(0xFF0F172A); // Midnight blue
   static const Color darkSurface = Color(0xFF1E293B); // Deep blue-gray

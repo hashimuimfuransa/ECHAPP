@@ -5,7 +5,6 @@ import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
-import 'package:excellence_coaching_hub/utils/course_navigation_utils.dart';
 
 class EnrolledCoursesScreen extends ConsumerWidget {
   const EnrolledCoursesScreen({super.key});
@@ -63,12 +62,12 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               color: AppTheme.greyColor.withOpacity(0.3),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No Enrolled Courses',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.blackColor,
+                color: AppTheme.blackColor
               ),
             ),
             const SizedBox(height: 12),
@@ -116,7 +115,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
               'My Learning (${enrolledCourses.length})',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.blackColor,
@@ -222,7 +221,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               // Course title
               Text(
                 course.title ?? 'Untitled Course',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.blackColor,

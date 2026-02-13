@@ -26,7 +26,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       body: Container(
-        color: isDarkMode ? const Color(0xFF121212) : AppTheme.whiteColor,
+        color: AppTheme.getBackgroundColor(context),
         child: SafeArea(
           child: Column(
             children: [
@@ -179,17 +179,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           IconButton(
             onPressed: () => context.pop(),
             icon: Icon(Icons.arrow_back, 
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor, 
+              color: AppTheme.getIconColor(context), 
               size: 28),
           ),
           Text(
             'Settings',
             style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor,
+              color: AppTheme.getTextColor(context),
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
@@ -203,9 +199,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildSection(BuildContext context, String title, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark 
-          ? const Color(0xFF1E1E1E) 
-          : AppTheme.whiteColor,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -285,11 +279,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: AppTheme.greyColor,
+                    style: TextStyle(
+                      color: AppTheme.getSecondaryTextColor(context),
                       fontSize: 13,
                     ),
                   ),
@@ -346,11 +340,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: AppTheme.greyColor,
+                  style: TextStyle(
+                    color: AppTheme.getSecondaryTextColor(context),
                     fontSize: 13,
                   ),
                 ),
@@ -408,11 +402,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: AppTheme.greyColor,
+                  style: TextStyle(
+                    color: AppTheme.getSecondaryTextColor(context),
                     fontSize: 13,
                   ),
                 ),

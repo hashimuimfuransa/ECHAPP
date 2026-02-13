@@ -98,12 +98,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Excellence\nCoaching Hub',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context),
                     height: 1.2,
                   ),
                   textAlign: TextAlign.center,
@@ -220,7 +220,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? AppTheme.primaryGreen : AppTheme.blackColor,
+          color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           fontSize: isDesktop ? 14 : 16,
         ),

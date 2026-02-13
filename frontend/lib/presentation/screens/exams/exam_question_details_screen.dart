@@ -11,10 +11,10 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
         title: const Text('Question Details'),
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.getBackgroundColor(context),
         elevation: 0,
       ),
       body: SingleChildScrollView(
