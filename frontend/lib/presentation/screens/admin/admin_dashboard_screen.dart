@@ -17,7 +17,38 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   bool _isSyncing = false;
   bool _hasLoadedInitialData = false;
+  bool _hasCheckedRole = false;
   String? _syncMessage;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkUserRole();
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkUserRole();
+  }
+
+  void _checkUserRole() {
+    if (!_hasCheckedRole) {
+      final authState = ref.watch(authProvider);
+      if (authState.user != null && !authState.isLoading) {
+        _hasCheckedRole = true;
+        debugPrint('AdminDashboardScreen: Checking user role - ${authState.user?.role}');
+        
+        // If user is not admin, redirect to student dashboard
+        if (authState.user?.role != 'admin') {
+          debugPrint('AdminDashboardScreen: Non-admin detected, redirecting to student dashboard');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/dashboard');
+          });
+        }
+      }
+    }
+  }
 
   Future<void> _triggerManualSync() async {
     if (_isSyncing) return;

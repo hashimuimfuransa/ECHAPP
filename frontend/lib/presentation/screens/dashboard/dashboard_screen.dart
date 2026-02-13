@@ -22,6 +22,38 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _hasCheckedRole = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkUserRole();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkUserRole();
+  }
+
+  void _checkUserRole() {
+    if (!_hasCheckedRole) {
+      final authState = ref.watch(authProvider);
+      if (authState.user != null && !authState.isLoading) {
+        _hasCheckedRole = true;
+        debugPrint('DashboardScreen: Checking user role - ${authState.user?.role}');
+        
+        // If user is admin, redirect to admin dashboard
+        if (authState.user?.role == 'admin') {
+          debugPrint('DashboardScreen: Admin detected, redirecting to admin dashboard');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/admin');
+          });
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;

@@ -37,9 +37,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       debugPrint('LoginScreen: Checking navigation - User: ${authState.user != null}, Loading: ${authState.isLoading}, Error: ${authState.error}');
       if (authState.user != null && !authState.isLoading) {
         _hasNavigated = true;
-        debugPrint('LoginScreen: Navigating to dashboard');
-        // Navigate to dashboard after successful login
-        context.go('/dashboard');
+        debugPrint('LoginScreen: Navigating to dashboard for role: ${authState.user?.role}');
+        // Navigate to appropriate dashboard based on user role
+        if (authState.user?.role == 'admin') {
+          debugPrint('LoginScreen: Navigating to admin dashboard');
+          context.go('/admin');
+        } else {
+          debugPrint('LoginScreen: Navigating to student dashboard');
+          context.go('/dashboard');
+        }
       }
     }
   }
