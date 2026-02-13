@@ -26,9 +26,21 @@ router.delete('/:id', protect, roleAuthorize('admin'), deleteExam);
 router.post('/', protect, roleAuthorize('admin'), createExam);
 
 // Student routes
+router.get('/student/history', protect, getUserExamHistory); // New independent route for student exam history
+router.get('/history/test', protect, (req, res) => {
+  res.json({
+    success: true,
+    message: 'History endpoint is accessible',
+    user: {
+      id: req.user?.id,
+      email: req.user?.email,
+      role: req.user?.role
+    }
+  });
+});
+router.get('/history', protect, getUserExamHistory); // Original route - keep for backward compatibility
 router.get('/course/:courseId', protect, getCourseExams);
 router.get('/section/:sectionId', protect, getExamsBySection); // Added new route
-router.get('/history', protect, getUserExamHistory); // Added new route
 router.get('/:examId/questions', protect, getExamQuestions);
 router.post('/:examId/submit', protect, submitExam);
 router.get('/:examId/results', protect, getExamResults);

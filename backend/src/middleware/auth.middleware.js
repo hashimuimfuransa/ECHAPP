@@ -31,6 +31,8 @@ const protect = async (req, res, next) => {
       if (req.user) {
         console.log('User role:', req.user.role);
         console.log('User ID:', req.user._id);
+        console.log('User email:', req.user.email);
+        console.log('User isActive:', req.user.isActive);
       }
       
       if (!req.user) {
@@ -47,6 +49,7 @@ const protect = async (req, res, next) => {
       next();
     } catch (error) {
       console.log('Auth error:', error.message);
+      console.error('Full auth error:', error);
       return sendUnauthorized(res, 'Not authorized, invalid token');
     }
   } else {

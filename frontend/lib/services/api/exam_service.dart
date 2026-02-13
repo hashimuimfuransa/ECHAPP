@@ -198,7 +198,7 @@ class ExamService {
       print('ExamService: Response body length: ${response.body.length}');
       
       // Log first 200 characters of response for debugging
-      if (response.body.length > 0) {
+      if (response.body.isNotEmpty) {
         final preview = response.body.substring(0, response.body.length > 200 ? 200 : response.body.length);
         print('ExamService: Response preview: $preview');
       }
@@ -278,7 +278,8 @@ class ExamService {
   /// Get user's exam history
   Future<List<ExamResult>> getUserExamHistory() async {
     try {
-      final response = await _apiClient.get('${ApiConfig.exams}/history');
+      // Use the new independent route for student exam history
+      final response = await _apiClient.get('${ApiConfig.exams}/student/history');
       response.validateStatus();
       
       final apiResponse = response.toApiResponse(
@@ -424,7 +425,7 @@ class ExamResult {
               : null,
       score: json['score'] ?? 0,
       totalPoints: json['totalPoints'] ?? 0,
-      percentage: json['percentage'] != null ? json['percentage'].toDouble() : null,
+      percentage: json['percentage']?.toDouble(),
       passed: json['passed'] ?? false,
       message: json['message'] ?? 'Exam completed',
       submittedAt: json['submittedAt'] != null 

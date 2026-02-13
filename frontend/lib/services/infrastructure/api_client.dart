@@ -27,11 +27,14 @@ class ApiClient {
         print('ApiClient: Token acquired successfully, length: ${token?.length ?? 0}');
         if (token != null) {
           print('ApiClient: Token preview: ${token.substring(0, token.length > 50 ? 50 : token.length)}...');
+          return {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          };
+        } else {
+          print('ApiClient: Token is null despite having user - this should not happen');
+          // Fall through to return basic headers
         }
-        return {
-          'Content-Type': 'application/json',
-          'Authorization': token != null ? 'Bearer $token' : '',
-        };
       } else {
         print('ApiClient: No current user found - request will be unauthenticated');
       }
@@ -40,6 +43,7 @@ class ApiClient {
       print('ApiClient: Stack trace: ${e is Error ? e.stackTrace : 'No stack trace'}');
     }
     
+    // Return basic headers when no valid token is available
     return {
       'Content-Type': 'application/json',
     };

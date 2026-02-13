@@ -296,8 +296,15 @@ const getExamResults = async (req, res) => {
 // Get user's exam history
 const getUserExamHistory = async (req, res) => {
   try {
+    console.log('=== EXAM HISTORY REQUEST ===');
+    console.log('User ID from request:', req.user?.id);
+    console.log('User role:', req.user?.role);
+    console.log('User email:', req.user?.email);
+    console.log('Full user object:', JSON.stringify(req.user, null, 2));
+    
     const userId = req.user.id;
     
+    console.log('Searching for results with userId:', userId);
     const results = await Result.find({ userId })
       .populate({
         path: 'examId',
@@ -309,8 +316,12 @@ const getUserExamHistory = async (req, res) => {
       })
       .sort({ submittedAt: -1 });
     
+    console.log('Found', results.length, 'results for user');
+    console.log('Results:', JSON.stringify(results, null, 2));
+    
     sendSuccess(res, results, 'Exam history retrieved successfully');
   } catch (error) {
+    console.error('Error in getUserExamHistory:', error);
     sendError(res, 'Failed to retrieve exam history', 500, error.message);
   }
 };
