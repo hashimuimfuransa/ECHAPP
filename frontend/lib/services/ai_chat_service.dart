@@ -100,8 +100,8 @@ class RealAIChatService implements AIChatService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = json.decode(response.body);
-        return jsonList.map((json) => _fromMap(json)).toList();
+        final List<dynamic> responseData = json.decode(response.body);
+        return responseData.map((item) => _fromMap(item)).toList();
       } else {
         throw Exception('Failed to load conversation: ${response.statusCode}');
       }
@@ -134,14 +134,14 @@ class RealAIChatService implements AIChatService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> json = json.decode(response.body);
+        final Map<String, dynamic> responseData = json.decode(response.body);
         return AIChatMessage(
-          id: json['id'] ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          id: responseData['id'] ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
           sender: 'ai',
-          message: json['message'] ?? 'Sorry, I couldn\'t process that request.',
+          message: responseData['message'] ?? 'Sorry, I couldn\'t process that request.',
           timestamp: DateTime.now(),
           isContextAware: true,
-          audioUrl: json['audioUrl'],
+          audioUrl: responseData['audioUrl'],
         );
       } else {
         throw Exception('Failed to send message: ${response.statusCode}');

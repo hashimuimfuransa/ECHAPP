@@ -35,7 +35,7 @@ dependencies:
   share_plus: ^10.1.2
   file_picker: ^8.0.3
   audioplayers: ^6.0.0
-  record: ^5.1.2
+  # record: ^5.1.2  # Temporarily removed due to Linux compatibility issues
 
   firebase_auth: ^6.1.4
   firebase_core: ^4.4.0
