@@ -94,7 +94,7 @@ router.post('/chat/send', async (req, res) => {
     // Generate AI response using Groq (Grok model)
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesForAI,
-      model: "mixtral-8x7b-32768", // Using Mixtral as a placeholder; replace with actual Grok model when available
+      model: "llama-3.1-8b-instant",
       temperature: 0.7,
       max_tokens: 1024,
       top_p: 1,
