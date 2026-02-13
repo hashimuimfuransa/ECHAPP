@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/exam.dart';
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
 
 /// Screen to display user's exam history with detailed results
@@ -372,7 +371,11 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'Unknown date';
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    try {
+      return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Invalid date';
+    }
   }
 }
 
@@ -618,6 +621,10 @@ class _ExamDetailsSheet extends StatelessWidget {
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'Unknown date';
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    try {
+      return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Invalid date';
+    }
   }
 }

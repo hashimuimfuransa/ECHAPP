@@ -285,15 +285,27 @@ class ExamService {
       print('ExamService: Raw response status: ${response.statusCode}');
       print('ExamService: Raw response body: ${response.body}');
       
-      final apiResponse = response.toApiResponse(
-        (json) => (json as List).map((item) => ExamResult.fromJson(item)).toList()
-      );
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       
-      if (apiResponse.success) {
-        print('ExamService: Successfully parsed ${apiResponse.data?.length ?? 0} exam results');
-        return apiResponse.data ?? [];
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as List<dynamic>;
+        print('ExamService: Successfully parsed ${data.length} exam results');
+        
+        final validResults = <ExamResult>[];
+        for (final item in data) {
+          if (item != null && item is Map<String, dynamic>) {
+            try {
+              validResults.add(ExamResult.fromJson(item));
+            } catch (e) {
+              print('ExamService: Error parsing exam result: $e');
+              continue;
+            }
+          }
+        }
+        print('ExamService: Converted ${validResults.length} valid results from ${data.length} total items');
+        return validResults;
       } else {
-        throw ApiException(apiResponse.message);
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch exam history');
       }
     } catch (e) {
       print('ExamService: Error fetching exam history: $e');
@@ -421,24 +433,36 @@ class ExamResult {
   });
 
   factory ExamResult.fromJson(Map<String, dynamic> json) {
+    // Handle examId - can be String, Map, or null
+    String? examId;
+    exam_model.Exam? examDetails;
+    
+    if (json['examId'] != null) {
+      if (json['examId'] is String) {
+        examId = json['examId'] as String;
+      } else if (json['examId'] is Map<String, dynamic>) {
+        final examData = json['examId'] as Map<String, dynamic>;
+        examId = examData['_id'] as String?;
+        try {
+          examDetails = exam_model.Exam.fromJson(examData);
+        } catch (e) {
+          print('ExamResult: Error parsing exam details: $e');
+        }
+      }
+    }
+    
     return ExamResult(
       resultId: json['_id'] ?? json['resultId'] ?? '',
-      examId: json['examId'] is String 
-          ? json['examId'] as String
-          : (json['examId'] is Map<String, dynamic>) 
-              ? (json['examId'] as Map<String, dynamic>)['_id'] as String
-              : null,
+      examId: examId,
       score: json['score'] ?? 0,
       totalPoints: json['totalPoints'] ?? 0,
-      percentage: json['percentage']?.toDouble(),
+      percentage: (json['percentage'] is num) ? json['percentage'].toDouble() : json['percentage']?.toDouble(),
       passed: json['passed'] ?? false,
       message: json['message'] ?? 'Exam completed',
       submittedAt: json['submittedAt'] != null 
           ? DateTime.parse(json['submittedAt'] as String)
-          : null,
-      examDetails: json['examId'] is Map<String, dynamic>
-          ? exam_model.Exam.fromJson(json['examId'] as Map<String, dynamic>)
-          : null,
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null),
+      examDetails: examDetails,
     );
   }
 }
