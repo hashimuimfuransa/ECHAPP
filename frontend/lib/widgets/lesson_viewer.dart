@@ -318,7 +318,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 if (value == 'take-exam') {
                   // Navigate to first exam
                   if (_sectionExams != null && _sectionExams!.isNotEmpty) {
-                    context.push('/learning/${widget.courseId}/exam', extra: {'examId': _sectionExams![0].id});
+                    context.push('/learning/${widget.courseId}/exam/${_sectionExams![0].id}', extra: _sectionExams![0]);
                   }
                 }
               },
@@ -603,11 +603,36 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                       child: ElevatedButton.icon(
                         onPressed: _isDownloading 
                           ? null  // Disable button during download
-                          : _isVideoDownloaded() 
-                            ? () => GoRouter.of(context).push('/downloads')  // Navigate to downloads if already downloaded
-                            : () => _downloadVideo(),  // Download if not downloaded
-                        icon: _getDownloadButtonIcon(),
-                        label: Text(_getDownloadButtonText()),
+                          : () async {
+                              bool isDownloaded = await _isVideoDownloaded();
+                              if (isDownloaded) { 
+                                print('View in Downloads button pressed');
+                                GoRouter.of(context).push('/downloads');
+                              } else { 
+                                print('Download Video button pressed');
+                                _downloadVideo();
+                              }
+                            },  // Download if not downloaded
+                        icon: FutureBuilder<Widget>(
+                          future: _getDownloadButtonIcon(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return snapshot.data!;
+                            } else {
+                              return const Icon(Icons.download, size: 16); // Default icon while loading
+                            }
+                          },
+                        ),
+                        label: FutureBuilder<String>(
+                          future: _getDownloadButtonText(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Text(snapshot.data!);
+                            } else {
+                              return const Text('Download Video'); // Default text while loading
+                            }
+                          },
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isDownloading ? Colors.grey[600] : AppTheme.primaryGreen,
                           foregroundColor: Colors.white,
@@ -941,7 +966,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () {
-                      context.push('/learning/${widget.courseId}/exam', extra: {'examId': exam.id});
+                      context.push('/learning/${widget.courseId}/exam/${exam.id}', extra: exam);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryGreen,
@@ -1017,67 +1042,107 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   // Check if video is already downloaded
-  bool _isVideoDownloaded() {
+  Future<bool> _isVideoDownloaded() async {
+    print('Checking if video is downloaded for lesson: ${widget.lesson.id}');
     // Check with new naming scheme first
     final download = _downloadService.getDownloadStatus(widget.lesson.id);
+    print('Download status from service: $download');
     if (download != null && download.status == DownloadStatus.completed) {
+      print('Video is downloaded (new naming scheme)');
       return true;
     }
     
     // Also check if there's a local file with the old naming scheme
     // This handles cases where downloads were made before the naming change
     String oldFilename = 'lesson_${widget.lesson.id}';
-    // We'd need to check if the file exists locally with the old naming scheme
-    // This would require access to the download service's local file checking
+    print('Checking old filename: $oldFilename');
+    
+    // Check if file exists directly using download service
+    final exists = await _downloadService.isVideoDownloaded(oldFilename);
+    if (exists) {
+      print('Found existing file with old naming scheme');
+      // Create download record for this file
+      final path = await _downloadService.getLocalVideoPath(oldFilename);
+      if (path != null) {
+        final download = Download(
+          id: widget.lesson.id,
+          lessonId: widget.lesson.id,
+          fileName: oldFilename,
+          originalTitle: widget.lesson.title,
+          localPath: path,
+          downloadProgress: 1.0,
+          isDownloading: false,
+          status: DownloadStatus.completed,
+        );
+        // Update the download service
+        // Note: We can't directly access _downloads map, so we'd need a method in DownloadService
+      }
+      return true;
+    }
+    
     return false;
   }
 
   // Get download status text
-  String _getDownloadButtonText() {
+  Future<String> _getDownloadButtonText() async {
+    print('Getting download button text');
+    print('Is downloading: $_isDownloading');
+    bool isDownloaded = await _isVideoDownloaded();
+    print('Is video downloaded: $isDownloaded');
+    
     if (_isDownloading) {
+      print('Returning: Downloading...');
       return 'Downloading...';
     }
     
-    if (_isVideoDownloaded()) {
+    if (isDownloaded) {
+      print('Returning: View in Downloads');
       return 'View in Downloads';
     }
     
+    print('Returning: Download Video');
     return 'Download Video';
   }
 
   // Get download button icon
-  Widget _getDownloadButtonIcon() {
+  Future<Widget> _getDownloadButtonIcon() async {
     if (_isDownloading) {
       return const SizedBox(
-        width: 16, 
-        height: 16, 
+        width: 16,
+        height: 16,
         child: CircularProgressIndicator(
-          strokeWidth: 2, 
+          strokeWidth: 2,
           valueColor: AlwaysStoppedAnimation<Color>(Colors.white)
         )
       );
     }
-    
-    if (_isVideoDownloaded()) {
+      
+    bool isDownloaded = await _isVideoDownloaded();
+    if (isDownloaded) {
       return const Icon(Icons.visibility, size: 16);
     }
-    
+      
     return const Icon(Icons.download, size: 16);
   }
 
   // Download video method
   void _downloadVideo() async {
+    print('Starting download video method');
     if (_lessonContent?.videoUrl == null || _lessonContent!.videoUrl!.isEmpty) {
+      print('No video URL available');
       return;
     }
 
     // Check if already downloaded
-    if (_isVideoDownloaded()) {
+    bool isDownloaded = await _isVideoDownloaded();
+    if (isDownloaded) {
+      print('Video already downloaded, navigating to downloads');
       // Navigate to downloads screen
       GoRouter.of(context).push('/downloads');
       return;
     }
 
+    print('Setting download state to true');
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
@@ -1093,6 +1158,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         originalTitle: widget.lesson.title,
         lessonId: widget.lesson.id,
         onProgress: (progress) {
+          print('Download progress: ${(progress * 100).round()}%');
           setState(() {
             _downloadProgress = progress;
           });

@@ -16,7 +16,79 @@ class DownloadService {
 
   // Initialize the service and load persisted downloads
   Future<void> init() async {
+    print('Initializing download service...');
     await _loadDownloadsFromStorage();
+    print('Loaded ${_downloads.length} downloads from storage');
+    await _scanForExistingDownloads();
+    print('Scan complete. Total downloads now: ${_downloads.length}');
+  }
+
+  // Scan for existing downloaded files and create records for them
+  Future<void> _scanForExistingDownloads() async {
+    try {
+      print('Scanning for existing downloads...');
+      final directory = await _getAppDirectory();
+      final dir = Directory(directory);
+      
+      if (await dir.exists()) {
+        final files = dir.listSync();
+        print('Found ${files.length} files in download directory');
+        
+        for (final file in files) {
+          if (file is File && file.path.endsWith('.mp4')) {
+            final fileName = file.path.split('/').last.replaceAll('.mp4', '');
+            print('Processing file: $fileName');
+            final lessonId = _extractLessonIdFromFilename(fileName);
+            print('Extracted lesson ID: $lessonId');
+            
+            if (lessonId != null && !_downloads.containsKey(lessonId)) {
+              print('Found existing download: $fileName for lesson: $lessonId');
+              // Create download record for existing file
+              final download = Download(
+                id: lessonId,
+                lessonId: lessonId,
+                fileName: fileName,
+                originalTitle: fileName, // We don't have the original title
+                localPath: file.path,
+                downloadProgress: 1.0,
+                isDownloading: false,
+                status: DownloadStatus.completed,
+              );
+              _downloads[lessonId] = download;
+            }
+          }
+        }
+        
+        if (_downloads.isNotEmpty) {
+          await _saveDownloadsToStorage();
+          print('Created records for ${_downloads.length} existing downloads');
+        }
+      }
+    } catch (e) {
+      print('Error scanning for existing downloads: $e');
+    }
+  }
+
+  // Extract lesson ID from filename (simple heuristic)
+  String? _extractLessonIdFromFilename(String filename) {
+    print('Extracting lesson ID from filename: $filename');
+    // If filename looks like a lesson ID (hex string), use it
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(filename)) {
+      print('Found lesson ID pattern: $filename');
+      return filename;
+    }
+    // If filename starts with "lesson_", extract the ID part
+    if (filename.startsWith('lesson_')) {
+      final idPart = filename.substring(7); // Remove "lesson_" prefix
+      if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(idPart)) {
+        print('Found lesson ID in lesson_ prefix: $idPart');
+        return idPart;
+      }
+    }
+    // For other filenames (like sanitized titles), we can't extract lesson ID
+    // In this case, we might need a different approach - perhaps maintain a mapping
+    print('Could not extract lesson ID from filename: $filename');
+    return null;
   }
 
   // Load downloads from shared preferences
@@ -85,25 +157,45 @@ class DownloadService {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
+    print('Starting download video in service');
+    print('URL: $url');
+    print('Filename: $fileName');
+    print('Lesson ID: $lessonId');
+      
     try {
       final directory = await _getAppDirectory();
+      print('Download directory: $directory');
       final filePath = "$directory/$fileName.mp4";
-
+      print('File path: $filePath');
+  
       // Check if file already exists
       final file = File(filePath);
+      print('Checking if file exists: ${await file.exists()}');
       if (await file.exists()) {
-        // Return existing file path if already downloaded
-        // Update download record if it exists
-        if (_downloads.containsKey(lessonId)) {
-          _downloads[lessonId] = _downloads[lessonId]!.copyWith(
-            status: DownloadStatus.completed,
-            isDownloading: false,
-            downloadProgress: 1.0,
-          );
-        }
+        print('File already exists, creating/updating download record');
+        // File exists, create/update download record
+        final download = Download(
+          id: lessonId,
+          lessonId: lessonId,
+          fileName: fileName,
+          originalTitle: originalTitle,
+          localPath: filePath,
+          downloadProgress: 1.0,
+          isDownloading: false,
+          status: DownloadStatus.completed,
+        );
+        _downloads[lessonId] = download;
+        await _saveDownloadsToStorage();
+        // Simulate progress callbacks for UI consistency
+        onProgress(0.0);
+        await Future.delayed(const Duration(milliseconds: 100));
+        onProgress(0.5);
+        await Future.delayed(const Duration(milliseconds: 100));
+        onProgress(1.0);
+        onSuccess?.call();
         return filePath;
       }
-
+  
       // Create download record
       final download = Download(
         id: lessonId,
@@ -116,25 +208,33 @@ class DownloadService {
         status: DownloadStatus.downloading,
       );
       _downloads[lessonId] = download;
+      print('Created download record');
       await _saveDownloadsToStorage(); // Save to persistent storage
-
+      print('Saved download record to storage');
+  
+      print('Starting actual download with Dio');
       await _dio.download(
         url,
         filePath,
-        onReceiveProgress: (received, total) {
+        onReceiveProgress: (received, total) async {
+          print('Dio progress callback called: received=$received, total=$total');
           if (total != -1) {
             double progress = received / total;
+            print('Download service progress: ${(progress * 100).round()}%');
             download.downloadProgress = progress;
             onProgress(progress);
-            
+              
             // Update download record with current progress
             _downloads[lessonId] = download.copyWith(
               downloadProgress: progress,
             );
+            // Save progress to persistent storage
+            await _saveDownloadsToStorage();
           }
         },
       );
-
+        
+      print('Download completed successfully');
       // Update download status
       _downloads[lessonId] = download.copyWith(
         isDownloading: false,
@@ -142,20 +242,35 @@ class DownloadService {
       );
       await _saveDownloadsToStorage(); // Save to persistent storage
       onSuccess?.call();
-
+  
       return filePath;
     } catch (e) {
+      print('Download failed with error: $e');
       _downloads[lessonId] = _downloads[lessonId]!.copyWith(
         isDownloading: false,
         status: DownloadStatus.failed,
         error: e.toString(),
       );
+      await _saveDownloadsToStorage(); // Save error state to persistent storage
       onError?.call(e.toString());
       rethrow;
     }
   }
 
-  // Check if video is downloaded locally
+  // Check if video is downloaded locally by lesson ID
+  Future<bool> isVideoDownloadedByLessonId(String lessonId) async {
+    try {
+      final download = _downloads[lessonId];
+      if (download != null) {
+        return download.status == DownloadStatus.completed;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  // Check if video is downloaded locally by filename
   Future<bool> isVideoDownloaded(String fileName) async {
     try {
       final directory = await _getAppDirectory();

@@ -321,45 +321,76 @@ const getUserExamHistory = async (req, res) => {
     
     // Transform the results to include detailed question information
     const formattedResults = await Promise.all(results.map(async (result) => {
-      // Get questions for this exam
-      const questions = await Question.find({ examId: result.examId?._id })
-        .select('question options correctAnswer points');
+      // Only fetch questions if examId exists
+      let questions = [];
+      let questionResults = [];
       
-      // Process each answer to determine if it was correct
-      const questionResults = result.answers.map(userAnswer => {
-        const question = questions.find(q => q._id.toString() === userAnswer.questionId);
-        if (!question) return null;
+      if (result.examId) {
+        // Get questions for this exam
+        questions = await Question.find({ examId: result.examId._id })
+          .select('question options correctAnswer points');
         
-        // Determine if the answer was correct
-        let isCorrect = false;
-        if (typeof question.correctAnswer === 'number') {
-          // Correct answer is an index
-          isCorrect = userAnswer.selectedOption === question.correctAnswer;
-        } else {
-          // Correct answer is a string/value
-          isCorrect = userAnswer.selectedOption < question.options.length && 
-                     question.options[userAnswer.selectedOption] === question.correctAnswer;
-        }
-        
-        return {
-          questionId: userAnswer.questionId,
-          questionText: question.question,
-          options: question.options,
-          selectedOption: userAnswer.selectedOption,
-          selectedOptionText: userAnswer.selectedOption < question.options.length 
-            ? question.options[userAnswer.selectedOption] 
+        // Process each answer to determine if it was correct
+        questionResults = result.answers.map(userAnswer => {
+          // Use toString() for safer ObjectId comparison
+          const question = questions.find(q => q._id.toString() === userAnswer.questionId.toString());
+          if (!question) {
+            console.log('No matching question found for questionId:', userAnswer.questionId);
+            console.log('Available question IDs:', questions.map(q => q._id.toString()));
+            return null;
+          }
+          
+          // Determine if the answer was correct
+          let isCorrect = false;
+          if (typeof question.correctAnswer === 'number') {
+            // Correct answer is an index
+            isCorrect = userAnswer.selectedOption === question.correctAnswer;
+          } else {
+            // Correct answer is a string/value
+            isCorrect = userAnswer.selectedOption < question.options.length && 
+                       question.options[userAnswer.selectedOption] === question.correctAnswer;
+          }
+          
+          return {
+            questionId: userAnswer.questionId,
+            questionText: question.question,
+            options: question.options,
+            selectedOption: userAnswer.selectedOption,
+            selectedOptionText: userAnswer.selectedOption < question.options.length 
+              ? question.options[userAnswer.selectedOption] 
+              : 'Invalid option',
+            correctAnswer: question.correctAnswer,
+            correctAnswerText: typeof question.correctAnswer === 'number' 
+              ? (question.correctAnswer < question.options.length 
+                  ? question.options[question.correctAnswer] 
+                  : 'Invalid correct answer')
+              : question.correctAnswer,
+            isCorrect: isCorrect,
+            points: question.points,
+            earnedPoints: isCorrect ? question.points : 0
+          };
+        }).filter(q => q !== null);
+      } else if (result.detailedResults && Array.isArray(result.detailedResults)) {
+        // Handle legacy results that already contain detailed results
+        questionResults = result.detailedResults.map(detailedResult => ({
+          questionId: detailedResult.questionId,
+          questionText: detailedResult.questionText,
+          options: detailedResult.options,
+          selectedOption: detailedResult.userAnswer,
+          selectedOptionText: detailedResult.userAnswer < detailedResult.options.length 
+            ? detailedResult.options[detailedResult.userAnswer] 
             : 'Invalid option',
-          correctAnswer: question.correctAnswer,
-          correctAnswerText: typeof question.correctAnswer === 'number' 
-            ? (question.correctAnswer < question.options.length 
-                ? question.options[question.correctAnswer] 
+          correctAnswer: detailedResult.correctAnswer,
+          correctAnswerText: typeof detailedResult.correctAnswer === 'number' 
+            ? (detailedResult.correctAnswer < detailedResult.options.length 
+                ? detailedResult.options[detailedResult.correctAnswer] 
                 : 'Invalid correct answer')
-            : question.correctAnswer,
-          isCorrect: isCorrect,
-          points: question.points,
-          earnedPoints: isCorrect ? question.points : 0
-        };
-      }).filter(q => q !== null);
+            : detailedResult.correctAnswer,
+          isCorrect: detailedResult.isCorrect,
+          points: detailedResult.pointsPossible,
+          earnedPoints: detailedResult.pointsEarned
+        }));
+      }
       
       // Calculate statistics
       const totalQuestions = questionResults.length;

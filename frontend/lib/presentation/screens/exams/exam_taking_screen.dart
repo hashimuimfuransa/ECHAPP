@@ -3,14 +3,15 @@ import 'dart:async';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
 import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'exam_history_screen.dart';
 
 class ExamTakingScreen extends StatefulWidget {
   final exam_model.Exam exam;
 
   const ExamTakingScreen({
-    Key? key,
+    super.key,
     required this.exam,
-  }) : super(key: key);
+  });
 
   @override
   State<ExamTakingScreen> createState() => _ExamTakingScreenState();
@@ -18,7 +19,7 @@ class ExamTakingScreen extends StatefulWidget {
 
 class _ExamTakingScreenState extends State<ExamTakingScreen> {
   List<Question> _questions = [];
-  Map<int, String?> _answers = {};
+  final Map<int, String?> _answers = {};
   int _currentQuestionIndex = 0;
   int _timeRemaining = 0;
   Timer? _timer;
@@ -62,7 +63,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
       setState(() {
         _isLoading = false;
       });
-      throw e;
+      rethrow;
     }
   }
 
@@ -88,7 +89,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   void _selectAnswer(String answer) {
     setState(() {
-      _answers[_currentQuestionIndex] = answer;
+      _answers[_currentQuestionIndex] = answer; // Store the actual answer string for UI
     });
   }
 
@@ -121,9 +122,14 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
       // Prepare answers in the required format
       final answers = _answers.entries
           .where((entry) => entry.value != null)
-          .map((entry) => {
-            'questionId': _questions[entry.key].id,
-            'selectedOption': entry.value,
+          .map((entry) {
+            // Convert answer string to index for backend
+            final question = _questions[entry.key];
+            final answerIndex = question.options.indexOf(entry.value!);
+            return {
+              'questionId': question.id,
+              'selectedOption': answerIndex >= 0 ? answerIndex : 0,
+            };
           })
           .toList();
 
@@ -848,10 +854,10 @@ class ExamResultsScreen extends StatelessWidget {
   final ExamResult result;
 
   const ExamResultsScreen({
-    Key? key,
+    super.key,
     required this.exam,
     required this.result,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1222,11 +1228,11 @@ class ExamResultsScreen extends StatelessWidget {
           height: 50,
           child: OutlinedButton(
             onPressed: () {
-              // TODO: Implement review functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Review feature coming soon!'),
-                  backgroundColor: AppTheme.primary,
+              // Navigate to exam history screen to review answers
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ExamHistoryScreen(),
                 ),
               );
             },
