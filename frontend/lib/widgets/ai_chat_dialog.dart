@@ -6,6 +6,7 @@ import 'package:excellence_coaching_hub/models/course.dart';
 import 'package:excellence_coaching_hub/services/ai_chat_service.dart';
 import 'package:excellence_coaching_hub/widgets/ai_chat_messages_list.dart';
 import 'package:excellence_coaching_hub/widgets/ai_chat_input_widget.dart';
+import 'package:excellence_coaching_hub/widgets/voice_chat_widget.dart';
 
 /// AI Chat Dialog Widget
 class AIChatDialog extends StatefulWidget {
@@ -34,6 +35,7 @@ class _AIChatDialogState extends State<AIChatDialog> with TickerProviderStateMix
   List<AIChatMessage> _messages = [];
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _showVoiceChat = false;
 
   @override
   void initState() {
@@ -154,6 +156,12 @@ class _AIChatDialogState extends State<AIChatDialog> with TickerProviderStateMix
     }
   }
 
+  void _toggleVoiceChat() {
+    setState(() {
+      _showVoiceChat = !_showVoiceChat;
+    });
+  }
+
   void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -227,6 +235,13 @@ class _AIChatDialogState extends State<AIChatDialog> with TickerProviderStateMix
                     ),
                   ),
                   IconButton(
+                    onPressed: _toggleVoiceChat,
+                    icon: Icon(
+                      _showVoiceChat ? Icons.chat : Icons.mic,
+                      color: Colors.white,
+                    ),
+                  ),
+                  IconButton(
                     onPressed: widget.onClose,
                     icon: const Icon(
                       Icons.close,
@@ -237,17 +252,62 @@ class _AIChatDialogState extends State<AIChatDialog> with TickerProviderStateMix
               ),
             ),
             
-            // Chat messages area
-            AIChatMessagesList(
-              messages: _messages,
-              currentUserId: 'user',
-            ),
+            // Chat messages area or voice chat widget
+            if (_showVoiceChat)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: VoiceChatWidget(
+                      conversationId: widget.conversationId,
+                      context: {
+                        'courseTitle': widget.currentCourse?.title ?? '',
+                        'lessonTitle': widget.currentLesson?.title ?? '',
+                      },
+                      onVoiceMessageReceived: (text) {
+                        // Add the transcribed text to messages
+                        final userMessage = AIChatMessage(
+                          id: 'voice_user_${DateTime.now().millisecondsSinceEpoch}',
+                          sender: 'user',
+                          message: text,
+                          timestamp: DateTime.now(),
+                          isContextAware: false,
+                        );
+                        
+                        setState(() {
+                          _messages.add(userMessage);
+                        });
+                      },
+                      onTextMessageReceived: (text) {
+                        // Add the text response to messages
+                        final aiMessage = AIChatMessage(
+                          id: 'voice_ai_${DateTime.now().millisecondsSinceEpoch}',
+                          sender: 'ai',
+                          message: text,
+                          timestamp: DateTime.now(),
+                          isContextAware: true,
+                        );
+                        
+                        setState(() {
+                          _messages.add(aiMessage);
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              )
+            else
+              AIChatMessagesList(
+                messages: _messages,
+                currentUserId: 'user',
+              ),
             
             // Input area
-            AIChatInputWidget(
-              onSendMessage: _handleSendMessage,
-              isLoading: _isLoading,
-            ),
+            if (!_showVoiceChat)
+              AIChatInputWidget(
+                onSendMessage: _handleSendMessage,
+                isLoading: _isLoading,
+              ),
           ],
         ),
       ),

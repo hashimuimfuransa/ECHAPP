@@ -8,6 +8,10 @@ class ApiConfig {
     return '$ipAddress/api';
   }
   
+  // AI endpoints
+  static String get aiBaseUrl => '${baseUrl.replaceFirst('/api', '')}/api/ai';
+  static String get voiceBaseUrl => '${baseUrl.replaceFirst('/api', '')}/api/voice';
+  
   // Auth endpoints
   static String get register => '$baseUrl/auth/register';
   static String get login => '$baseUrl/auth/login';

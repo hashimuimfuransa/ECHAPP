@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/models/lesson.dart';
 import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellence_coaching_hub/config/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
+import 'package:http_parser/http_parser.dart';
 
 /// AI Chat Message model
 class AIChatMessage {
@@ -14,6 +17,7 @@ class AIChatMessage {
   final String message;
   final DateTime timestamp;
   final bool isContextAware; // Whether this message uses learning context
+  final String? audioUrl; // URL for audio response
 
   AIChatMessage({
     required this.id,
@@ -21,6 +25,7 @@ class AIChatMessage {
     required this.message,
     required this.timestamp,
     this.isContextAware = false,
+    this.audioUrl,
   });
 
   AIChatMessage copyWith({
@@ -29,6 +34,7 @@ class AIChatMessage {
     String? message,
     DateTime? timestamp,
     bool? isContextAware,
+    String? audioUrl,
   }) {
     return AIChatMessage(
       id: id ?? this.id,
@@ -36,6 +42,7 @@ class AIChatMessage {
       message: message ?? this.message,
       timestamp: timestamp ?? this.timestamp,
       isContextAware: isContextAware ?? this.isContextAware,
+      audioUrl: audioUrl ?? this.audioUrl,
     );
   }
 }
@@ -73,13 +80,15 @@ class AIChatContext {
 abstract class AIChatService {
   Future<List<AIChatMessage>> getConversation(String conversationId);
   Future<AIChatMessage> sendMessage(String conversationId, String message, AIChatContext context);
+  Future<AIChatMessage> sendVoiceMessage(String conversationId, File audioFile, AIChatContext context);
   Future<void> createConversation(AIChatContext context);
   Future<void> updateContext(String conversationId, AIChatContext context);
 }
 
 /// Real AI Chat Service that connects to backend Grok AI
 class RealAIChatService implements AIChatService {
-  static const String _baseUrl = 'http://localhost:3000/api/ai'; // Adjust to your backend URL
+  static String get _baseUrl => ApiConfig.aiBaseUrl; // Use centralized API config
+  static String get _voiceBaseUrl => ApiConfig.voiceBaseUrl; // Use centralized voice API config
   final http.Client _httpClient = http.Client();
 
   @override
@@ -132,6 +141,7 @@ class RealAIChatService implements AIChatService {
           message: json['message'] ?? 'Sorry, I couldn\'t process that request.',
           timestamp: DateTime.now(),
           isContextAware: true,
+          audioUrl: json['audioUrl'],
         );
       } else {
         throw Exception('Failed to send message: ${response.statusCode}');
@@ -143,6 +153,59 @@ class RealAIChatService implements AIChatService {
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
         sender: 'ai',
         message: 'I\'m having trouble connecting to my AI brain. Could you try asking again?',
+        timestamp: DateTime.now(),
+        isContextAware: false,
+      );
+    }
+  }
+
+  @override
+  Future<AIChatMessage> sendVoiceMessage(String conversationId, File audioFile, AIChatContext context) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse(_voiceBaseUrl + '/send'), // Use centralized voice API config
+      );
+      
+      request.fields['conversationId'] = conversationId;
+      request.fields['context'] = jsonEncode({
+        'courseTitle': context.currentCourse?.title ?? '',
+        'lessonTitle': context.currentLesson?.title ?? '',
+        'studentName': context.studentName ?? '',
+        'studentLevel': context.studentLevel ?? '',
+      });
+      
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'audio',
+          audioFile.path,
+          contentType: MediaType('audio', 'mp4'), // Assuming M4A or MP4 audio
+        ),
+      );
+      
+      var response = await request.send();
+      var responseBody = await response.stream.bytesToString();
+      
+      if (response.statusCode == 200) {
+        var jsonData = jsonDecode(responseBody);
+        return AIChatMessage(
+          id: 'voice_ai_${DateTime.now().millisecondsSinceEpoch}',
+          sender: 'ai',
+          message: jsonData['textResponse'] ?? 'I processed your voice message.',
+          timestamp: DateTime.now(),
+          isContextAware: true,
+          audioUrl: jsonData['audioResponse'],
+        );
+      } else {
+        throw Exception('Failed to send voice message: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error sending voice message: $e');
+      // Return a fallback message in case of error
+      return AIChatMessage(
+        id: 'error_voice_${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'ai',
+        message: 'I\'m having trouble processing your voice message. Could you try again?',
         timestamp: DateTime.now(),
         isContextAware: false,
       );
@@ -215,6 +278,7 @@ class RealAIChatService implements AIChatService {
       message: json['message'] ?? '',
       timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch),
       isContextAware: json['isContextAware'] ?? false,
+      audioUrl: json['audioUrl'],
     );
   }
 }
