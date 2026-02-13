@@ -194,7 +194,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
                               Text(
                                 'Welcome to Your Learning Journey',
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      color: AppTheme.blackColor,
+                                      color: AppTheme.getTextColor(context),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 28,
                                     ),
@@ -466,7 +466,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
                         Text(
                           'Welcome to Your Learning Journey',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                                 fontWeight: FontWeight.bold,
                               ),
                           textAlign: TextAlign.center,
@@ -475,7 +475,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
                         Text(
                           'Choose your preferred way to get started',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.greyColor,
+                                color: AppTheme.getSecondaryTextColor(context),
                               ),
                           textAlign: TextAlign.center,
                         ),

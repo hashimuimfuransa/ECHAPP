@@ -67,12 +67,12 @@ class AppTheme {
       : errorColor;          // Original red for light mode
   }
 
-  // Dark mode neutrals
-  static const Color darkBg = Color(0xFF0F172A); // Midnight blue
-  static const Color darkSurface = Color(0xFF1E293B); // Deep blue-gray
-  static const Color darkCard = Color(0xFF1E293B); // Consistent with surface
-  static const Color darkTextPrimary = Color(0xFFFFFFFF); // White text
-  static const Color darkTextSecondary = Color(0xFFCBD5E1); // Light gray text
+  // Dark mode neutrals - Enhanced for better visual appeal
+  static const Color darkBg = Color(0xFF0F1419); // Deep space black with subtle blue undertone
+  static const Color darkSurface = Color(0xFF1A202C); // Rich dark blue-gray
+  static const Color darkCard = Color(0xFF2D3748); // Slightly lighter for better contrast
+  static const Color darkTextPrimary = Color(0xFFE2E8F0); // Soft white with warm undertone
+  static const Color darkTextSecondary = Color(0xFFA0AEC0); // Warm gray for better readability
 
   /* =========================
      GRADIENTS (MODERN)
@@ -217,13 +217,16 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: darkBg,
-
-    colorScheme: const ColorScheme.dark(
+    
+    // Enhanced color scheme for dark mode
+    colorScheme: ColorScheme.dark(
       primary: primary,
-      secondary: accent,
+      secondary: const Color(0xFF4FD1C7), // Turquoise accent for better contrast
       surface: darkSurface,
-      onSurface: darkTextPrimary, // Clearer text
-      onPrimary: Colors.white, // Consistent background
+      onSurface: darkTextPrimary,
+      onPrimary: Colors.white,
+      // Add subtle elevation overlay
+      shadow: const Color(0xFF000000),
     ),
 
     appBarTheme: const AppBarTheme(
@@ -233,29 +236,45 @@ class AppTheme {
       centerTitle: true,
     ),
 
-    textTheme: const TextTheme(
+    textTheme: TextTheme(
       headlineLarge: TextStyle(
         fontSize: 34,
         fontWeight: FontWeight.w800,
-        color: darkTextPrimary, // Clearer headline
+        color: darkTextPrimary,
+        letterSpacing: -0.6,
+        // Add subtle text shadow for better readability in dark mode
+        shadows: [
+          Shadow(
+            offset: const Offset(0, 1),
+            blurRadius: 2,
+            color: Colors.black.withOpacity(0.3),
+          ),
+        ],
       ),
       headlineMedium: TextStyle(
         fontSize: 26,
         fontWeight: FontWeight.w700,
-        color: darkTextPrimary, // Clearer headline
+        color: darkTextPrimary,
+        shadows: [
+          Shadow(
+            offset: const Offset(0, 1),
+            blurRadius: 1,
+            color: Colors.black.withOpacity(0.2),
+          ),
+        ],
       ),
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: darkTextPrimary, // Clearer title
+        color: darkTextPrimary,
       ),
       bodyLarge: TextStyle(
         fontSize: 16,
-        color: darkTextPrimary, // Clearer body text
+        color: darkTextPrimary,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
-        color: darkTextSecondary, // Clearer secondary text
+        color: darkTextSecondary,
       ),
     ),
 
@@ -276,10 +295,10 @@ class AppTheme {
     ),
 
     cardTheme: CardThemeData(
-      color: darkCard, // Consistent card background
+      color: darkCard,
       surfaceTintColor: Colors.transparent,
-      elevation: 1,
-      shadowColor: Colors.black12,
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.3), // Deeper shadow for better depth
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),

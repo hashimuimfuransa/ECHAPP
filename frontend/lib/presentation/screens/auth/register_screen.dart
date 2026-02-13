@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
 import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
@@ -167,21 +166,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white,
+                                color: AppTheme.getTextColor(context),
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                labelStyle: const TextStyle(
-                                  color: Colors.white70,
+                                labelStyle: TextStyle(
+                                  color: AppTheme.getSecondaryTextColor(context),
                                   fontWeight: FontWeight.w500,
                                 ),
-                                prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                                prefixIcon: Icon(Icons.lock_outline, color: AppTheme.getSecondaryTextColor(context)),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                    color: Colors.white70,
+                                    color: AppTheme.getSecondaryTextColor(context),
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -358,10 +357,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text(
+                              Text(
                                 "Already have an account? ",
                                 style: TextStyle(
-                                  color: Colors.white70,
+                                  color: AppTheme.getSecondaryTextColor(context),
                                   fontSize: 16,
                                 ),
                               ),
@@ -369,10 +368,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 onPressed: () {
                                   Navigator.pop(context);
                                 },
-                                child: const Text(
+                                child: Text(
                                   'Sign In',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppTheme.getTextColor(context),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                   ),

@@ -149,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Text(
                             'Welcome Back!',
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: AppTheme.blackColor,
+                                  color: AppTheme.getTextColor(context),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 32,
                                 ),
@@ -159,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Text(
                             'Sign in to continue your learning journey',
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: AppTheme.greyColor,
+                                  color: AppTheme.getSecondaryTextColor(context),
                                   fontSize: 18,
                                   height: 1.4,
                                 ),
@@ -203,20 +203,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       }
                                       return null;
                                     },
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 18,
-                                      color: AppTheme.blackColor,
+                                      color: AppTheme.getTextColor(context),
                                     ),
                                     decoration: InputDecoration(
                                       labelText: 'Email Address',
-                                      labelStyle: const TextStyle(
-                                        color: AppTheme.greyColor,
+                                      labelStyle: TextStyle(
+                                        color: AppTheme.getSecondaryTextColor(context),
                                         fontWeight: FontWeight.w500,
                                         fontSize: 16,
                                       ),
-                                      prefixIcon: const Icon(
+                                      prefixIcon: Icon(
                                         Icons.email_outlined, 
-                                        color: AppTheme.greyColor,
+                                        color: AppTheme.getSecondaryTextColor(context),
                                         size: 24,
                                       ),
                                       filled: true,
@@ -257,26 +257,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       }
                                       return null;
                                     },
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 18,
-                                      color: AppTheme.blackColor,
+                                      color: AppTheme.getTextColor(context),
                                     ),
                                     decoration: InputDecoration(
                                       labelText: 'Password',
-                                      labelStyle: const TextStyle(
-                                        color: AppTheme.greyColor,
+                                      labelStyle: TextStyle(
+                                        color: AppTheme.getSecondaryTextColor(context),
                                         fontWeight: FontWeight.w500,
                                         fontSize: 16,
                                       ),
-                                      prefixIcon: const Icon(
+                                      prefixIcon: Icon(
                                         Icons.lock_outline, 
-                                        color: AppTheme.greyColor,
+                                        color: AppTheme.getSecondaryTextColor(context),
                                         size: 24,
                                       ),
                                       suffixIcon: IconButton(
                                         icon: Icon(
                                           _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                          color: AppTheme.greyColor,
+                                          color: AppTheme.getSecondaryTextColor(context),
                                           size: 24,
                                         ),
                                         onPressed: () {
@@ -382,7 +382,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     children: [
                                       Expanded(
                                         child: Divider(
-                                          color: AppTheme.greyColor.withOpacity(0.5),
+                                          color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
                                           thickness: 1,
                                         ),
                                       ),
@@ -398,7 +398,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                                       Expanded(
                                         child: Divider(
-                                          color: AppTheme.greyColor.withOpacity(0.5),
+                                          color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
                                           thickness: 1,
                                         ),
                                       ),
@@ -486,10 +486,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           SizedBox(height: spacing),
                           
                           // Footer text
-                          const Text(
+                          Text(
                             '© 2026 ExcellenceCoachingHub',
                             style: TextStyle(
-                              color: AppTheme.greyColor,
+                              color: AppTheme.getSecondaryTextColor(context),
                               fontSize: 16,
                             ),
                             textAlign: TextAlign.center,
@@ -542,7 +542,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text(
                           'Welcome Back!',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
                               ),
@@ -552,7 +552,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text(
                           'Sign in to continue your learning journey',
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: AppTheme.greyColor,
+                                color: AppTheme.getSecondaryTextColor(context),
                                 height: 1.4,
                               ),
                           textAlign: TextAlign.center,
@@ -597,19 +597,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Email Address',
-                                labelStyle: const TextStyle(
-                                  color: AppTheme.greyColor,
+                                labelStyle: TextStyle(
+                                  color: AppTheme.getSecondaryTextColor(context),
                                   fontWeight: FontWeight.w500,
                                 ),
-                                prefixIcon: const Icon(
+                                prefixIcon: Icon(
                                   Icons.email_outlined, 
-                                  color: AppTheme.greyColor
+                                  color: AppTheme.getSecondaryTextColor(context)
                                 ),
                                 filled: true,
                                 fillColor: AppTheme.lightGreen.withOpacity(0.1),
@@ -649,24 +649,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 }
                                 return null;
                               },
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                labelStyle: const TextStyle(
-                                  color: AppTheme.greyColor,
+                                labelStyle: TextStyle(
+                                  color: AppTheme.getSecondaryTextColor(context),
                                   fontWeight: FontWeight.w500,
                                 ),
-                                prefixIcon: const Icon(
+                                prefixIcon: Icon(
                                   Icons.lock_outline, 
-                                  color: AppTheme.greyColor
+                                  color: AppTheme.getSecondaryTextColor(context)
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                    color: AppTheme.greyColor,
+                                    color: AppTheme.getSecondaryTextColor(context),
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -756,7 +756,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   style: TextStyle(
                                     color: authState.error!.contains('successfully') || authState.error!.contains('Welcome') || authState.error!.contains('back')
                                         ? AppTheme.primaryGreen
-                                        : Colors.red,
+                                        : AppTheme.getErrorColor(context),
                                     fontWeight: FontWeight.w500,
                                   ),
                                   textAlign: TextAlign.center,
@@ -770,7 +770,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: AppTheme.greyColor.withOpacity(0.5),
+                                    color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
                                     thickness: 1,
                                   ),
                                 ),
@@ -786,7 +786,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: AppTheme.greyColor.withOpacity(0.5),
+                                    color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
                                     thickness: 1,
                                   ),
                                 ),

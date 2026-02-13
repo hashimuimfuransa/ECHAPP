@@ -149,7 +149,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                             color: AppTheme.whiteColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Column(
+                          child: Column(
                             children: [
                               CircularProgressIndicator(
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -159,7 +159,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               Text(
                                 'Preparing your learning experience...',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppTheme.getTextColor(context),
                                   fontSize: 18,
                                 ),
                               ),
