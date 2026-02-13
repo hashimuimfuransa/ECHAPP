@@ -68,12 +68,18 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     });
 
     try {
+      print('Loading lesson content for lesson ID: ${widget.lesson.id}');
       // Get fresh lesson content from API to ensure we have the latest extracted notes
       _lessonContent = await _videoService.getLessonContent(widget.lesson.id);
+      print('Lesson content loaded. Video URL: ${_lessonContent?.videoUrl}');
       
       // If there's video content, initialize video player
       if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty) {
+        print('Initializing video player...');
         await _initializeVideoPlayer(_lessonContent!.videoUrl!);
+        print('Video player initialized');
+      } else {
+        print('No video content found');
       }
 
       // Load exams for the section
@@ -83,6 +89,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading lesson content: $e');
       setState(() {
         _isLoading = false;
         _hasError = true;
@@ -108,18 +115,39 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
     try {
-      // Check if video is already downloaded locally
-      String? localPath = await _downloadService.getLocalVideoPath('lesson_${widget.lesson.id}');
+      print('Initializing video player with URL: $videoUrl');
+      
+      // Sanitize lesson title for filename
+      String sanitizedTitle = _sanitizeFilename(widget.lesson.title);
+      print('Sanitized filename: $sanitizedTitle');
+      
+      // Check if video is already downloaded locally (try both new and old naming schemes)
+      String? localPath;
+      
+      // First try the new sanitized filename
+      localPath = await _downloadService.getLocalVideoPath(sanitizedTitle);
+      print('Local path with sanitized name: $localPath');
+      
+      // If not found, try the old generic naming scheme
+      if (localPath == null) {
+        String oldFilename = 'lesson_${widget.lesson.id}';
+        localPath = await _downloadService.getLocalVideoPath(oldFilename);
+        print('Local path with old naming: $localPath');
+      }
       
       if (localPath != null) {
         // Use local file if available
+        print('Using local file: $localPath');
         _videoController = VideoPlayerController.file(File(localPath));
       } else {
         // Use network URL if not downloaded
+        print('Using network URL: $videoUrl');
         _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       }
       
+      print('Initializing video controller...');
       await _videoController!.initialize();
+      print('Video controller initialized successfully');
       
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
@@ -142,6 +170,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           ),
         ),
         errorBuilder: (context, errorMessage) {
+          print('Video player error: $errorMessage');
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -169,14 +198,24 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _initializeVideoPlayer(videoUrl),
+                  child: const Text('Retry'),
+                ),
               ],
             ),
           );
         },
       );
+      print('Chewie controller created successfully');
     } catch (e) {
       print('Error initializing video player: $e');
       // Don't set error state here as we can still show notes
+      // But show a retry option
+      setState(() {
+        _hasError = true;
+      });
     }
   }
 
@@ -564,11 +603,11 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                       child: ElevatedButton.icon(
                         onPressed: _isDownloading 
                           ? null  // Disable button during download
-                          : () => _downloadVideo(),
-                        icon: _isDownloading 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                          : const Icon(Icons.download, size: 16),
-                        label: Text(_isDownloading ? 'Downloading...' : 'Download Video'),
+                          : _isVideoDownloaded() 
+                            ? () => GoRouter.of(context).push('/downloads')  // Navigate to downloads if already downloaded
+                            : () => _downloadVideo(),  // Download if not downloaded
+                        icon: _getDownloadButtonIcon(),
+                        label: Text(_getDownloadButtonText()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isDownloading ? Colors.grey[600] : AppTheme.primaryGreen,
                           foregroundColor: Colors.white,
@@ -579,7 +618,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                     IconButton(
                       onPressed: () {
                         // Navigate to downloads screen
-                        context.push('/downloads');
+                        print('Downloads button pressed - navigating to /downloads');
+                        GoRouter.of(context).push('/downloads');
                       },
                       icon: const Icon(Icons.download_done),
                       tooltip: 'View Downloads',
@@ -963,9 +1003,78 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     );
   }
 
+  // Helper method to sanitize filename
+  String _sanitizeFilename(String filename) {
+    // Remove or replace invalid characters for filenames
+    String sanitized = filename
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')  // Replace invalid characters with underscore
+        .replaceAll(RegExp(r'\s+'), '_')           // Replace spaces with underscores
+        .replaceAll(RegExp(r'_+'), '_')            // Replace multiple underscores with single
+        .trim();
+    
+    // Limit length to prevent issues, but make sure we don't exceed the string length
+    return sanitized.length > 100 ? sanitized.substring(0, 100) : sanitized;
+  }
+
+  // Check if video is already downloaded
+  bool _isVideoDownloaded() {
+    // Check with new naming scheme first
+    final download = _downloadService.getDownloadStatus(widget.lesson.id);
+    if (download != null && download.status == DownloadStatus.completed) {
+      return true;
+    }
+    
+    // Also check if there's a local file with the old naming scheme
+    // This handles cases where downloads were made before the naming change
+    String oldFilename = 'lesson_${widget.lesson.id}';
+    // We'd need to check if the file exists locally with the old naming scheme
+    // This would require access to the download service's local file checking
+    return false;
+  }
+
+  // Get download status text
+  String _getDownloadButtonText() {
+    if (_isDownloading) {
+      return 'Downloading...';
+    }
+    
+    if (_isVideoDownloaded()) {
+      return 'View in Downloads';
+    }
+    
+    return 'Download Video';
+  }
+
+  // Get download button icon
+  Widget _getDownloadButtonIcon() {
+    if (_isDownloading) {
+      return const SizedBox(
+        width: 16, 
+        height: 16, 
+        child: CircularProgressIndicator(
+          strokeWidth: 2, 
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white)
+        )
+      );
+    }
+    
+    if (_isVideoDownloaded()) {
+      return const Icon(Icons.visibility, size: 16);
+    }
+    
+    return const Icon(Icons.download, size: 16);
+  }
+
   // Download video method
   void _downloadVideo() async {
     if (_lessonContent?.videoUrl == null || _lessonContent!.videoUrl!.isEmpty) {
+      return;
+    }
+
+    // Check if already downloaded
+    if (_isVideoDownloaded()) {
+      // Navigate to downloads screen
+      GoRouter.of(context).push('/downloads');
       return;
     }
 
@@ -975,9 +1084,13 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     });
 
     try {
+      // Sanitize lesson title for filename
+      String sanitizedTitle = _sanitizeFilename(widget.lesson.title);
+      
       await _downloadService.downloadVideo(
         url: _lessonContent!.videoUrl!,
-        fileName: 'lesson_${widget.lesson.id}',
+        fileName: sanitizedTitle,
+        originalTitle: widget.lesson.title,
         lessonId: widget.lesson.id,
         onProgress: (progress) {
           setState(() {

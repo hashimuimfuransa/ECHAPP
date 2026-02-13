@@ -4,12 +4,18 @@ import 'package:excellence_coaching_hub/config/app_theme.dart';
 import 'package:excellence_coaching_hub/presentation/router/app_router.dart';
 import 'package:excellence_coaching_hub/services/firebase_auth_service.dart';
 import 'package:excellence_coaching_hub/services/categories_service.dart';
+import 'package:excellence_coaching_hub/services/download_service.dart';
 import 'package:excellence_coaching_hub/presentation/screens/settings/settings_screen.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseAuthService.initializeFirebase();
+  
+  // Initialize download service
+  final downloadService = DownloadService();
+  await downloadService.init();
+  
   runApp(
     const ProviderScope(
       child: ExcellenceCoachingHubApp(),

@@ -114,7 +114,7 @@ class DownloadsSection extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              download.fileName,
+              download.originalTitle,
               style: const TextStyle(
                 color: AppTheme.blackColor,
                 fontSize: 14,

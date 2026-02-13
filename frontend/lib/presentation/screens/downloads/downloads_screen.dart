@@ -16,7 +16,10 @@ class DownloadsScreen extends StatefulWidget {
 class _DownloadsScreenState extends State<DownloadsScreen> {
   final DownloadService _downloadService = DownloadService();
   List<Download> _downloads = [];
+  List<Download> _filteredDownloads = [];
   bool _isLoading = true;
+  String _searchQuery = '';
+  DownloadStatus? _statusFilter;
 
   @override
   void initState() {
@@ -31,6 +34,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
     try {
       _downloads = _downloadService.getAllDownloads();
+      _applyFilters();
     } catch (e) {
       print('Error loading downloads: $e');
     } finally {
@@ -40,12 +44,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     }
   }
 
-  Future<void> _deleteDownload(String lessonId, String fileName) async {
+  Future<void> _deleteDownload(Download download) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Download'),
-        content: Text('Are you sure you want to delete "$fileName"?'),
+        content: Text('Are you sure you want to delete "${download.originalTitle}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -53,15 +57,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if (result == true) {
-      final deleted = await _downloadService.deleteDownload(lessonId);
+      final deleted = await _downloadService.deleteDownload(download.lessonId);
       if (deleted) {
         _loadDownloads(); // Refresh the list
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,6 +99,35 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
   }
 
+  void _applyFilters() {
+    setState(() {
+      _filteredDownloads = _downloads.where((download) {
+        // Apply search filter
+        bool matchesSearch = _searchQuery.isEmpty || 
+            download.originalTitle.toLowerCase().contains(_searchQuery.toLowerCase());
+        
+        // Apply status filter
+        bool matchesStatus = _statusFilter == null || download.status == _statusFilter;
+        
+        return matchesSearch && matchesStatus;
+      }).toList();
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _applyFilters();
+    });
+  }
+
+  void _onStatusFilterChanged(DownloadStatus? status) {
+    setState(() {
+      _statusFilter = status;
+      _applyFilters();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,51 +135,102 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         title: const Text('My Downloads'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryGreen),
-            )
-          : _downloads.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.download_outlined,
-                        size: 80,
-                        color: AppTheme.greyColor.withOpacity(0.3),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'No downloads yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: AppTheme.greyColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Download videos to watch them offline',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.greyColor.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadDownloads,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _downloads.length,
-                    itemBuilder: (context, index) {
-                      final download = _downloads[index];
-                      return _buildDownloadItem(download);
-                    },
-                  ),
+        actions: [
+          // Filter button
+          PopupMenuButton<DownloadStatus?>(
+            icon: const Icon(Icons.filter_list),
+            onSelected: _onStatusFilterChanged,
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<DownloadStatus?>(
+                  value: null,
+                  child: Text('All Status'),
                 ),
+                const PopupMenuItem<DownloadStatus?>(
+                  value: DownloadStatus.completed,
+                  child: Text('Completed'),
+                ),
+                const PopupMenuItem<DownloadStatus?>(
+                  value: DownloadStatus.downloading,
+                  child: Text('Downloading'),
+                ),
+                const PopupMenuItem<DownloadStatus?>(
+                  value: DownloadStatus.failed,
+                  child: Text('Failed'),
+                ),
+              ];
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search downloads...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onChanged: _onSearchChanged,
+            ),
+          ),
+          // Downloads list
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                  )
+                : _filteredDownloads.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.download_outlined,
+                              size: 80,
+                              color: AppTheme.greyColor.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'No downloads found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: AppTheme.greyColor,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _searchQuery.isEmpty && _statusFilter == null
+                                  ? 'Download videos to watch them offline'
+                                  : 'Try adjusting your search or filters',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.greyColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadDownloads,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredDownloads.length,
+                          itemBuilder: (context, index) {
+                            final download = _filteredDownloads[index];
+                            return _buildDownloadItem(download);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -186,7 +270,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        download.fileName,
+                        download.originalTitle,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -231,7 +315,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   icon: const Icon(Icons.more_vert),
                   onSelected: (String value) {
                     if (value == 'delete') {
-                      _deleteDownload(download.lessonId, download.fileName);
+                      _deleteDownload(download);
                     }
                   },
                   itemBuilder: (BuildContext context) {

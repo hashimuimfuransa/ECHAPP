@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellence_coaching_hub/models/download.dart';
+import 'dart:convert';
 
 class DownloadService {
   static final DownloadService _instance = DownloadService._internal();
@@ -10,6 +12,62 @@ class DownloadService {
 
   final Dio _dio = Dio();
   final Map<String, Download> _downloads = {}; // Key: lessonId
+  static const String _downloadsKey = 'downloaded_videos';
+
+  // Initialize the service and load persisted downloads
+  Future<void> init() async {
+    await _loadDownloadsFromStorage();
+  }
+
+  // Load downloads from shared preferences
+  Future<void> _loadDownloadsFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final downloadsJson = prefs.getString(_downloadsKey);
+      
+      if (downloadsJson != null) {
+        final List<dynamic> downloadsList = json.decode(downloadsJson);
+        for (final downloadJson in downloadsList) {
+          final download = Download.fromJson(downloadJson);
+          // Verify the file still exists before adding to memory
+          final file = File(download.localPath);
+          if (await file.exists()) {
+            _downloads[download.lessonId] = download;
+          } else {
+            // File doesn't exist anymore, remove from storage
+            await _removeDownloadFromStorage(download.lessonId);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading downloads from storage: $e');
+      // Clear the downloads map if there's an error
+      _downloads.clear();
+    }
+  }
+
+  // Save downloads to shared preferences
+  Future<void> _saveDownloadsToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final downloadsList = _downloads.values
+          .map((download) => download.toJson())
+          .toList();
+      await prefs.setString(_downloadsKey, json.encode(downloadsList));
+    } catch (e) {
+      print('Error saving downloads to storage: $e');
+    }
+  }
+
+  // Remove a specific download from storage
+  Future<void> _removeDownloadFromStorage(String lessonId) async {
+    try {
+      _downloads.remove(lessonId);
+      await _saveDownloadsToStorage();
+    } catch (e) {
+      print('Error removing download from storage: $e');
+    }
+  }
 
   // Get app documents directory
   Future<String> _getAppDirectory() async {
@@ -21,6 +79,7 @@ class DownloadService {
   Future<String> downloadVideo({
     required String url,
     required String fileName,
+    required String originalTitle,
     required String lessonId,
     required Function(double) onProgress,
     Function()? onSuccess,
@@ -50,12 +109,14 @@ class DownloadService {
         id: lessonId,
         lessonId: lessonId,
         fileName: fileName,
+        originalTitle: originalTitle,
         localPath: filePath,
         downloadProgress: 0.0,
         isDownloading: true,
         status: DownloadStatus.downloading,
       );
       _downloads[lessonId] = download;
+      await _saveDownloadsToStorage(); // Save to persistent storage
 
       await _dio.download(
         url,
@@ -79,6 +140,7 @@ class DownloadService {
         isDownloading: false,
         status: DownloadStatus.completed,
       );
+      await _saveDownloadsToStorage(); // Save to persistent storage
       onSuccess?.call();
 
       return filePath;
@@ -141,8 +203,8 @@ class DownloadService {
           await file.delete();
         }
         
-        // Remove from downloads map
-        _downloads.remove(lessonId);
+        // Remove from downloads map and storage
+        await _removeDownloadFromStorage(lessonId);
         return true;
       }
       return false;
