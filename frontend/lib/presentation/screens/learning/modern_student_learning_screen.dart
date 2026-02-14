@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/section_repository.dart' as section_repo;
@@ -126,8 +127,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () {
-          // Clear navigation stack and go to dashboard
-          Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+          // Navigate to dashboard using GoRouter
+          context.go('/dashboard');
         },
       ),
       title: Text(

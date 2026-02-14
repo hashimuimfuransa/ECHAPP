@@ -214,9 +214,20 @@ const submitExam = async (req, res) => {
     }
 
     // Check if user already submitted this exam
-    const existingResult = await Result.findOne({ userId, examId });
-    if (existingResult) {
-      return sendError(res, 'You have already submitted this exam', 400);
+    const existingResults = await Result.find({ userId, examId });
+    
+    // Get exam details to check type
+    const examDetails = await Exam.findById(examId);
+    
+    // For quiz and pastpaper types, allow retakes
+    if (examDetails && (examDetails.type === 'quiz' || examDetails.type === 'pastpaper')) {
+      // Allow retakes for quiz and pastpaper
+      console.log(`Allowing retake for ${examDetails.type} exam for user ${userId}`);
+    } else {
+      // For final exams and other types, prevent multiple submissions
+      if (existingResults.length > 0) {
+        return sendError(res, 'You have already submitted this exam', 400);
+      }
     }
 
     // Get all questions for this exam
@@ -231,15 +242,35 @@ const submitExam = async (req, res) => {
       if (question) {
         totalPoints += question.points;
         
-        // For MCQ and True/False questions, compare against correct answer index
-        if (question.type === 'mcq' || question.type === 'true_false') {
-          if (question.correctAnswer === userAnswer.selectedOption) {
-            score += question.points;
-          }
-        } else {
-          // For open questions and fill-in-the-blank, we might need manual grading
-          // For now, we'll skip scoring these questions automatically
-          // In a real system, these would require manual review
+        // Handle different question types
+        switch (question.type) {
+          case 'mcq':
+          case 'true_false':
+            // Compare against correct answer index (Number)
+            if (question.correctAnswer === userAnswer.selectedOption) {
+              score += question.points;
+            }
+            break;
+            
+          case 'fill_blank':
+            // For fill-in-the-blank, check if answer matches (case insensitive)
+            if (userAnswer.answerText && question.correctAnswer) {
+              const userAnswerText = userAnswer.answerText.toString().trim().toLowerCase();
+              const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
+              if (userAnswerText === correctAnswerText) {
+                score += question.points;
+              }
+            }
+            break;
+            
+          case 'open':
+            // Open questions get 0 points automatically - require manual grading
+            // The answer is stored but not scored until manually reviewed
+            console.log(`Open question ${question._id} requires manual grading`);
+            break;
+            
+          default:
+            console.warn(`Unknown question type: ${question.type}`);
         }
       }
     }
@@ -288,8 +319,23 @@ const getExamResults = async (req, res) => {
       return sendError(res, 'You must be enrolled in this course to view results', 403);
     }
 
-    const result = await Result.findOne({ userId, examId })
-      .populate('examId', 'title type');
+    // For quiz and pastpaper types, return the most recent result
+    // For other types, return the first (and typically only) result
+    const examDetails = await Exam.findById(examId);
+    let result;
+    
+    if (examDetails && (examDetails.type === 'quiz' || examDetails.type === 'pastpaper')) {
+      // Return the most recent result for quiz/pastpaper
+      const results = await Result.find({ userId, examId })
+        .sort({ submittedAt: -1 })
+        .populate('examId', 'title type')
+        .limit(1);
+      result = results.length > 0 ? results[0] : null;
+    } else {
+      // For final exams, return any result (should be only one)
+      result = await Result.findOne({ userId, examId })
+        .populate('examId', 'title type');
+    }
 
     if (!result) {
       return sendNotFound(res, 'No results found for this exam');
@@ -351,18 +397,19 @@ const getUserExamHistory = async (req, res) => {
           // Determine if the answer was correct
           let isCorrect = false;
           if (question.type === 'mcq' || question.type === 'true_false') {
-            // For MCQ and True/False questions
-            if (typeof question.correctAnswer === 'number') {
-              // Correct answer is an index
-              isCorrect = userAnswer.selectedOption === question.correctAnswer;
-            } else {
-              // Correct answer is a string/value
-              isCorrect = userAnswer.selectedOption < question.options.length && 
-                         question.options[userAnswer.selectedOption] === question.correctAnswer;
+            // Mirror the same logic as in submitExam
+            if (question.correctAnswer === userAnswer.selectedOption) {
+              isCorrect = true;
+            }
+          } else if (question.type === 'fill_blank') {
+            // For fill-in-the-blank questions
+            if (userAnswer.answerText && question.correctAnswer) {
+              const userAnswerText = userAnswer.answerText.toString().trim().toLowerCase();
+              const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
+              isCorrect = userAnswerText === correctAnswerText;
             }
           } else {
-            // For open questions and fill-in-the-blank, we might need manual grading
-            // For now, we'll skip automatic scoring
+            // For open questions, requires manual grading
             isCorrect = false; // Requires manual review
           }
           

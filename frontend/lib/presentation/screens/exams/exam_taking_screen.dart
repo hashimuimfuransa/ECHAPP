@@ -19,7 +19,8 @@ class ExamTakingScreen extends StatefulWidget {
 
 class _ExamTakingScreenState extends State<ExamTakingScreen> {
   List<Question> _questions = [];
-  final Map<int, dynamic> _answers = {}; // Can store String for MCQ or String for open questions
+  final Map<int, dynamic> _answers = {}; // Stores selectedOption (Number/String) and answerText (String) for each question
+  final Map<int, TextEditingController> _textControllers = {}; // Controllers for text input fields
   int _currentQuestionIndex = 0;
   int _timeRemaining = 0;
   Timer? _timer;
@@ -35,6 +36,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    // Dispose all text controllers
+    _textControllers.values.forEach((controller) => controller.dispose());
     super.dispose();
   }
 
@@ -51,6 +54,30 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
         _questions = questions;
         _timeRemaining = widget.exam.timeLimit * 60; // Convert minutes to seconds
         _isLoading = false;
+        
+        // Initialize text controllers for text input questions
+        for (int i = 0; i < _questions.length; i++) {
+          final question = _questions[i];
+          if (question.type == 'fill_blank' || question.type == 'open') {
+            if (!_textControllers.containsKey(i)) {
+              // Initialize with existing answer if available
+              String initialText = '';
+              if (_answers[i] != null) {
+                if (_answers[i] is Map) {
+                  initialText = _answers[i]['answerText']?.toString() ?? '';
+                } else {
+                  initialText = _answers[i]?.toString() ?? '';
+                }
+              }
+              _textControllers[i] = TextEditingController(text: initialText);
+              
+              // Add listener to update answers when text changes
+              _textControllers[i]!.addListener(() {
+                _updateAnswer(i, _textControllers[i]!.text);
+              });
+            }
+          }
+        }
       });
 
       // Start timer if time limit is set
@@ -88,13 +115,66 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
   }
 
   void _selectAnswer(dynamic answer) {
+    final currentQuestion = _questions[_currentQuestionIndex];
+    
     setState(() {
-      _answers[_currentQuestionIndex] = answer; // Store the answer (can be string for MCQ or open text)
+      if (currentQuestion.type == 'mcq' || currentQuestion.type == 'true_false') {
+        // For MCQ and True/False, store the selected option index
+        final optionIndex = currentQuestion.options.indexOf(answer);
+        _answers[_currentQuestionIndex] = {
+          'selectedOption': optionIndex,
+          'answerText': answer,
+        };
+      } else if (currentQuestion.type == 'fill_blank' || currentQuestion.type == 'open') {
+        // For fill-in-blank and open questions, store the text answer
+        _answers[_currentQuestionIndex] = {
+          'selectedOption': answer,
+          'answerText': answer,
+        };
+        
+        // Also update the text controller if it exists
+        if (_textControllers.containsKey(_currentQuestionIndex)) {
+          _textControllers[_currentQuestionIndex]!.text = answer.toString();
+        }
+      }
     });
+  }
+
+  void _updateAnswer(int questionIndex, String text) {
+    final question = _questions[questionIndex];
+    if (question.type == 'fill_blank' || question.type == 'open') {
+      setState(() {
+        _answers[questionIndex] = {
+          'selectedOption': text,
+          'answerText': text,
+        };
+      });
+    }
   }
 
   void _nextQuestion() {
     if (_currentQuestionIndex < _questions.length - 1) {
+      // Ensure text controller exists for the next question if it's a text input type
+      final nextQuestion = _questions[_currentQuestionIndex + 1];
+      if (nextQuestion.type == 'fill_blank' || nextQuestion.type == 'open') {
+        if (!_textControllers.containsKey(_currentQuestionIndex + 1)) {
+          String initialText = '';
+          if (_answers[_currentQuestionIndex + 1] != null) {
+            if (_answers[_currentQuestionIndex + 1] is Map) {
+              initialText = _answers[_currentQuestionIndex + 1]['answerText']?.toString() ?? '';
+            } else {
+              initialText = _answers[_currentQuestionIndex + 1]?.toString() ?? '';
+            }
+          }
+          _textControllers[_currentQuestionIndex + 1] = TextEditingController(text: initialText);
+          
+          // Add listener to update answers when text changes
+          _textControllers[_currentQuestionIndex + 1]!.addListener(() {
+            _updateAnswer(_currentQuestionIndex + 1, _textControllers[_currentQuestionIndex + 1]!.text);
+          });
+        }
+      }
+      
       setState(() {
         _currentQuestionIndex++;
       });
@@ -103,6 +183,27 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   void _previousQuestion() {
     if (_currentQuestionIndex > 0) {
+      // Ensure text controller exists for the previous question if it's a text input type
+      final prevQuestion = _questions[_currentQuestionIndex - 1];
+      if (prevQuestion.type == 'fill_blank' || prevQuestion.type == 'open') {
+        if (!_textControllers.containsKey(_currentQuestionIndex - 1)) {
+          String initialText = '';
+          if (_answers[_currentQuestionIndex - 1] != null) {
+            if (_answers[_currentQuestionIndex - 1] is Map) {
+              initialText = _answers[_currentQuestionIndex - 1]['answerText']?.toString() ?? '';
+            } else {
+              initialText = _answers[_currentQuestionIndex - 1]?.toString() ?? '';
+            }
+          }
+          _textControllers[_currentQuestionIndex - 1] = TextEditingController(text: initialText);
+          
+          // Add listener to update answers when text changes
+          _textControllers[_currentQuestionIndex - 1]!.addListener(() {
+            _updateAnswer(_currentQuestionIndex - 1, _textControllers[_currentQuestionIndex - 1]!.text);
+          });
+        }
+      }
+      
       setState(() {
         _currentQuestionIndex--;
       });
@@ -111,6 +212,20 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   void _submitExam() async {
     if (_isSubmitting) return;
+
+    // Ensure all text field values are synced to answers before submitting
+    for (int i = 0; i < _questions.length; i++) {
+      final question = _questions[i];
+      if ((question.type == 'fill_blank' || question.type == 'open') && _textControllers.containsKey(i)) {
+        final textValue = _textControllers[i]!.text;
+        if (textValue.isNotEmpty) {
+          _answers[i] = {
+            'selectedOption': textValue,
+            'answerText': textValue,
+          };
+        }
+      }
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -124,19 +239,30 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           .where((entry) => entry.value != null)
           .map((entry) {
             final question = _questions[entry.key];
-            if (question.type == 'mcq' || question.type == 'true_false') {
-              // For MCQ and True/False questions, convert answer string to index
-              final answerIndex = question.options.indexOf(entry.value.toString());
+            final answerData = entry.value;
+            
+            // Handle the new answer format (Map with selectedOption and answerText)
+            if (answerData is Map) {
               return {
                 'questionId': question.id,
-                'selectedOption': answerIndex >= 0 ? answerIndex : 0,
+                'selectedOption': answerData['selectedOption'],
+                'answerText': answerData['answerText'],
               };
             } else {
-              // For open questions and fill-in-the-blank, store the text answer
-              return {
-                'questionId': question.id,
-                'selectedOption': entry.value.toString(), // Store the actual text for open and fill-blank questions
-              };
+              // Fallback for old format
+              if (question.type == 'mcq' || question.type == 'true_false') {
+                final answerIndex = question.options.indexOf(answerData.toString());
+                return {
+                  'questionId': question.id,
+                  'selectedOption': answerIndex >= 0 ? answerIndex : 0,
+                };
+              } else {
+                return {
+                  'questionId': question.id,
+                  'selectedOption': answerData.toString(),
+                  'answerText': answerData.toString(),
+                };
+              }
             }
           })
           .toList();
@@ -315,7 +441,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     }
 
     final currentQuestion = _questions[_currentQuestionIndex];
-    final selectedAnswer = _answers[_currentQuestionIndex];
+    final selectedAnswerData = _answers[_currentQuestionIndex];
+    final selectedAnswer = selectedAnswerData is Map ? selectedAnswerData['answerText'] : selectedAnswerData;
     final progress = (_currentQuestionIndex + 1) / _questions.length;
     
     return Scaffold(
@@ -631,116 +758,25 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             
             const SizedBox(height: 24),
             
-            // Question text
-            Text(
-              question.question,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-                color: AppTheme.getTextColor(context)
+            // Question text with special handling for fill_blank
+            if (question.type == 'fill_blank')
+              _buildFillBlankQuestion(question.question, selectedAnswer)
+            else
+              Text(
+                question.question,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                  color: AppTheme.getTextColor(context)
+                ),
               ),
-            ),
             
             const SizedBox(height: 32),
             
-            // Different UI for MCQ vs Open questions
-            if (question.type == 'mcq')
-              // MCQ Options
-              Expanded(
-                child: ListView.separated(
-                  itemCount: question.options.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final option = question.options[index];
-                    final isSelected = selectedAnswer == option;
-                    
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected 
-                            ? AppTheme.primary 
-                            : Colors.grey.shade300,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        color: isSelected 
-                          ? AppTheme.primary.withOpacity(0.1) 
-                          : Colors.white,
-                        boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : null,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _selectAnswer(option),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                // Option indicator
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: isSelected 
-                                      ? AppTheme.primary 
-                                      : Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: isSelected 
-                                        ? AppTheme.primary 
-                                        : Colors.grey.shade400,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: isSelected
-                                    ? const Icon(
-                                        Icons.check,
-                                        size: 18,
-                                        color: Colors.white,
-                                      )
-                                    : null,
-                                ),
-                                const SizedBox(width: 16),
-                                
-                                // Option text
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: isSelected 
-                                        ? FontWeight.w600 
-                                        : FontWeight.normal,
-                                      color: isSelected 
-                                        ? AppTheme.primary 
-                                        : AppTheme.blackColor,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              )
-            else if (question.type == 'true_false')
-              // True/False Options
+            // Different UI for different question types
+            if (question.type == 'mcq' || question.type == 'true_false')
+              // MCQ and True/False Options
               Expanded(
                 child: ListView.separated(
                   itemCount: question.options.length,
@@ -839,8 +875,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                 child: TextField(
                   keyboardType: TextInputType.text,
                   maxLines: 1,
+                  controller: _textControllers[_currentQuestionIndex] ?? TextEditingController(text: selectedAnswer?.toString()),
                   onChanged: (value) => _selectAnswer(value),
-                  controller: TextEditingController(text: selectedAnswer?.toString()),
                   decoration: InputDecoration(
                     hintText: 'Fill in the blank...',
                     hintStyle: TextStyle(
@@ -871,8 +907,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                   keyboardType: TextInputType.multiline,
                   maxLines: null,
                   expands: true,
+                  controller: _textControllers[_currentQuestionIndex] ?? TextEditingController(text: selectedAnswer?.toString()),
                   onChanged: (value) => _selectAnswer(value),
-                  controller: TextEditingController(text: selectedAnswer?.toString()),
                   decoration: InputDecoration(
                     hintText: 'Type your answer here...',
                     hintStyle: TextStyle(
@@ -898,6 +934,53 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFillBlankQuestion(String questionText, dynamic selectedAnswer) {
+    // Split the question text by underscores or use a placeholder
+    final parts = questionText.split('_____');
+    
+    // Get the current text from the controller if available
+    String currentText = '';
+    if (_textControllers.containsKey(_currentQuestionIndex)) {
+      currentText = _textControllers[_currentQuestionIndex]!.text;
+    } else {
+      currentText = selectedAnswer?.toString() ?? '';
+    }
+    
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          height: 1.4,
+          color: AppTheme.getTextColor(context),
+        ),
+        children: [
+          for (int i = 0; i < parts.length; i++) ...[
+            TextSpan(text: parts[i]),
+            if (i < parts.length - 1)
+              WidgetSpan(
+                child: Container(
+                  width: 120,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
+                  ),
+                  child: Text(
+                    currentText,
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
@@ -1012,7 +1095,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 class Question {
   final String id;
   final String question;
-  final String type; // 'mcq' or 'open'
+  final String type; // 'mcq', 'true_false', 'fill_blank', or 'open'
   final List<String> options;
   final int points;
   final String? section;
@@ -1030,7 +1113,7 @@ class Question {
     return Question(
       id: json['_id'] ?? json['id'] ?? '',
       question: json['question'] ?? '',
-      type: json['type'] ?? 'mcq',
+      type: json['type'] != null ? json['type'] : 'mcq', // Handle null type explicitly
       options: List<String>.from(json['options'] ?? []),
       points: json['points'] ?? 1,
       section: json['section'],

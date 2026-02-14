@@ -474,11 +474,23 @@ class ExamResult {
       statistics = ExamStatistics.fromJson(json['statistics'] as Map<String, dynamic>);
     }
     
+    // Safely parse score and totalPoints which can be either int or String
+    int parseScore(dynamic value) {
+      if (value is int) {
+        return value;
+      } else if (value is String) {
+        return int.tryParse(value) ?? 0;
+      } else if (value is num) {
+        return value.toInt();
+      }
+      return 0;
+    }
+    
     return ExamResult(
       resultId: json['_id'] ?? json['resultId'] ?? '',
       examId: examId,
-      score: json['score'] ?? 0,
-      totalPoints: json['totalPoints'] ?? 0,
+      score: parseScore(json['score']),
+      totalPoints: parseScore(json['totalPoints']),
       percentage: (json['percentage'] is num) ? json['percentage'].toDouble() : json['percentage']?.toDouble(),
       passed: json['passed'] ?? false,
       message: json['message'] ?? 'Exam completed',
@@ -519,17 +531,42 @@ class QuestionResult {
   });
 
   factory QuestionResult.fromJson(Map<String, dynamic> json) {
+    // Safely parse selectedOption which can be either int or String
+    int parseSelectedOption(dynamic value) {
+      if (value is int) {
+        return value;
+      } else if (value is String) {
+        // Try to parse string to int, fallback to 0 if invalid
+        return int.tryParse(value) ?? 0;
+      } else if (value is num) {
+        return value.toInt();
+      }
+      return 0;
+    }
+    
+    // Safely parse points which can be either int or String
+    int parsePoints(dynamic value) {
+      if (value is int) {
+        return value;
+      } else if (value is String) {
+        return int.tryParse(value) ?? 0;
+      } else if (value is num) {
+        return value.toInt();
+      }
+      return 0;
+    }
+    
     return QuestionResult(
       questionId: json['questionId'] as String? ?? '',
       questionText: json['questionText'] as String? ?? '',
       options: (json['options'] as List?)?.map((e) => e as String).toList() ?? [],
-      selectedOption: json['selectedOption'] as int? ?? 0,
+      selectedOption: parseSelectedOption(json['selectedOption']),
       selectedOptionText: json['selectedOptionText'] as String? ?? '',
       correctAnswer: json['correctAnswer'],
       correctAnswerText: json['correctAnswerText'] as String? ?? '',
       isCorrect: json['isCorrect'] as bool? ?? false,
-      points: json['points'] as int? ?? 0,
-      earnedPoints: json['earnedPoints'] as int? ?? 0,
+      points: parsePoints(json['points']),
+      earnedPoints: parsePoints(json['earnedPoints']),
     );
   }
 }

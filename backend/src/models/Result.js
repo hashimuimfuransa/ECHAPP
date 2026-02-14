@@ -18,8 +18,12 @@ const resultSchema = new mongoose.Schema({
       required: true
     },
     selectedOption: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed, // Can be Number (MCQ/TrueFalse) or String (Open/FillBlank)
       required: true
+    },
+    answerText: {
+      type: String, // Store text answer for open and fill_blank questions
+      required: false
     }
   }],
   score: {

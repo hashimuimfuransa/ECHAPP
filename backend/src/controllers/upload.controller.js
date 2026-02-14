@@ -460,13 +460,21 @@ const uploadDocument = async (req, res) => {
             // Create questions from AI-processed content
             if (processedQuestions && processedQuestions.length > 0) {
               const questionsWithExamId = processedQuestions.map(q => {
-                // Find the index of the correct answer in the options
-                const correctAnswerIndex = q.options.indexOf(q.correctAnswer);
+                // Handle different question types properly
+                let correctAnswer = q.correctAnswer;
+                let options = q.options || [];
+                
+                // For MCQ and True/False, convert correct answer to index
+                if ((q.type === 'mcq' || q.type === 'true_false') && options.length > 0) {
+                  const correctAnswerIndex = options.indexOf(q.correctAnswer);
+                  correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
+                }
                 
                 return {
                   question: q.question,
-                  options: q.options,
-                  correctAnswer: correctAnswerIndex !== -1 ? correctAnswerIndex : 0, // Store index of correct answer
+                  type: q.type || 'mcq', // Ensure type is always set
+                  options: options,
+                  correctAnswer: correctAnswer,
                   points: q.points || 1,
                   examId: exam._id
                 };

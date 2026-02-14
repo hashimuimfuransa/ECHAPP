@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
+import 'dart:async';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -434,7 +436,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 }
 
-// Local Video Player Widget
+// Local Video Player Widget with enhanced features for downloaded videos
 class _LocalVideoPlayer extends StatefulWidget {
   final String filePath;
   final String title;
@@ -453,6 +455,8 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
   late Future<void> _initializeVideoPlayerFuture;
   bool _isPlaying = false;
   bool _showControls = true;
+  bool _isFullscreen = false;
+  Timer? _hideControlsTimer;
 
   @override
   void initState() {
@@ -465,30 +469,48 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
           _isPlaying = _controller.value.isPlaying;
         });
       });
+      // Auto-hide controls after 3 seconds
+      _startHideControlsTimer();
     });
   }
 
   @override
   void dispose() {
+    _hideControlsTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _startHideControlsTimer() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _isPlaying) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      backgroundColor: Colors.black,
+      appBar: _isFullscreen ? null : AppBar(
         title: Text(widget.title),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.fullscreen),
+            icon: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
             onPressed: _toggleFullscreen,
           ),
         ],
       ),
-      body: _buildVideoPlayer(),
+      body: Container(
+        color: Colors.black,
+        child: _buildVideoPlayer(),
+      ),
     );
   }
 
@@ -502,14 +524,22 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
               setState(() {
                 _showControls = !_showControls;
               });
+              if (_showControls && _isPlaying) {
+                _startHideControlsTimer();
+              }
             },
             child: Stack(
               alignment: Alignment.center,
               children: [
-                AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  child: VideoPlayer(_controller),
+                // Black background
+                Container(
+                  color: Colors.black,
+                  child: AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: VideoPlayer(_controller),
+                  ),
                 ),
+                // Play button overlay when paused
                 if (!_isPlaying && !_showControls)
                   Container(
                     decoration: const BoxDecoration(
@@ -522,14 +552,18 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
                       size: 60,
                     ),
                   ),
+                // Controls overlay
                 if (_showControls) _buildVideoControls(),
               ],
             ),
           );
         } else {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+          return Container(
+            color: Colors.black,
+            child: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+              ),
             ),
           );
         }
@@ -544,70 +578,134 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
+            Colors.black54,
             Colors.transparent,
             Colors.black54,
           ],
+          stops: [0.0, 0.2, 1.0],
         ),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Progress bar
-          Row(
-            children: [
-              Text(
-                _formatDuration(_controller.value.position),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: VideoProgressIndicator(
-                  _controller,
-                  allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: AppTheme.primaryGreen,
-                    bufferedColor: Colors.white30,
-                    backgroundColor: Colors.white24,
-                  ),
+          // Top controls
+          if (_isFullscreen)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    if (_isFullscreen) {
+                      _toggleFullscreen();
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                _formatDuration(_controller.value.duration),
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
+                  onPressed: _toggleFullscreen,
+                ),
+              ],
+            ),
           
-          // Control buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // Middle play/pause button
+          Center(
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: IconButton(
+                icon: Icon(
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: AppTheme.primaryGreen,
+                  size: 50,
+                ),
+                onPressed: _togglePlayPause,
+              ),
+            ),
+          ),
+          
+          // Bottom controls
+          Column(
             children: [
-              IconButton(
-                icon: const Icon(Icons.replay_10, color: Colors.white, size: 30),
-                onPressed: () => _seekBackward(10),
-              ),
-              const SizedBox(width: 20),
-              Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: AppTheme.primaryGreen,
-                    size: 40,
+              // Progress bar
+              Row(
+                children: [
+                  Text(
+                    _formatDuration(_controller.value.position),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
-                  onPressed: _togglePlayPause,
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: VideoProgressIndicator(
+                      _controller,
+                      allowScrubbing: true,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      colors: const VideoProgressColors(
+                        playedColor: AppTheme.primaryGreen,
+                        bufferedColor: Colors.white30,
+                        backgroundColor: Colors.white24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _formatDuration(_controller.value.duration),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
               ),
-              const SizedBox(width: 20),
-              IconButton(
-                icon: const Icon(Icons.forward_10, color: Colors.white, size: 30),
-                onPressed: () => _seekForward(10),
+              const SizedBox(height: 10),
+              
+              // Control buttons row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.replay_10, color: Colors.white, size: 24),
+                    onPressed: () => _seekBackward(10),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.skip_previous, color: Colors.white, size: 24),
+                    onPressed: () => _seekBackward(30),
+                  ),
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: AppTheme.primaryGreen,
+                        size: 32,
+                      ),
+                      onPressed: _togglePlayPause,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.skip_next, color: Colors.white, size: 24),
+                    onPressed: () => _seekForward(30),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.forward_10, color: Colors.white, size: 24),
+                    onPressed: () => _seekForward(10),
+                  ),
+                ],
               ),
             ],
           ),
@@ -624,20 +722,44 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
         _controller.play();
       }
     });
+    // Restart hide timer when controls are shown
+    if (_showControls) {
+      _startHideControlsTimer();
+    }
   }
 
   void _toggleFullscreen() {
-    // Handle fullscreen toggle
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+    
+    if (_isFullscreen) {
+      // Enter fullscreen
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      // Exit fullscreen
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
   }
 
   void _seekForward(int seconds) {
     final newPosition = _controller.value.position + Duration(seconds: seconds);
     _controller.seekTo(newPosition);
+    // Show controls temporarily
+    setState(() {
+      _showControls = true;
+    });
+    _startHideControlsTimer();
   }
 
   void _seekBackward(int seconds) {
     final newPosition = _controller.value.position - Duration(seconds: seconds);
     _controller.seekTo(newPosition);
+    // Show controls temporarily
+    setState(() {
+      _showControls = true;
+    });
+    _startHideControlsTimer();
   }
 
   String _formatDuration(Duration duration) {

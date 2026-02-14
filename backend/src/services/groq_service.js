@@ -55,7 +55,7 @@ class GroqService {
       }
 
       // Process document in chunks to avoid context limits
-      const chunks = this.splitTextIntoChunks(documentText, 8000); // 8000 chars per chunk for Mixtral
+      const chunks = this.splitTextIntoChunks(documentText, 12000); // Increased to 12000 chars per chunk
       let allQuestions = [];
       
       console.log(`Document text extracted (first 200 chars): ${documentText.substring(0, 200)}...`);
@@ -67,7 +67,9 @@ class GroqService {
         
         try {
           const chunkQuestions = await this.processChunkWithGroq(chunk, examType, fileName, i + 1, chunks.length);
+          console.log(`Chunk ${i + 1}: Generated ${chunkQuestions.length} questions`);
           allQuestions = allQuestions.concat(chunkQuestions);
+          console.log(`Total questions so far: ${allQuestions.length}`);
           console.log(`✓ Successfully processed chunk ${i + 1} - Generated ${chunkQuestions.length} questions`);
         } catch (chunkError) {
           console.warn(`⚠ Warning: Failed to process chunk ${i + 1}:`, chunkError.message);
@@ -81,7 +83,9 @@ class GroqService {
       }
 
       // Deduplicate and clean up questions
+      const beforeDedup = allQuestions.length;
       allQuestions = this.deduplicateQuestions(allQuestions);
+      console.log(`Deduplication: ${beforeDedup} -> ${allQuestions.length} questions`);
       
       if (allQuestions.length === 0) {
         // Fallback to template questions if Groq fails
@@ -103,14 +107,28 @@ class GroqService {
    * Process a single chunk with Groq
    */
   async processChunkWithGroq(chunk, examType, fileName, chunkNumber, totalChunks) {
-    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. Return 5-8 high-quality questions in JSON format only. Support multiple question types: MCQ (multiple choice), open-ended, fill-in-the-blank, and true/false. If the document has sections (e.g., Section A, Section B), organize questions accordingly:
+    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. CRITICALLY IMPORTANT: Analyze each question to determine the most appropriate question type based on the question format and content.
 
+Return ONLY the questions that exist in the document in JSON format. Extract each question exactly as it appears in the text, do not create or generate any new questions. Support these question types:
+
+1. "mcq" - Multiple choice with 4 options (use when question asks for selection from given choices)
+2. "true_false" - True/False questions (use for yes/no or true/false statements)
+3. "fill_blank" - Fill-in-the-blank questions (use when question contains blanks to be filled)
+4. "open" - Open-ended/essay questions (use for questions requiring detailed written responses)
+
+ANALYSIS CRITERIA FOR QUESTION TYPE DETECTION:
+- MCQ: Question contains "which of the following", "select the best", "choose", or provides multiple options
+- TRUE_FALSE: Question is a statement that can be judged as true or false
+- FILL_BLANK: Question contains blank spaces (____) or asks "fill in the blank"
+- OPEN: Question asks for explanation, description, reasons, or detailed analysis
+
+JSON FORMAT:
 [
   {
     "question": "The question text",
-    "type": "mcq", // or "open", "fill_blank", or "true_false"
-    "options": ["Option A", "Option B", "Option C", "Option D"], // Include for MCQ, omit for open/fill_blank, use ["True", "False"] for true_false
-    "correctAnswer": "Option A", // For MCQ/True_False: correct option text, for open: sample answer, for fill_blank: the exact answer
+    "type": "mcq", // CRITICAL: Must specify correct type
+    "options": ["Option A", "Option B", "Option C", "Option D"], // Required for MCQ/True_False
+    "correctAnswer": "Option A", // For MCQ/True_False: correct option text, for open: sample answer, for fill_blank: exact answer
     "points": 1,
     "section": "Section A" // Include if applicable
   }
@@ -119,18 +137,17 @@ class GroqService {
 Text content from section ${chunkNumber} of ${fileName}:
 ${chunk}
 
-Requirements:
-- Extract relevant questions from this section only
-- Create appropriate ${examType.toUpperCase()} exam questions
-- Support MCQ (with 4 options), open-ended, fill-in-the-blank, and true/false questions
-- If document has sections (like Section A, Section B), assign questions to appropriate sections
-- For open-ended questions, omit the options field and provide a sample answer in correctAnswer
-- For fill-in-the-blank questions, provide the question with blank(s) and the correct answer
-- For true/false questions, provide options ["True", "False"] and correct answer
-- For MCQ questions, provide 4 options and specify the correct answer
-- Clear and unambiguous questions
+REQUIREMENTS:
+- Extract ONLY the questions that exist in this section - do not create or generate any new questions
+- Identify and extract each question exactly as it appears in the document
+- CRITICALLY: Analyze each question to determine the CORRECT question type
+- For MCQ: Provide the existing options and specify the correct answer text
+- For TRUE_FALSE: Provide options ["True", "False"] and correct answer if it's a true/false statement
+- For FILL_BLANK: Provide the question with blanks as it appears and the correct answer
+- For OPEN: Omit options field and provide the expected answer format in correctAnswer
+- Clear, unambiguous questions
 - JSON format only, no extra text
-- Generate 5-8 comprehensive questions per section`;
+- Extract all and only the questions present in the document`;
 
     try {
       const completion = await this.groq.chat.completions.create({
@@ -142,7 +159,7 @@ Requirements:
           }
         ],
         temperature: 0.3,
-        max_tokens: 4000
+        max_tokens: 8000
       });
 
       const response = completion.choices[0].message.content;
@@ -235,16 +252,20 @@ Requirements:
         return [];
       }
       
-      // Ensure all questions have the required fields
+      // Ensure all questions have the required fields and proper type handling
       return questions.map((q, index) => ({
         id: `q_${Date.now()}_${chunkNumber}_${index}`,
         question: q.question || `Question from section ${chunkNumber}`,
-        type: q.type || 'mcq', // Default to mcq if not specified
-        options: q.type === 'mcq' && Array.isArray(q.options) ? q.options.slice(0, 4) : [], // Only for MCQ
-        correctAnswer: q.correctAnswer || (q.type === 'open' ? null : (q.options ? q.options[0] : "Option A")),
+        type: q.type && ['mcq', 'open', 'fill_blank', 'true_false'].includes(q.type) ? q.type : 'mcq', // Validate and default to mcq if invalid
+        options: (q.type === 'mcq' || q.type === 'true_false') && Array.isArray(q.options) ? q.options.slice(0, 4) : 
+                 q.type === 'true_false' ? ['True', 'False'] : [], // Ensure true/false has proper options
+        correctAnswer: q.correctAnswer || 
+                      (q.type === 'open' ? 'Sample answer for open question' : 
+                       q.type === 'fill_blank' ? 'Correct answer' : 
+                       (q.options && q.options.length > 0 ? q.options[0] : 'Option A')),
         points: q.points || 1,
         section: q.section || null // Include section if provided
-      })).filter(q => q.question && q.question.length > 10); // Filter out poor quality questions
+      })).filter(q => q.question && q.question.length > 5); // Filter out poor quality questions
       
     } catch (error) {
       console.error("Error processing chunk with Groq:", error);
@@ -319,8 +340,19 @@ Requirements:
   deduplicateQuestions(questions) {
     const seen = new Set();
     return questions.filter(question => {
-      const key = question.question.toLowerCase().trim();
+      // Create a more unique key by combining question text, options, and correct answer
+      let key = question.question.toLowerCase().trim();
+      if (question.options && question.options.length > 0) {
+        // Include all options to make the key more unique
+        key += '|' + question.options.join('|').toLowerCase();
+      }
+      // Also include the correct answer to distinguish between similar questions with different answers
+      if (question.correctAnswer) {
+        key += '|correct:' + question.correctAnswer.toString().toLowerCase();
+      }
+      
       if (seen.has(key)) {
+        console.log(`Skipping duplicate question: ${question.question.substring(0, 50)}...`);
         return false;
       }
       seen.add(key);
@@ -534,7 +566,7 @@ Requirements:
       correctAnswer: q.correctAnswer || (q.type === 'open' ? null : (q.options ? q.options[0] : (q.type === 'fill_blank' ? '' : "Option A"))),
       points: q.points || 1,
       section: q.section || null // Include section if provided
-    })).filter(q => q.question && q.question.length > 5); // Filter out poor quality questions
+    })).filter(q => q.question && q.question.length > 3); // Less strict filtering - only remove very short questions
   }
   
   /**
