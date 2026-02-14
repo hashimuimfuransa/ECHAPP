@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:excellence_coaching_hub/firebase_options.dart';
+import 'package:excellencecoachinghub/firebase_options.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthService {

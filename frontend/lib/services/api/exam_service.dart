@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:excellence_coaching_hub/config/api_config.dart';
+import '../../config/api_config.dart';
 import '../infrastructure/api_client.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
+import '../../models/exam.dart' as exam_model;
 
 /// Service for exam-related API operations
 class ExamService {

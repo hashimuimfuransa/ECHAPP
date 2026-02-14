@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-import 'package:excellence_coaching_hub/models/user.dart';
-import 'package:excellence_coaching_hub/config/storage_manager.dart';
-import 'package:excellence_coaching_hub/services/firebase_auth_service.dart';
-import 'package:excellence_coaching_hub/data/repositories/auth_repository.dart';
+import 'package:excellencecoachinghub/models/user.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
+import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
+import 'package:excellencecoachinghub/data/repositories/auth_repository.dart';
 
 final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager());
 
@@ -41,9 +41,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> login(String email, String password) async {
+    debugPrint('AuthProvider: Starting email/password login');
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      // Step 1: Login with Firebase Auth
       final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -51,37 +53,51 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       if (userCredential?.user != null) {
         final firebaseUser = userCredential!.user!;
+        debugPrint('AuthProvider: Firebase login successful for ${firebaseUser.email}');
         
-        // Get actual role from Firebase custom claims
-        final userRole = await FirebaseAuthService.getUserRole();
+        // Step 2: Get Firebase ID token
+        debugPrint('AuthProvider: Getting Firebase ID token');
+        final idToken = await firebaseUser.getIdToken();
+        debugPrint('AuthProvider: Got Firebase ID token');
         
-        // Create local user from Firebase user data
-        final localUser = User(
-          id: firebaseUser.uid,
-          fullName: firebaseUser.displayName ?? '',
-          email: firebaseUser.email ?? '',
-          phone: firebaseUser.phoneNumber,
-          role: userRole,
-          createdAt: DateTime.fromMillisecondsSinceEpoch(firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch),
-        );
+        if (idToken == null) {
+          debugPrint('AuthProvider: ERROR - idToken is null after login');
+          throw Exception('Failed to get Firebase ID token after login');
+        }
         
-        // Save user data
-        await _storageManager.saveUserRole(localUser.role);
-        await _storageManager.saveUserId(localUser.id);
+        // Step 3: Send token to backend for authentication
+        debugPrint('AuthProvider: Sending token to backend for authentication');
+        final authResponse = await _authRepository.firebaseLogin(idToken);
+        debugPrint('AuthProvider: Backend authentication successful');
         
-        state = state.copyWith(isLoading: false, user: localUser);
+        // Step 4: Save tokens and user data
+        await _storageManager.saveAccessToken(authResponse.token);
+        await _storageManager.saveRefreshToken(authResponse.refreshToken);
+        await _storageManager.saveUserRole(authResponse.user.role);
+        await _storageManager.saveUserId(authResponse.user.id);
+        
+        debugPrint('AuthProvider: Login completed successfully');
+        
+        // Set the user state and ensure navigation triggers
+        state = state.copyWith(isLoading: false, user: authResponse.user, error: null);
+        
+        // Small delay to ensure state is properly propagated
+        await Future.delayed(const Duration(milliseconds: 50));
       } else {
         state = state.copyWith(isLoading: false, error: 'Login failed');
       }
     } catch (e) {
+      debugPrint('Login Provider Error: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   Future<void> register(String fullName, String email, String password, String? phone) async {
+    debugPrint('AuthProvider: Starting registration process');
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      // Step 1: Register with Firebase Auth
       final userCredential = await FirebaseAuthService.registerWithEmailAndPassword(
         email: email,
         password: password,
@@ -90,42 +106,64 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       if (userCredential?.user != null) {
         final firebaseUser = userCredential!.user!;
+        debugPrint('AuthProvider: Firebase registration successful for ${firebaseUser.email}');
         
-        // Get actual role from Firebase custom claims (will be 'student' for new users)
-        final userRole = await FirebaseAuthService.getUserRole();
+        // Step 2: Get Firebase ID token
+        debugPrint('AuthProvider: Getting Firebase ID token');
+        final idToken = await firebaseUser.getIdToken();
+        debugPrint('AuthProvider: Got Firebase ID token');
         
-        // Create local user from Firebase user data
-        final localUser = User(
-          id: firebaseUser.uid,
-          fullName: firebaseUser.displayName ?? fullName,
-          email: firebaseUser.email ?? '',
-          phone: phone,
-          role: userRole,
-          createdAt: DateTime.fromMillisecondsSinceEpoch(firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch),
-        );
+        if (idToken == null) {
+          debugPrint('AuthProvider: ERROR - idToken is null after registration');
+          throw Exception('Failed to get Firebase ID token after registration');
+        }
         
-        // Save user data
-        await _storageManager.saveUserRole(localUser.role);
-        await _storageManager.saveUserId(localUser.id);
+        // Step 3: Send token to backend for synchronization
+        debugPrint('AuthProvider: Sending token to backend for sync');
+        final authResponse = await _authRepository.firebaseLogin(idToken);
+        debugPrint('AuthProvider: Backend sync successful');
         
-        state = state.copyWith(isLoading: false, user: localUser);
+        // Step 4: Save tokens and user data
+        await _storageManager.saveAccessToken(authResponse.token);
+        await _storageManager.saveRefreshToken(authResponse.refreshToken);
+        await _storageManager.saveUserRole(authResponse.user.role);
+        await _storageManager.saveUserId(authResponse.user.id);
+        
+        debugPrint('AuthProvider: Registration completed successfully');
+        state = state.copyWith(isLoading: false, user: authResponse.user);
       } else {
         state = state.copyWith(isLoading: false, error: 'Registration failed');
       }
     } catch (e) {
+      debugPrint('Registration Provider Error: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   Future<void> logout() async {
+    debugPrint('AuthProvider: Starting logout process');
+    state = state.copyWith(isLoading: true, error: null);
+    
     try {
+      // Sign out from Firebase
       await FirebaseAuthService.signOut();
+      debugPrint('AuthProvider: Firebase sign out successful');
     } catch (e) {
-      // Ignore logout errors
-    } finally {
-      await _storageManager.clearAll();
-      state = AuthState();
+      debugPrint('AuthProvider: Firebase sign out error (continuing anyway): $e');
+      // Don't throw error - we want to clear local data regardless
     }
+    
+    try {
+      // Clear all local storage
+      await _storageManager.clearAll();
+      debugPrint('AuthProvider: Local storage cleared');
+    } catch (e) {
+      debugPrint('AuthProvider: Storage clear error: $e');
+    }
+    
+    // Reset state
+    state = AuthState();
+    debugPrint('AuthProvider: Logout completed successfully');
   }
 
   Future<void> signInWithGoogle() async {
@@ -174,6 +212,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           error: null
         );
         debugPrint('AuthProvider: State updated - User: ${authResponse.user.email}, ID: ${authResponse.user.id}');
+        
+        // Small delay to ensure state is properly propagated for navigation
+        await Future.delayed(const Duration(milliseconds: 50));
       } else {
         debugPrint('AuthProvider: Google Sign-In returned null');
         state = state.copyWith(isLoading: false, error: 'Google Sign-In cancelled');
@@ -217,6 +258,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final firebaseUser = FirebaseAuthService.getCurrentUser();
       
       if (firebaseUser != null) {
+        debugPrint('AuthProvider: Firebase user found: ${firebaseUser.email}');
+        
         // Check if we have stored tokens and user data
         final storedUserId = await _storageManager.getUserId();
         final storedUserRole = await _storageManager.getUserRole();
@@ -227,6 +270,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             storedToken != null && 
             storedUserId == firebaseUser.uid) {
           
+          debugPrint('AuthProvider: Valid session found for user: $storedUserId');
           // Recreate user from stored data
           final user = User(
             id: firebaseUser.uid,
@@ -238,15 +282,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
           state = state.copyWith(user: user);
         } else {
-          // User is signed in to Firebase but we don't have backend tokens
+          debugPrint('AuthProvider: Incomplete session data. storedUserId: $storedUserId, storedUserRole: $storedUserRole, storedToken: ${storedToken != null}');
+          // User is signed in to Firebase but we don't have complete backend tokens
           // This could happen if app was closed after Firebase login but before backend auth
           // For now, we'll clear the state and require re-authentication
           await _storageManager.clearAll();
           await FirebaseAuthService.signOut();
           state = AuthState();
         }
+      } else {
+        debugPrint('AuthProvider: No Firebase user found');
       }
     } catch (e) {
+      debugPrint('AuthProvider: Error checking auth status: $e');
       // Clear storage if there's an error
       await _storageManager.clearAll();
       state = AuthState();

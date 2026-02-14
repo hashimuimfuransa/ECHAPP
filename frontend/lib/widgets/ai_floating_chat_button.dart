@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/ai_chat_service.dart';
-import 'package:excellence_coaching_hub/widgets/ai_chat_dialog.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 
 /// Floating AI Chat Button that expands to full chat when clicked
 class AIFloatingChatButton extends ConsumerStatefulWidget {
@@ -86,7 +86,7 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
 
     return Stack(
       children: [
-        // Modern gradient label with animation
+        // Modern theme-aware label with animation
         Positioned(
           right: 12,
           bottom: 85,
@@ -94,7 +94,7 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
             opacity: _isExpanded ? 0.0 : 1.0,
             duration: const Duration(milliseconds: 300),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
@@ -104,30 +104,30 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                     AppTheme.accent.withOpacity(0.95),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: AppTheme.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.auto_awesome,
                     color: Colors.white,
-                    size: 14,
+                    size: 16,
                   ),
-                  SizedBox(width: 4),
-                  Text(
-                    'Chat',
+                  const SizedBox(width: 6),
+                  const Text(
+                    'AI Assistant',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -136,7 +136,7 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
           ),
         ),
         
-        // Modern floating chat button with gradient and micro-interactions
+        // Theme-aware floating chat button with enhanced micro-interactions
         Positioned(
           right: 12,
           bottom: 12,
@@ -156,13 +156,13 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                 boxShadow: [
                   BoxShadow(
                     color: AppTheme.primary.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                   BoxShadow(
-                    color: AppTheme.accent.withOpacity(0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+                    color: AppTheme.accent.withOpacity(0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
@@ -190,8 +190,8 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                     );
                   },
                   child: _isExpanded
-                      ? const Icon(Icons.close, key: ValueKey('close'), size: 20)
-                      : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 20),
+                      ? const Icon(Icons.close, key: ValueKey('close'), size: 22)
+                      : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 22),
                 ),
               ),
             ),

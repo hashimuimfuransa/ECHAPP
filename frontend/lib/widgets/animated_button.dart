@@ -9,14 +9,14 @@ class AnimatedButton extends StatelessWidget {
   final double? height;
 
   const AnimatedButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     required this.color,
     this.isLoading = false,
     this.width,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

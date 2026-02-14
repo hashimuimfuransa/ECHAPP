@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/api/enrollment_service.dart';
+import 'package:excellencecoachinghub/services/api/enrollment_service.dart';
 
 /// Model for user profile statistics
 class UserProfileStats {

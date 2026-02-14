@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/ai_chat_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Modern Widget to display individual chat messages with avatars and animations
@@ -82,6 +82,8 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -111,9 +113,9 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          color: AppTheme.primary.withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -130,23 +132,9 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: widget.isCurrentUser
-                        ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppTheme.primary,
-                              AppTheme.primaryDark,
-                            ],
-                          )
-                        : LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white,
-                              Colors.grey[50]!,
-                            ],
-                          ),
+                    color: widget.isCurrentUser
+                        ? (isDarkMode ? AppTheme.primary : AppTheme.primary)
+                        : (isDarkMode ? AppTheme.darkSurface : Colors.white),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(20),
                       topRight: const Radius.circular(20),
@@ -160,16 +148,20 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                     boxShadow: [
                       BoxShadow(
                         color: widget.isCurrentUser
-                            ? AppTheme.primary.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                            ? AppTheme.primary.withOpacity(0.3)
+                            : (isDarkMode 
+                                ? Colors.black.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.15)),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                     border: Border.all(
                       color: widget.isCurrentUser
                           ? Colors.transparent
-                          : Colors.grey[200]!,
+                          : (isDarkMode
+                              ? AppTheme.darkTextSecondary.withOpacity(0.2)
+                              : Colors.grey[200]!),
                       width: 1,
                     ),
                   ),
@@ -182,7 +174,7 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                         style: TextStyle(
                           color: widget.isCurrentUser
                               ? Colors.white
-                              : Colors.black87,
+                              : (isDarkMode ? AppTheme.darkTextPrimary : Colors.black87),
                           fontSize: 15,
                           height: 1.4,
                         ),
@@ -199,7 +191,7 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                             style: TextStyle(
                               color: widget.isCurrentUser
                                   ? Colors.white70
-                                  : Colors.grey[600],
+                                  : (isDarkMode ? AppTheme.darkTextSecondary : Colors.grey[600]),
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -211,7 +203,9 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                               decoration: BoxDecoration(
                                 color: widget.isCurrentUser
                                     ? Colors.white24
-                                    : AppTheme.primary.withOpacity(0.1),
+                                    : (isDarkMode 
+                                        ? AppTheme.primary.withOpacity(0.2)
+                                        : AppTheme.primary.withOpacity(0.1)),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -263,9 +257,9 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          color: Colors.blue.withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),

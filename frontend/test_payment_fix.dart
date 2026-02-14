@@ -1,6 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'lib/models/payment.dart';
-import 'lib/models/payment_status.dart';
 import 'lib/services/api/payment_api_service.dart';
 
 void main() {

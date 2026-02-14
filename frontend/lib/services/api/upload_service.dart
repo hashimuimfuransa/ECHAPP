@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:excellence_coaching_hub/config/api_config.dart';
+import '../../config/api_config.dart';
 import 'dart:io';
 import 'package:http_parser/http_parser.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;

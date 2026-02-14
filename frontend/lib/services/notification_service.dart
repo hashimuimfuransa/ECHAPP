@@ -2,98 +2,100 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/api_config.dart';
 import '../models/notification.dart';
+import '../services/infrastructure/token_manager.dart';
 
 class NotificationService {
   final String _baseUrl = ApiConfig.baseUrl;
 
   Future<List<Notification>> getNotifications() async {
     try {
+      final token = await TokenManager().getIdToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
       final response = await http.get(
         Uri.parse('$_baseUrl/notifications'),
-        headers: await _getHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Notification.fromJson(json)).toList();
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final notificationsData = data['data']['notifications'] as List;
+          return notificationsData.map((json) => Notification.fromJson(json)).toList();
+        } else {
+          throw Exception(data['message'] ?? 'Failed to load notifications');
+        }
       } else {
-        throw Exception('Failed to load notifications: ${response.statusCode}');
+        throw Exception('Failed to load notifications: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      // Return mock notifications in case of error
-      return _getMockNotifications();
+      print('Error fetching notifications: $e');
+      rethrow;
     }
   }
 
   Future<void> markAsRead(String notificationId) async {
     try {
-      final response = await http.patch(
+      final token = await TokenManager().getIdToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final response = await http.put(
         Uri.parse('$_baseUrl/notifications/$notificationId/read'),
-        headers: await _getHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to mark notification as read: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Failed to mark notification as read');
+        }
+      } else {
+        throw Exception('Failed to mark notification as read: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      throw Exception('Error marking notification as read: $e');
+      print('Error marking notification as read: $e');
+      rethrow;
     }
   }
 
   Future<void> markAllAsRead() async {
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/notifications/mark-all-read'),
-        headers: await _getHeaders(),
+      final token = await TokenManager().getIdToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/notifications/read-all'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to mark all notifications as read: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Failed to mark all notifications as read');
+        }
+      } else {
+        throw Exception('Failed to mark all notifications as read: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      throw Exception('Error marking all notifications as read: $e');
+      print('Error marking all notifications as read: $e');
+      rethrow;
     }
   }
 
-  Future<Map<String, String>> _getHeaders() async {
-    // In a real implementation, this would get the auth token
-    // For now, return basic headers
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
 
-  List<Notification> _getMockNotifications() {
-    final now = DateTime.now();
-    return [
-      Notification(
-        id: '1',
-        title: 'New Student Registration',
-        message: 'John Doe has registered for your platform',
-        type: 'info',
-        timestamp: now.subtract(const Duration(minutes: 2)),
-      ),
-      Notification(
-        id: '2',
-        title: 'Payment Received',
-        message: 'RWF 15,000 received from Jane Smith',
-        type: 'success',
-        timestamp: now.subtract(const Duration(hours: 1)),
-      ),
-      Notification(
-        id: '3',
-        title: 'Course Completed',
-        message: 'Sam Wilson completed "Advanced Mathematics"',
-        type: 'achievement',
-        timestamp: now.subtract(const Duration(hours: 3)),
-      ),
-      Notification(
-        id: '4',
-        title: 'New Course Created',
-        message: 'You created a new course: "Introduction to Physics"',
-        type: 'info',
-        timestamp: now.subtract(const Duration(days: 1)),
-      ),
-    ];
-  }
 }

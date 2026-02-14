@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class EnrolledCoursesScreen extends ConsumerWidget {
   const EnrolledCoursesScreen({super.key});
@@ -330,7 +330,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
 
   void _continueLearning(BuildContext context, Course course) {
     // Navigate to the student learning screen for this course
-    context.push('/learning/${course.id}', extra: {
+    context.pushReplacement('/learning/${course.id}', extra: {
       'courseId': course.id,
       'course': course,
     });

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/exam.dart';
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'exam_question_details_screen.dart';
 
 /// Screen to display user's exam history with detailed results

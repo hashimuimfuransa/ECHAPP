@@ -99,7 +99,7 @@ class PaymentPendingScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         _buildContactInstruction(
                           '1. contact for payment via:',
-                          'MTN Mobile Money: 0793828834',
+                          'MTN: 0793828834',
                           Icons.phone,
                         ),
                         const SizedBox(height: 8),

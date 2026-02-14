@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/course_payment_providers.dart';
-import 'package:excellence_coaching_hub/presentation/providers/enrollment_provider.dart';
-import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_payment_providers.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 
 /// Utility class for handling smart course navigation
 /// Checks if user has pending payment and navigates accordingly
@@ -29,7 +28,7 @@ class CourseNavigationUtils {
         // If already enrolled, go directly to learning screen
         print('User already enrolled - navigating to learning screen');
         if (context.mounted) {
-          context.push('/learning/${course.id}');
+          context.pushReplacement('/learning/${course.id}');
         }
         return;
       }
@@ -37,11 +36,10 @@ class CourseNavigationUtils {
       // If not enrolled, check for pending payments
       try {
         print('🔍 Checking for pending payments for course ID: ${course.id}');
-        final hasPendingPaymentFuture = ref.read(hasPendingPaymentProvider(course.id));
-        final hasPendingPayment = await hasPendingPaymentFuture;
+        final hasPendingPayment = await ref.read(hasPendingPaymentProvider(course.id).future);
         print('✅ Pending payment check result: $hasPendingPayment');
         
-        if (hasPendingPayment == true) {
+        if (hasPendingPayment) {
           // Navigate to payment pending screen and start listener
           print('User has pending payment - navigating to payment screen');
           if (context.mounted) {
@@ -95,7 +93,7 @@ class CourseNavigationUtils {
       
       if (isEnrolled && context.mounted) {
         print('User is now enrolled after payment - redirecting to learning screen');
-        context.push('/learning/${course.id}');
+        context.pushReplacement('/learning/${course.id}');
         
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,10 +117,9 @@ class CourseNavigationUtils {
   ) async {
     try {
       print('🔍 Checking for pending payments (context method) for course ID: ${course.id}');
-      final hasPendingPaymentFuture = ref.read(hasPendingPaymentProvider(course.id));
-      final hasPendingPayment = await hasPendingPaymentFuture;
+      final hasPendingPayment = await ref.read(hasPendingPaymentProvider(course.id).future);
       
-      if (hasPendingPayment == true) {
+      if (hasPendingPayment) {
         if (context.mounted) {
           Navigator.push(
             context,

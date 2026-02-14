@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 // Providers for settings
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);

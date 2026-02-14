@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/models/notification.dart';
-import 'package:excellence_coaching_hub/services/notification_service.dart';
+import 'package:excellencecoachinghub/models/notification.dart';
+import 'package:excellencecoachinghub/services/notification_service.dart';
 
 class NotificationState {
   final bool isLoading;

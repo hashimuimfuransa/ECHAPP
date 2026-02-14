@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/api/course_service.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/services/api/course_service.dart';
 
 // Admin course management state
 class AdminCourseState {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,31 +22,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _checkAndNavigate();
+    // Add a slight delay to ensure the widget tree is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndNavigate();
+    });
   }
 
   @override
   void didUpdateWidget(covariant LoginScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _checkAndNavigate();
+    // Add a slight delay to ensure the widget tree is fully updated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndNavigate();
+    });
   }
 
   void _checkAndNavigate() {
     if (!_hasNavigated) {
       final authState = ref.watch(authProvider);
       debugPrint('LoginScreen: Checking navigation - User: ${authState.user != null}, Loading: ${authState.isLoading}, Error: ${authState.error}');
-      if (authState.user != null && !authState.isLoading) {
-        _hasNavigated = true;
-        debugPrint('LoginScreen: Navigating to dashboard for role: ${authState.user?.role}');
-        // Navigate to appropriate dashboard based on user role
-        if (authState.user?.role == 'admin') {
-          debugPrint('LoginScreen: Navigating to admin dashboard');
-          context.go('/admin');
-        } else {
-          debugPrint('LoginScreen: Navigating to student dashboard');
-          context.go('/dashboard');
+      
+      // Add a small delay to ensure UI updates are complete
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_hasNavigated && authState.user != null && !authState.isLoading) {
+          _hasNavigated = true;
+          debugPrint('LoginScreen: Navigating to dashboard for role: ${authState.user?.role}');
+          
+          // Navigate to appropriate dashboard based on user role
+          if (authState.user?.role == 'admin') {
+            debugPrint('LoginScreen: Navigating to admin dashboard');
+            context.go('/admin');
+          } else {
+            debugPrint('LoginScreen: Navigating to student dashboard');
+            context.go('/dashboard');
+          }
         }
-      }
+      });
     }
   }
 
@@ -58,11 +69,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _login() {
+    // Dismiss keyboard before processing login
+    FocusScope.of(context).unfocus();
+    
     if (_formKey.currentState!.validate()) {
       ref.read(authProvider.notifier).login(
             _emailController.text.trim(),
             _passwordController.text,
-          );
+          ).then((_) {
+        // Ensure navigation happens after login completes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _checkAndNavigate();
+        });
+      });
     }
   }
 
@@ -421,6 +440,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       onPressed: authState.isLoading 
                                           ? null 
                                           : () {
+                                              // Dismiss keyboard before Google Sign-In
+                                              FocusScope.of(context).unfocus();
                                               debugPrint('LoginScreen: Google Sign-In button pressed');
                                               ref.read(authProvider.notifier).signInWithGoogle();
                                             },
@@ -809,6 +830,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 onPressed: authState.isLoading 
                                     ? null 
                                     : () {
+                                        // Dismiss keyboard before Google Sign-In
+                                        FocusScope.of(context).unfocus();
                                         debugPrint('LoginScreen: Google Sign-In button pressed');
                                         ref.read(authProvider.notifier).signInWithGoogle();
                                       },

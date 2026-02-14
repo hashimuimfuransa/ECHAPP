@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/section_repository.dart' as section_repo;
-import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart' as lesson_repo;
-import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/models/section.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/section_repository.dart' as section_repo;
+import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart' as lesson_repo;
+import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/section.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class StudentLearningScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -134,6 +134,13 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Clear navigation stack and go to dashboard
+            Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+          },
+        ),
         title: Text(_course!.title),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
@@ -145,7 +152,12 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
         ],
       ),
       endDrawer: _buildCourseOutline(context),
-      body: _buildLearningContent(context),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadCourseData();
+        },
+        child: _buildLearningContent(context),
+      ),
     );
   }
 
@@ -242,7 +254,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
               children: [
                 Text(
                   _course!.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.getTextColor(context)
@@ -283,7 +295,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'What would you like to learn today?',
           style: TextStyle(
             fontSize: 20,
@@ -403,7 +415,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
           const SizedBox(height: 15),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppTheme.getTextColor(context)
@@ -457,7 +469,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Your Progress',
             style: TextStyle(
               fontSize: 18,
@@ -488,7 +500,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w500,
                   color: AppTheme.getTextColor(context)
                 ),
@@ -554,7 +566,7 @@ class _StudentLearningScreenState extends ConsumerState<StudentLearningScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Course Sections',
             style: TextStyle(
               fontSize: 20,

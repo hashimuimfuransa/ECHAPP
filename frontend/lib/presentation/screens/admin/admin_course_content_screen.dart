@@ -4,24 +4,24 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/providers/content_management_provider.dart';
-import 'package:excellence_coaching_hub/models/section.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/data/repositories/video_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/lesson_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/exam_repository.dart';
-import 'package:excellence_coaching_hub/models/video.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
-import 'package:excellence_coaching_hub/services/infrastructure/api_client.dart'; // For ApiException
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/content_management_provider.dart';
+import 'package:excellencecoachinghub/models/section.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/data/repositories/video_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
+import 'package:excellencecoachinghub/models/video.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/services/infrastructure/api_client.dart'; // For ApiException
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:excellence_coaching_hub/config/api_config.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
 
 class AdminCourseContentScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -405,7 +405,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
       
       print('Building section card - Exams: ${exams.length}, Loading: $examsLoading');
     return Container(
-      key: ValueKey('section-${section.id}-exams-${exams.length}-loading-${examsLoading}'),
+      key: ValueKey('section-${section.id}-exams-${exams.length}-loading-$examsLoading'),
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
         color: Colors.white,

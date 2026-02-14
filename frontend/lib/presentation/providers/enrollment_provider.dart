@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
 
 final enrollmentRepositoryProvider = Provider<EnrollmentRepository>((ref) {
   return EnrollmentRepository();

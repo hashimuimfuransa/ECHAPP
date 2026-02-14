@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
 
 /// Screen to display detailed question results for a specific exam
 class ExamQuestionDetailsScreen extends StatelessWidget {
@@ -44,7 +44,7 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
               final index = entry.key;
               final question = entry.value;
               return _buildQuestionCard(index + 1, question);
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -334,7 +334,7 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ],

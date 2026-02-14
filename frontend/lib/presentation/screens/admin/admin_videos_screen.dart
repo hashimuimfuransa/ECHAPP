@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/api/video_service.dart';
-import 'package:excellence_coaching_hub/models/video.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/api/video_service.dart';
+import 'package:excellencecoachinghub/models/video.dart';
 
 class AdminVideosScreen extends StatefulWidget {
   const AdminVideosScreen({super.key});

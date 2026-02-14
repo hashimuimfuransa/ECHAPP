@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'dart:convert';
 import 'user.dart';
 
 part 'course.freezed.dart';
@@ -107,7 +106,115 @@ class Course with _$Course {
   }) = _Course;
 
   factory Course.fromJson(Map<String, dynamic> json) => _$CourseFromJson(json);
+  
+  @override
+  // TODO: implement category
+  Map<String, dynamic>? get category => throw UnimplementedError();
+  
+  @override
+  // TODO: implement categoryId
+  String? get categoryId => throw UnimplementedError();
+  
+  @override
+  // TODO: implement createdAt
+  DateTime get createdAt => throw UnimplementedError();
+  
+  @override
+  // TODO: implement createdBy
+  User get createdBy => throw UnimplementedError();
+  
+  @override
+  // TODO: implement description
+  String get description => throw UnimplementedError();
+  
+  @override
+  // TODO: implement duration
+  int get duration => throw UnimplementedError();
+  
+  @override
+  // TODO: implement id
+  String get id => throw UnimplementedError();
+  
+  @override
+  // TODO: implement isPublished
+  bool get isPublished => throw UnimplementedError();
+  
+  @override
+  // TODO: implement level
+  String get level => throw UnimplementedError();
+  
+  @override
+  // TODO: implement price
+  double get price => throw UnimplementedError();
+  
+  @override
+  // TODO: implement thumbnail
+  String? get thumbnail => throw UnimplementedError();
+  
+  @override
+  // TODO: implement title
+  String get title => throw UnimplementedError();
+  
+  @override
+  Map<String, dynamic> toJson() {
+    // TODO: implement toJson
+    throw UnimplementedError();
+  }
 }
+
+  @override
+  // TODO: implement category
+  Map<String, dynamic>? get category => throw UnimplementedError();
+
+  @override
+  // TODO: implement categoryId
+  String? get categoryId => throw UnimplementedError();
+
+  @override
+  // TODO: implement createdAt
+  DateTime get createdAt => throw UnimplementedError();
+
+  @override
+  // TODO: implement createdBy
+  User get createdBy => throw UnimplementedError();
+
+  @override
+  // TODO: implement description
+  String get description => throw UnimplementedError();
+
+  @override
+  // TODO: implement duration
+  int get duration => throw UnimplementedError();
+
+  @override
+  // TODO: implement id
+  String get id => throw UnimplementedError();
+
+  @override
+  // TODO: implement isPublished
+  bool get isPublished => throw UnimplementedError();
+
+  @override
+  // TODO: implement level
+  String get level => throw UnimplementedError();
+
+  @override
+  // TODO: implement price
+  double get price => throw UnimplementedError();
+
+  @override
+  // TODO: implement thumbnail
+  String? get thumbnail => throw UnimplementedError();
+
+  @override
+  // TODO: implement title
+  String get title => throw UnimplementedError();
+
+  @override
+  Map<String, dynamic> toJson() {
+    // TODO: implement toJson
+    throw UnimplementedError();
+  }
 
 @freezed
 class CourseListResponse with _$CourseListResponse {
@@ -120,6 +227,28 @@ class CourseListResponse with _$CourseListResponse {
 
   factory CourseListResponse.fromJson(Map<String, dynamic> json) =>
       _$CourseListResponseFromJson(json);
+      
+        @override
+        // TODO: implement courses
+        List<Course> get courses => throw UnimplementedError();
+      
+        @override
+        // TODO: implement currentPage
+        int get currentPage => throw UnimplementedError();
+      
+        @override
+        Map<String, dynamic> toJson() {
+          // TODO: implement toJson
+          throw UnimplementedError();
+        }
+      
+        @override
+        // TODO: implement total
+        int get total => throw UnimplementedError();
+      
+        @override
+        // TODO: implement totalPages
+        int get totalPages => throw UnimplementedError();
 }
 
 @freezed
@@ -137,4 +266,42 @@ class Enrollment with _$Enrollment {
 
   factory Enrollment.fromJson(Map<String, dynamic> json) =>
       _$EnrollmentFromJson(json);
+      
+        @override
+        // TODO: implement certificateEligible
+        bool get certificateEligible => throw UnimplementedError();
+      
+        @override
+        // TODO: implement completedLessons
+        List<String> get completedLessons => throw UnimplementedError();
+      
+        @override
+        // TODO: implement completionStatus
+        String get completionStatus => throw UnimplementedError();
+      
+        @override
+        // TODO: implement courseId
+        String get courseId => throw UnimplementedError();
+      
+        @override
+        // TODO: implement enrollmentDate
+        DateTime get enrollmentDate => throw UnimplementedError();
+      
+        @override
+        // TODO: implement id
+        String get id => throw UnimplementedError();
+      
+        @override
+        // TODO: implement progress
+        double get progress => throw UnimplementedError();
+      
+        @override
+        Map<String, dynamic> toJson() {
+          // TODO: implement toJson
+          throw UnimplementedError();
+        }
+      
+        @override
+        // TODO: implement userId
+        String get userId => throw UnimplementedError();
 }

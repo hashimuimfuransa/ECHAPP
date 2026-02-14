@@ -1,12 +1,15 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/services.dart';
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'dart:convert';
+
 import '../config/api_config.dart';
 
 class ImageUploadService {
@@ -20,14 +23,19 @@ class ImageUploadService {
     int quality = 80,
   }) async {
     try {
+      // On web, we should only allow gallery access since camera access might not work properly
+      final effectiveSource = kIsWeb ? ImageSource.gallery : source;
+      
       final XFile? pickedFile = await _picker.pickImage(
-        source: source,
+        source: effectiveSource,
         maxWidth: maxWidth.toDouble(),
         maxHeight: maxHeight.toDouble(),
         imageQuality: quality,
       );
       
       if (pickedFile != null) {
+        // On web, the path might be a blob URL, so we need to handle it differently
+        // On web, this shouldn't be reached anymore since we handle it differently in pickAndUploadImage
         return File(pickedFile.path);
       }
       return null;
@@ -116,6 +124,92 @@ class ImageUploadService {
         }
       }
     } catch (e) {
+      // Clean up the temporary file if created on web
+      if (kIsWeb) {
+        try {
+          // Attempt to delete the temporary file created for web
+          if (await imageFile.exists()) {
+            await imageFile.delete();
+          }
+        } catch (cleanupError) {
+          // Silently ignore cleanup errors
+          print('Warning: Failed to clean up temporary file: $cleanupError');
+        }
+      }
+      throw Exception('Image upload failed: $e');
+    }
+  }
+
+  /// Upload XFile directly (used for web platform)
+  static Future<String> _uploadXFile(XFile xFile) async {
+    try {
+      // Get Firebase ID token for authentication
+      final firebase_auth.User? currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final idToken = await currentUser.getIdToken(true);
+      
+      // Determine content type
+      final mimeType = lookupMimeType(xFile.path) ?? 'image/jpeg';
+      
+      // Read file as bytes
+      final bytes = await xFile.readAsBytes();
+      
+      // Create multipart request
+      final uri = Uri.parse('${ApiConfig.baseUrl}/upload/image');
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add authentication header
+      request.headers.addAll({
+        'Authorization': 'Bearer $idToken',
+      });
+      
+      // Add file to request
+      final multipartFile = http.MultipartFile.fromBytes(
+        'image',
+        bytes,
+        filename: path.basename(xFile.path),
+        contentType: MediaType.parse(mimeType),
+      );
+      
+      request.files.add(multipartFile);
+      
+      // Send request
+      final response = await request.send();
+      
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        
+        // Parse JSON response to extract image URL
+        try {
+          final jsonResponse = json.decode(responseBody);
+          if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+            final data = jsonResponse['data'];
+            if (data['imageUrl'] != null) {
+              return data['imageUrl'];
+            } else if (data['signedUrl'] != null) {
+              return data['signedUrl']; // Fallback to signed URL
+            } else {
+              throw Exception('Image URL not found in response');
+            }
+          } else {
+            throw Exception(jsonResponse['message'] ?? 'Upload failed');
+          }
+        } catch (parseError) {
+          throw Exception('Failed to parse upload response: $parseError');
+        }
+      } else {
+        final errorBody = await response.stream.bytesToString();
+        try {
+          final errorResponse = json.decode(errorBody);
+          throw Exception(errorResponse['message'] ?? 'Upload failed with status: ${response.statusCode}');
+        } catch (e) {
+          throw Exception('Upload failed with status: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
       throw Exception('Image upload failed: $e');
     }
   }
@@ -128,17 +222,33 @@ class ImageUploadService {
     int quality = 80,
   }) async {
     try {
-      final imageFile = await pickImage(
-        source: source,
-        maxWidth: maxWidth,
-        maxHeight: maxHeight,
-        quality: quality,
-      );
-      
-      if (imageFile != null) {
-        return await uploadImage(imageFile);
+      // On web, we need to handle the upload differently
+      if (kIsWeb) {
+        final effectiveSource = ImageSource.gallery; // Force gallery on web
+        final xFile = await _picker.pickImage(
+          source: effectiveSource,
+          maxWidth: maxWidth.toDouble(),
+          maxHeight: maxHeight.toDouble(),
+          imageQuality: quality,
+        );
+        
+        if (xFile != null) {
+          return await _uploadXFile(xFile); // Use a new method for XFile uploads on web
+        }
+        return null;
+      } else {
+        final imageFile = await pickImage(
+          source: source,
+          maxWidth: maxWidth,
+          maxHeight: maxHeight,
+          quality: quality,
+        );
+        
+        if (imageFile != null) {
+          return await uploadImage(imageFile);
+        }
+        return null;
       }
-      return null;
     } catch (e) {
       throw Exception('Pick and upload failed: $e');
     }

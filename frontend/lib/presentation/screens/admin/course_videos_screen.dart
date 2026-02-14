@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/api/video_service.dart';
-import 'package:excellence_coaching_hub/models/video.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/api/video_service.dart';
+import 'package:excellencecoachinghub/models/video.dart';
 
 class CourseVideosScreen extends StatefulWidget {
   final String courseId;

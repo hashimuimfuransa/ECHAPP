@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/providers/admin_dashboard_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/notification_provider.dart';
-import 'package:excellence_coaching_hub/services/admin_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/services/admin_service.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});

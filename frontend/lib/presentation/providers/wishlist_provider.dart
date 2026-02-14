@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/wishlist_service.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/services/wishlist_service.dart';
 
 final wishlistServiceProvider = Provider<WishlistService>((ref) {
   return WishlistService();

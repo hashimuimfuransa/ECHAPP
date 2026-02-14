@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
-import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});

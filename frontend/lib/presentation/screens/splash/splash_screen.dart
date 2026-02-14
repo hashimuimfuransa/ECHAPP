@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -18,8 +17,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     
-    // Simple navigation after minimal delay
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // Start listening for auth changes immediately
+    _checkAuthAndNavigate();
+    
+    // Simple navigation after minimal delay as fallback
+    Future.delayed(const Duration(milliseconds: 2000), () {
       _navigateBasedOnAuth();
     });
   }
@@ -35,21 +37,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _checkAuthAndNavigate() {
-    // Listen for auth state changes
-    ref.listen(authProvider, (previous, current) {
-      debugPrint('Splash: Auth state changed - User: ${current.user != null}, Loading: ${current.isLoading}');
-      
-      // Only navigate after the splash animation completes and we have a definitive auth state
-      if (!current.isLoading) {
-        if (current.user != null) {
-          debugPrint('Splash: Navigating to dashboard');
-          context.go('/dashboard');
-        } else {
-          debugPrint('Splash: Navigating to auth selection');
-          context.go('/auth-selection');
-        }
+    // Check initial auth state
+    final authState = ref.read(authProvider);
+    debugPrint('Splash: Initial auth check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
+    
+    // Navigate based on current state
+    if (!authState.isLoading) {
+      if (authState.user != null) {
+        debugPrint('Splash: Navigating to dashboard');
+        context.go('/dashboard');
+      } else {
+        debugPrint('Splash: Navigating to auth selection');
+        context.go('/auth-selection');
       }
-    });
+    }
     
     // Also check initial state after delay
     Future.delayed(const Duration(milliseconds: 2500), () {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class CustomVideoPlayer extends StatefulWidget {
   final String videoUrl;

@@ -1,15 +1,16 @@
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_payment_providers.dart';
+import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_stats_provider.dart';
+import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
+import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/presentation/providers/course_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/enrollment_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/course_payment_providers.dart';
-import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
-import 'package:excellence_coaching_hub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:share_plus/share_plus.dart';
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
@@ -38,19 +39,53 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
 
   // Method to handle payment
   void _handlePayment(WidgetRef ref, Course course) async {
-    print('Initiating payment for course: ${course.title ?? "Untitled Course"} (ID: ${course.id})');
+    print('Initiating payment for course: \${course.title} (ID: \${course.id})');
     print('Course price: ${course.price}');
     
     final paymentNotifier = ref.read(paymentProvider.notifier);
     print('Payment notifier obtained');
     
     try {
-      await paymentNotifier.initiatePayment(
+      final paymentResponse = await paymentNotifier.initiatePayment(
         courseId: course.id,
         paymentMethod: 'mtn_momo',
-        contactInfo: 'Student initiated payment for ${course.title ?? "Untitled Course"}',
+        contactInfo: 'Student initiated payment for ${course.title}',
       );
       print('Payment initiation completed');
+          
+      // Show success message
+      if (ref.context.mounted) {
+        ScaffoldMessenger.of(ref.context).showSnackBar(
+          SnackBar(
+            content: Text('Payment initiated successfully! Refreshing course status...'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Refresh the pending payment status to show updated UI
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Refresh the payment data to trigger UI update
+        ref.refresh(hasPendingPaymentProvider(course.id));
+        
+        // Allow UI to update to show 'Payment Pending' status
+        await Future.delayed(const Duration(milliseconds: 1000));
+        
+        // Now navigate to the payment pending screen
+        if (ref.context.mounted) {
+          Navigator.pushReplacement(
+            ref.context,
+            MaterialPageRoute(
+              builder: (context) => PaymentPendingScreen(
+                course: course,
+                transactionId: paymentResponse.transactionId,
+                amount: paymentResponse.amount,
+              ),
+            ),
+          );
+        }
+      }
     } catch (e) {
       print('Payment initiation failed: $e');
       // Show error to user
@@ -73,21 +108,21 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           );
           
           // Navigate to payment pending screen after a short delay
-          await Future.delayed(const Duration(seconds: 2));
-          
-          // Navigate to payment pending screen
-          if (ref.context.mounted) {
-            Navigator.push(
-              ref.context,
-              MaterialPageRoute(
-                builder: (context) => PaymentPendingScreen(
-                  course: course,
-                  transactionId: 'pending',
-                  amount: course.price,
+          Future.delayed(const Duration(seconds: 2)).then((_) {
+            // Navigate to payment pending screen
+            if (ref.context.mounted) {
+              Navigator.push(
+                ref.context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentPendingScreen(
+                    course: course,
+                    transactionId: 'pending',
+                    amount: course.price,
+                  ),
                 ),
-              ),
-            );
-          }
+              );
+            }
+          });
           return; // Exit early since we're navigating
         }
         
@@ -104,14 +139,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
 
   // Method to handle sharing
   void _handleShare(Course course) async {
-    final String shareText = 'Check out this amazing course: ${course.title ?? "Untitled Course"}\n'
+    final String shareText = 'Check out this amazing course: \${course.title}\n'
         'Instructor: ${course.createdBy.fullName}\n'
         'Price: ${course.price == 0 ? 'Free' : 'RWF ${course.price.toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
         'Duration: ${course.duration} minutes\n\n'
         'Learn more at Excellence Coaching Hub!';
     
-    await Share.share(shareText, subject: 'Course Recommendation: ${course.title ?? "Untitled Course"}');
+    await Share.share(shareText, subject: 'Course Recommendation: \${course.title}');
   }
 
   @override
@@ -240,6 +275,25 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         );
                       },
                     ),
+                    // Refresh button
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                        onPressed: () {
+                          // Refresh the course detail screen
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => CourseDetailScreen(courseId: widget.courseId),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                     Container(
                       margin: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -341,7 +395,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                               ],
                               // Course title
                               Text(
-                                course.title ?? 'Untitled Course',
+                                course.title,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 28,
@@ -357,25 +411,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // Instructor info
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.person,
-                                    color: Colors.white70,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'by ${course.createdBy.fullName}',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
+
                               const SizedBox(height: 6),
                               // Rating and students (if available)
                               Row(
@@ -457,13 +493,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                             _buildEnhancedRequirements(course),
                           
                           const SizedBox(height: 30),
-                          
-
-                          
-                          // Enhanced Instructor Info
-                          _buildEnhancedInstructorInfo(course),
-                          
-                          const SizedBox(height: 40),
                           
                           // Enhanced Enroll Button
                           _buildEnhancedEnrollSection(context, course, ref, isEnrolledAsync),
@@ -1007,55 +1036,169 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedCourseStats(Course course) {
-    final stats = [
-      {
-        'icon': Icons.access_time_outlined,
-        'value': '${course.duration} mins',
-        'label': 'Duration',
-        'color': const Color(0xFF667eea)
-      },
-      {
-        'icon': Icons.speed_outlined,
-        'value': course.level,
-        'label': 'Level',
-        'color': const Color(0xFF764ba2)
-      },
-      {
-        'icon': Icons.people_outline,
-        'value': '1,248',
-        'label': 'Students',
-        'color': const Color(0xFFf093fb)
-      },
-    ];
+    return Consumer(
+      builder: (context, ref, child) {
+        final enrollmentCountAsync = ref.watch(courseStatsProvider(course.id));
+        
+        return enrollmentCountAsync.when(
+          data: (enrollmentCount) {
+            final stats = [
+              {
+                'icon': Icons.access_time_outlined,
+                'value': '${course.duration} mins',
+                'label': 'Duration',
+                'color': const Color(0xFF667eea)
+              },
+              {
+                'icon': Icons.speed_outlined,
+                'value': course.level,
+                'label': 'Level',
+                'color': const Color(0xFF764ba2)
+              },
+              {
+                'icon': Icons.people_outline,
+                'value': enrollmentCount.toString(),
+                'label': 'Students',
+                'color': const Color(0xFFf093fb)
+              },
+            ];
 
-    // Only add category if it's provided in the course data
-    if (course.category != null && course.category!['name'] != null) {
-      stats.add({
-        'icon': Icons.category_outlined,
-        'value': course.category!['name'],
-        'label': 'Category',
-        'color': const Color(0xFFf5576c)
-      });
-    }
+            // Only add category if it's provided in the course data
+            if (course.category != null && course.category!['name'] != null) {
+              stats.add({
+                'icon': Icons.category_outlined,
+                'value': course.category!['name'],
+                'label': 'Category',
+                'color': const Color(0xFFf5576c)
+              });
+            }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Course Overview',
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
-        ),
-      ],
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Course Overview',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
+                ),
+              ],
+            );
+          },
+          loading: () {
+            // Show skeleton loading while fetching enrollment count
+            final stats = [
+              {
+                'icon': Icons.access_time_outlined,
+                'value': '${course.duration} mins',
+                'label': 'Duration',
+                'color': const Color(0xFF667eea)
+              },
+              {
+                'icon': Icons.speed_outlined,
+                'value': course.level,
+                'label': 'Level',
+                'color': const Color(0xFF764ba2)
+              },
+              {
+                'icon': Icons.people_outline,
+                'value': 'Loading...',
+                'label': 'Students',
+                'color': const Color(0xFFf093fb)
+              },
+            ];
+
+            if (course.category != null && course.category!['name'] != null) {
+              stats.add({
+                'icon': Icons.category_outlined,
+                'value': course.category!['name'],
+                'label': 'Category',
+                'color': const Color(0xFFf5576c)
+              });
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Course Overview',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
+                ),
+              ],
+            );
+          },
+          error: (error, stack) {
+            // Fallback to showing 0 students if there's an error
+            final stats = [
+              {
+                'icon': Icons.access_time_outlined,
+                'value': '${course.duration} mins',
+                'label': 'Duration',
+                'color': const Color(0xFF667eea)
+              },
+              {
+                'icon': Icons.speed_outlined,
+                'value': course.level,
+                'label': 'Level',
+                'color': const Color(0xFF764ba2)
+              },
+              {
+                'icon': Icons.people_outline,
+                'value': '0',
+                'label': 'Students',
+                'color': const Color(0xFFf093fb)
+              },
+            ];
+
+            if (course.category != null && course.category!['name'] != null) {
+              stats.add({
+                'icon': Icons.category_outlined,
+                'value': course.category!['name'],
+                'label': 'Category',
+                'color': const Color(0xFFf5576c)
+              });
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Course Overview',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

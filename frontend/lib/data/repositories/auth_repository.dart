@@ -1,8 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/api_config.dart';
-import 'package:excellence_coaching_hub/models/user.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
+import 'package:excellencecoachinghub/models/user.dart';
 
 class AuthRepository {
   final http.Client _client;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class CourseListingScreen extends StatefulWidget {
   const CourseListingScreen({super.key});

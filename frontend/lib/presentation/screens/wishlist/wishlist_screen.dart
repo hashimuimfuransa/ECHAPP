@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/presentation/providers/wishlist_provider.dart';
-import 'package:excellence_coaching_hub/presentation/screens/courses/course_detail_screen.dart';
-import 'package:excellence_coaching_hub/presentation/widgets/beautiful_widgets.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
+import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
+import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});

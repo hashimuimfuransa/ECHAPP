@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/presentation/providers/auth_provider.dart';
-import 'package:excellence_coaching_hub/presentation/providers/user_profile_provider.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -929,7 +929,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'Sign Out',
                   subtitle: 'Log out from your account',
                   onTap: () {
-                    // Handle sign out
+                    _showLogoutDialog(context);
                   },
                 ),
               ],
@@ -1129,6 +1129,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(authProvider.notifier).logout();
+                context.go('/login');
+              },
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

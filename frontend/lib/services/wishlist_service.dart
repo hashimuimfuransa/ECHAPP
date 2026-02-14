@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:excellence_coaching_hub/models/wishlist.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellencecoachinghub/models/wishlist.dart';
+import 'package:excellencecoachinghub/models/course.dart';
 
 class WishlistService {
   static const String _baseUrl = 'http://localhost:3000/api';

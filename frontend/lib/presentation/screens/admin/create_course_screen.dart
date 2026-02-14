@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/category.dart';
-import 'package:excellence_coaching_hub/data/repositories/category_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/services/image_upload_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/category.dart';
+import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/services/image_upload_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'dart:io';
 
 
@@ -178,31 +179,39 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   Future<void> _pickAndUploadImage() async {
     if (!mounted) return;
     
-    final source = await showDialog<ImageSource>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Image Source'),
-          content: const Text('Choose where to pick your course thumbnail from:'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.camera),
-              child: const Text('Camera'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
-              child: const Text('Gallery'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
+    ImageSource source;
     
-    if (source == null) return;
+    // On web, we should only use gallery since camera access might not work properly
+    if (kIsWeb) {
+      source = ImageSource.gallery;
+    } else {
+      ImageSource? dialogResult = await showDialog<ImageSource?>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Image Source'),
+            content: const Text('Choose where to pick your course thumbnail from:'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+                child: const Text('Camera'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+                child: const Text('Gallery'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+      
+      if (dialogResult == null) return;
+      source = dialogResult;
+    }
 
     setState(() {
       _isUploadingImage = true;
@@ -682,7 +691,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
                 ),
-                items: _categories.map((category) {
+                items: _categories.map<DropdownMenuItem<String>>((category) {
                   return DropdownMenuItem(
                     value: category.id,
                     child: Text(category.name ?? 'Unnamed Category'),

@@ -187,7 +187,7 @@ const getExamQuestions = async (req, res) => {
     }
 
     const questions = await Question.find({ examId })
-      .select('question options points');
+      .select('question type options points section');
 
     sendSuccess(res, { exam, questions }, 'Exam questions retrieved successfully');
   } catch (error) {
@@ -230,8 +230,16 @@ const submitExam = async (req, res) => {
       const question = questions.find(q => q._id.toString() === userAnswer.questionId);
       if (question) {
         totalPoints += question.points;
-        if (question.correctAnswer === userAnswer.selectedOption) {
-          score += question.points;
+        
+        // For MCQ and True/False questions, compare against correct answer index
+        if (question.type === 'mcq' || question.type === 'true_false') {
+          if (question.correctAnswer === userAnswer.selectedOption) {
+            score += question.points;
+          }
+        } else {
+          // For open questions and fill-in-the-blank, we might need manual grading
+          // For now, we'll skip scoring these questions automatically
+          // In a real system, these would require manual review
         }
       }
     }
@@ -342,13 +350,20 @@ const getUserExamHistory = async (req, res) => {
           
           // Determine if the answer was correct
           let isCorrect = false;
-          if (typeof question.correctAnswer === 'number') {
-            // Correct answer is an index
-            isCorrect = userAnswer.selectedOption === question.correctAnswer;
+          if (question.type === 'mcq' || question.type === 'true_false') {
+            // For MCQ and True/False questions
+            if (typeof question.correctAnswer === 'number') {
+              // Correct answer is an index
+              isCorrect = userAnswer.selectedOption === question.correctAnswer;
+            } else {
+              // Correct answer is a string/value
+              isCorrect = userAnswer.selectedOption < question.options.length && 
+                         question.options[userAnswer.selectedOption] === question.correctAnswer;
+            }
           } else {
-            // Correct answer is a string/value
-            isCorrect = userAnswer.selectedOption < question.options.length && 
-                       question.options[userAnswer.selectedOption] === question.correctAnswer;
+            // For open questions and fill-in-the-blank, we might need manual grading
+            // For now, we'll skip automatic scoring
+            isCorrect = false; // Requires manual review
           }
           
           return {
@@ -487,14 +502,21 @@ const createExam = async (req, res) => {
     // Create questions if any exist
     if (processedQuestions && processedQuestions.length > 0) {
       const questionsWithExamId = processedQuestions.map(q => {
-        // Find the index of the correct answer in the options
-        const correctAnswerIndex = q.options.indexOf(q.correctAnswer);
+        // Handle both MCQ and open questions
+        let correctAnswer = q.correctAnswer;
+        if (q.type === 'mcq' && q.options && q.correctAnswer) {
+          // For MCQ questions, convert correct answer to index if it's the actual answer text
+          const correctAnswerIndex = q.options.indexOf(q.correctAnswer);
+          correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
+        }
         
         return {
           question: q.question,
-          options: q.options,
-          correctAnswer: correctAnswerIndex !== -1 ? correctAnswerIndex : 0, // Store index of correct answer
+          type: q.type || 'mcq',
+          options: q.options || [],
+          correctAnswer: correctAnswer,
           points: q.points || 1,
+          section: q.section || null,
           examId: exam._id
         };
       });

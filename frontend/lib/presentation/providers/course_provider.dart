@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/data/repositories/course_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/categories_service.dart';
-import 'package:excellence_coaching_hub/data/repositories/enrollment_repository.dart';
-import 'package:excellence_coaching_hub/data/repositories/category_repository.dart';
-import 'package:excellence_coaching_hub/models/category.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/services/categories_service.dart';
+import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
+import 'package:excellencecoachinghub/models/category.dart';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();

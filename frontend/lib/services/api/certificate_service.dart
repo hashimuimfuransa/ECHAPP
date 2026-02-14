@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellencecoachinghub/models/course.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 

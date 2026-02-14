@@ -1,12 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/ai_chat_service.dart';
-import 'package:excellence_coaching_hub/widgets/ai_chat_messages_list.dart';
-import 'package:excellence_coaching_hub/widgets/ai_chat_input_widget.dart';
-import 'package:excellence_coaching_hub/widgets/voice_chat_widget.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_messages_list.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_input_widget.dart';
+import 'package:excellencecoachinghub/widgets/voice_chat_widget.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Modern AI Chat Dialog Widget with Glass Morphism Effect
@@ -55,16 +55,16 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     );
     
     _headerAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Slightly shorter duration for better visibility
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
     
     _headerSlideAnimation = Tween<double>(
-      begin: -30.0, // Reduce starting offset to ensure header is visible
+      begin: -30.0,
       end: 0.0,
     ).animate(CurvedAnimation(
       parent: _headerAnimationController,
-      curve: Curves.easeOut, // Use simpler curve for more predictable movement
+      curve: Curves.easeOut,
     ));
 
     _flutterTts = FlutterTts();
@@ -74,7 +74,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     _flutterTts.setPitch(1.0);
     
     _animationController.forward().then((_) {
-      // Add a small delay before starting header animation for better visual effect
       Future.delayed(const Duration(milliseconds: 100), () {
         _headerAnimationController.forward();
       });
@@ -91,7 +90,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   }
 
   void _speakMessage(String message) {
-    // Speak the AI response from voice chat
     _flutterTts.speak(message);
   }
 
@@ -102,7 +100,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
         _messages = messages;
       });
       
-      // Add welcome message if no messages exist
       if (messages.isEmpty) {
         await _sendWelcomeMessage();
       }
@@ -145,14 +142,12 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
       _messages.add(aiMessage);
     });
 
-    // Speak the welcome message
     await _flutterTts.speak(aiMessage.message);
   }
 
   Future<void> _handleSendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
-    // Add user message
     final userMessage = AIChatMessage(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',
       sender: 'user',
@@ -168,16 +163,13 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     });
 
     try {
-      // Create context for AI
       final context = AIChatContext(
         currentCourse: widget.currentCourse,
         currentLesson: widget.currentLesson,
       );
 
-      // Simulate typing delay for better UX
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Send message to AI service
       final aiResponse = await widget.chatService.sendMessage(
         widget.conversationId,
         message.trim(),
@@ -190,7 +182,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
         _isTyping = false;
       });
 
-      // Speak the AI response
       await _flutterTts.speak(aiResponse.message);
     } catch (e) {
       print('Error sending message: $e');
@@ -219,249 +210,243 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
         width: MediaQuery.of(context).size.width * 0.95,
-        height: MediaQuery.of(context).size.height * 0.7, // Further increase height for better header visibility
-        margin: const EdgeInsets.fromLTRB(16, 24, 16, 16), // More top margin to ensure header is visible
+        height: MediaQuery.of(context).size.height * 0.75,
+        margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.95),
-              Colors.white.withOpacity(0.85),
-            ],
-          ),
+          borderRadius: BorderRadius.circular(28),
+          color: isDarkMode ? AppTheme.darkCard : Colors.white,
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: isDarkMode 
+              ? AppTheme.darkTextSecondary.withOpacity(0.2)
+              : Colors.grey.withOpacity(0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 30,
+              color: isDarkMode 
+                ? Colors.black.withOpacity(0.4)
+                : Colors.black.withOpacity(0.15),
+              blurRadius: 35,
               offset: const Offset(0, 15),
             ),
             BoxShadow(
-              color: AppTheme.primary.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 5),
+              color: AppTheme.primary.withOpacity(0.15),
+              blurRadius: 25,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
+          borderRadius: BorderRadius.circular(28),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: isDarkMode 
+                  ? AppTheme.darkTextSecondary.withOpacity(0.1)
+                  : Colors.white.withOpacity(0.3),
+                width: 1,
               ),
-              child: Column(
-                children: [
-                  // Modern Chat Header with Slide Animation
-                  SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -0.1), // Reduce offset so header starts slightly above but remains visible
-                      end: Offset.zero,
-                    ).animate(_headerSlideAnimation),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppTheme.primary,
-                            AppTheme.primaryDark,
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
+            ),
+            child: Column(
+              children: [
+                // Theme-aware Chat Header with Slide Animation
+                SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, -0.1),
+                    end: Offset.zero,
+                  ).animate(_headerSlideAnimation),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primary,
+                          AppTheme.primaryDark,
                         ],
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.auto_awesome,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withOpacity(0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  'AI Learning Assistant',
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'AI Learning Assistant',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (widget.currentCourse != null)
+                                Text(
+                                  widget.currentCourse!.title,
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (widget.currentCourse != null)
-                                  Text(
-                                    widget.currentCourse!.title,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: _toggleVoiceChat,
-                            icon: Icon(
-                              _showVoiceChat ? Icons.chat : Icons.mic,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          ),
-                          IconButton(
-                            onPressed: widget.onClose,
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  // Chat messages area or voice chat widget
-                  if (_showVoiceChat)
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: VoiceChatWidget(
-                            conversationId: widget.conversationId,
-                            context: {
-                              'courseTitle': widget.currentCourse?.title ?? '',
-                              'lessonTitle': widget.currentLesson?.title ?? '',
-                            },
-                            onVoiceMessageReceived: (text) {
-                              // Add the transcribed text to messages
-                              final userMessage = AIChatMessage(
-                                id: 'voice_user_${DateTime.now().millisecondsSinceEpoch}',
-                                sender: 'user',
-                                message: text,
-                                timestamp: DateTime.now(),
-                                isContextAware: false,
-                              );
-                              
-                              setState(() {
-                                _messages.add(userMessage);
-                              });
-                            },
-                            onTextMessageReceived: (text) {
-                              // Add the text response to messages
-                              final aiMessage = AIChatMessage(
-                                id: 'voice_ai_${DateTime.now().millisecondsSinceEpoch}',
-                                sender: 'ai',
-                                message: text,
-                                timestamp: DateTime.now(),
-                                isContextAware: true,
-                              );
-                              
-                              setState(() {
-                                _messages.add(aiMessage);
-                              });
-
-                              // Speak the AI response from voice chat
-                              _speakMessage(aiMessage.message); // Call a helper method to handle the async operation
-                            },
+                            ],
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          AIChatMessagesList(
-                            messages: _messages,
-                            currentUserId: 'user',
+                        IconButton(
+                          onPressed: _toggleVoiceChat,
+                          icon: Icon(
+                            _showVoiceChat ? Icons.chat : Icons.mic,
+                            color: Colors.white,
+                            size: 22,
                           ),
-                          // Typing indicator overlay
-                          if (_isTyping)
-                            Positioned(
-                              bottom: 16,
-                              right: 16,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.auto_awesome,
+                          padding: const EdgeInsets.all(10),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        ),
+                        IconButton(
+                          onPressed: widget.onClose,
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          padding: const EdgeInsets.all(10),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Chat messages area or voice chat widget
+                if (_showVoiceChat)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: VoiceChatWidget(
+                          conversationId: widget.conversationId,
+                          context: {
+                            'courseTitle': widget.currentCourse?.title ?? '',
+                            'lessonTitle': widget.currentLesson?.title ?? '',
+                          },
+                          onVoiceMessageReceived: (text) {
+                            final userMessage = AIChatMessage(
+                              id: 'voice_user_${DateTime.now().millisecondsSinceEpoch}',
+                              sender: 'user',
+                              message: text,
+                              timestamp: DateTime.now(),
+                              isContextAware: false,
+                            );
+                            
+                            setState(() {
+                              _messages.add(userMessage);
+                            });
+                          },
+                          onTextMessageReceived: (text) {
+                            final aiMessage = AIChatMessage(
+                              id: 'voice_ai_${DateTime.now().millisecondsSinceEpoch}',
+                              sender: 'ai',
+                              message: text,
+                              timestamp: DateTime.now(),
+                              isContextAware: true,
+                            );
+                            
+                            setState(() {
+                              _messages.add(aiMessage);
+                            });
+
+                            _speakMessage(aiMessage.message);
+                          },
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        AIChatMessagesList(
+                          messages: _messages,
+                          currentUserId: 'user',
+                        ),
+                        if (_isTyping)
+                          Positioned(
+                            bottom: 16,
+                            right: 16,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    color: AppTheme.primary,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Thinking...',
+                                    style: TextStyle(
                                       color: AppTheme.primary,
-                                      size: 16,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Thinking...',
-                                      style: TextStyle(
-                                        color: AppTheme.primary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                  
-                  // Modern Input area
-                  if (!_showVoiceChat)
-                    AIChatInputWidget(
-                      onSendMessage: _handleSendMessage,
-                      isLoading: _isLoading,
-                    ),
-                ],
-              ),
+                  ),
+                
+                // Modern Input area
+                if (!_showVoiceChat)
+                  AIChatInputWidget(
+                    onSendMessage: _handleSendMessage,
+                    isLoading: _isLoading,
+                  ),
+              ],
             ),
           ),
         ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/admin_service.dart';
-import 'package:excellence_coaching_hub/widgets/analytics_charts.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/admin_service.dart';
+import 'package:excellencecoachinghub/widgets/analytics_charts.dart';
 
 class AdminAnalyticsScreen extends StatefulWidget {
   const AdminAnalyticsScreen({super.key});
@@ -595,7 +595,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                           ],
                         ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

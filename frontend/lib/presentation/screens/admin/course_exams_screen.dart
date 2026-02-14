@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
-import 'package:excellence_coaching_hub/data/repositories/exam_repository.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
 
 class CourseExamsScreen extends StatefulWidget {
   final String courseId;

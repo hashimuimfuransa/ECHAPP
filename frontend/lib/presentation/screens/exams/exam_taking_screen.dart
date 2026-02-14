@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'exam_history_screen.dart';
 
 class ExamTakingScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class ExamTakingScreen extends StatefulWidget {
 
 class _ExamTakingScreenState extends State<ExamTakingScreen> {
   List<Question> _questions = [];
-  final Map<int, String?> _answers = {};
+  final Map<int, dynamic> _answers = {}; // Can store String for MCQ or String for open questions
   int _currentQuestionIndex = 0;
   int _timeRemaining = 0;
   Timer? _timer;
@@ -87,9 +87,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     return '$minutes:$secs';
   }
 
-  void _selectAnswer(String answer) {
+  void _selectAnswer(dynamic answer) {
     setState(() {
-      _answers[_currentQuestionIndex] = answer; // Store the actual answer string for UI
+      _answers[_currentQuestionIndex] = answer; // Store the answer (can be string for MCQ or open text)
     });
   }
 
@@ -123,13 +123,21 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
       final answers = _answers.entries
           .where((entry) => entry.value != null)
           .map((entry) {
-            // Convert answer string to index for backend
             final question = _questions[entry.key];
-            final answerIndex = question.options.indexOf(entry.value!);
-            return {
-              'questionId': question.id,
-              'selectedOption': answerIndex >= 0 ? answerIndex : 0,
-            };
+            if (question.type == 'mcq' || question.type == 'true_false') {
+              // For MCQ and True/False questions, convert answer string to index
+              final answerIndex = question.options.indexOf(entry.value.toString());
+              return {
+                'questionId': question.id,
+                'selectedOption': answerIndex >= 0 ? answerIndex : 0,
+              };
+            } else {
+              // For open questions and fill-in-the-blank, store the text answer
+              return {
+                'questionId': question.id,
+                'selectedOption': entry.value.toString(), // Store the actual text for open and fill-blank questions
+              };
+            }
           })
           .toList();
 
@@ -273,7 +281,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                   const Text(
                     'This exam doesn\'t have any questions configured yet. Please contact your instructor or try again later.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       color: AppTheme.greyColor,
                       height: 1.5,
@@ -548,7 +556,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     );
   }
 
-  Widget _buildQuestionCard(Question question, String? selectedAnswer) {
+  Widget _buildQuestionCard(Question question, dynamic selectedAnswer) {
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(
@@ -583,6 +591,24 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                       fontSize: 14,
                     ),
                   ),
+                  if (question.section != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        question.section!,
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -618,99 +644,258 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             
             const SizedBox(height: 32),
             
-            // Options
-            Expanded(
-              child: ListView.separated(
-                itemCount: question.options.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final option = question.options[index];
-                  final isSelected = selectedAnswer == option;
-                  
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected 
-                          ? AppTheme.primary 
-                          : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                      color: isSelected 
-                        ? AppTheme.primary.withOpacity(0.1) 
-                        : Colors.white,
-                      boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _selectAnswer(option),
+            // Different UI for MCQ vs Open questions
+            if (question.type == 'mcq')
+              // MCQ Options
+              Expanded(
+                child: ListView.separated(
+                  itemCount: question.options.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final option = question.options[index];
+                    final isSelected = selectedAnswer == option;
+                    
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              // Option indicator
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: isSelected 
-                                    ? AppTheme.primary 
-                                    : Colors.grey.shade300,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
+                        border: Border.all(
+                          color: isSelected 
+                            ? AppTheme.primary 
+                            : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        color: isSelected 
+                          ? AppTheme.primary.withOpacity(0.1) 
+                          : Colors.white,
+                        boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primary.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _selectAnswer(option),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Option indicator
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
                                     color: isSelected 
                                       ? AppTheme.primary 
-                                      : Colors.grey.shade400,
-                                    width: 2,
+                                      : Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected 
+                                        ? AppTheme.primary 
+                                        : Colors.grey.shade400,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                    ? const Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                                ),
+                                const SizedBox(width: 16),
+                                
+                                // Option text
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: isSelected 
+                                        ? FontWeight.w600 
+                                        : FontWeight.normal,
+                                      color: isSelected 
+                                        ? AppTheme.primary 
+                                        : AppTheme.blackColor,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ),
-                                child: isSelected
-                                  ? const Icon(
-                                      Icons.check,
-                                      size: 18,
-                                      color: Colors.white,
-                                    )
-                                  : null,
-                              ),
-                              const SizedBox(width: 16),
-                              
-                              // Option text
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: isSelected 
-                                      ? FontWeight.w600 
-                                      : FontWeight.normal,
-                                    color: isSelected 
-                                      ? AppTheme.primary 
-                                      : AppTheme.blackColor,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                    );
+                  },
+                ),
+              )
+            else if (question.type == 'true_false')
+              // True/False Options
+              Expanded(
+                child: ListView.separated(
+                  itemCount: question.options.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final option = question.options[index];
+                    final isSelected = selectedAnswer == option;
+                    
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected 
+                            ? AppTheme.primary 
+                            : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        color: isSelected 
+                          ? AppTheme.primary.withOpacity(0.1) 
+                          : Colors.white,
+                        boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primary.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _selectAnswer(option),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Option indicator
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                      ? AppTheme.primary 
+                                      : Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected 
+                                        ? AppTheme.primary 
+                                        : Colors.grey.shade400,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                    ? const Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                                ),
+                                const SizedBox(width: 16),
+                                
+                                // Option text
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: isSelected 
+                                        ? FontWeight.w600 
+                                        : FontWeight.normal,
+                                      color: isSelected 
+                                        ? AppTheme.primary 
+                                        : AppTheme.blackColor,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else if (question.type == 'fill_blank')
+              // Fill-in-the-blank Text Field
+              Expanded(
+                child: TextField(
+                  keyboardType: TextInputType.text,
+                  maxLines: 1,
+                  onChanged: (value) => _selectAnswer(value),
+                  controller: TextEditingController(text: selectedAnswer?.toString()),
+                  decoration: InputDecoration(
+                    hintText: 'Fill in the blank...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
                     ),
-                  );
-                },
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
+              )
+            else
+              // Open Question Text Field
+              Expanded(
+                child: TextField(
+                  keyboardType: TextInputType.multiline,
+                  maxLines: null,
+                  expands: true,
+                  onChanged: (value) => _selectAnswer(value),
+                  controller: TextEditingController(text: selectedAnswer?.toString()),
+                  decoration: InputDecoration(
+                    hintText: 'Type your answer here...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -827,22 +1012,28 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 class Question {
   final String id;
   final String question;
+  final String type; // 'mcq' or 'open'
   final List<String> options;
   final int points;
+  final String? section;
 
   Question({
     required this.id,
     required this.question,
+    required this.type,
     required this.options,
     required this.points,
+    this.section,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
       id: json['_id'] ?? json['id'] ?? '',
       question: json['question'] ?? '',
+      type: json['type'] ?? 'mcq',
       options: List<String>.from(json['options'] ?? []),
       points: json['points'] ?? 1,
+      section: json['section'],
     );
   }
 }

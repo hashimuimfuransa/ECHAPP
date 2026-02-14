@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/admin_service.dart';
-import 'package:excellence_coaching_hub/models/user.dart';
-import 'package:excellence_coaching_hub/models/enrollment.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/admin_service.dart';
+import 'package:excellencecoachinghub/models/user.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
   const AdminStudentsScreen({super.key});

@@ -1,9 +1,10 @@
+import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/data/repositories/certificate_repository.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class CertificatesScreen extends ConsumerWidget {
   const CertificatesScreen({super.key});
@@ -175,7 +176,7 @@ class CertificatesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                course.title!,
+                course.title,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,

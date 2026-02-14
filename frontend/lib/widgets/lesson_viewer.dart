@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/services/api/video_api_service.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/api/exam_service.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/services/download_service.dart';
-import 'package:excellence_coaching_hub/models/download.dart';
-import 'package:excellence_coaching_hub/widgets/ai_floating_chat_button.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/models/download.dart';
+import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
 import 'dart:io';
 
 /// Comprehensive lesson viewer that handles both video and notes content
@@ -768,13 +767,95 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   ],
                 ),
                 if (_isDownloading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(
-                      value: _downloadProgress,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isSmallScreen = constraints.maxWidth < 500;
+                      
+                      return Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.primaryGreen.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Progress bar
+                            LinearProgressIndicator(
+                              value: _downloadProgress,
+                              backgroundColor: Colors.grey[300],
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                              minHeight: isSmallScreen ? 6 : 8,
+                            ),
+                            const SizedBox(height: 12),
+                            // Progress information
+                            if (isSmallScreen) ...[
+                              // Stacked layout for small screens
+                              Text(
+                                'Downloading...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.getTextColor(context),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${(_downloadProgress * 100).round()}%',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryGreen,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${(widget.lesson.duration * _downloadProgress).round()}min of ${widget.lesson.duration}min',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.greyColor,
+                                ),
+                              ),
+                            ] else ...[
+                              // Row layout for larger screens
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Downloading...',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.getTextColor(context),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(_downloadProgress * 100).round()}%',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${(widget.lesson.duration * _downloadProgress).round()} of ${widget.lesson.duration} minutes downloaded',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.greyColor,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
                   ),
               ],
             ),

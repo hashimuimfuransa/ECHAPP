@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/services/download_service.dart';
-import 'package:excellence_coaching_hub/models/download.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/models/download.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';

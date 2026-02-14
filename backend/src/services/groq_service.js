@@ -103,14 +103,16 @@ class GroqService {
    * Process a single chunk with Groq
    */
   async processChunkWithGroq(chunk, examType, fileName, chunkNumber, totalChunks) {
-    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. Return 5-8 high-quality questions in JSON format only:
+    const prompt = `Extract exam questions from this text section for a ${examType.toUpperCase()} test. Return 5-8 high-quality questions in JSON format only. Support multiple question types: MCQ (multiple choice), open-ended, fill-in-the-blank, and true/false. If the document has sections (e.g., Section A, Section B), organize questions accordingly:
 
 [
   {
     "question": "The question text",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": "Option A",
-    "points": 1
+    "type": "mcq", // or "open", "fill_blank", or "true_false"
+    "options": ["Option A", "Option B", "Option C", "Option D"], // Include for MCQ, omit for open/fill_blank, use ["True", "False"] for true_false
+    "correctAnswer": "Option A", // For MCQ/True_False: correct option text, for open: sample answer, for fill_blank: the exact answer
+    "points": 1,
+    "section": "Section A" // Include if applicable
   }
 ]
 
@@ -120,7 +122,12 @@ ${chunk}
 Requirements:
 - Extract relevant questions from this section only
 - Create appropriate ${examType.toUpperCase()} exam questions
-- Multiple choice with 4 options
+- Support MCQ (with 4 options), open-ended, fill-in-the-blank, and true/false questions
+- If document has sections (like Section A, Section B), assign questions to appropriate sections
+- For open-ended questions, omit the options field and provide a sample answer in correctAnswer
+- For fill-in-the-blank questions, provide the question with blank(s) and the correct answer
+- For true/false questions, provide options ["True", "False"] and correct answer
+- For MCQ questions, provide 4 options and specify the correct answer
 - Clear and unambiguous questions
 - JSON format only, no extra text
 - Generate 5-8 comprehensive questions per section`;
@@ -147,8 +154,8 @@ Requirements:
       
       // Try multiple JSON extraction patterns
       const patterns = [
-        /```json\n([\s\S]*?)\n```/,  // ```json
-        /```([\s\S]*?)```/,          // ```
+        /```json\n([\s\S]*?)\n```/,  // \`\`\`json
+        /```([\s\S]*?)```/,          // \`\`\`
         /\[([\s\S]*)\]/,             // Direct array
         /\{([\s\S]*)\}/              // Direct object containing array
       ];
@@ -219,7 +226,7 @@ Requirements:
         
         // If all parsing fails, try line-by-line parsing
         console.log('Attempting line-by-line JSON parsing...');
-        questions = this.parseQuestionsLineByLine(cleanJson);
+        questions = this.parseQuestionsLineByLineExtended(cleanJson);
         if (questions && questions.length > 0) {
           console.log(`Successfully parsed ${questions.length} questions line-by-line`);
           return this.validateAndCleanQuestions(questions);
@@ -232,9 +239,11 @@ Requirements:
       return questions.map((q, index) => ({
         id: `q_${Date.now()}_${chunkNumber}_${index}`,
         question: q.question || `Question from section ${chunkNumber}`,
-        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [`Option A`, `Option B`, `Option C`, `Option D`],
-        correctAnswer: q.correctAnswer || (q.options ? q.options[0] : "Option A"),
-        points: q.points || 1
+        type: q.type || 'mcq', // Default to mcq if not specified
+        options: q.type === 'mcq' && Array.isArray(q.options) ? q.options.slice(0, 4) : [], // Only for MCQ
+        correctAnswer: q.correctAnswer || (q.type === 'open' ? null : (q.options ? q.options[0] : "Option A")),
+        points: q.points || 1,
+        section: q.section || null // Include section if provided
       })).filter(q => q.question && q.question.length > 10); // Filter out poor quality questions
       
     } catch (error) {
@@ -323,93 +332,155 @@ Requirements:
     const templates = [
       {
         question: `Based on the content of "${fileName}", what is the main topic discussed?`,
+        type: 'mcq',
         options: ["Topic A", "Topic B", "Topic C", "Topic D"],
         correctAnswer: "Topic A",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `What key concept was covered in the ${examType} material?`,
+        type: 'mcq',
         options: ["Concept 1", "Concept 2", "Concept 3", "Concept 4"],
         correctAnswer: "Concept 1",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `According to the document, which principle is most important?`,
+        type: 'mcq',
         options: ["Principle X", "Principle Y", "Principle Z", "Principle W"],
         correctAnswer: "Principle X",
-        points: 1
+        points: 1,
+        section: null
+      },
+      {
+        question: `______ is the process by which plants convert sunlight to energy.`,
+        type: 'fill_blank',
+        correctAnswer: "Photosynthesis",
+        points: 1,
+        section: null
+      },
+      {
+        question: `True or False: The Earth is the third planet from the Sun.`,
+        type: 'true_false',
+        options: ["True", "False"],
+        correctAnswer: "True",
+        points: 1,
+        section: null
+      },
+      {
+        question: `What is the capital of France? ______`,
+        type: 'fill_blank',
+        correctAnswer: "Paris",
+        points: 1,
+        section: null
+      },
+      {
+        question: `______ is the largest mammal in the world.`,
+        type: 'fill_blank',
+        correctAnswer: "Blue whale",
+        points: 1,
+        section: null
+      },
+      {
+        question: `True or False: Water boils at 100 degrees Celsius at sea level.`,
+        type: 'true_false',
+        options: ["True", "False"],
+        correctAnswer: "True",
+        points: 1,
+        section: null
       },
       {
         question: `What is the primary focus of this educational content?`,
+        type: 'mcq',
         options: ["Focus Area 1", "Focus Area 2", "Focus Area 3", "Focus Area 4"],
         correctAnswer: "Focus Area 1",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `Based on the material, what should students understand most?`,
+        type: 'mcq',
         options: ["Understanding A", "Understanding B", "Understanding C", "Understanding D"],
         correctAnswer: "Understanding A",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `What methodology or approach is emphasized in this ${examType}?`,
+        type: 'mcq',
         options: ["Method A", "Method B", "Method C", "Method D"],
         correctAnswer: "Method A",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `Which theory or framework is central to this content?`,
+        type: 'mcq',
         options: ["Theory X", "Theory Y", "Theory Z", "Theory W"],
         correctAnswer: "Theory X",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `What practical application is highlighted in the material?`,
-        options: ["Application 1", "Application 2", "Application 3", "Application 4"],
-        correctAnswer: "Application 1",
-        points: 1
+        type: 'open',
+        correctAnswer: "Students should describe the practical application in their own words.",
+        points: 2,
+        section: null
       },
       {
         question: `What critical thinking skill is developed through this content?`,
-        options: ["Skill Alpha", "Skill Beta", "Skill Gamma", "Skill Delta"],
-        correctAnswer: "Skill Alpha",
-        points: 1
+        type: 'open',
+        correctAnswer: "Students should explain the critical thinking skill in detail.",
+        points: 2,
+        section: null
       },
       {
-        question: `What real-world scenario is addressed in this educational material?`,
-        options: ["Scenario One", "Scenario Two", "Scenario Three", "Scenario Four"],
-        correctAnswer: "Scenario One",
-        points: 1
+        question: `Describe the real-world scenario addressed in this educational material.`,
+        type: 'open',
+        correctAnswer: "Students should provide a detailed explanation of the real-world scenario.",
+        points: 2,
+        section: null
       },
       {
         question: `What problem-solving technique is taught in this section?`,
+        type: 'mcq',
         options: ["Technique P", "Technique Q", "Technique R", "Technique S"],
         correctAnswer: "Technique P",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `What analytical approach is recommended for understanding this content?`,
+        type: 'mcq',
         options: ["Approach I", "Approach II", "Approach III", "Approach IV"],
         correctAnswer: "Approach I",
-        points: 1
+        points: 1,
+        section: null
       },
       {
         question: `What evaluation criteria are established in this material?`,
-        options: ["Criteria 1", "Criteria 2", "Criteria 3", "Criteria 4"],
-        correctAnswer: "Criteria 1",
-        points: 1
+        type: 'open',
+        correctAnswer: "Students should list and explain the evaluation criteria.",
+        points: 2,
+        section: null
       },
       {
         question: `What learning outcome is expected from mastering this content?`,
-        options: ["Outcome X", "Outcome Y", "Outcome Z", "Outcome W"],
-        correctAnswer: "Outcome X",
-        points: 1
+        type: 'open',
+        correctAnswer: "Students should describe the expected learning outcomes.",
+        points: 2,
+        section: null
       },
       {
         question: `What foundational knowledge is assumed for this ${examType}?`,
+        type: 'mcq',
         options: ["Knowledge Base A", "Knowledge Base B", "Knowledge Base C", "Knowledge Base D"],
         correctAnswer: "Knowledge Base A",
-        points: 1
+        points: 1,
+        section: null
       }
     ];
     
@@ -418,9 +489,11 @@ Requirements:
     return templates.slice(0, questionCount).map((template, index) => ({
       id: `template_q_${Date.now()}_${index}`,
       question: template.question,
-      options: [...template.options],
+      type: template.type,
+      options: template.options || [],
       correctAnswer: template.correctAnswer,
-      points: template.points
+      points: template.points,
+      section: template.section
     }));
   }
 
@@ -456,9 +529,11 @@ Requirements:
     return questions.map((q, index) => ({
       id: `q_${Date.now()}_${index}`,
       question: q.question || `Question ${index + 1}`,
-      options: Array.isArray(q.options) ? q.options.slice(0, 4) : [`Option A`, `Option B`, `Option C`, `Option D`],
-      correctAnswer: q.correctAnswer || (q.options ? q.options[0] : "Option A"),
-      points: q.points || 1
+      type: q.type || 'mcq', // Default to mcq if not specified
+      options: (q.type === 'mcq' || q.type === 'true_false') && Array.isArray(q.options) ? (q.type === 'true_false' ? ['True', 'False'] : q.options.slice(0, 4)) : [], // Options for MCQ and True/False
+      correctAnswer: q.correctAnswer || (q.type === 'open' ? null : (q.options ? q.options[0] : (q.type === 'fill_blank' ? '' : "Option A"))),
+      points: q.points || 1,
+      section: q.section || null // Include section if provided
     })).filter(q => q.question && q.question.length > 5); // Filter out poor quality questions
   }
   
@@ -507,6 +582,89 @@ Requirements:
         const answerMatch = trimmedLine.match(/"correctAnswer"\s*:\s*"([^"]+)"/);
         if (answerMatch) {
           currentQuestion.correctAnswer = answerMatch[1];
+        }
+      }
+    }
+    
+    // Add the last question if it exists
+    if (currentQuestion) {
+      questions.push(currentQuestion);
+    }
+    
+    return questions;
+  }
+  
+  /**
+   * Parse questions from potentially malformed JSON line by line - Extended version supporting question types and sections
+   */
+  parseQuestionsLineByLineExtended(text) {
+    const questions = [];
+    const lines = text.split('\n');
+    
+    let currentQuestion = null;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Look for question patterns
+      if (trimmedLine.includes('question') && trimmedLine.includes('"')) {
+        const questionMatch = trimmedLine.match(/"question"\s*:\s*"([^"]+)"/);
+        if (questionMatch) {
+          if (currentQuestion) {
+            questions.push(currentQuestion);
+          }
+          currentQuestion = {
+            question: questionMatch[1],
+            type: 'mcq', // Default to mcq
+            options: [],
+            correctAnswer: null,
+            points: 1,
+            section: null
+          };
+        }
+      }
+      
+      // Look for question type
+      if (currentQuestion && trimmedLine.includes('type') && trimmedLine.includes('"')) {
+        const typeMatch = trimmedLine.match(/"type"\s*:\s*"([^"]+)"/);
+        if (typeMatch) {
+          currentQuestion.type = typeMatch[1];
+        }
+      }
+      
+      // Look for options
+      if (currentQuestion && trimmedLine.includes('options') && trimmedLine.includes('[')) {
+        const optionsMatch = trimmedLine.match(/"options"\s*:\s*\[([^\]]+)\]/);
+        if (optionsMatch) {
+          const optionsText = optionsMatch[1];
+          const optionMatches = optionsText.match(/"([^"]+)"/g);
+          if (optionMatches) {
+            currentQuestion.options = optionMatches.map(opt => opt.replace(/"/g, ''));
+          }
+        }
+      }
+      
+      // Look for correct answer
+      if (currentQuestion && trimmedLine.includes('correctAnswer') && trimmedLine.includes('"')) {
+        const answerMatch = trimmedLine.match(/"correctAnswer"\s*:\s*"([^"]+)"/);
+        if (answerMatch) {
+          currentQuestion.correctAnswer = answerMatch[1];
+        }
+      }
+      
+      // Look for points
+      if (currentQuestion && trimmedLine.includes('points') && trimmedLine.includes(':')) {
+        const pointsMatch = trimmedLine.match(/"points"\s*:\s*(\d+)/);
+        if (pointsMatch) {
+          currentQuestion.points = parseInt(pointsMatch[1]);
+        }
+      }
+      
+      // Look for section
+      if (currentQuestion && trimmedLine.includes('section') && trimmedLine.includes('"')) {
+        const sectionMatch = trimmedLine.match(/"section"\s*:\s*"([^"]+)"/);
+        if (sectionMatch) {
+          currentQuestion.section = sectionMatch[1];
         }
       }
     }

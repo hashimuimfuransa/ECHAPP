@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class DocumentViewer extends StatefulWidget {
   final String documentPath;

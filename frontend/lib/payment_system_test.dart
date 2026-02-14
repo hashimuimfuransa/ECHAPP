@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/providers/payment_riverpod_provider.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/payment_management_screen_riverpod.dart';
-import 'package:excellence_coaching_hub/presentation/screens/payments/payment_history_screen.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
+import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
 
 void main() {
   runApp(

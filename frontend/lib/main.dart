@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/router/app_router.dart';
-import 'package:excellence_coaching_hub/services/firebase_auth_service.dart';
-import 'package:excellence_coaching_hub/services/categories_service.dart';
-import 'package:excellence_coaching_hub/services/download_service.dart';
-import 'package:excellence_coaching_hub/presentation/screens/settings/settings_screen.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/router/app_router.dart';
+import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
+import 'package:excellencecoachinghub/services/categories_service.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/services/push_notification_service.dart';
+import 'package:excellencecoachinghub/services/fcm_token_service.dart';
+import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseAuthService.initializeFirebase();
+  
+  // Initialize push notifications
+  await PushNotificationService.initialize();
+  
+  // Initialize and sync FCM token
+  await FCMTokenService.initializeAndSyncToken();
   
   // Initialize download service
   final downloadService = DownloadService();

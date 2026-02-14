@@ -20,6 +20,10 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        freeCompilerArgs += listOf(
+            "-Xsuppress-version-warnings",
+            "-opt-in=kotlin.RequiresOptIn"
+        )
     }
 
     defaultConfig {
@@ -31,6 +35,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Enable multidex for apps with many dependencies
+        multiDexEnabled = true
     }
 
     buildTypes {

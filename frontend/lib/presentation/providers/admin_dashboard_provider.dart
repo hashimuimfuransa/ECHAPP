@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/services/admin_service.dart';
+import 'package:excellencecoachinghub/services/admin_service.dart';
 
 class AdminDashboardState {
   final bool isLoading;

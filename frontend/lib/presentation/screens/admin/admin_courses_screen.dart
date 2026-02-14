@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/presentation/providers/admin_course_provider.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
+import 'package:excellencecoachinghub/models/course.dart';
 
 class AdminCoursesScreen extends ConsumerStatefulWidget {
   const AdminCoursesScreen({super.key});

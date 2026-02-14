@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -326,7 +326,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.primaryGreen,
+          activeThumbColor: AppTheme.primaryGreen,
         ),
       ],
     );

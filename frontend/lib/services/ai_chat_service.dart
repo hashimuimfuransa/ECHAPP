@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/models/lesson.dart';
-import 'package:excellence_coaching_hub/models/course.dart';
-import 'package:excellence_coaching_hub/config/api_config.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -164,7 +164,7 @@ class RealAIChatService implements AIChatService {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse(_voiceBaseUrl + '/send'), // Use centralized voice API config
+        Uri.parse('$_voiceBaseUrl/send'), // Use centralized voice API config
       );
       
       request.fields['conversationId'] = conversationId;

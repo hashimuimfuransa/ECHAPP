@@ -1,41 +1,41 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:excellence_coaching_hub/presentation/screens/splash/splash_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/auth/login_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/auth/register_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/auth/forgot_password_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/auth/auth_selection_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/auth/email_auth_option_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/dashboard/dashboard_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/courses/courses_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/courses/course_detail_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/profile/profile_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/settings/settings_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/certificates/certificates_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/privacy/privacy_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/categories/categories_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/enrolled/enrolled_courses_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/help/help_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_dashboard_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_courses_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/create_course_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_course_content_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_create_lesson_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_students_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/course_videos_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/course_materials_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/course_exams_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_settings_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/payment_management_screen_riverpod.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_videos_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/admin/admin_analytics_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/exams/create_exam_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/exams/exam_taking_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/learning/modern_student_learning_screen.dart';
-import 'package:excellence_coaching_hub/models/exam.dart' as exam_model;
-import 'package:excellence_coaching_hub/presentation/screens/downloads/downloads_screen.dart';
-import 'package:excellence_coaching_hub/presentation/screens/landing/landing_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/splash/splash_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/login_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/register_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/forgot_password_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/profile/profile_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/privacy/privacy_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/categories/categories_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/enrolled/enrolled_courses_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/help/help_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_dashboard_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_courses_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/create_course_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_course_content_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_create_lesson_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_students_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/course_videos_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/course_materials_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/course_exams_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/notifications/notifications_screen.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
+import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 
 class AppRouter {
   GoRouter get router => GoRouter(
@@ -102,6 +102,12 @@ class AppRouter {
           GoRoute(
             path: '/downloads',
             builder: (context, state) => const DownloadsScreen(),
+          ),
+          
+          // Notifications Route
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const NotificationsScreen(),
           ),
           
           // Admin Routes

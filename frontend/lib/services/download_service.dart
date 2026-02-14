@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:excellence_coaching_hub/models/download.dart';
+import 'package:excellencecoachinghub/models/download.dart';
 import 'dart:convert';
 
 class DownloadService {

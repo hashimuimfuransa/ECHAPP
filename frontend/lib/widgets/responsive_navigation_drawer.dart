@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellence_coaching_hub/config/app_theme.dart';
-import 'package:excellence_coaching_hub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 class ResponsiveNavigationDrawer extends ConsumerWidget {
   final String currentPage;
@@ -60,13 +61,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     ];
 
     if (ResponsiveBreakpoints.isDesktop(context)) {
-      return _buildDesktopDrawer(context, navItems);
+      return _buildDesktopDrawer(context, navItems, ref);
     } else {
-      return _buildMobileDrawer(context, navItems);
+      return _buildMobileDrawer(context, navItems, ref);
     }
   }
 
-  Widget _buildDesktopDrawer(BuildContext context, List<Map<String, dynamic>> items) {
+  Widget _buildDesktopDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref) {
     return Container(
       width: 280,
       decoration: BoxDecoration(
@@ -132,14 +133,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           // Logout section
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildLogoutButton(context),
+            child: _buildLogoutButton(context, ref),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileDrawer(BuildContext context, List<Map<String, dynamic>> items) {
+  Widget _buildMobileDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref) {
     return Drawer(
       child: Column(
         children: [
@@ -195,7 +196,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           const Divider(),
           
           // Logout
-          _buildLogoutButton(context),
+          _buildLogoutButton(context, ref),
         ],
       ),
     );
@@ -241,7 +242,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context) {
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
     return ListTile(
       leading: const Icon(
         Icons.logout,
@@ -255,12 +256,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         ),
       ),
       onTap: () {
-        _showLogoutDialog(context);
+        _showLogoutDialog(context, ref);
       },
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -275,8 +276,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Implement logout functionality
-                // ref.read(authProvider.notifier).logout();
+                ref.read(authProvider.notifier).logout();
                 context.go('/login');
               },
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
