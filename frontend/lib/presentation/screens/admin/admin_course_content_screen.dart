@@ -1,6 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
@@ -16,6 +17,7 @@ import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
 import 'package:excellencecoachinghub/models/video.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/services/document/lesson_document_service.dart';
 import 'package:excellencecoachinghub/services/infrastructure/api_client.dart'; // For ApiException
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
@@ -1687,20 +1689,65 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                         final file = result.files.single;
                                         
                                         // Check if file path is valid before attempting upload
-                                        if (file.path != null) {
-                                          // Upload the document to the backend
-                                          final uploadResult = await _uploadDocument(file.path!, lesson['courseId']);
+                                        if (file.path != null || file.bytes != null) {
+                                          // Handle web vs mobile platform differences
+                                          Map<String, dynamic>? uploadResult;
+                                          
+                                          if (kIsWeb) {
+                                            // On web, use LessonDocumentService with PlatformFile
+                                            try {
+                                              final lessonDocumentService = LessonDocumentService();
+                                              uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
+                                                file: file,
+                                                courseId: lesson['courseId'],
+                                                sectionId: lesson['sectionId'] ?? '',
+                                              );
+                                            } catch (e) {
+                                              print('=== WEB UPLOAD ERROR ===');
+                                              print('Error type: ${e.runtimeType}');
+                                              print('Error message: $e');
+                                              print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+                                              print('=======================');
+                                              rethrow;
+                                            }
+                                          } else {
+                                            // On mobile, use the uploadDocumentForLesson method
+                                            if (file.path != null || file.bytes != null) {
+                                              final lessonDocumentService = LessonDocumentService();
+                                              try {
+                                                uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
+                                                  file: file,
+                                                  courseId: lesson['courseId'],
+                                                  sectionId: lesson['sectionId'] ?? '',
+                                                );
+                                              } catch (e) {
+                                                print('=== MOBILE UPLOAD ERROR ===');
+                                                print('Error type: ${e.runtimeType}');
+                                                print('Error message: $e');
+                                                print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+                                                print('=========================');
+                                                rethrow;
+                                              }
+                                            }
+                                          }
                                           
                                           if (uploadResult != null) {
-                                            // Handle the response - documentUrl might be in different fields
-                                            String? documentUrl = uploadResult['documentUrl'] as String?;
-                                            documentUrl ??= uploadResult['s3Key'] as String?;
-                                            if (documentUrl == null) {
-                                              // Try the data object structure
-                                              final data = uploadResult['data'];
-                                              if (data != null && data is Map<String, dynamic>) {
-                                                documentUrl = data['documentUrl'] as String?;
-                                                documentUrl ??= data['s3Key'] as String?;
+                                            // Handle the response - documentUrl is in the data object
+                                            String? documentUrl;
+                                            
+                                            // Check if it's the direct response structure
+                                            if (uploadResult is Map<String, dynamic>) {
+                                              // Try to get from the main data object
+                                              documentUrl = uploadResult['documentUrl'] as String?;
+                                              documentUrl ??= uploadResult['s3Key'] as String?;
+                                              
+                                              // If not found, check if there's a nested data object
+                                              if (documentUrl == null) {
+                                                final nestedData = uploadResult['data'];
+                                                if (nestedData != null && nestedData is Map<String, dynamic>) {
+                                                  documentUrl = nestedData['documentUrl'] as String?;
+                                                  documentUrl ??= nestedData['s3Key'] as String?;
+                                                }
                                               }
                                             }
                                             
@@ -1767,6 +1814,13 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                         });
                                       }
                                     } catch (e) {
+                                      print('=== MAIN UPLOAD CATCH BLOCK ===');
+                                      print('Final error caught:');
+                                      print('Error type: ${e.runtimeType}');
+                                      print('Error message: $e');
+                                      print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+                                      print('================================');
+                                      
                                       setDialogState(() {
                                         isUploadingDocument = false;
                                       });
@@ -1968,9 +2022,20 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
           throw Exception('User not authenticated');
         }
         
-        final file = File(filePath);
-        final bytes = await file.readAsBytes();
-        final fileName = path.basename(filePath);
+        // Handle web vs mobile platform differences
+        Uint8List bytes;
+        String fileName;
+        
+        if (kIsWeb) {
+          // On web, we should not use File operations since dart:io is not available
+          // This is the source of the error - we need to avoid using File() on web
+          throw Exception('File upload is not supported on web. Please use the UploadService instead.');
+        } else {
+          // On mobile, we can use File operations
+          final file = File(filePath);
+          bytes = await file.readAsBytes();
+          fileName = path.basename(filePath);
+        }
         
         final idToken = await currentUser.getIdToken(true);
         

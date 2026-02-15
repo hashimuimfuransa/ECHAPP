@@ -509,7 +509,8 @@ class QuestionResult {
   final String questionId;
   final String questionText;
   final List<String> options;
-  final int selectedOption;
+  final String type;
+  final dynamic selectedOption;
   final String selectedOptionText;
   final dynamic correctAnswer;
   final String correctAnswerText;
@@ -521,6 +522,7 @@ class QuestionResult {
     required this.questionId,
     required this.questionText,
     required this.options,
+    required this.type,
     required this.selectedOption,
     required this.selectedOptionText,
     required this.correctAnswer,
@@ -531,17 +533,19 @@ class QuestionResult {
   });
 
   factory QuestionResult.fromJson(Map<String, dynamic> json) {
-    // Safely parse selectedOption which can be either int or String
-    int parseSelectedOption(dynamic value) {
+    // Handle selectedOption which can be either int (for MCQ) or String (for text answers)
+    dynamic parseSelectedOption(dynamic value) {
       if (value is int) {
         return value;
       } else if (value is String) {
-        // Try to parse string to int, fallback to 0 if invalid
-        return int.tryParse(value) ?? 0;
+        // For text-based questions, return the string directly
+        // Try to parse as int for MCQ options, otherwise return the string
+        final parsedInt = int.tryParse(value);
+        return parsedInt ?? value;
       } else if (value is num) {
         return value.toInt();
       }
-      return 0;
+      return value ?? 0;
     }
     
     // Safely parse points which can be either int or String
@@ -560,6 +564,7 @@ class QuestionResult {
       questionId: json['questionId'] as String? ?? '',
       questionText: json['questionText'] as String? ?? '',
       options: (json['options'] as List?)?.map((e) => e as String).toList() ?? [],
+      type: json['type'] as String? ?? 'mcq',
       selectedOption: parseSelectedOption(json['selectedOption']),
       selectedOptionText: json['selectedOptionText'] as String? ?? '',
       correctAnswer: json['correctAnswer'],

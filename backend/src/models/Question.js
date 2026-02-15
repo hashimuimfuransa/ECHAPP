@@ -13,7 +13,7 @@ const questionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['mcq', 'open', 'fill_blank', 'true_false'], // Multiple choice, open ended, fill-in-the-blank, or true/false
+    enum: ['mcq', 'true_false', 'fill_blank', 'open'], // Support all question types
     default: 'mcq',
     required: true
   },
@@ -23,7 +23,10 @@ const questionSchema = new mongoose.Schema({
   }],
   correctAnswer: {
     type: mongoose.Schema.Types.Mixed, // Can be either string (answer text) or number (option index)
-    required: false // Not required for open questions
+    required: function() {
+      // correctAnswer is required for mcq and true_false, but optional for open and fill_blank
+      return this.type === 'mcq' || this.type === 'true_false';
+    }
   },
   points: {
     type: Number,

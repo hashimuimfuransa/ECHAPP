@@ -6,6 +6,7 @@ class Lesson {
   final String? description;
   final String? videoId;
   final String? notes;
+  final String? status;
   final int order;
   final int duration;
 
@@ -17,6 +18,7 @@ class Lesson {
     this.description,
     this.videoId,
     this.notes,
+    this.status,
     required this.order,
     required this.duration,
   });
@@ -30,6 +32,7 @@ class Lesson {
       description: json['description'] as String?,
       videoId: json['videoId'] as String?,
       notes: json['notes'] as String?,
+      status: json['status'] as String?,
       order: json['order'] ?? 0,
       duration: json['duration'] ?? 0,
     );
@@ -44,6 +47,7 @@ class Lesson {
       'description': description,
       'videoId': videoId,
       'notes': notes,
+      'status': status,
       'order': order,
       'duration': duration,
     };

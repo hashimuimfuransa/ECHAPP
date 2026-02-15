@@ -19,10 +19,14 @@ const resultSchema = new mongoose.Schema({
     },
     selectedOption: {
       type: mongoose.Schema.Types.Mixed, // Can be Number (MCQ/TrueFalse) or String (Open/FillBlank)
-      required: true
+      required: false // Not required for open questions
     },
     answerText: {
       type: String, // Store text answer for open and fill_blank questions
+      required: false
+    },
+    earnedPoints: {
+      type: Number, // Points earned for this question
       required: false
     }
   }],

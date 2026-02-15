@@ -4,7 +4,9 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
@@ -13,6 +15,21 @@ import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
 import 'dart:io';
+
+// Model for notes sections
+class NotesSection {
+  final String id;
+  final String title;
+  final int level; // 1 for main sections (#), 2 for subsections (##)
+  final int lineNumber;
+  
+  NotesSection({
+    required this.id,
+    required this.title,
+    required this.level,
+    required this.lineNumber,
+  });
+}
 
 /// Comprehensive lesson viewer that handles both video and notes content
 class LessonViewer extends ConsumerStatefulWidget {
@@ -38,6 +55,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   String _errorMessage = '';
   final VideoApiService _videoService = VideoApiService();
   final ExamService _examService = ExamService();
+  final SectionService _sectionService = SectionService();
   List<exam_model.Exam>? _sectionExams;
   bool _examsLoading = false;
   final ScrollController _scrollController = ScrollController();
@@ -45,11 +63,23 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
   Download? _currentDownload;
+  
+  // Section filtering variables
+  List<Section> _courseSections = [];
+  List<Lesson> _courseLessons = [];
+  String? _selectedSectionId;
+  bool _sectionsLoading = false;
+  
+  // Notes section filtering variables
+  List<NotesSection> _notesSections = [];
+  String? _selectedNotesSection;
+  Map<String, double> _sectionPositions = {};
 
   @override
   void initState() {
     super.initState();
     _loadLessonContent();
+    _loadCourseContent();
   }
 
   @override
@@ -95,6 +125,110 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         _errorMessage = e.toString();
       });
     }
+  }
+
+  // Load all course content for section filtering
+  Future<void> _loadCourseContent() async {
+    setState(() {
+      _sectionsLoading = true;
+    });
+
+    try {
+      print('Loading course content for course ID: ${widget.courseId}');
+      
+      // Get all sections for the course
+      _courseSections = await _sectionService.getSectionsByCourse(widget.courseId);
+      print('Loaded ${_courseSections.length} sections');
+      
+      // Get all lessons for the course
+      final courseContent = await _sectionService.getCourseContent(widget.courseId);
+      final sectionsData = courseContent['sections'] as List? ?? [];
+      
+      _courseLessons = [];
+      for (var sectionData in sectionsData) {
+        if (sectionData is Map<String, dynamic>) {
+          final lessonsData = sectionData['lessons'] as List? ?? [];
+          for (var lessonData in lessonsData) {
+            if (lessonData is Map<String, dynamic>) {
+              _courseLessons.add(Lesson.fromJson(lessonData));
+            }
+          }
+        }
+      }
+      
+      print('Loaded ${_courseLessons.length} lessons');
+      
+      // Set current section as selected
+      _selectedSectionId = widget.lesson.sectionId;
+      
+      setState(() {
+        _sectionsLoading = false;
+      });
+    } catch (e) {
+      print('Error loading course content: $e');
+      setState(() {
+        _sectionsLoading = false;
+      });
+    }
+  }
+
+  // Parse notes content to extract sections for filtering
+  void _parseNotesSections(String notesContent) {
+    _notesSections = [];
+    _sectionPositions = {};
+    
+    if (notesContent.isEmpty) return;
+    
+    List<String> lines = notesContent.split('\n');
+    NotesSection? currentSection;
+    int currentLineIndex = 0;
+    
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i].trim();
+      currentLineIndex += i;
+      
+      if (line.startsWith('# ')) {
+        // Main section heading
+        String sectionTitle = line.substring(2).trim();
+        if (currentSection != null) {
+          _notesSections.add(currentSection);
+        }
+        
+        currentSection = NotesSection(
+          id: 'section_$i',
+          title: sectionTitle,
+          level: 1,
+          lineNumber: i,
+        );
+        
+        // Store position for scrolling
+        _sectionPositions[currentSection.id] = currentLineIndex.toDouble();
+        
+      } else if (line.startsWith('## ')) {
+        // Subsection heading
+        String sectionTitle = line.substring(3).trim();
+        if (currentSection != null) {
+          _notesSections.add(currentSection);
+        }
+        
+        currentSection = NotesSection(
+          id: 'subsection_$i',
+          title: sectionTitle,
+          level: 2,
+          lineNumber: i,
+        );
+        
+        // Store position for scrolling
+        _sectionPositions[currentSection.id] = currentLineIndex.toDouble();
+      }
+    }
+    
+    // Add the last section
+    if (currentSection != null) {
+      _notesSections.add(currentSection);
+    }
+    
+    print('Parsed ${_notesSections.length} sections from notes');
   }
 
   // Load exams for the current section
@@ -868,6 +1002,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     // Parse the organized notes from the content
     String notesContent = _lessonContent!.notes ?? '';
     
+    // Parse notes sections for filtering
+    _parseNotesSections(notesContent);
+    
     // Debug: Print the notes content to console
     print('DEBUG: Notes content for lesson ${widget.lesson.id}:');
     print('Content length: ${notesContent.length}');
@@ -962,6 +1099,169 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             ),
           ),
         ),
+        // Notes section filter dropdown
+        if (_notesSections.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 16, bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.borderGrey,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      size: 18,
+                      color: AppTheme.greyColor,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Jump to Section:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.greyColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_notesSections.length} sections',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.greyColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButton<String>(
+                  value: _selectedNotesSection,
+                  hint: const Text(
+                    'Select a section to jump to...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                  isExpanded: true,
+                  underline: Container(),
+                  items: _notesSections.map((section) {
+                    return DropdownMenuItem<String>(
+                      value: section.id,
+                      child: Row(
+                        children: [
+                          // Indentation for subsections
+                          if (section.level == 2)
+                            const SizedBox(width: 20),
+                          if (section.level == 1)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryGreen.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.folder,
+                                size: 14,
+                                color: AppTheme.primaryGreen,
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.description,
+                                size: 14,
+                                color: AppTheme.accent,
+                              ),
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              section.title,
+                              style: TextStyle(
+                                fontSize: section.level == 1 ? 14 : 13,
+                                fontWeight: section.level == 1 ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedNotesSection = newValue;
+                      });
+                      _scrollToNotesSection(newValue);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Quick section buttons
+                if (_notesSections.length <= 8) // Only show buttons for reasonable number of sections
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _notesSections.map((section) {
+                      return ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedNotesSection = section.id;
+                          });
+                          _scrollToNotesSection(section.id);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _selectedNotesSection == section.id
+                              ? AppTheme.primaryGreen
+                              : Colors.white,
+                          foregroundColor: _selectedNotesSection == section.id
+                              ? Colors.white
+                              : AppTheme.primaryGreen,
+                          side: BorderSide(
+                            color: AppTheme.primaryGreen,
+                            width: 1,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: _selectedNotesSection == section.id ? 2 : 0,
+                        ),
+                        child: Text(
+                          section.title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _selectedNotesSection == section.id 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            ),
+          ),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -1459,5 +1759,129 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         ],
       ),
     );
+  }
+
+  // Navigate to first lesson in selected section
+  void _navigateToSection(String sectionId) {
+    final sectionLessons = _courseLessons
+        .where((lesson) => lesson.sectionId == sectionId)
+        .toList();
+    
+    if (sectionLessons.isNotEmpty) {
+      // Navigate to the first lesson in the selected section
+      final firstLesson = sectionLessons.first;
+      if (firstLesson.id != widget.lesson.id) {
+        // Replace current route with new lesson
+        context.pushReplacement(
+          '/learning/${widget.courseId}/lesson/${firstLesson.id}',
+          extra: firstLesson,
+        );
+      }
+    }
+  }
+
+  // Build list of lessons in selected section for quick navigation
+  Widget _buildSectionLessonsList() {
+    final sectionLessons = _courseLessons
+        .where((lesson) => lesson.sectionId == _selectedSectionId)
+        .toList();
+    
+    if (sectionLessons.isEmpty) {
+      return Container();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.primaryGreen.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Lessons in this section:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.greyColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: sectionLessons.map((lesson) {
+              final isCurrentLesson = lesson.id == widget.lesson.id;
+              return ElevatedButton(
+                onPressed: isCurrentLesson
+                    ? null
+                    : () {
+                        context.pushReplacement(
+                          '/learning/${widget.courseId}/lesson/${lesson.id}',
+                          extra: lesson,
+                        );
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isCurrentLesson
+                      ? AppTheme.primaryGreen
+                      : Colors.white,
+                  foregroundColor: isCurrentLesson
+                      ? Colors.white
+                      : AppTheme.primaryGreen,
+                  side: BorderSide(
+                    color: AppTheme.primaryGreen,
+                    width: 1,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: isCurrentLesson ? 2 : 0,
+                ),
+                child: Text(
+                  lesson.title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isCurrentLesson ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Scroll to specific section in notes content
+  void _scrollToNotesSection(String sectionId) {
+    if (_sectionPositions.containsKey(sectionId)) {
+      double position = _sectionPositions[sectionId]!;
+      // Adjust position to account for UI elements above the notes
+      double adjustedPosition = position + 300; // Approximate offset
+      
+      _scrollController.animateTo(
+        adjustedPosition,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      
+      // Show a brief confirmation
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Jumped to section'),
+          duration: const Duration(seconds: 1),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+    }
   }
 }

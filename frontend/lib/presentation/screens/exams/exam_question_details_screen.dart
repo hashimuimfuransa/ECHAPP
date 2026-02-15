@@ -239,9 +239,9 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
               ),
             ],
           ),
-          
+        
           const SizedBox(height: 12),
-          
+        
           // Question text
           Text(
             question.questionText,
@@ -250,13 +250,51 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          
+        
           const SizedBox(height: 12),
-          
-          // Options
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        
+          // Display user's answer based on question type
+          if (question.selectedOptionText.isNotEmpty && 
+              !question.selectedOptionText.contains('Invalid option')) 
+          ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.blue.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Answer:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    question.selectedOptionText,
+                    style: const TextStyle(
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        
+          // Options for MCQ and True/False questions only
+          if (question.options.isNotEmpty) ...[
+            // Only show options for MCQ and True/False questions
+            if (question.type == 'mcq' || question.type == 'true_false') ...[
+              const SizedBox(height: 12),
               const Text(
                 'Options:',
                 style: TextStyle(
@@ -272,7 +310,7 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
                 final isSelected = index == question.selectedOption;
                 final isCorrect = (question.correctAnswer is int && question.correctAnswer == index) ||
                                 (question.correctAnswer is String && question.correctAnswer == option);
-                
+              
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
@@ -335,7 +373,40 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
                   ),
                 );
               }),
-            ],
+            ]
+          ],
+        
+          // Correct answer section
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppTheme.primaryGreen.withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Correct Answer:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  question.correctAnswerText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

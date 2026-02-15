@@ -64,12 +64,43 @@ class FirebaseAuthService {
   // Password Reset
   static Future<void> sendPasswordResetEmail(String email) async {
     try {
+      debugPrint('Sending password reset email to: $email');
+      
+      // Validate email format
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+        throw Exception('Please enter a valid email address');
+      }
+      
       await _auth.sendPasswordResetEmail(email: email);
+      debugPrint('Password reset email sent successfully to: $email');
+      
+      // Additional debugging - check if email was actually sent
+      debugPrint('Firebase password reset email request completed for: $email');
+      
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Password Reset Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      
+      // Handle specific Firebase auth errors
+      switch (e.code) {
+        case 'invalid-email':
+          throw Exception('The email address is invalid.');
+        case 'user-not-found':
+          // Don't reveal if user exists for security
+          // But we'll still show success message to prevent user enumeration
+          debugPrint('User not found for email: $email, but showing success for security');
+          return; // Don't throw error, let success flow continue
+        case 'too-many-requests':
+          debugPrint('Too many requests for email: $email');
+          throw Exception('Too many requests. Please try again later.');
+        case 'network-request-failed':
+          debugPrint('Network error for email: $email');
+          throw Exception('Network error. Please check your connection.');
+        default:
+          debugPrint('Unknown error for email: $email, error: ${e.message}');
+          throw Exception('Failed to send password reset email. Please try again.');
+      }
     } catch (e) {
-      debugPrint('Password Reset Error: $e');
+      debugPrint('General Password Reset Error for email $email: $e');
       throw Exception('Failed to send password reset email. Please try again.');
     }
   }

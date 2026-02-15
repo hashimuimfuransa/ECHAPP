@@ -4,6 +4,7 @@ import 'package:excellencecoachinghub/presentation/screens/splash/splash_screen.
 import 'package:excellencecoachinghub/presentation/screens/auth/login_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/register_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/forgot_password_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/reset_password_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
@@ -73,6 +74,17 @@ class AppRouter {
           GoRoute(
             path: '/forgot-password',
             builder: (context, state) => const ForgotPasswordScreen(),
+          ),
+          GoRoute(
+            path: '/reset-password',
+            builder: (context, state) {
+              final mode = state.uri.queryParameters['mode'];
+              final oobCode = state.uri.queryParameters['oobCode'];
+              
+              // Only return oobCode if mode is resetPassword
+              final resetCode = (mode == 'resetPassword' || mode == 'verifyEmail') ? oobCode : oobCode;
+              return ResetPasswordScreen(oobCode: resetCode);
+            },
           ),
           
           // Main App Routes

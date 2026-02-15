@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/app_router.dart';
@@ -12,23 +13,38 @@ import 'package:excellencecoachinghub/presentation/screens/settings/settings_scr
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseAuthService.initializeFirebase();
   
-  // Initialize push notifications
-  await PushNotificationService.initialize();
+  // Start critical initialization in parallel
+  await Future.wait([
+    FirebaseAuthService.initializeFirebase(),
+    PushNotificationService.initialize(),
+  ]);
   
-  // Initialize and sync FCM token
-  await FCMTokenService.initializeAndSyncToken();
-  
-  // Initialize download service
-  final downloadService = DownloadService();
-  await downloadService.init();
+  // Start non-critical initialization in background
+  _initializeBackgroundServices();
   
   runApp(
     const ProviderScope(
       child: ExcellenceCoachingHubApp(),
     ),
   );
+}
+
+// Background initialization that doesn't block app startup
+Future<void> _initializeBackgroundServices() async {
+  try {
+    // Initialize FCM token sync (non-blocking)
+    await FCMTokenService.initializeAndSyncToken();
+    
+    // Initialize download service (non-blocking)
+    final downloadService = DownloadService();
+    await downloadService.init();
+    
+    debugPrint('Background services initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing background services: $e');
+    // Don't crash the app if background services fail
+  }
 }
 
 class ExcellenceCoachingHubApp extends ConsumerWidget {

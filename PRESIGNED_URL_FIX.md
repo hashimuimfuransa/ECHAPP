@@ -97,7 +97,7 @@ router.post('/presigned-url', protect, authorize('admin'), generatePresignedUrl)
 **✅ CORRECT WAY (PUT method):**
 ```javascript
 // Step 1: Get presigned URL from backend
-const presignResponse = await fetch('http://192.168.1.3:5000/api/upload/presigned-url', {
+const presignResponse = await fetch('http://192.168.1.4:5000/api/upload/presigned-url', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${authToken}`,

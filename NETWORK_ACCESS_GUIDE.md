@@ -26,7 +26,7 @@ ip addr show
 ### Option 1: Manual IP Configuration (Current Approach)
 Update the IP address in `lib/config/api_config.dart`:
 ```dart
-const String ipAddress = 'YOUR_MACHINE_IP_HERE'; // e.g., '192.168.1.3'
+const String ipAddress = 'YOUR_MACHINE_IP_HERE'; // e.g., '192.168.1.4'
 ```
 
 ### Option 2: Environment-Based Configuration (Recommended)
@@ -45,7 +45,7 @@ class ApiConfig {
       return 'http://localhost:5000/api';
     } else {
       // Mobile/Desktop - use your machine's IP
-      const String ipAddress = '192.168.1.3'; // Update this
+      const String ipAddress = '192.168.1.4'; // Update this
       return 'http://$ipAddress:5000/api';
     }
   }

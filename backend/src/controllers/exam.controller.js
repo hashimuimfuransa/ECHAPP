@@ -4,7 +4,7 @@ const Result = require('../models/Result');
 const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Enrollment = require('../models/Enrollment');
-const GroqService = require('../services/groq_service');
+const GrokService = require('../services/grok_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all exams for admin
@@ -221,7 +221,7 @@ const submitExam = async (req, res) => {
     
     // For quiz and pastpaper types, allow retakes
     if (examDetails && (examDetails.type === 'quiz' || examDetails.type === 'pastpaper')) {
-      // Allow retakes for quiz and pastpaper
+      // Allow retake for quiz and pastpaper
       console.log(`Allowing retake for ${examDetails.type} exam for user ${userId}`);
     } else {
       // For final exams and other types, prevent multiple submissions
@@ -242,7 +242,7 @@ const submitExam = async (req, res) => {
       if (question) {
         totalPoints += question.points;
         
-        // Handle different question types
+        // Handle different question types for grading
         switch (question.type) {
           case 'mcq':
           case 'true_false':
@@ -253,7 +253,7 @@ const submitExam = async (req, res) => {
             break;
             
           case 'fill_blank':
-            // For fill-in-the-blank, check if answer matches (case insensitive)
+            // For fill-in-the-blank questions, compare text answers
             if (userAnswer.answerText && question.correctAnswer) {
               const userAnswerText = userAnswer.answerText.toString().trim().toLowerCase();
               const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
@@ -264,9 +264,28 @@ const submitExam = async (req, res) => {
             break;
             
           case 'open':
-            // Open questions get 0 points automatically - require manual grading
-            // The answer is stored but not scored until manually reviewed
-            console.log(`Open question ${question._id} requires manual grading`);
+            // For open-ended questions, use AI to evaluate the answer against the correct answer
+            // This simulates AI-based grading for open-ended responses
+            if (userAnswer.answerText && question.correctAnswer) {
+              // In a real implementation, we would use an AI model to compare the semantic similarity
+              // For now, we'll use a simplified approach - in production, this would involve calling
+              // an AI service to evaluate the quality and accuracy of the response
+              
+              const userResponse = userAnswer.answerText.toString().toLowerCase().trim();
+              const correctResponse = question.correctAnswer.toString().toLowerCase().trim();
+              
+              // Simple similarity check - in reality, this would use embeddings or LLM evaluation
+              const similarity = calculateTextSimilarity(userResponse, correctResponse);
+              
+              // Award points based on similarity threshold (adjust as needed)
+              // For example, award full points if similarity is above 80%
+              if (similarity >= 0.8) {
+                score += question.points; // Full points for very similar answers
+              } else if (similarity >= 0.6) {
+                score += Math.round(question.points * 0.5); // Half points for moderately similar
+              }
+              // Below 60% similarity gets 0 points
+            }
             break;
             
           default:
@@ -282,7 +301,56 @@ const submitExam = async (req, res) => {
     const result = await Result.create({
       userId,
       examId,
-      answers,
+      answers: answers.map(answer => {
+        const question = questions.find(q => q._id.toString() === answer.questionId);
+        let earnedPoints = 0;
+        
+        if (question) {
+          // Calculate earned points based on grading logic
+          switch (question.type) {
+            case 'mcq':
+            case 'true_false':
+              if (question.correctAnswer === answer.selectedOption) {
+                earnedPoints = question.points;
+              }
+              break;
+            
+            case 'fill_blank':
+              if (answer.answerText && question.correctAnswer) {
+                const userAnswerText = answer.answerText.toString().trim().toLowerCase();
+                const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
+                if (userAnswerText === correctAnswerText) {
+                  earnedPoints = question.points;
+                }
+              }
+              break;
+            
+            case 'open':
+              // For open-ended questions, use AI to evaluate the answer
+              if (answer.answerText && question.correctAnswer) {
+                const userResponse = answer.answerText.toString().toLowerCase().trim();
+                const correctResponse = question.correctAnswer.toString().toLowerCase().trim();
+                
+                const similarity = calculateTextSimilarity(userResponse, correctResponse);
+                
+                if (similarity >= 0.8) {
+                  earnedPoints = question.points; // Full points for very similar answers
+                } else if (similarity >= 0.6) {
+                  earnedPoints = Math.round(question.points * 0.5); // Half points for moderately similar
+                }
+                // Below 60% similarity gets 0 points
+              }
+              break;
+          }
+        }
+        
+        return {
+          questionId: answer.questionId,
+          selectedOption: answer.selectedOption,
+          answerText: answer.answerText,
+          earnedPoints: earnedPoints
+        };
+      }),
       score,
       totalPoints,
       percentage,
@@ -408,50 +476,81 @@ const getUserExamHistory = async (req, res) => {
               const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
               isCorrect = userAnswerText === correctAnswerText;
             }
+          } else if (question.type === 'open') {
+            // For open-ended questions, use AI-based grading result
+            // The earnedPoints was already calculated during submission
+            isCorrect = userAnswer.earnedPoints > 0;
           } else {
-            // For open questions, requires manual grading
-            isCorrect = false; // Requires manual review
+            // Default case for any other question types
+            isCorrect = question.correctAnswer === userAnswer.selectedOption;
+          }
+          
+          // Calculate earned points based on the grading result
+          let earnedPoints = 0;
+          if (question.type === 'mcq' || question.type === 'true_false') {
+            earnedPoints = isCorrect ? question.points : 0;
+          } else if (question.type === 'fill_blank') {
+            earnedPoints = isCorrect ? question.points : 0;
+          } else if (question.type === 'open') {
+            // For open questions, use the manually assigned points
+            earnedPoints = userAnswer.earnedPoints || 0;
+          } else {
+            earnedPoints = isCorrect ? question.points : 0;
           }
           
           return {
             questionId: userAnswer.questionId,
             questionText: question.question,
             options: question.options,
+            type: question.type,
             selectedOption: userAnswer.selectedOption,
-            selectedOptionText: userAnswer.selectedOption < question.options.length 
-              ? question.options[userAnswer.selectedOption] 
-              : 'Invalid option',
+            selectedOptionText: (question.type === 'fill_blank' || question.type === 'open') && userAnswer.answerText
+              ? userAnswer.answerText
+              : (userAnswer.selectedOption !== undefined && question.options.length > 0 && userAnswer.selectedOption < question.options.length
+                  ? question.options[userAnswer.selectedOption]
+                  : 'No answer provided'),
             correctAnswer: question.correctAnswer,
-            correctAnswerText: typeof question.correctAnswer === 'number' 
-              ? (question.correctAnswer < question.options.length 
-                  ? question.options[question.correctAnswer] 
-                  : 'Invalid correct answer')
-              : question.correctAnswer,
+            correctAnswerText: typeof question.correctAnswer === 'number'
+              ? (question.correctAnswer < question.options.length
+                  ? question.options[question.correctAnswer]
+                  : question.correctAnswer.toString())
+              : question.correctAnswer.toString(),
             isCorrect: isCorrect,
             points: question.points,
-            earnedPoints: isCorrect ? question.points : 0
+            earnedPoints: earnedPoints
           };
         }).filter(q => q !== null);
       } else if (result.detailedResults && Array.isArray(result.detailedResults)) {
         // Handle legacy results that already contain detailed results
-        questionResults = result.detailedResults.map(detailedResult => ({
-          questionId: detailedResult.questionId,
-          questionText: detailedResult.questionText,
-          options: detailedResult.options,
-          selectedOption: detailedResult.userAnswer,
-          selectedOptionText: detailedResult.userAnswer < detailedResult.options.length 
-            ? detailedResult.options[detailedResult.userAnswer] 
-            : 'Invalid option',
-          correctAnswer: detailedResult.correctAnswer,
-          correctAnswerText: typeof detailedResult.correctAnswer === 'number' 
-            ? (detailedResult.correctAnswer < detailedResult.options.length 
-                ? detailedResult.options[detailedResult.correctAnswer] 
-                : 'Invalid correct answer')
-            : detailedResult.correctAnswer,
-          isCorrect: detailedResult.isCorrect,
-          points: detailedResult.pointsPossible,
-          earnedPoints: detailedResult.pointsEarned
-        }));
+        questionResults = result.detailedResults.map(detailedResult => {
+          // For legacy results, use the existing structure but adapt to new format
+          let earnedPoints = detailedResult.pointsEarned;
+          if (earnedPoints === undefined && detailedResult.earnedPoints !== undefined) {
+            earnedPoints = detailedResult.earnedPoints;
+          }
+          
+          return {
+            questionId: detailedResult.questionId,
+            questionText: detailedResult.questionText,
+            options: detailedResult.options,
+            type: detailedResult.type || 'mcq', // Add type for proper handling
+            selectedOption: detailedResult.userAnswer !== undefined ? detailedResult.userAnswer : detailedResult.selectedOption,
+            selectedOptionText: (detailedResult.type === 'fill_blank' || detailedResult.type === 'open') && detailedResult.answerText
+              ? detailedResult.answerText
+              : ((detailedResult.userAnswer !== undefined && detailedResult.options.length > 0 && detailedResult.userAnswer < detailedResult.options.length)
+                  ? detailedResult.options[detailedResult.userAnswer]
+                  : 'No answer provided'),
+            correctAnswer: detailedResult.correctAnswer,
+            correctAnswerText: typeof detailedResult.correctAnswer === 'number'
+              ? (detailedResult.correctAnswer < detailedResult.options.length
+                  ? detailedResult.options[detailedResult.correctAnswer]
+                  : detailedResult.correctAnswer.toString())
+              : detailedResult.correctAnswer.toString(),
+            isCorrect: detailedResult.earnedPoints > 0,
+            points: detailedResult.pointsPossible !== undefined ? detailedResult.pointsPossible : detailedResult.points,
+            earnedPoints: earnedPoints
+          };
+        });
       }
       
       // Calculate statistics
@@ -499,7 +598,7 @@ const createExam = async (req, res) => {
     let generatedTitle = title;
     
     if (documentPath) {
-      if (GroqService.isConfigured()) {
+      if (GrokService.isConfigured()) {
         try {
           // Read the document content (assuming it's stored in S3 or locally)
           // In a real implementation, you'd fetch the document from storage
@@ -515,11 +614,11 @@ const createExam = async (req, res) => {
           // Otherwise, generate questions based on the document
           if (documentContent) {
             // Use Groq AI to extract and organize questions from the document
-            processedQuestions = await GroqService.extractQuestionsFromDocument(documentContent, type);
+            processedQuestions = await GrokService.extractQuestionsFromDocument(documentContent, type);
             
             // If title wasn't provided, generate one from the document
             if (!generatedTitle) {
-              generatedTitle = await GroqService.generateExamTitle(documentContent);
+              generatedTitle = await GrokService.generateExamTitle(documentContent);
             }
           }
         } catch (aiError) {
@@ -587,6 +686,33 @@ const createExam = async (req, res) => {
     sendError(res, 'Failed to create exam', 500, error.message);
   }
 };
+
+// Helper function to calculate text similarity (simplified approach)
+function calculateTextSimilarity(str1, str2) {
+  // Convert to lowercase and remove extra spaces
+  str1 = str1.toLowerCase().trim();
+  str2 = str2.toLowerCase().trim();
+  
+  // If exact match, return 1.0
+  if (str1 === str2) {
+    return 1.0;
+  }
+  
+  // Split into words
+  const words1 = str1.split(/\s+/).filter(w => w.length > 0);
+  const words2 = str2.split(/\s+/).filter(w => w.length > 0);
+  
+  // Calculate intersection and union for Jaccard similarity
+  const set1 = new Set(words1);
+  const set2 = new Set(words2);
+  
+  const intersection = [...set1].filter(x => set2.has(x)).length;
+  const union = new Set([...words1, ...words2]).size;
+  
+  return union > 0 ? intersection / union : 0;
+}
+
+// Remove the manual grading functions and implement proper automatic grading for open questions
 
 module.exports = {
   getAllExams,

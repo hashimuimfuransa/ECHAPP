@@ -204,128 +204,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildHeader(BuildContext context, user) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back,',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                user?.fullName ?? 'Student',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: Icon(Icons.contact_support, color: AppTheme.primaryGreen, size: 24),
-            onPressed: () => _showContactInfoDialog(context),
-            tooltip: 'Contact Us',
-          ),
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined, size: 24),
-                // Notification badge
-                if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: () => context.push('/notifications'),
-            tooltip: 'Notifications',
-          ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: AppTheme.primaryGreen, size: 24),
-            onPressed: () async {
-              await _refreshDashboard(); // FIX #6: use shared refresh method
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Dashboard refreshed'),
-                    backgroundColor: AppTheme.primaryGreen,
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              }
-            },
-            tooltip: 'Refresh Dashboard',
-          ),
-          PopupMenuButton(
-            icon: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8: withOpacity -> withValues
-              child: Text(
-                user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            color: Theme.of(context).cardColor,
-            onSelected: (value) {
-              if (value == 'logout') {
-                _showLogoutDialog(context);
-              }
-            },
-            itemBuilder: (context) => <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                value: 'profile',
-                onTap: () => context.push('/profile'),
-                child: Row(children: [
-                  Icon(Icons.person_outline, color: AppTheme.getIconColor(context), size: 18),
-                  const SizedBox(width: 10),
-                  Text('Profile', style: TextStyle(color: AppTheme.getTextColor(context))),
-                ]),
-              ),
-              PopupMenuItem<String>(
-                value: 'settings',
-                onTap: () => context.push('/settings'),
-                child: Row(children: [
-                  Icon(Icons.settings_outlined, color: AppTheme.getIconColor(context), size: 18),
-                  const SizedBox(width: 10),
-                  Text('Settings', style: TextStyle(color: AppTheme.getTextColor(context))),
-                ]),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(children: [
-                  Icon(Icons.logout, color: AppTheme.getErrorColor(context), size: 18),
-                  const SizedBox(width: 10),
-                  Text('Logout', style: TextStyle(color: AppTheme.getErrorColor(context))),
-                ]),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+    // Use enhanced responsive layout
+    if (ResponsiveBreakpoints.isSmallMobile(context)) {
+      return _buildSmallMobileHeader(context, user);
+    } else if (ResponsiveBreakpoints.isStandardMobile(context)) {
+      return _buildStandardMobileHeader(context, user);
+    } else {
+      return _buildDesktopHeader(context, user);
+    }
   }
 
   Widget _buildDesktopHeader(BuildContext context, user) {
@@ -461,6 +347,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildWelcomeCard(BuildContext context, user) {
+    // Responsive sizing based on screen size
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final isStandardMobile = ResponsiveBreakpoints.isStandardMobile(context);
+    
+    final padding = isSmallMobile ? 16.0 : (isStandardMobile ? 20.0 : 24.0);
+    final iconSize = isSmallMobile ? 24.0 : (isStandardMobile ? 26.0 : 28.0);
+    final titleFontSize = isSmallMobile ? 18.0 : (isStandardMobile ? 20.0 : 22.0);
+    final subtitleFontSize = isSmallMobile ? 12.0 : (isStandardMobile ? 13.0 : 14.0);
+    final borderRadius = isSmallMobile ? 16.0 : 20.0;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -478,21 +373,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isSmallMobile ? 10.0 : 12.0),
                   decoration: BoxDecoration(
                     color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(isSmallMobile ? 12.0 : 16.0),
                   ),
-                  child: Icon(Icons.school, color: AppTheme.whiteColor, size: 28),
+                  child: Icon(Icons.school, color: AppTheme.whiteColor, size: iconSize),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isSmallMobile ? 12.0 : 16.0),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,24 +396,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         'Welcome Back, ${user?.fullName ?? 'Student'}!',
                         style: TextStyle(
                           color: AppTheme.whiteColor,
-                          fontSize: 22,
+                          fontSize: titleFontSize,
                           fontWeight: FontWeight.w700,
                         ),
+                        maxLines: isSmallMobile ? 1 : 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: isSmallMobile ? 4.0 : 6.0),
                       Text(
-                        'Continue your learning journey and achieve your goals',
+                        isSmallMobile 
+                          ? 'Continue learning and achieve goals' 
+                          : 'Continue your learning journey and achieve your goals',
                         style: TextStyle(
                           color: AppTheme.whiteColor.withValues(alpha: 0.9), // FIX #8
-                          fontSize: 14,
+                          fontSize: subtitleFontSize,
                         ),
+                        maxLines: isSmallMobile ? 2 : 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: isSmallMobile ? 16.0 : 24.0),
             Row(
               children: [
                 Expanded(
@@ -1924,6 +1825,280 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         );
       },
+    );
+  }
+
+  /// Compact header for small mobile devices (≤ 360px)
+  Widget _buildSmallMobileHeader(BuildContext context, user) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Welcome text - stacked vertically for space
+          Text(
+            'Welcome back,',
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            user?.fullName ?? 'Student',
+            style: TextStyle(
+              color: Theme.of(context).textTheme.headlineSmall?.color,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 12),
+          // Compact action row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.contact_support, size: 20),
+                onPressed: () => _showContactInfoDialog(context),
+                tooltip: 'Contact',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined, size: 20),
+                    if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () => context.push('/notifications'),
+                tooltip: 'Notifications',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: () async {
+                  await _refreshDashboard();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Refreshed'),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                tooltip: 'Refresh',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              PopupMenuButton(
+                icon: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                  child: Text(
+                    user?.fullName?.substring(0, 1).toUpperCase() ?? 'U',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                color: Theme.of(context).cardColor,
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    _showLogoutDialog(context);
+                  }
+                },
+                itemBuilder: (context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'profile',
+                    onTap: () => context.push('/profile'),
+                    child: const Row(children: [
+                      Icon(Icons.person_outline, size: 16),
+                      SizedBox(width: 8),
+                      Text('Profile', style: TextStyle(fontSize: 14)),
+                    ]),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'settings',
+                    onTap: () => context.push('/settings'),
+                    child: const Row(children: [
+                      Icon(Icons.settings_outlined, size: 16),
+                      SizedBox(width: 8),
+                      Text('Settings', style: TextStyle(fontSize: 14)),
+                    ]),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<String>(
+                    value: 'logout',
+                    child: const Row(children: [
+                      Icon(Icons.logout, color: Colors.red, size: 16),
+                      SizedBox(width: 8),
+                      Text('Logout', style: TextStyle(color: Colors.red, fontSize: 14)),
+                    ]),
+                  ),
+                ],
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Header for standard mobile devices (361px - 768px)
+  Widget _buildStandardMobileHeader(BuildContext context, user) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Welcome text
+          Text(
+            'Welcome back,',
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            user?.fullName ?? 'Student',
+            style: TextStyle(
+              color: Theme.of(context).textTheme.headlineSmall?.color,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+          // Action row with better spacing
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.contact_support, size: 22),
+                onPressed: () => _showContactInfoDialog(context),
+                tooltip: 'Contact Us',
+                padding: const EdgeInsets.all(8),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 22),
+                onPressed: () async {
+                  await _refreshDashboard();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Dashboard refreshed'),
+                        backgroundColor: AppTheme.primaryGreen,
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                tooltip: 'Refresh Dashboard',
+                padding: const EdgeInsets.all(8),
+              ),
+              IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined, size: 22),
+                    if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () => context.push('/notifications'),
+                tooltip: 'Notifications',
+                padding: const EdgeInsets.all(8),
+              ),
+              PopupMenuButton(
+                icon: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                  child: Text(
+                    user?.fullName?.substring(0, 1).toUpperCase() ?? 'U',
+                    style: const TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                color: Theme.of(context).cardColor,
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    _showLogoutDialog(context);
+                  }
+                },
+                itemBuilder: (context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'profile',
+                    onTap: () => context.push('/profile'),
+                    child: const Row(children: [
+                      Icon(Icons.person_outline, size: 17),
+                      SizedBox(width: 9),
+                      Text('Profile', style: TextStyle(fontSize: 15)),
+                    ]),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'settings',
+                    onTap: () => context.push('/settings'),
+                    child: const Row(children: [
+                      Icon(Icons.settings_outlined, size: 17),
+                      SizedBox(width: 9),
+                      Text('Settings', style: TextStyle(fontSize: 15)),
+                    ]),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<String>(
+                    value: 'logout',
+                    child: const Row(children: [
+                      Icon(Icons.logout, color: Colors.red, size: 17),
+                      SizedBox(width: 9),
+                      Text('Logout', style: TextStyle(color: Colors.red, fontSize: 15)),
+                    ]),
+                  ),
+                ],
+                padding: const EdgeInsets.all(8),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

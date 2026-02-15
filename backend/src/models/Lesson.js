@@ -38,6 +38,11 @@ const lessonSchema = new mongoose.Schema({
     type: Number,
     default: 0, // in minutes
     min: [0, 'Duration cannot be negative']
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'processing', 'completed', 'error'],
+    default: 'completed' // Default to completed for existing lessons
   }
 }, {
   timestamps: true

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
-import 'package:excellencecoachinghub/services/api/upload_service.dart';
+import 'package:excellencecoachinghub/services/document/exam_document_service.dart';
 
 class CreateExamScreen extends StatefulWidget {
   final String courseId;
@@ -50,10 +51,17 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           _processingStatus = 'Uploading document...';
         });
 
-        // Use the UploadService to upload the document and create exam from it
-        final uploadService = UploadService();
+        // Use the ExamDocumentService to upload the document and create exam from it
+        final examDocumentService = ExamDocumentService();
         
-        final response = await uploadService.uploadDocumentWithExamCreation(
+        print('=== EXAM DOCUMENT UPLOAD ===');
+        print('File: ${file.name}');
+        print('Course ID: ${widget.courseId}');
+        print('Section ID: ${widget.sectionId}');
+        print('Exam Type: $_selectedType');
+        print('============================');
+        
+        final response = await examDocumentService.uploadDocumentForExamCreation(
           file: file,
           courseId: widget.courseId,
           sectionId: widget.sectionId,
@@ -62,9 +70,21 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           passingScore: int.tryParse(_passingScoreController.text) ?? 50,
           timeLimit: int.tryParse(_timeLimitController.text) ?? 0,
         );
+        
+        print('=== EXAM UPLOAD RESPONSE ===');
+        print('Full response: $response');
+        print('Success: ${response['success']}');
+        print('Data keys: ${response['data']?.keys?.toList()}');
+        print('============================');
 
         setState(() {
-          _uploadedDocumentPath = response['documentUrl'];
+          // Handle response structure - documentUrl might be in data object
+          String? documentUrl = response['documentUrl'] as String?;
+          if (documentUrl == null && response['data'] is Map<String, dynamic>) {
+            documentUrl = response['data']['documentUrl'] as String?;
+          }
+          
+          _uploadedDocumentPath = documentUrl;
           _documentFileName = file.name;
           _processingStatus = 'Document processed successfully!';
           _isProcessing = false;

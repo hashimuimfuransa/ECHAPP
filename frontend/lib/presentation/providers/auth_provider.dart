@@ -246,10 +246,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      debugPrint('AuthProvider: Sending password reset email to $email');
       await FirebaseAuthService.sendPasswordResetEmail(email);
-      state = state.copyWith(isLoading: false, error: 'Password reset email sent. Please check your inbox.');
+      
+      // Check if the state is still valid before updating
+      if (state != null) {
+        // Success - show confirmation message
+        state = state.copyWith(
+          isLoading: false, 
+          error: 'Password reset email sent successfully! Please check your inbox (including spam folder) and follow the instructions to reset your password.'
+        );
+      }
+      
+      debugPrint('AuthProvider: Password reset email sent successfully');
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      debugPrint('AuthProvider: Password reset failed - $e');
+      String errorMessage = e.toString();
+      
+      // Provide user-friendly error messages
+      if (errorMessage.contains('Please enter a valid email address')) {
+        errorMessage = 'Please enter a valid email address';
+      } else if (errorMessage.contains('Too many requests')) {
+        errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
+      } else if (errorMessage.contains('Network error')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (errorMessage.contains('Failed to send')) {
+        errorMessage = 'Unable to send password reset email. Please try again or contact support.';
+      }
+      
+      // Check if the state is still valid before updating
+      if (state != null) {
+        state = state.copyWith(isLoading: false, error: errorMessage);
+      }
     }
   }
 

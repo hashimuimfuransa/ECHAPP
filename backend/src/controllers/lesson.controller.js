@@ -58,9 +58,9 @@ const createLesson = async (req, res) => {
       try {
         const S3Service = require('../services/s3_service');
         const DocumentProcessingService = require('../services/document_processing_service');
-        const GroqService = require('../services/groq_service');
+        const GrokService = require('../services/grok_service');
         
-        if (GroqService.isConfigured()) {
+        if (GrokService.isConfigured()) {
           // Fetch the document from S3
           const documentBuffer = await S3Service.getFileBuffer(notes);
           
@@ -76,7 +76,7 @@ const createLesson = async (req, res) => {
             }
             
             // Organize the notes using Groq AI
-            processedNotes = await GroqService.organizeNotes({
+            processedNotes = await GrokService.organizeNotes({
               buffer: documentBuffer,
               mimetype: mimeType,
               originalname: notes.split('/').pop()

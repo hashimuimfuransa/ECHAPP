@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +11,7 @@ import '../../../data/repositories/lesson_repository.dart';
 import '../../../data/repositories/video_repository.dart';
 import '../../../models/video.dart';
 import '../../../presentation/providers/content_management_provider.dart';
+import '../../../services/document/lesson_document_service.dart';
 import '../../../services/infrastructure/api_client.dart';
 
 class AdminCreateLessonScreen extends ConsumerStatefulWidget {
@@ -209,21 +211,62 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
       });
 
       // Upload the document to the backend (this will create a lesson automatically)
-      final response = await _apiClient.postFile(
-        '${ApiConfig.baseUrl}/upload/document',
-        filePath: file.path!,
-        fieldName: 'document',
-        additionalFields: {
-          'courseId': widget.courseId,
-          'sectionId': widget.sectionId,
-          'title': _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
-          'description': _descriptionController.text.trim(),
-          'duration': _duration.toString(),
-        },
-      );
+      // Handle web vs mobile platform differences
+      print('=== PLATFORM CHECK ===');
+      print('Is web: $kIsWeb');
+      print('File path: ${file.path}');
+      print('File bytes available: ${file.bytes != null}');
+      print('=====================');
+      
+      Map<String, dynamic> responseData;
+      
+      if (kIsWeb) {
+        print('=== WEB UPLOAD PATH ===');
+        // On web, use LessonDocumentService with PlatformFile
+        try {
+          final lessonDocumentService = LessonDocumentService();
+          print('Calling LessonDocumentService with file: ${file.name}');
+          responseData = await lessonDocumentService.uploadDocumentForLessonNotes(
+            file: file,
+            courseId: widget.courseId,
+            sectionId: widget.sectionId,
+            title: _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
+            description: _descriptionController.text.trim(),
+          );
+          print('Web upload successful, response: $responseData');
+        } catch (e) {
+          print('=== WEB UPLOAD ERROR ===');
+          print('Error type: ${e.runtimeType}');
+          print('Error message: $e');
+          print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+          print('=======================');
+          rethrow;
+        }
+      } else {
+        // On mobile, use the existing API client method
+        final response = await _apiClient.postFile(
+          '${ApiConfig.baseUrl.replaceFirst('/api', '')}/api/documents/upload',
+          filePath: file.path!,
+          fieldName: 'document',
+          additionalFields: {
+            'courseId': widget.courseId,
+            'sectionId': widget.sectionId,
+            'title': _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
+            'description': _descriptionController.text.trim(),
+            'duration': _duration.toString(),
+          },
+        );
+        responseData = jsonDecode(response.body);
+      }
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+      print('=== RESPONSE HANDLING ===');
+      print('Response data: $responseData');
+      print('Success: ${responseData['success']}');
+      print('Data keys: ${responseData['data']?.keys?.toList()}');
+      print('Lesson data: ${responseData['data']?['lesson']}');
+      print('========================');
+      
+      if (responseData['success'] == true) {
         final lessonData = responseData['data']['lesson'];
         
         if (lessonData != null) {
@@ -250,7 +293,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           });
         }
       } else {
-        throw Exception('Failed to upload document: ${response.statusCode}');
+        throw Exception('Failed to upload document');
       }
     } catch (e) {
       setState(() {

@@ -13,16 +13,47 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _isInitializing = true;
+  String _loadingMessage = 'Initializing app...';
+  
   @override
   void initState() {
     super.initState();
     
-    // Start listening for auth changes immediately
+    // Start initialization check
+    _checkInitializationStatus();
+    
+    // Start listening for auth changes
     _checkAuthAndNavigate();
     
-    // Simple navigation after minimal delay as fallback
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      _navigateBasedOnAuth();
+    // Simple navigation after reasonable delay as fallback
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _loadingMessage = 'Almost ready...';
+        });
+        _navigateBasedOnAuth();
+      }
+    });
+  }
+  
+  void _checkInitializationStatus() {
+    // Check if background services are ready
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _loadingMessage = 'Preparing your learning experience...';
+        });
+      }
+    });
+    
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     });
   }
   
@@ -152,18 +183,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                           ),
                           child: Column(
                             children: [
-                              CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                strokeWidth: 4,
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                'Preparing your learning experience...',
-                                style: TextStyle(
-                                  color: AppTheme.getTextColor(context),
-                                  fontSize: 18,
+                              if (_isInitializing) ...[
+                                CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  strokeWidth: 4,
                                 ),
-                              ),
+                                SizedBox(height: 20),
+                                Text(
+                                  _loadingMessage,
+                                  style: TextStyle(
+                                    color: AppTheme.getTextColor(context),
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ] else ...[
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.white,
+                                  size: 48,
+                                ),
+                                SizedBox(height: 20),
+                                Text(
+                                  'Ready to go!',
+                                  style: TextStyle(
+                                    color: AppTheme.getTextColor(context),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -232,7 +280,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       );
     } else {
       // Mobile layout (enhanced original design)
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Color(0xFF6A11CB),
         body: SafeArea(
           child: Center(
@@ -261,10 +309,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 
                 SizedBox(height: 30),
                 
-                // Loading indicator
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+                if (_isInitializing) ...[
+                  // Loading indicator
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                  
+                  SizedBox(height: 20),
+                  
+                  // Loading message
+                  Text(
+                    _loadingMessage,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ] else ...[
+                  // Success indicator
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                  
+                  SizedBox(height: 20),
+                  
+                  Text(
+                    'Ready to go!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),

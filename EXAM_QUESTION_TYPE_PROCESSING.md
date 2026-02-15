@@ -7,8 +7,8 @@ This document describes how the exam system processes uploaded documents to auto
 
 1. **Multiple Choice Questions (MCQ)** - Traditional questions with 4 options
 2. **True/False Questions** - Questions with True/False options
-3. **Fill-in-the-blank Questions** - Questions requiring text input to fill blanks
-4. **Open/Short Answer Questions** - Essay-type questions requiring detailed text responses
+
+**Note**: Fill-in-the-blank and Open/Short Answer questions are no longer supported as of the latest update.
 
 ## Current Issues
 
@@ -33,8 +33,8 @@ Return 5-8 high-quality questions in JSON format only. Support these question ty
 
 1. "mcq" - Multiple choice with 4 options (use when question asks for selection from given choices)
 2. "true_false" - True/False questions (use for yes/no or true/false statements)
-3. "fill_blank" - Fill-in-the-blank questions (use when question contains blanks to be filled)
-4. "open" - Open-ended/essay questions (use for questions requiring detailed written responses)
+
+**Note**: "fill_blank" and "open" question types are no longer supported as of the latest update.
 
 ANALYSIS CRITERIA FOR QUESTION TYPE DETECTION:
 - MCQ: Question contains "which of the following", "select the best", "choose", or provides multiple options
@@ -109,7 +109,7 @@ Ensure the Question model properly validates question types:
 // In Question.js model
 type: {
   type: String,
-  enum: ['mcq', 'open', 'fill_blank', 'true_false'],
+  enum: ['mcq', 'true_false'], // Multiple choice or true/false only
   default: 'mcq',
   required: true
 },
@@ -143,7 +143,7 @@ factory Question.fromJson(Map<String, dynamic> json) {
   String questionType = json['type'] != null ? json['type'] : 'mcq';
   
   // Validate question type
-  const validTypes = ['mcq', 'open', 'fill_blank', 'true_false'];
+  const validTypes = ['mcq', 'true_false'];
   if (!validTypes.contains(questionType)) {
     questionType = 'mcq'; // Default to mcq for invalid types
   }
@@ -228,10 +228,10 @@ The system now:
 ### 📊 Test Results
 
 Successfully tested with a sample ICT document containing:
-- ✅ **4 MCQ questions** - Correctly detected with 4 options each
+- ✅ **6 MCQ questions** - Correctly detected with 4 options each
 - ✅ **2 TRUE_FALSE questions** - Correctly detected with True/False options
-- ✅ **2 FILL_BLANK questions** - Correctly detected with text answers
-- ✅ **2 OPEN questions** - Correctly detected with sample answers
+
+**Note**: Fill-in-blank and Open questions are no longer generated or processed.
 
 ### 🎯 Key Improvements
 
