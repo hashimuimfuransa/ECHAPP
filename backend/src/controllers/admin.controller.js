@@ -744,6 +744,7 @@ const deleteStudent = async (req, res) => {
     let firebaseDeleted = false;
     let mongoDeleted = false;
     let deletedUserData = null;
+    let mongoUser = null;
     
     try {
       // Try to delete from Firebase
@@ -756,12 +757,22 @@ const deleteStudent = async (req, res) => {
     }
     
     // Find the user in MongoDB to get complete data before deletion
-    const mongoUser = await User.findOne({ 
-      $or: [
-        { _id: id },
-        { firebaseUid: id }
-      ]
-    }).select('-password');
+    // First try to find by MongoDB ObjectId
+    try {
+      mongoUser = await User.findById(id).select('-password');
+    } catch (mongoError) {
+      // If that fails, try to find by firebaseUid
+      if (mongoError.name === 'CastError') {
+        mongoUser = await User.findOne({ firebaseUid: id }).select('-password');
+      } else {
+        throw mongoError;
+      }
+    }
+    
+    // If not found by ObjectId, try finding by firebaseUid
+    if (!mongoUser) {
+      mongoUser = await User.findOne({ firebaseUid: id }).select('-password');
+    }
     
     if (mongoUser) {
       deletedUserData = {

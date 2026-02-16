@@ -236,8 +236,27 @@ class NotificationController {
   // Send push notification via FCM
   async sendPushNotification(userId, title, message, data = {}) {
     try {
-      // Get user's FCM token from database (you'll need to store this when users login)
-      const user = await User.findById(userId);
+      // Get user's FCM token from database
+      // Handle both MongoDB ObjectId and Firebase UID
+      let user = null;
+      
+      // First try to find by MongoDB ObjectId
+      try {
+        user = await User.findById(userId);
+      } catch (mongoError) {
+        // If that fails, try to find by firebaseUid
+        if (mongoError.name === 'CastError') {
+          user = await User.findOne({ firebaseUid: userId });
+        } else {
+          throw mongoError;
+        }
+      }
+      
+      // If not found by ObjectId, try finding by firebaseUid
+      if (!user) {
+        user = await User.findOne({ firebaseUid: userId });
+      }
+      
       if (!user || !user.fcmToken) {
         console.log('User FCM token not found');
         return;
