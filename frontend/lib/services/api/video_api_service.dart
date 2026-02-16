@@ -21,7 +21,7 @@ class VideoApiService {
       
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as Map<String, dynamic>;
-        return data['streamUrl'] as String;
+        return data['streamingUrl'] as String;
       } else {
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to get video stream URL');
       }

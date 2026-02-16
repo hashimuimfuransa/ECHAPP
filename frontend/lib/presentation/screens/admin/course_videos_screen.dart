@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/video_service.dart';
+import 'package:excellencecoachinghub/services/api/video_api_service.dart';
 import 'package:excellencecoachinghub/models/video.dart';
 
 class CourseVideosScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class CourseVideosScreen extends StatefulWidget {
 
 class _CourseVideosScreenState extends State<CourseVideosScreen> {
   final VideoService _videoService = VideoService();
+  final VideoApiService _videoApiService = VideoApiService();
   bool _isLoading = false;
   List<Video> _videos = [];
   String? _errorMessage;
@@ -849,7 +851,7 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
 
   void _previewVideo(Video video) {
     // Show video preview in a modal
-    if (video.url != null && video.url!.isNotEmpty) {
+    if (video.id.isNotEmpty) {
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -893,7 +895,10 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
                               aspectRatio: 16 / 9,
                               child: Container(
                                 color: Colors.black,
-                                child: _buildVideoPlayer(video.url!),
+                                child: _VideoPlayerWidget(
+                                  lessonId: video.id,
+                                  videoApiService: _videoApiService,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -921,15 +926,11 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Video URL not available for preview'),
+          content: Text('Video not available for preview'),
           backgroundColor: Colors.orange,
         ),
       );
     }
-  }
-
-  Widget _buildVideoPlayer(String videoUrl) {
-    return _VideoPlayerWidget(url: videoUrl);
   }
 
   void _editVideoDetails(Video video) {
@@ -1028,9 +1029,10 @@ class _CourseVideosScreenState extends State<CourseVideosScreen> {
 }  // End of _CourseVideosScreenState class
 
 class _VideoPlayerWidget extends StatefulWidget {
-  final String url;
+  final String lessonId;
+  final VideoApiService videoApiService;
 
-  const _VideoPlayerWidget({required this.url});
+  const _VideoPlayerWidget({required this.lessonId, required this.videoApiService});
 
   @override
   State<_VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
@@ -1039,6 +1041,8 @@ class _VideoPlayerWidget extends StatefulWidget {
 class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
   late VideoPlayerController _controller;
   ChewieController? _chewieController;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -1047,10 +1051,21 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
   }
 
   Future<void> _initializeVideoPlayer() async {
-    _controller = VideoPlayerController.network(widget.url);
-    
     try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Get the signed streaming URL from the video API service
+      final streamingUrl = await widget.videoApiService.getVideoStreamUrl(widget.lessonId);
+      
+      _controller = VideoPlayerController.network(streamingUrl);
+      
       await _controller.initialize();
+      
+      // Check if the video format might be problematic
+      final formatWarning = _checkVideoFormatCompatibility(streamingUrl);
       
       _chewieController = ChewieController(
         videoPlayerController: _controller,
@@ -1059,22 +1074,69 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
         aspectRatio: 16 / 9,
         errorBuilder: (context, errorMessage) {
           return Center(
-            child: Text(
-              'Error loading video: $errorMessage',
-              style: const TextStyle(color: Colors.white),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.white,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Video failed to load',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  formatWarning ?? 'This may be due to video codec compatibility issues.\nTry re-encoding the video with H.264 codec.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: $errorMessage',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.red[200],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           );
         },
       );
       
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
       }
     }
+  }
+  
+  String? _checkVideoFormatCompatibility(String url) {
+    // This is a basic check - in reality, you'd need to inspect the actual video file
+    // For now, we'll provide general guidance based on common issues
+    if (url.toLowerCase().contains('.mov') || url.toLowerCase().contains('.hevc') || url.toLowerCase().contains('.h265')) {
+      return 'This video appears to use HEVC/H.265 codec which may not be supported on all devices.\nConsider re-encoding to H.264 for better compatibility.';
+    }
+    return null;
   }
 
   @override
