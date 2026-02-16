@@ -215,7 +215,13 @@ const googleSignIn = async (req, res) => {
 // Firebase login/signup - handles both new and existing users
 const firebaseLogin = async (req, res) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, fullName } = req.body;
+    
+    // Debug logging
+    console.log('=== Firebase Login Debug ===');
+    console.log('Received idToken:', idToken ? 'Present' : 'Missing');
+    console.log('Received fullName:', fullName || 'Not provided');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     if (!idToken) {
       return sendError(res, 'Firebase ID token is required', 400);
@@ -230,10 +236,34 @@ const firebaseLogin = async (req, res) => {
     if (!user) {
       // Case 1: New user (signup) - create user in MongoDB
       console.log('Creating new user from Firebase:', decodedToken.email);
+      console.log('Provided full name:', fullName);
+      
+      // Get user's display name from Firebase Auth
+      let displayName = 'Firebase User';
+      try {
+        const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+        console.log('=== Firebase User Debug ===');
+        console.log('Firebase UID:', firebaseUser.uid);
+        console.log('Firebase Email:', firebaseUser.email);
+        console.log('Firebase Display Name:', firebaseUser.displayName);
+        console.log('Provided fullName:', fullName);
+        
+        // Priority order for display name:
+        // 1. Provided fullName (from frontend)
+        // 2. Firebase display name (if available)
+        // 3. Email username
+        // 4. Default fallback
+        displayName = fullName || firebaseUser.displayName || firebaseUser.email.split('@')[0] || 'Firebase User';
+        console.log('Final displayName selected:', displayName);
+      } catch (firebaseError) {
+        console.log('Could not get user display name from Firebase Auth, using provided name or default');
+        displayName = fullName || 'Firebase User';
+      }
+      
       user = await User.create({
         firebaseUid: decodedToken.uid,
         email: decodedToken.email,
-        fullName: decodedToken.name || 'Firebase User',
+        fullName: displayName,
         role: 'student',
         provider: 'firebase',
         isVerified: decodedToken.email_verified || false,
@@ -253,10 +283,17 @@ const firebaseLogin = async (req, res) => {
     } else {
       // Case 2: Existing user (login) - user already in MongoDB
       console.log('Existing user logging in:', user.email);
-      // Optionally update user info if it changed in Firebase
-      if (decodedToken.name && user.fullName !== decodedToken.name) {
-        user.fullName = decodedToken.name;
-        await user.save();
+      // Update user info from Firebase Auth
+      try {
+        const firebaseUser = await admin.auth().getUser(decodedToken.uid);
+        const newDisplayName = firebaseUser.displayName || firebaseUser.email.split('@')[0];
+        if (newDisplayName && user.fullName !== newDisplayName) {
+          user.fullName = newDisplayName;
+          await user.save();
+          console.log('Updated user display name to:', newDisplayName);
+        }
+      } catch (firebaseError) {
+        console.log('Could not update user display name from Firebase Auth');
       }
     }
     

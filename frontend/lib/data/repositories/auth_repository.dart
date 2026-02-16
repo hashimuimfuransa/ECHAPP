@@ -98,15 +98,24 @@ class AuthRepository {
     }
   }
 
-  Future<AuthResponse> firebaseLogin(String idToken) async {
+  Future<AuthResponse> firebaseLogin(String idToken, {String? fullName}) async {
     print('AuthRepository.firebaseLogin called with idToken type: ${idToken.runtimeType}');
     print('AuthRepository.firebaseLogin idToken value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
+    print('AuthRepository.firebaseLogin fullName parameter: ${fullName ?? 'null'}');
     
     try {
       print('Attempting to encode JSON body');
       String encodedBody;
       try {
-        encodedBody = jsonEncode({'idToken': idToken});
+        final body = {
+          'idToken': idToken,
+        };
+        if (fullName != null) {
+          body['fullName'] = fullName;
+          print('Adding fullName to request body: $fullName');
+        }
+        encodedBody = jsonEncode(body);
+        print('Final request body: $encodedBody');
         print('JSON encoding successful');
       } catch (encodeError) {
         print('JSON encoding error: $encodeError');

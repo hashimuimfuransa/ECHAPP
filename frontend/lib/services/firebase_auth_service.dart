@@ -29,7 +29,11 @@ class FirebaseAuthService {
       // Update user profile
       if (userCredential.user != null) {
         await userCredential.user!.updateDisplayName(fullName);
+        debugPrint('FirebaseAuthService: Set display name to: $fullName');
+        // Add a small delay to ensure the update is processed
+        await Future.delayed(Duration(milliseconds: 500));
         await userCredential.user!.reload();
+        debugPrint('FirebaseAuthService: User reloaded, display name is now: ${userCredential.user!.displayName}');
       }
       
       return userCredential;

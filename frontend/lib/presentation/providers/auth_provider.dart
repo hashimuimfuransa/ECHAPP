@@ -5,6 +5,7 @@ import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
 import 'package:excellencecoachinghub/data/repositories/auth_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager());
 
@@ -114,27 +115,62 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Register directly with backend which will send welcome email
-      debugPrint('AuthProvider: Sending registration to backend API');
-      final authResponse = await _authRepository.register(fullName, email, password, phone);
+      // Step 1: Register with Firebase Auth first
+      debugPrint('AuthProvider: Registering with Firebase Auth');
+      final userCredential = await FirebaseAuthService.registerWithEmailAndPassword(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
       
-      // Save tokens and user data
-      await _storageManager.saveAccessToken(authResponse.token);
-      await _storageManager.saveRefreshToken(authResponse.refreshToken);
-      await _storageManager.saveUserRole(authResponse.user.role);
-      await _storageManager.saveUserId(authResponse.user.id);
-      
-      debugPrint('AuthProvider: Registration completed successfully');
-      state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Registration successful! Welcome to ExcellenceCoachingHub.');
+      if (userCredential?.user != null) {
+        final firebaseUser = userCredential!.user!;
+        debugPrint('AuthProvider: Firebase registration successful for ${firebaseUser.email}');
+        
+        // Ensure the display name is properly set and user is reloaded
+        await firebaseUser.reload();
+        final updatedUser = firebase_auth.FirebaseAuth.instance.currentUser;
+        debugPrint('AuthProvider: User reloaded, display name: ${updatedUser?.displayName}');
+        
+        // Step 2: Get Firebase ID token
+        debugPrint('AuthProvider: Getting Firebase ID token');
+        final idToken = await updatedUser?.getIdToken() ?? await firebaseUser.getIdToken();
+        debugPrint('AuthProvider: Got Firebase ID token');
+        
+        if (idToken == null) {
+          debugPrint('AuthProvider: ERROR - idToken is null after registration');
+          throw Exception('Failed to get Firebase ID token after registration');
+        }
+        
+        // Step 3: Send token to backend for user creation in MongoDB
+        debugPrint('AuthProvider: Sending token to backend for authentication');
+        final authResponse = await _authRepository.firebaseLogin(idToken, fullName: fullName);
+        debugPrint('AuthProvider: Backend authentication successful');
+        
+        // Step 4: Save tokens and user data
+        await _storageManager.saveAccessToken(authResponse.token);
+        await _storageManager.saveRefreshToken(authResponse.refreshToken);
+        await _storageManager.saveUserRole(authResponse.user.role);
+        await _storageManager.saveUserId(authResponse.user.id);
+        
+        debugPrint('AuthProvider: Registration completed successfully');
+        state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Registration successful! Welcome to ExcellenceCoachingHub.');
+      } else {
+        state = state.copyWith(isLoading: false, error: 'Registration failed. Please try again.');
+      }
     } catch (e) {
       debugPrint('Registration Provider Error: $e');
       String errorMessage = e.toString();
       
       // Provide user-friendly error messages
-      if (errorMessage.contains('User already exists')) {
+      if (errorMessage.contains('email-already-in-use')) {
         errorMessage = 'An account with this email already exists. Please try logging in instead.';
-      } else if (errorMessage.contains('Invalid user data')) {
-        errorMessage = 'Please check your information and try again.';
+      } else if (errorMessage.contains('invalid-email')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (errorMessage.contains('weak-password')) {
+        errorMessage = 'Password is too weak. Please use a stronger password.';
+      } else if (errorMessage.contains('operation-not-allowed')) {
+        errorMessage = 'Email/password registration is not enabled.';
       } else if (errorMessage.contains('Network error')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
       } else if (errorMessage.contains('Registration failed')) {
