@@ -18,21 +18,47 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       
       console.log('Token extracted:', token.substring(0, 10) + '...');
-
-      // Verify Firebase ID token
-      const decodedToken = await admin.auth().verifyIdToken(token);
       
-      console.log('Token verified, UID:', decodedToken.uid);
-      
-      // Find user by Firebase UID
-      req.user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
-      
-      console.log('User found:', !!req.user);
-      if (req.user) {
-        console.log('User role:', req.user.role);
-        console.log('User ID:', req.user._id);
-        console.log('User email:', req.user.email);
-        console.log('User isActive:', req.user.isActive);
+      // Try to verify as Firebase ID token first
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        
+        console.log('Firebase token verified, UID:', decodedToken.uid);
+        
+        // Find user by Firebase UID
+        req.user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
+        
+        console.log('User found via Firebase:', !!req.user);
+        if (req.user) {
+          console.log('User role:', req.user.role);
+          console.log('User ID:', req.user._id);
+          console.log('User email:', req.user.email);
+          console.log('User isActive:', req.user.isActive);
+        }
+      } catch (firebaseError) {
+        console.log('Firebase token verification failed:', firebaseError.message);
+        console.log('Trying JWT token verification...');
+        
+        // If Firebase verification fails, try JWT verification
+        try {
+          const decoded = verifyToken(token);
+          
+          console.log('JWT token verified, ID:', decoded.id);
+          
+          // Find user by ID
+          req.user = await User.findById(decoded.id).select('-password');
+          
+          console.log('User found via JWT:', !!req.user);
+          if (req.user) {
+            console.log('User role:', req.user.role);
+            console.log('User ID:', req.user._id);
+            console.log('User email:', req.user.email);
+            console.log('User isActive:', req.user.isActive);
+          }
+        } catch (jwtError) {
+          console.log('JWT token verification failed:', jwtError.message);
+          throw new Error('Invalid token');
+        }
       }
       
       if (!req.user) {

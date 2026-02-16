@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
@@ -39,7 +40,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _emailController.text.trim(),
             _passwordController.text,
             _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          );
+          ).then((_) {
+            // Check if registration was successful and navigate
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final authState = ref.read(authProvider);
+              if (authState.user != null && !authState.isLoading) {
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Welcome ${authState.user!.fullName}! Registration successful. Redirecting to dashboard...',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                
+                // Navigate to dashboard after a short delay
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (authState.user?.role == 'admin') {
+                    context.go('/admin');
+                  } else {
+                    context.go('/dashboard');
+                  }
+                });
+              }
+            });
+          });
     }
   }
 
@@ -366,7 +394,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.pop(context);
+                                  context.go('/login');
                                 },
                                 child: Text(
                                   'Sign In',

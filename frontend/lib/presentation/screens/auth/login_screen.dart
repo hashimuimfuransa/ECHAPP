@@ -48,6 +48,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _hasNavigated = true;
           debugPrint('LoginScreen: Navigating to dashboard for role: ${authState.user?.role}');
           
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Welcome back, ${authState.user!.fullName}! Redirecting to dashboard...',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: AppTheme.primaryGreen,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          
           // Navigate to appropriate dashboard based on user role
           if (authState.user?.role == 'admin') {
             debugPrint('LoginScreen: Navigating to admin dashboard');

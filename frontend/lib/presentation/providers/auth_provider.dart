@@ -80,16 +80,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: Login completed successfully');
         
         // Set the user state and ensure navigation triggers
-        state = state.copyWith(isLoading: false, user: authResponse.user, error: null);
+        state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Welcome back! Login successful.');
         
         // Small delay to ensure state is properly propagated
         await Future.delayed(const Duration(milliseconds: 50));
       } else {
-        state = state.copyWith(isLoading: false, error: 'Login failed');
+        state = state.copyWith(isLoading: false, error: 'Login failed. Please try again.');
       }
     } catch (e) {
       debugPrint('Login Provider Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      String errorMessage = e.toString();
+      
+      // Provide user-friendly error messages
+      if (errorMessage.contains('Invalid email or password')) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (errorMessage.contains('Account is deactivated')) {
+        errorMessage = 'Your account has been deactivated. Please contact support.';
+      } else if (errorMessage.contains('Network error')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (errorMessage.contains('Login failed')) {
+        errorMessage = 'Login failed. Please try again.';
+      } else {
+        // Remove technical prefixes for cleaner user messages
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+      
+      state = state.copyWith(isLoading: false, error: errorMessage);
     }
   }
 
@@ -109,10 +125,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storageManager.saveUserId(authResponse.user.id);
       
       debugPrint('AuthProvider: Registration completed successfully');
-      state = state.copyWith(isLoading: false, user: authResponse.user);
+      state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Registration successful! Welcome to ExcellenceCoachingHub.');
     } catch (e) {
       debugPrint('Registration Provider Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      String errorMessage = e.toString();
+      
+      // Provide user-friendly error messages
+      if (errorMessage.contains('User already exists')) {
+        errorMessage = 'An account with this email already exists. Please try logging in instead.';
+      } else if (errorMessage.contains('Invalid user data')) {
+        errorMessage = 'Please check your information and try again.';
+      } else if (errorMessage.contains('Network error')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (errorMessage.contains('Registration failed')) {
+        errorMessage = 'Registration failed. Please try again or contact support.';
+      } else {
+        // Remove technical prefixes for cleaner user messages
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+      
+      state = state.copyWith(isLoading: false, error: errorMessage);
     }
   }
 
