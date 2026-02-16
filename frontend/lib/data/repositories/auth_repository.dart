@@ -4,6 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/models/user.dart';
 
+class PasswordResetResponse {
+  final bool success;
+  final String? message;
+
+  PasswordResetResponse({
+    required this.success,
+    this.message,
+  });
+
+  factory PasswordResetResponse.fromJson(Map<String, dynamic> json) {
+    return PasswordResetResponse(
+      success: json['success'] ?? false,
+      message: json['message'],
+    );
+  }
+}
+
 class AuthRepository {
   final http.Client _client;
 
@@ -153,6 +170,59 @@ class AuthRepository {
       token: 'firebase_only_token_${user.id}',
       refreshToken: 'firebase_refresh_token_${user.id}',
     );
+  }
+
+  Future<PasswordResetResponse> sendPasswordResetEmail(String email) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Return a success response
+        return PasswordResetResponse(
+          success: true,
+          message: data['message'] ?? 'Password reset email sent successfully!',
+        );
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to send password reset email');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
+  Future<PasswordResetResponse> resetPassword(String token, String newPassword) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'newPassword': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Return a success response
+        return PasswordResetResponse(
+          success: true,
+          message: data['message'] ?? 'Password reset successfully!',
+        );
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
   }
 
   Future<User> getProfile() async {

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
@@ -97,43 +98,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Step 1: Register with Firebase Auth
-      final userCredential = await FirebaseAuthService.registerWithEmailAndPassword(
-        email: email,
-        password: password,
-        fullName: fullName,
-      );
+      // Register directly with backend which will send welcome email
+      debugPrint('AuthProvider: Sending registration to backend API');
+      final authResponse = await _authRepository.register(fullName, email, password, phone);
       
-      if (userCredential?.user != null) {
-        final firebaseUser = userCredential!.user!;
-        debugPrint('AuthProvider: Firebase registration successful for ${firebaseUser.email}');
-        
-        // Step 2: Get Firebase ID token
-        debugPrint('AuthProvider: Getting Firebase ID token');
-        final idToken = await firebaseUser.getIdToken();
-        debugPrint('AuthProvider: Got Firebase ID token');
-        
-        if (idToken == null) {
-          debugPrint('AuthProvider: ERROR - idToken is null after registration');
-          throw Exception('Failed to get Firebase ID token after registration');
-        }
-        
-        // Step 3: Send token to backend for synchronization
-        debugPrint('AuthProvider: Sending token to backend for sync');
-        final authResponse = await _authRepository.firebaseLogin(idToken);
-        debugPrint('AuthProvider: Backend sync successful');
-        
-        // Step 4: Save tokens and user data
-        await _storageManager.saveAccessToken(authResponse.token);
-        await _storageManager.saveRefreshToken(authResponse.refreshToken);
-        await _storageManager.saveUserRole(authResponse.user.role);
-        await _storageManager.saveUserId(authResponse.user.id);
-        
-        debugPrint('AuthProvider: Registration completed successfully');
-        state = state.copyWith(isLoading: false, user: authResponse.user);
-      } else {
-        state = state.copyWith(isLoading: false, error: 'Registration failed');
-      }
+      // Save tokens and user data
+      await _storageManager.saveAccessToken(authResponse.token);
+      await _storageManager.saveRefreshToken(authResponse.refreshToken);
+      await _storageManager.saveUserRole(authResponse.user.role);
+      await _storageManager.saveUserId(authResponse.user.id);
+      
+      debugPrint('AuthProvider: Registration completed successfully');
+      state = state.copyWith(isLoading: false, user: authResponse.user);
     } catch (e) {
       debugPrint('Registration Provider Error: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -246,19 +222,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      debugPrint('AuthProvider: Sending password reset email to $email');
-      await FirebaseAuthService.sendPasswordResetEmail(email);
+      debugPrint('AuthProvider: Sending password reset email to $email via backend API');
       
-      // Check if the state is still valid before updating
-      if (state != null) {
-        // Success - show confirmation message
-        state = state.copyWith(
-          isLoading: false, 
-          error: 'Password reset email sent successfully! Please check your inbox (including spam folder) and follow the instructions to reset your password.'
-        );
-      }
+      // Call backend API to send password reset email using SendGrid
+      final response = await _authRepository.sendPasswordResetEmail(email);
       
-      debugPrint('AuthProvider: Password reset email sent successfully');
+      // Success - show confirmation message
+      state = state.copyWith(
+        isLoading: false, 
+        error: response.message ?? 'Password reset email sent successfully! Please check your inbox (including spam folder) and follow the instructions to reset your password.'
+      );
+          
+      debugPrint('AuthProvider: Password reset email sent successfully via backend API');
     } catch (e) {
       debugPrint('AuthProvider: Password reset failed - $e');
       String errorMessage = e.toString();
@@ -275,9 +250,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       
       // Check if the state is still valid before updating
-      if (state != null) {
-        state = state.copyWith(isLoading: false, error: errorMessage);
-      }
+      state = state.copyWith(isLoading: false, error: errorMessage);
+    }
+  }
+
+  Future<PasswordResetResponse> resetPassword(String token, String newPassword) async {
+    try {
+      debugPrint('AuthProvider: Resetting password with token: ${token.substring(0, math.min(10, token.length))}...');
+      
+      // Call backend API to reset password
+      final response = await _authRepository.resetPassword(token, newPassword);
+      
+      debugPrint('AuthProvider: Password reset successfully');
+      return response;
+    } catch (e) {
+      debugPrint('AuthProvider: Password reset failed - $e');
+      rethrow;
     }
   }
 

@@ -376,6 +376,43 @@ class ExamService {
     }
   }
 
+  /// Delete a specific exam result for the authenticated user
+  Future<void> deleteExamResult(String resultId) async {
+    try {
+      final response = await _apiClient.delete('${ApiConfig.exams}/student/history/$resultId');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to delete exam result');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete exam result: $e');
+    }
+  }
+
+  /// Delete all exam results for the authenticated user
+  Future<Map<String, int>> deleteAllExamResults() async {
+    try {
+      final response = await _apiClient.delete('${ApiConfig.exams}/student/history');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to delete exam results');
+      }
+      
+      final data = jsonBody['data'] as Map<String, dynamic>?;
+      final deletedCount = data?['deletedCount'] as int? ?? 0;
+      
+      return {'deletedCount': deletedCount};
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete exam results: $e');
+    }
+  }
+
   /// Dispose of resources
   void dispose() {
     _apiClient.dispose();

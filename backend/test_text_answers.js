@@ -7,7 +7,7 @@ require('dotenv').config();
 async function testTextAnswers() {
   try {
     // Connect to database
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to database');
     
     // Find a recent exam result with text answers

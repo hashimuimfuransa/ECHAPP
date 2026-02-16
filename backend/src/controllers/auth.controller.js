@@ -1,8 +1,10 @@
 const User = require('../models/User');
+const crypto = require('crypto');
 const { generateToken, generateRefreshToken } = require('../utils/jwt.utils');
 const { sendSuccess, sendError, sendUnauthorized } = require('../utils/response.utils');
 const { OAuth2Client } = require('google-auth-library');
 const admin = require('../config/firebase');
+const emailService = require('../services/email.service');
 
 // Google OAuth is handled by Firebase, so we don't need separate Google OAuth client
 // const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -30,6 +32,15 @@ const register = async (req, res) => {
     if (user) {
       const token = generateToken({ id: user._id });
       const refreshToken = generateRefreshToken({ id: user._id });
+
+      // Send welcome email to the new user
+      try {
+        await emailService.sendWelcomeEmail(user.email, user);
+        console.log(`Welcome email sent to new user: ${user.email}`);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail the registration if email sending fails
+      }
 
       sendSuccess(res, {
         user: {
@@ -230,6 +241,15 @@ const firebaseLogin = async (req, res) => {
         // Firebase users don't need password
         password: undefined
       });
+
+      // Send welcome email to the new user
+      try {
+        await emailService.sendWelcomeEmail(user.email, user);
+        console.log(`Welcome email sent to new user: ${user.email}`);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail the registration if email sending fails
+      }
     } else {
       // Case 2: Existing user (login) - user already in MongoDB
       console.log('Existing user logging in:', user.email);
@@ -267,6 +287,97 @@ const firebaseLogin = async (req, res) => {
   }
 };
 
+// Forgot password - send password reset email
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate email format
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      return sendError(res, 'Please provide a valid email address', 400);
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      // For security reasons, return success even if user doesn't exist
+      // This prevents user enumeration attacks
+      return sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
+    }
+
+    // Generate password reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour expiry
+
+    // Save reset token and expiry to user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpiry;
+    await user.save();
+
+    // Send password reset email using SendGrid
+    try {
+      await emailService.sendPasswordResetEmail(user.email, resetToken, user);
+      console.log(`Password reset email sent to: ${user.email}`);
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+      // Don't fail the request if email sending fails, but log the error
+    }
+
+    sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    sendError(res, 'Failed to send password reset email', 500, error.message);
+  }
+};
+
+// Reset password using token
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Validate inputs
+    if (!token || !newPassword) {
+      return sendError(res, 'Token and new password are required', 400);
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      return sendError(res, 'Password must be at least 6 characters long', 400);
+    }
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return sendError(res, 'Invalid or expired reset token', 400);
+    }
+
+    // Update user password
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    // Send confirmation email
+    try {
+      await emailService.sendPasswordResetConfirmationEmail(user.email, user);
+      console.log(`Password reset confirmation email sent to: ${user.email}`);
+    } catch (emailError) {
+      console.error('Error sending password reset confirmation email:', emailError);
+      // Don't fail the reset if email sending fails
+    }
+
+    sendSuccess(res, null, 'Password reset successfully');
+  } catch (error) {
+    console.error('Reset password error:', error);
+    sendError(res, 'Failed to reset password', 500, error.message);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -274,5 +385,7 @@ module.exports = {
   getProfile,
   logout,
   googleSignIn,
-  firebaseLogin
+  firebaseLogin,
+  forgotPassword,
+  resetPassword
 };

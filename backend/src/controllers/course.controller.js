@@ -1,6 +1,8 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const User = require('../models/User');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const emailService = require('../services/email.service');
 
 // Get all courses
 const getCourses = async (req, res) => {
@@ -206,6 +208,22 @@ const createCourse = async (req, res) => {
     // Populate the course with user details before sending response
     const populatedCourse = await Course.findById(course._id)
       .populate('createdBy', 'id fullName email role createdAt');
+
+    // If the course is published, send notification email to all active users
+    if (populatedCourse.isPublished) {
+      try {
+        // Get all active users to notify them about the new course
+        const users = await User.find({ isActive: true }, 'fullName email');
+        
+        if (users.length > 0) {
+          await emailService.sendNewCourseEmail(users, populatedCourse);
+          console.log(`New course email sent to ${users.length} users for course: ${populatedCourse.title}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending new course notification emails:', emailError);
+        // Don't fail the course creation if email sending fails
+      }
+    }
 
     sendSuccess(res, populatedCourse, 'Course created successfully', 201);
   } catch (error) {

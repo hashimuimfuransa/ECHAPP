@@ -1,6 +1,8 @@
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const Payment = require('../models/Payment');
+const User = require('../models/User');
+const emailService = require('../services/email.service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Enroll in a course
@@ -41,6 +43,18 @@ const enrollInCourse = async (req, res) => {
       enrollmentDate: new Date(),
       completionStatus: 'enrolled'
     });
+
+    // Get user and course details for email notification
+    const user = await User.findById(userId).select('fullName email');
+    
+    // Send enrollment confirmation email
+    try {
+      await emailService.sendEnrollmentConfirmation(user.email, user, course);
+      console.log(`Enrollment confirmation email sent to user: ${user.email}`);
+    } catch (emailError) {
+      console.error('Error sending enrollment confirmation email:', emailError);
+      // Don't fail the enrollment if email sending fails
+    }
 
     sendSuccess(res, enrollment, 'Successfully enrolled in course', 201);
   } catch (error) {

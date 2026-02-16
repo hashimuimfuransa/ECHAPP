@@ -12,7 +12,9 @@ const {
   submitExam,
   getExamResults,
   getUserExamHistory, // Added new function
-  createExam
+  createExam,
+  deleteExamResult,
+  deleteAllExamResults
 } = require('../controllers/exam.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { authorize: roleAuthorize } = require('../middleware/role.middleware');
@@ -27,6 +29,8 @@ router.post('/', protect, roleAuthorize('admin'), createExam);
 
 // Student routes
 router.get('/student/history', protect, getUserExamHistory); // New independent route for student exam history
+router.delete('/student/history/:id', protect, deleteExamResult); // Route to delete specific exam result
+router.delete('/student/history', protect, deleteAllExamResults); // Route to delete all exam results for user
 router.get('/history/test', protect, (req, res) => {
   res.json({
     success: true,

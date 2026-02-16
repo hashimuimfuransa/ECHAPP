@@ -204,11 +204,9 @@ class ExamProcessingService {
    * Validate exam processing result
    */
   filterExamQuestions(questions) {
-    // Allow ALL question types - preserve document structure
-    // Support natural question types from educational documents
+    // Only allow MCQ questions - filter out all other question types
     
-    const validTypes = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_BLANK', 'OPEN_ENDED', 
-                       'mcq', 'true_false', 'fill_blank', 'open'];
+    const validTypes = ['MULTIPLE_CHOICE', 'mcq'];
     
     const filtered = questions.filter(question => {
       // Validate basic question structure
@@ -223,11 +221,11 @@ class ExamProcessingService {
       );
       
       if (!isValidType) {
-        console.log(`Filtering out question with invalid type: ${question.type}`);
+        console.log(`Filtering out non-MCQ question type: ${question.type}`);
         return false;
       }
       
-      // Additional validation based on question type
+      // MCQ questions need options
       if (questionType === 'MULTIPLE_CHOICE' || questionType === 'MCQ') {
         // MCQ questions need options
         if (!Array.isArray(question.options) || question.options.length < 2) {
@@ -236,20 +234,10 @@ class ExamProcessingService {
         }
       }
       
-      if (questionType === 'TRUE_FALSE' || questionType === 'TRUE_FALSE') {
-        // True/False questions should have True/False options
-        if (!Array.isArray(question.options)) {
-          // Auto-add True/False options if missing
-          question.options = ["True", "False"];
-        }
-      }
-      
-      // Fill blank and open ended questions don't require options
-      
       return true;
     });
     
-    console.log(`Filtered exam questions: ${filtered.length} valid questions from ${questions.length} total`);
+    console.log(`Filtered exam questions: ${filtered.length} MCQ questions from ${questions.length} total (non-MCQ removed)`);
     return filtered;
   }
 

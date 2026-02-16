@@ -464,8 +464,8 @@ const uploadDocument = async (req, res) => {
                 let correctAnswer = q.correctAnswer;
                 let options = q.options || [];
                 
-                // For MCQ and True/False, convert correct answer to index
-                if ((q.type === 'mcq' || q.type === 'true_false') && options.length > 0) {
+                // For MCQ, convert correct answer to index
+                if (q.type === 'mcq' && options.length > 0) {
                   const correctAnswerIndex = options.indexOf(q.correctAnswer);
                   correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
                 }

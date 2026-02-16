@@ -234,7 +234,7 @@ class GrokService {
       }
 
       // Process document in chunks to avoid context limits
-      const chunks = this.splitTextIntoChunks(documentText, 8000); // Larger chunks for better context
+      const chunks = this.splitTextIntoChunks(documentText, 10000); // Increase chunk size to capture more questions per chunk
       let allQuestions = [];
       
       console.log(`Document text extracted (first 200 chars): ${documentText.substring(0, 200)}...`);
@@ -275,32 +275,26 @@ class GrokService {
    */
   async processChunkWithGrok(chunk, examType, fileName, chunkNumber, totalChunks) {
     const prompt = `
-You are an expert educational content analyzer. Your task is to extract ALL questions from the provided educational document and classify them by type.
+You are an expert educational content analyzer. Your task is to extract ALL questions that actually exist in the provided educational document.
 
 DOCUMENT TYPE: ${examType.toUpperCase()}
 FILE NAME: ${fileName}
 CHUNK: ${chunkNumber}/${totalChunks}
 
 IMPORTANT INSTRUCTIONS:
-1. Extract ALL questions from this document chunk - do not limit the number
-2. IDENTIFY question types by analyzing the natural structure and format in the document
-3. Return ONLY valid JSON format - no extra text or explanations
-4. Ensure proper JSON syntax with correct quotation marks and structure
-5. PRESERVE the authentic question types as they naturally appear in the educational content
-
-QUESTION TYPE CLASSIFICATION:
-- MULTIPLE_CHOICE: Questions with answer options (A, B, C, D or numbered options)
-- TRUE_FALSE: Statements that are either True or False
-- FILL_BLANK: Questions with blank spaces to fill in
-- OPEN_ENDED: Questions requiring detailed written responses
+1. Extract EVERY question that appears in this document chunk - do not limit to 5 or any fixed number
+2. Look for ALL questions regardless of their position in the document
+3. Focus specifically on questions with answer options (A/B/C/D, 1/2/3/4, (A)/(B)/(C)/(D), etc.)
+4. Return ONLY valid JSON format - no extra text or explanations
+5. Ensure proper JSON syntax with correct quotation marks and structure
 
 REQUIRED RESPONSE FORMAT (JSON ONLY):
 {
   "questions": [
     {
       "question": "Complete question text here",
-      "type": "MULTIPLE_CHOICE|TRUE_FALSE|FILL_BLANK|OPEN_ENDED",
-      "options": ["Option A", "Option B", "Option C", "Option D"], // Required for MCQ/TF, omit for others
+      "type": "MULTIPLE_CHOICE",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctAnswer": "Correct answer text or option index",
       "points": 1
     }
@@ -313,22 +307,21 @@ CRITICAL REQUIREMENTS:
 - No explanations or additional text
 - Use standard double quotes (") for all strings
 - Ensure valid JSON syntax
-- Extract ALL questions found in the document
-- Preserve the natural question types as they appear in the document
+- Extract ALL questions that actually exist in the document - do not stop at 5 questions
+- Include every question that has answer options (A/B/C/D, 1/2/3/4, etc.)
+- If there are 20 questions in the document, extract all 20 questions
+- If there are 50 questions in the document, extract all 50 questions
+- Do not artificially limit the number of questions extracted
+- Preserve the exact question text and options as they appear in the document
 
-ANALYSIS CRITERIA - DETECT NATURAL QUESTION TYPES FROM DOCUMENT STRUCTURE:
-- MULTIPLE_CHOICE: Look for questions with explicit answer choices (A/B/C/D, 1/2/3/4, or labeled options)
-- TRUE_FALSE: Identify statements presented as facts that can be judged true or false
-- FILL_BLANK: Find questions with blank spaces (____), "fill in the blank", or missing word prompts
-- OPEN_ENDED: Recognize questions asking for explanations, reasons, descriptions, analyses, or detailed responses
+QUESTION DETECTION:
+- Scan the entire document content for questions with options
+- Look for patterns like "1. Question text", "A. Option", "B. Option", etc.
+- Look for patterns like "(A) Option", "(B) Option", etc.
+- Look for patterns with numbers: "1. Question", "1. Option", "2. Option", etc.
+- Identify all questions regardless of their complexity or length
 
-DETECTION METHOD:
-- Analyze the actual structure and wording of each question in the document
-- Match question format to the most appropriate type based on content structure
-- Do NOT impose artificial constraints - let the document's natural question types determine the classification
-- Preserve the authentic assessment style found in the educational material
-
-Extract ALL questions and return ONLY the JSON response.
+Extract ALL questions that exist in the document and return ONLY the JSON response.
 `;
 
     const chatCompletion = await this.groq.chat.completions.create({
@@ -340,7 +333,7 @@ Extract ALL questions and return ONLY the JSON response.
       ],
       model: await this.getModel(),
       temperature: 0.3,
-      max_tokens: 4096,
+      max_tokens: 8192, // Increase to allow more questions in the response
     });
 
     const response = chatCompletion.choices[0]?.message?.content;
@@ -502,10 +495,81 @@ Generate a professional exam title that reflects the main topic covered. Keep it
   }
 
   splitTextIntoChunks(text, chunkSize) {
-    const chunks = [];
-    for (let i = 0; i < text.length; i += chunkSize) {
-      chunks.push(text.substring(i, i + chunkSize));
+    // Split text by paragraphs or sections to avoid breaking questions across chunks
+    const paragraphs = text.split(/\n\s*\n/); // Split by double newlines (paragraphs)
+    
+    if (paragraphs.length <= 1) {
+      // If no clear paragraph breaks, fall back to character-based splitting
+      const chunks = [];
+      for (let i = 0; i < text.length; i += chunkSize) {
+        chunks.push(text.substring(i, i + chunkSize));
+      }
+      return chunks;
     }
+    
+    // Try to group paragraphs into chunks of approximately chunkSize
+    const chunks = [];
+    let currentChunk = '';
+    
+    for (const paragraph of paragraphs) {
+      if (currentChunk.length + paragraph.length <= chunkSize) {
+        currentChunk += paragraph + '\n\n';
+      } else {
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk);
+        }
+        // If a single paragraph is larger than chunkSize, split it by sentences
+        if (paragraph.length > chunkSize) {
+          const subChunks = this.splitLargeParagraph(paragraph, chunkSize);
+          chunks.push(...subChunks);
+        } else {
+          currentChunk = paragraph + '\n\n';
+        }
+      }
+    }
+    
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+    
+    return chunks;
+  }
+  
+  /**
+   * Split a large paragraph into smaller chunks
+   */
+  splitLargeParagraph(paragraph, chunkSize) {
+    // Split by sentences to preserve meaning
+    const sentences = paragraph.split(/(?<=[.!?])\s+/);
+    const chunks = [];
+    let currentChunk = '';
+    
+    for (const sentence of sentences) {
+      if (currentChunk.length + sentence.length <= chunkSize) {
+        currentChunk += sentence + ' ';
+      } else {
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk.trim());
+        }
+        
+        // If a single sentence is too long, fall back to character-based splitting
+        if (sentence.length > chunkSize) {
+          const sentenceChunks = [];
+          for (let i = 0; i < sentence.length; i += chunkSize) {
+            sentenceChunks.push(sentence.substring(i, i + chunkSize));
+          }
+          chunks.push(...sentenceChunks);
+          currentChunk = '';
+        } else {
+          currentChunk = sentence + ' ';
+        }
+      }
+    }
+    
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+    }
+    
     return chunks;
   }
 
@@ -595,13 +659,6 @@ Generate a professional exam title that reflects the main topic covered. Keep it
         options: ["Topic A", "Topic B", "Topic C", "Topic D"],
         correctAnswer: "Topic A",
         points: 1,
-      },
-      {
-        question: `The document presents key educational content.`,
-        type: 'true_false',
-        options: ['True', 'False'],
-        correctAnswer: 'True',
-        points: 1,
       }
     ];
     
@@ -609,8 +666,7 @@ Generate a professional exam title that reflects the main topic covered. Keep it
   }
 
   filterQuestionTypes(questions) {
-    // Allow ALL question types - preserve document structure
-    // Previously filtered to only MCQ and True/False, but now allowing all natural types
+    // Only allow MCQ questions - filter out all other question types
     
     const filtered = questions.filter(question => {
       // Validate basic question structure
@@ -619,9 +675,8 @@ Generate a professional exam title that reflects the main topic covered. Keep it
         return false;
       }
       
-      // Validate question type
-      const validTypes = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_BLANK', 'OPEN_ENDED', 
-                         'mcq', 'true_false', 'fill_blank', 'open'];
+      // Only allow MCQ question types
+      const validTypes = ['MULTIPLE_CHOICE', 'mcq'];
       
       const questionType = (question.type || '').toUpperCase();
       const isValidType = validTypes.some(allowed => 
@@ -629,11 +684,11 @@ Generate a professional exam title that reflects the main topic covered. Keep it
       );
       
       if (!isValidType) {
-        console.log(`Filtering out question with invalid type: ${question.type}`);
+        console.log(`Filtering out non-MCQ question type: ${question.type}`);
         return false;
       }
       
-      // Additional validation based on question type
+      // MCQ questions need options
       if (questionType === 'MULTIPLE_CHOICE' || questionType === 'MCQ') {
         // MCQ questions need options
         if (!Array.isArray(question.options) || question.options.length < 2) {
@@ -642,20 +697,10 @@ Generate a professional exam title that reflects the main topic covered. Keep it
         }
       }
       
-      if (questionType === 'TRUE_FALSE' || questionType === 'TRUE_FALSE') {
-        // True/False questions should have True/False options
-        if (!Array.isArray(question.options)) {
-          // Auto-add True/False options if missing
-          question.options = ["True", "False"];
-        }
-      }
-      
-      // Fill blank and open ended questions don't require options
-      
       return true;
     });
     
-    console.log(`Filtered questions: ${filtered.length} valid questions from ${questions.length} total`);
+    console.log(`Filtered questions: ${filtered.length} MCQ questions from ${questions.length} total (non-MCQ removed)`);
     return filtered;
   }
 

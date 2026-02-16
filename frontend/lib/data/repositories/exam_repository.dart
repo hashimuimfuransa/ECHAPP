@@ -87,4 +87,22 @@ class ExamRepository {
       throw Exception('Failed to toggle exam publish status: $e');
     }
   }
+
+  /// Delete a specific exam result for the authenticated user
+  Future<void> deleteExamResult(String resultId) async {
+    try {
+      await _examService.deleteExamResult(resultId);
+    } catch (e) {
+      throw Exception('Failed to delete exam result: $e');
+    }
+  }
+
+  /// Delete all exam results for the authenticated user
+  Future<Map<String, int>> deleteAllExamResults() async {
+    try {
+      return await _examService.deleteAllExamResults();
+    } catch (e) {
+      throw Exception('Failed to delete exam results: $e');
+    }
+  }
 }

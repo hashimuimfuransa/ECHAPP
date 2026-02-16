@@ -4,7 +4,9 @@ const Result = require('../models/Result');
 const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Enrollment = require('../models/Enrollment');
+const User = require('../models/User');
 const GrokService = require('../services/grok_service');
+const emailService = require('../services/email.service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all exams for admin
@@ -217,12 +219,12 @@ const submitExam = async (req, res) => {
     const existingResults = await Result.find({ userId, examId });
     
     // Get exam details to check type
-    const examDetails = await Exam.findById(examId);
+    const examTypeInfo = await Exam.findById(examId);
     
     // For quiz and pastpaper types, allow retakes
-    if (examDetails && (examDetails.type === 'quiz' || examDetails.type === 'pastpaper')) {
+    if (examTypeInfo && (examTypeInfo.type === 'quiz' || examTypeInfo.type === 'pastpaper')) {
       // Allow retake for quiz and pastpaper
-      console.log(`Allowing retake for ${examDetails.type} exam for user ${userId}`);
+      console.log(`Allowing retake for ${examTypeInfo.type} exam for user ${userId}`);
     } else {
       // For final exams and other types, prevent multiple submissions
       if (existingResults.length > 0) {
@@ -252,42 +254,6 @@ const submitExam = async (req, res) => {
             }
             break;
             
-          case 'fill_blank':
-            // For fill-in-the-blank questions, compare text answers
-            if (userAnswer.answerText && question.correctAnswer) {
-              const userAnswerText = userAnswer.answerText.toString().trim().toLowerCase();
-              const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
-              if (userAnswerText === correctAnswerText) {
-                score += question.points;
-              }
-            }
-            break;
-            
-          case 'open':
-            // For open-ended questions, use AI to evaluate the answer against the correct answer
-            // This simulates AI-based grading for open-ended responses
-            if (userAnswer.answerText && question.correctAnswer) {
-              // In a real implementation, we would use an AI model to compare the semantic similarity
-              // For now, we'll use a simplified approach - in production, this would involve calling
-              // an AI service to evaluate the quality and accuracy of the response
-              
-              const userResponse = userAnswer.answerText.toString().toLowerCase().trim();
-              const correctResponse = question.correctAnswer.toString().toLowerCase().trim();
-              
-              // Simple similarity check - in reality, this would use embeddings or LLM evaluation
-              const similarity = calculateTextSimilarity(userResponse, correctResponse);
-              
-              // Award points based on similarity threshold (adjust as needed)
-              // For example, award full points if similarity is above 80%
-              if (similarity >= 0.8) {
-                score += question.points; // Full points for very similar answers
-              } else if (similarity >= 0.6) {
-                score += Math.round(question.points * 0.5); // Half points for moderately similar
-              }
-              // Below 60% similarity gets 0 points
-            }
-            break;
-            
           default:
             console.warn(`Unknown question type: ${question.type}`);
         }
@@ -314,33 +280,6 @@ const submitExam = async (req, res) => {
                 earnedPoints = question.points;
               }
               break;
-            
-            case 'fill_blank':
-              if (answer.answerText && question.correctAnswer) {
-                const userAnswerText = answer.answerText.toString().trim().toLowerCase();
-                const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
-                if (userAnswerText === correctAnswerText) {
-                  earnedPoints = question.points;
-                }
-              }
-              break;
-            
-            case 'open':
-              // For open-ended questions, use AI to evaluate the answer
-              if (answer.answerText && question.correctAnswer) {
-                const userResponse = answer.answerText.toString().toLowerCase().trim();
-                const correctResponse = question.correctAnswer.toString().toLowerCase().trim();
-                
-                const similarity = calculateTextSimilarity(userResponse, correctResponse);
-                
-                if (similarity >= 0.8) {
-                  earnedPoints = question.points; // Full points for very similar answers
-                } else if (similarity >= 0.6) {
-                  earnedPoints = Math.round(question.points * 0.5); // Half points for moderately similar
-                }
-                // Below 60% similarity gets 0 points
-              }
-              break;
           }
         }
         
@@ -356,6 +295,25 @@ const submitExam = async (req, res) => {
       percentage,
       passed
     });
+
+    // Get user and exam details for email notification
+    const user = await User.findById(userId).select('fullName email');
+    const examInfo = await Exam.findById(examId).populate('courseId', 'title');
+    
+    // Send exam score notification email
+    try {
+      await emailService.sendExamScoreNotification(user.email, user, examInfo, {
+        score,
+        totalPoints,
+        percentage,
+        passed,
+        message: passed ? 'Congratulations! You passed the exam.' : 'You did not pass. Please try again.'
+      });
+      console.log(`Exam score notification email sent to user: ${user.email}`);
+    } catch (emailError) {
+      console.error('Error sending exam score notification email:', emailError);
+      // Don't fail the exam submission if email sending fails
+    }
 
     sendSuccess(res, {
       resultId: result._id,
@@ -389,10 +347,10 @@ const getExamResults = async (req, res) => {
 
     // For quiz and pastpaper types, return the most recent result
     // For other types, return the first (and typically only) result
-    const examDetails = await Exam.findById(examId);
+    const examTypeInfo = await Exam.findById(examId);
     let result;
     
-    if (examDetails && (examDetails.type === 'quiz' || examDetails.type === 'pastpaper')) {
+    if (examTypeInfo && (examTypeInfo.type === 'quiz' || examTypeInfo.type === 'pastpaper')) {
       // Return the most recent result for quiz/pastpaper
       const results = await Result.find({ userId, examId })
         .sort({ submittedAt: -1 })
@@ -469,17 +427,6 @@ const getUserExamHistory = async (req, res) => {
             if (question.correctAnswer === userAnswer.selectedOption) {
               isCorrect = true;
             }
-          } else if (question.type === 'fill_blank') {
-            // For fill-in-the-blank questions
-            if (userAnswer.answerText && question.correctAnswer) {
-              const userAnswerText = userAnswer.answerText.toString().trim().toLowerCase();
-              const correctAnswerText = question.correctAnswer.toString().trim().toLowerCase();
-              isCorrect = userAnswerText === correctAnswerText;
-            }
-          } else if (question.type === 'open') {
-            // For open-ended questions, use AI-based grading result
-            // The earnedPoints was already calculated during submission
-            isCorrect = userAnswer.earnedPoints > 0;
           } else {
             // Default case for any other question types
             isCorrect = question.correctAnswer === userAnswer.selectedOption;
@@ -489,11 +436,6 @@ const getUserExamHistory = async (req, res) => {
           let earnedPoints = 0;
           if (question.type === 'mcq' || question.type === 'true_false') {
             earnedPoints = isCorrect ? question.points : 0;
-          } else if (question.type === 'fill_blank') {
-            earnedPoints = isCorrect ? question.points : 0;
-          } else if (question.type === 'open') {
-            // For open questions, use the manually assigned points
-            earnedPoints = userAnswer.earnedPoints || 0;
           } else {
             earnedPoints = isCorrect ? question.points : 0;
           }
@@ -712,6 +654,47 @@ function calculateTextSimilarity(str1, str2) {
   return union > 0 ? intersection / union : 0;
 }
 
+// Delete specific exam result for the authenticated user
+const deleteExamResult = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Find the result to ensure it belongs to the user
+    const result = await Result.findOne({ _id: id, userId });
+
+    if (!result) {
+      return sendNotFound(res, 'Exam result not found or does not belong to you');
+    }
+
+    // Delete the specific exam result
+    await Result.findByIdAndDelete(id);
+
+    sendSuccess(res, null, 'Exam result deleted successfully');
+  } catch (error) {
+    console.error('Error in deleteExamResult:', error);
+    sendError(res, 'Failed to delete exam result', 500, error.message);
+  }
+};
+
+// Delete all exam results for the authenticated user
+const deleteAllExamResults = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Count how many results will be deleted
+    const count = await Result.countDocuments({ userId });
+
+    // Delete all exam results for this user
+    await Result.deleteMany({ userId });
+
+    sendSuccess(res, { deletedCount: count }, `Deleted ${count} exam results successfully`);
+  } catch (error) {
+    console.error('Error in deleteAllExamResults:', error);
+    sendError(res, 'Failed to delete exam results', 500, error.message);
+  }
+};
+
 // Remove the manual grading functions and implement proper automatic grading for open questions
 
 module.exports = {
@@ -726,5 +709,7 @@ module.exports = {
   submitExam,
   getExamResults,
   getUserExamHistory,
-  createExam
+  createExam,
+  deleteExamResult,
+  deleteAllExamResults
 };

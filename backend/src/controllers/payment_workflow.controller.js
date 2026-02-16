@@ -3,6 +3,7 @@ const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../utils/response.utils');
+const emailService = require('../services/email.service');
 
 // Initiate payment for a course
 const initiatePayment = async (req, res) => {
@@ -179,6 +180,20 @@ const verifyPayment = async (req, res) => {
       };
       
       console.log('Response data prepared:', responseData);
+      
+      // Send email notification to user about payment status
+      try {
+        await emailService.sendPaymentStatusEmail(
+          userIdInfo.email, 
+          { fullName: userIdInfo.fullName }, 
+          payment, 
+          status
+        );
+        console.log(`Payment status email sent to user: ${userIdInfo.email}`);
+      } catch (emailError) {
+        console.error('Error sending payment status email:', emailError);
+        // Don't fail the entire operation if email fails
+      }
       
       sendSuccess(res, responseData, `Payment ${status} successfully`);
       

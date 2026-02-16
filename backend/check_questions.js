@@ -1,38 +1,22 @@
 const mongoose = require('mongoose');
+const Question = require('./src/models/Question');
 require('dotenv').config();
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI);
-
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', async () => {
-  console.log('Connected to MongoDB');
-  
+async function checkQuestions() {
   try {
-    // Import the Question model
-    const Question = require('./src/models/Question');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to database');
     
-    // Find the latest verb-to-be exam (ID: 6989b116511fbbd47b6ce567)
-    const examId = '6989b116511fbbd47b6ce567';
-    
-    // Find all questions for this exam
-    const questions = await Question.find({ examId: examId });
-    
-    console.log(`Found ${questions.length} questions for exam ${examId}:`);
-    questions.forEach((question, index) => {
-      console.log(`\n--- Question ${index + 1} ---`);
-      console.log(`ID: ${question._id}`);
-      console.log(`Question: ${question.question}`);
-      console.log(`Options: ${question.options.join(', ')}`);
-      console.log(`Correct Answer Index: ${question.correctAnswer}`);
-      console.log(`Points: ${question.points}`);
+    const questions = await Question.find({ examId: '6991ee526cfa11c580f43af8' });
+    console.log('Questions for exam:');
+    questions.forEach(q => {
+      console.log(`${q._id}: ${q.question} (${q.type}) - Correct: ${q.correctAnswer}`);
     });
     
-    // Close connection
-    mongoose.connection.close();
+    await mongoose.connection.close();
   } catch (error) {
     console.error('Error:', error);
-    mongoose.connection.close();
   }
-});
+}
+
+checkQuestions();

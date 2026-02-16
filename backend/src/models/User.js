@@ -54,6 +54,12 @@ const userSchema = new mongoose.Schema({
   fcmToken: {
     type: String,
     sparse: true
+  },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
   }
 }, {
   timestamps: true

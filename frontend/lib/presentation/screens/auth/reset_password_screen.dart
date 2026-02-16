@@ -11,7 +11,7 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.oobCode});
 
   @override
-  _ResetPasswordScreenState createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -39,7 +39,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _verifyResetLink() async {
-    if (widget.oobCode == null || widget.oobCode!.isEmpty) {
+    // Check if oobCode was passed as argument (from EnterResetCodeScreen)
+    final passedCode = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final resetCode = passedCode?['oobCode'] as String?;
+
+    // Use the passed code if available, otherwise use the widget's code
+    final codeToUse = resetCode ?? widget.oobCode;
+
+    if (codeToUse == null || codeToUse.isEmpty) {
       setState(() {
         _isVerifying = false;
         _errorMessage = 'Invalid reset link. Please request a new password reset.';
@@ -47,53 +54,30 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       return;
     }
 
-    try {
-      // Verify the OOB code with Firebase
-      final auth = firebase_auth.FirebaseAuth.instance;
-      await auth.verifyPasswordResetCode(widget.oobCode!);
-      setState(() {
-        _isVerifying = false;
-        _isValidLink = true;
-        _errorMessage = null;
-      });
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      setState(() {
-        _isVerifying = false;
-        _isValidLink = false;
-        switch (e.code) {
-          case 'invalid-action-code':
-            _errorMessage = 'This reset link is invalid or has expired. Please request a new password reset.';
-            break;
-          case 'expired-action-code':
-            _errorMessage = 'This reset link has expired. Please request a new password reset.';
-            break;
-          default:
-            _errorMessage = 'Unable to verify reset link. Please try again.';
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _isVerifying = false;
-        _isValidLink = false;
-        _errorMessage = 'Unable to verify reset link. Please try again.';
-      });
-    }
+    // For our backend-based reset, we just need to ensure the token is present
+    // Verification will happen when the password is reset
+    setState(() {
+      _isVerifying = false;
+      _isValidLink = true;
+      _errorMessage = null;
+    });
   }
 
   Future<void> _resetPassword() async {
-    if (_formKey.currentState!.validate() && widget.oobCode != null) {
+    // Use the code passed as argument if available
+    final passedCode = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final resetCode = passedCode?['oobCode'] as String?;
+    final codeToUse = resetCode ?? widget.oobCode;
+
+    if (_formKey.currentState!.validate() && codeToUse != null) {
       final newPassword = _passwordController.text.trim();
       
       try {
         final notifier = ref.read(authProvider.notifier);
         notifier.state = notifier.state.copyWith(isLoading: true, error: null);
         
-        // Complete the password reset with Firebase
-        final auth = firebase_auth.FirebaseAuth.instance;
-        await auth.confirmPasswordReset(
-          code: widget.oobCode!,
-          newPassword: newPassword,
-        );
+        // Reset password using backend API
+        await ref.read(authProvider.notifier).resetPassword(codeToUse, newPassword);
         
         // Show success and navigate to login
         if (mounted) {
@@ -108,33 +92,23 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           // Navigate to login screen
           Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
         }
-      } on firebase_auth.FirebaseAuthException catch (e) {
-        String errorMessage;
-        switch (e.code) {
-          case 'invalid-action-code':
-            errorMessage = 'This reset link is no longer valid. Please request a new password reset.';
-            break;
-          case 'expired-action-code':
-            errorMessage = 'This reset link has expired. Please request a new password reset.';
-            break;
-          case 'weak-password':
-            errorMessage = 'Password is too weak. Please use a stronger password.';
-            break;
-          default:
-            errorMessage = 'Failed to reset password. Please try again.';
+      } catch (e) {
+        String errorMessage = e.toString();
+        
+        // Provide user-friendly error messages
+        if (errorMessage.contains('Invalid or expired reset token')) {
+          errorMessage = 'This reset link is invalid or has expired. Please request a new password reset.';
+        } else if (errorMessage.contains('must be at least 6 characters')) {
+          errorMessage = 'Password must be at least 6 characters long.';
+        } else if (errorMessage.contains('Token and new password are required')) {
+          errorMessage = 'Missing required information. Please try again.';
+        } else {
+          errorMessage = 'Failed to reset password. Please try again.';
         }
         
         if (mounted) {
           final notifier = ref.read(authProvider.notifier);
           notifier.state = notifier.state.copyWith(isLoading: false, error: errorMessage);
-        }
-      } catch (e) {
-        if (mounted) {
-          final notifier = ref.read(authProvider.notifier);
-          notifier.state = notifier.state.copyWith(
-            isLoading: false, 
-            error: 'Failed to reset password. Please try again.'
-          );
         }
       }
     }

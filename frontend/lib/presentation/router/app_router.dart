@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/presentation/screens/auth/forgot_password_
 import 'package:excellencecoachinghub/presentation/screens/auth/reset_password_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/enter_reset_code_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
@@ -74,6 +75,10 @@ class AppRouter {
           GoRoute(
             path: '/forgot-password',
             builder: (context, state) => const ForgotPasswordScreen(),
+          ),
+          GoRoute(
+            path: '/enter-reset-code',
+            builder: (context, state) => const EnterResetCodeScreen(),
           ),
           GoRoute(
             path: '/reset-password',

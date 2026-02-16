@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
 import 'exam_question_details_screen.dart';
 
 /// Screen to display user's exam history with detailed results
@@ -61,6 +62,12 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
         elevation: 0,
         centerTitle: false,
         actions: [
+          if (_examHistory.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: Colors.red),
+              onPressed: _confirmDeleteAllExamResults,
+              tooltip: 'Delete All History',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadExamHistory,
@@ -69,6 +76,73 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
       ),
       body: _buildContent(),
     );
+  }
+
+  void _confirmDeleteAllExamResults() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete All Exam History'),
+          content: Text(
+            'Are you sure you want to delete all ${_examHistory.length} exam results? '
+            'This action cannot be undone.'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _deleteAllExamResults();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete All'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteAllExamResults() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final examService = ExamService();
+      await examService.deleteAllExamResults();
+      
+      // Refresh the exam history to show empty state
+      await _loadExamHistory();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All exam history deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete exam history: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Widget _buildContent() {
@@ -192,39 +266,83 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isPassed 
-                          ? AppTheme.successColor.withOpacity(0.1)
-                          : AppTheme.errorColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isPassed ? Icons.check_circle : Icons.cancel,
-                          size: 16,
-                          color: isPassed 
-                              ? AppTheme.successColor 
-                              : AppTheme.errorColor,
+                  PopupMenuButton<String>(
+                    onSelected: (String choice) {
+                      if (choice == 'delete') {
+                        _confirmDeleteExamResult(result);
+                      } else if (choice == 'details') {
+                        _showExamDetails(result);
+                      } else if (choice == 'review') {
+                        _showQuestionDetails(result);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) {
+                      return <PopupMenuEntry<String>>[
+                        const PopupMenuItem<String>(
+                          value: 'details',
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 16),
+                              SizedBox(width: 8),
+                              Text('View Details'),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isPassed ? 'Passed' : 'Failed',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        const PopupMenuItem<String>(
+                          value: 'review',
+                          child: Row(
+                            children: [
+                              Icon(Icons.quiz, size: 16),
+                              SizedBox(width: 8),
+                              Text('Question Review'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, size: 16, color: Colors.red),
+                              const SizedBox(width: 8),
+                              const Text('Delete Result', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ];
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isPassed 
+                            ? AppTheme.successColor.withOpacity(0.1)
+                            : AppTheme.errorColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isPassed ? Icons.check_circle : Icons.cancel,
+                            size: 16,
                             color: isPassed 
                                 ? AppTheme.successColor 
                                 : AppTheme.errorColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            isPassed ? 'Passed' : 'Failed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isPassed 
+                                  ? AppTheme.successColor 
+                                  : AppTheme.errorColor,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down, size: 16),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -399,6 +517,70 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
         ),
       ),
     );
+  }
+
+  void _confirmDeleteExamResult(ExamResult result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Exam Result'),
+          content: Text('Are you sure you want to delete the result for "${result.examDetails?.title ?? 'Unknown Exam'}"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _deleteExamResult(result.resultId);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteExamResult(String resultId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final examService = ExamService();
+      await examService.deleteExamResult(resultId);
+      
+      // Refresh the exam history to remove the deleted item
+      await _loadExamHistory();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Exam result deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete exam result: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _showExamDetails(ExamResult result) {

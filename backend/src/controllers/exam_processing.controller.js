@@ -423,13 +423,10 @@ const getProcessingStatus = async (req, res) => {
 // Helper method to map AI question types to our enum values
 function mapQuestionType(aiType) {
   const typeMap = {
-    'MULTIPLE_CHOICE': 'mcq',
-    'TRUE_FALSE': 'true_false',
-    'FILL_BLANK': 'fill_blank',
-    'OPEN_ENDED': 'open'
+    'MULTIPLE_CHOICE': 'mcq'
   };
   
-  return typeMap[aiType] || 'mcq'; // Default to mcq if unknown
+  return typeMap[aiType] || 'mcq'; // Only return mcq since other types are filtered out
 }
 
 module.exports = {
