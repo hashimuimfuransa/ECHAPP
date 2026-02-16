@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // FIX #11: Added for Clipboard.setData
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,10 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_payment_providers.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
@@ -23,11 +27,39 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _hasCheckedRole = false;
+  Timer? _autoRefreshTimer;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _checkUserRole();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Start auto-refresh timer to check payment status periodically
+    _startAutoRefresh();
+  }
+
+  void _startAutoRefresh() {
+    // Check payment status every 10 seconds
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _refreshPaymentStatus();
+    });
+  }
+
+  void _refreshPaymentStatus() {
+    // Refresh user payments to check for status updates
+    ref.read(paymentProvider.notifier).loadUserPayments();
+    // Also refresh enrolled courses to update UI if payment was approved
+    ref.invalidate(enrolledCoursesProvider);
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   // FIX #10: Removed duplicate _checkUserRole call from didUpdateWidget.
@@ -36,13 +68,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   void _checkUserRole() {
     if (!_hasCheckedRole) {
-      final authState = ref.read(authProvider); // use read, not watch, outside build
+      final authState =
+          ref.read(authProvider); // use read, not watch, outside build
       if (authState.user != null && !authState.isLoading) {
         _hasCheckedRole = true;
-        debugPrint('DashboardScreen: Checking user role - ${authState.user?.role}');
+        debugPrint(
+            'DashboardScreen: Checking user role - ${authState.user?.role}');
 
         if (authState.user?.role == 'admin') {
-          debugPrint('DashboardScreen: Admin detected, redirecting to admin dashboard');
+          debugPrint(
+              'DashboardScreen: Admin detected, redirecting to admin dashboard');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) context.go('/admin');
           });
@@ -87,28 +122,43 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               children: [
                                 _buildWelcomeCard(context, user),
                                 const SizedBox(height: 25),
-                                if (ref.watch(authProvider.notifier).isAdmin) ...[
+                                if (ref
+                                    .watch(authProvider.notifier)
+                                    .isAdmin) ...[
                                   _buildAdminAccessButton(context),
                                   const SizedBox(height: 25),
                                 ],
                                 enrolledCoursesAsync.when(
-                                  data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
-                                  loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                                  error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
+                                  data: (enrolledCourses) =>
+                                      _buildContinueLearning(
+                                          context, enrolledCourses),
+                                  loading: () => _buildLoadingCard(
+                                      context, 'Continue Learning'),
+                                  error: (error, stack) => _buildErrorCard(
+                                      context,
+                                      'Continue Learning',
+                                      error.toString()),
                                 ),
                                 const SizedBox(height: 25),
                                 const DownloadsSection(),
                                 const SizedBox(height: 25),
                                 popularCoursesAsync.when(
                                   data: (popularCourses) {
-                                    debugPrint('Dashboard: Received ${popularCourses.length} popular courses'); // FIX #9: print -> debugPrint
+                                    debugPrint(
+                                        'Dashboard: Received ${popularCourses.length} popular courses'); // FIX #9: print -> debugPrint
                                     if (popularCourses.isNotEmpty) {
-                                      debugPrint('Dashboard: First popular course thumbnail: ${popularCourses[0].thumbnail ?? "null"}'); // FIX #9
+                                      debugPrint(
+                                          'Dashboard: First popular course thumbnail: ${popularCourses[0].thumbnail ?? "null"}'); // FIX #9
                                     }
-                                    return _buildResponsivePopularCourses(context, popularCourses);
+                                    return _buildResponsivePopularCourses(
+                                        context, popularCourses);
                                   },
-                                  loading: () => _buildLoadingCard(context, 'Popular Courses'),
-                                  error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
+                                  loading: () => _buildLoadingCard(
+                                      context, 'Popular Courses'),
+                                  error: (error, stack) => _buildErrorCard(
+                                      context,
+                                      'Popular Courses',
+                                      error.toString()),
                                 ),
                                 const SizedBox(height: 25),
                                 _buildWishlistSection(context),
@@ -157,17 +207,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             const SizedBox(height: 25),
                           ],
                           enrolledCoursesAsync.when(
-                            data: (enrolledCourses) => _buildContinueLearning(context, enrolledCourses),
-                            loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                            error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
+                            data: (enrolledCourses) => _buildContinueLearning(
+                                context, enrolledCourses),
+                            loading: () =>
+                                _buildLoadingCard(context, 'Continue Learning'),
+                            error: (error, stack) => _buildErrorCard(
+                                context, 'Continue Learning', error.toString()),
                           ),
                           const SizedBox(height: 25),
                           const DownloadsSection(),
                           const SizedBox(height: 25),
                           popularCoursesAsync.when(
-                            data: (popularCourses) => _buildPopularCourses(context, popularCourses),
-                            loading: () => _buildLoadingCard(context, 'Popular Courses'),
-                            error: (error, stack) => _buildErrorCard(context, 'Popular Courses', error.toString()),
+                            data: (popularCourses) =>
+                                _buildPopularCourses(context, popularCourses),
+                            loading: () =>
+                                _buildLoadingCard(context, 'Popular Courses'),
+                            error: (error, stack) => _buildErrorCard(
+                                context, 'Popular Courses', error.toString()),
                           ),
                           const SizedBox(height: 25),
                           _buildWishlistSection(context),
@@ -189,7 +245,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           foregroundColor: Colors.white,
           elevation: 8,
           icon: const Icon(Icons.contact_support, size: 24),
-          label: const Text('Contact Us', style: TextStyle(fontWeight: FontWeight.bold)),
+          label: const Text('Contact Us',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       );
@@ -244,13 +301,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             children: [
               IconButton(
-                icon: Icon(Icons.contact_support, color: AppTheme.primaryGreen, size: 24),
+                icon: Icon(Icons.contact_support,
+                    color: AppTheme.primaryGreen, size: 24),
                 onPressed: () => _showContactInfoDialog(context),
                 tooltip: 'Contact Us',
               ),
               const SizedBox(width: 16),
               IconButton(
-                icon: Icon(Icons.refresh, color: AppTheme.primaryGreen, size: 24),
+                icon:
+                    Icon(Icons.refresh, color: AppTheme.primaryGreen, size: 24),
                 onPressed: () async {
                   await _refreshDashboard(); // FIX #6
                   if (context.mounted) {
@@ -271,7 +330,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     const Icon(Icons.notifications_outlined, size: 24),
                     // Notification badge
-                    if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
+                    if (ref
+                        .watch(notificationProvider)
+                        .notifications
+                        .any((n) => !n.isRead))
                       Positioned(
                         top: 0,
                         right: 0,
@@ -293,7 +355,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               PopupMenuButton(
                 icon: CircleAvatar(
                   radius: 22,
-                  backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
+                  backgroundColor:
+                      AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
                   child: Text(
                     user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
                     style: TextStyle(
@@ -314,27 +377,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     value: 'profile',
                     onTap: () => context.push('/profile'),
                     child: Row(children: [
-                      Icon(Icons.person_outline, color: AppTheme.getIconColor(context), size: 18),
+                      Icon(Icons.person_outline,
+                          color: AppTheme.getIconColor(context), size: 18),
                       const SizedBox(width: 10),
-                      Text('Profile', style: TextStyle(color: AppTheme.getTextColor(context))),
+                      Text('Profile',
+                          style:
+                              TextStyle(color: AppTheme.getTextColor(context))),
                     ]),
                   ),
                   PopupMenuItem<String>(
                     value: 'settings',
                     onTap: () => context.push('/settings'),
                     child: Row(children: [
-                      Icon(Icons.settings_outlined, color: AppTheme.getIconColor(context), size: 18),
+                      Icon(Icons.settings_outlined,
+                          color: AppTheme.getIconColor(context), size: 18),
                       const SizedBox(width: 10),
-                      Text('Settings', style: TextStyle(color: AppTheme.getTextColor(context))),
+                      Text('Settings',
+                          style:
+                              TextStyle(color: AppTheme.getTextColor(context))),
                     ]),
                   ),
                   const PopupMenuDivider(),
                   PopupMenuItem<String>(
                     value: 'logout',
                     child: Row(children: [
-                      Icon(Icons.logout, color: AppTheme.getErrorColor(context), size: 18),
+                      Icon(Icons.logout,
+                          color: AppTheme.getErrorColor(context), size: 18),
                       const SizedBox(width: 10),
-                      Text('Logout', style: TextStyle(color: AppTheme.getErrorColor(context))),
+                      Text('Logout',
+                          style: TextStyle(
+                              color: AppTheme.getErrorColor(context))),
                     ]),
                   ),
                 ],
@@ -350,11 +422,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Responsive sizing based on screen size
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final isStandardMobile = ResponsiveBreakpoints.isStandardMobile(context);
-    
+
     final padding = isSmallMobile ? 16.0 : (isStandardMobile ? 20.0 : 24.0);
     final iconSize = isSmallMobile ? 24.0 : (isStandardMobile ? 26.0 : 28.0);
-    final titleFontSize = isSmallMobile ? 18.0 : (isStandardMobile ? 20.0 : 22.0);
-    final subtitleFontSize = isSmallMobile ? 12.0 : (isStandardMobile ? 13.0 : 14.0);
+    final titleFontSize =
+        isSmallMobile ? 18.0 : (isStandardMobile ? 20.0 : 22.0);
+    final subtitleFontSize =
+        isSmallMobile ? 12.0 : (isStandardMobile ? 13.0 : 14.0);
     final borderRadius = isSmallMobile ? 16.0 : 20.0;
     return Container(
       decoration: BoxDecoration(
@@ -383,9 +457,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: EdgeInsets.all(isSmallMobile ? 10.0 : 12.0),
                   decoration: BoxDecoration(
                     color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
-                    borderRadius: BorderRadius.circular(isSmallMobile ? 12.0 : 16.0),
+                    borderRadius:
+                        BorderRadius.circular(isSmallMobile ? 12.0 : 16.0),
                   ),
-                  child: Icon(Icons.school, color: AppTheme.whiteColor, size: iconSize),
+                  child: Icon(Icons.school,
+                      color: AppTheme.whiteColor, size: iconSize),
                 ),
                 SizedBox(width: isSmallMobile ? 12.0 : 16.0),
                 Expanded(
@@ -404,11 +480,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       SizedBox(height: isSmallMobile ? 4.0 : 6.0),
                       Text(
-                        isSmallMobile 
-                          ? 'Continue learning and achieve goals' 
-                          : 'Continue your learning journey and achieve your goals',
+                        isSmallMobile
+                            ? 'Continue learning and achieve goals'
+                            : 'Continue your learning journey and achieve your goals',
                         style: TextStyle(
-                          color: AppTheme.whiteColor.withValues(alpha: 0.9), // FIX #8
+                          color: AppTheme.whiteColor
+                              .withValues(alpha: 0.9), // FIX #8
                           fontSize: subtitleFontSize,
                         ),
                         maxLines: isSmallMobile ? 2 : 3,
@@ -426,22 +503,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       ref.read(enrolledCoursesProvider).maybeWhen(
-                        data: (courses) => courses.isNotEmpty
-                            ? context.push('/my-courses')
-                            : context.push('/courses'),
-                        orElse: () => context.push('/courses'),
-                      );
+                            data: (courses) => courses.isNotEmpty
+                                ? context.push('/my-courses')
+                                : context.push('/courses'),
+                            orElse: () => context.push('/courses'),
+                          );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryGreen,
                       foregroundColor: AppTheme.whiteColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 2,
                     ),
                     child: const Text(
                       'Continue Learning',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -452,7 +531,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppTheme.whiteColor, width: 2),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(
                       'View Courses',
@@ -499,7 +579,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.admin_panel_settings, color: AppTheme.whiteColor, size: 28),
+              child: Icon(Icons.admin_panel_settings,
+                  color: AppTheme.whiteColor, size: 28),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -507,15 +588,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Admin Panel',
-                      style: TextStyle(color: AppTheme.whiteColor, fontSize: 20, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: AppTheme.whiteColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
                   Text('Manage courses, students, and platform settings',
-                      style: TextStyle(color: AppTheme.whiteColor.withValues(alpha: 0.9), fontSize: 14)), // FIX #8
+                      style: TextStyle(
+                          color: AppTheme.whiteColor.withValues(alpha: 0.9),
+                          fontSize: 14)), // FIX #8
                 ],
               ),
             ),
             Container(
-              decoration: BoxDecoration(color: AppTheme.whiteColor, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                  color: AppTheme.whiteColor,
+                  borderRadius: BorderRadius.circular(12)),
               child: IconButton(
                 icon: Icon(Icons.arrow_forward, color: AppTheme.primaryGreen),
                 onPressed: () => context.push('/admin'),
@@ -537,7 +625,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         'subtitle': 'Explore coaching categories',
         'icon': Icons.category_outlined,
         'color': AppTheme.primaryGreen,
-        'onTap': () => context.push('/categories'), // FIX #5: use go_router consistently
+        'onTap': () =>
+            context.push('/categories'), // FIX #5: use go_router consistently
       },
       {
         'title': 'My Learning',
@@ -595,8 +684,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildResponsiveActionCard(BuildContext context, String title, String subtitle,
-      IconData icon, Color color, Function onTap) {
+  Widget _buildResponsiveActionCard(BuildContext context, String title,
+      String subtitle, IconData icon, Color color, Function onTap) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     return Container(
@@ -605,13 +694,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         borderRadius: BorderRadius.circular(isDesktop ? 16.0 : 12.0),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
+            color:
+                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
             blurRadius: isDesktop ? 10.0 : 8.0,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+          color:
+              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
           width: 0.5,
         ),
       ),
@@ -644,7 +735,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SizedBox(height: isDesktop ? 6.0 : 5.0),
               Text(
                 subtitle,
-                style: TextStyle(color: AppTheme.greyColor, fontSize: isDesktop ? 14.0 : 12.0),
+                style: TextStyle(
+                    color: AppTheme.greyColor,
+                    fontSize: isDesktop ? 14.0 : 12.0),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -654,7 +747,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildContinueLearning(BuildContext context, List<Course> enrolledCourses) {
+  Widget _buildContinueLearning(
+      BuildContext context, List<Course> enrolledCourses) {
     if (enrolledCourses.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,13 +768,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
+                  color: Theme.of(context)
+                      .shadowColor
+                      .withValues(alpha: 0.08), // FIX #8
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
               ],
               border: Border.all(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+                color: Theme.of(context)
+                    .dividerColor
+                    .withValues(alpha: 0.1), // FIX #8
                 width: 0.5,
               ),
             ),
@@ -692,10 +790,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
+                      color:
+                          AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.play_circle_outline, color: AppTheme.greyColor, size: 30),
+                    child: const Icon(Icons.play_circle_outline,
+                        color: AppTheme.greyColor, size: 30),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
@@ -709,19 +809,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 5),
                         Text('Start a course to see your progress here',
-                            style: TextStyle(color: AppTheme.greyColor, fontSize: 13)),
+                            style: TextStyle(
+                                color: AppTheme.greyColor, fontSize: 13)),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
+                      color: AppTheme.primaryGreen
+                          .withValues(alpha: 0.1), // FIX #8
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text('Start Now',
                         style: TextStyle(
-                            color: AppTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.w500)),
+                            color: AppTheme.primaryGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500)),
                   ),
                 ],
               ),
@@ -750,7 +855,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               itemBuilder: (context, index) {
                 final course = enrolledCourses[index];
                 return GestureDetector(
-                  onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                  onTap: () =>
+                      CourseNavigationUtils.navigateToCourseWithContext(
+                          context, ref, course),
                   child: Container(
                     width: 320,
                     margin: const EdgeInsets.only(right: 15),
@@ -759,7 +866,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryGreen.withValues(alpha: 0.2), // FIX #8
+                          color: AppTheme.primaryGreen
+                              .withValues(alpha: 0.2), // FIX #8
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -774,20 +882,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             child: Container(
                               width: 60,
                               height: 60,
-                              color: AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
-                              child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                              color: AppTheme.greyColor
+                                  .withValues(alpha: 0.1), // FIX #8
+                              child: course.thumbnail != null &&
+                                      course.thumbnail!.isNotEmpty
                                   ? Image.network(
                                       course.thumbnail!,
                                       fit: BoxFit.cover,
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return const Icon(Icons.play_circle_filled,
-                                            color: AppTheme.greyColor, size: 24);
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return const Icon(
+                                            Icons.play_circle_filled,
+                                            color: AppTheme.greyColor,
+                                            size: 24);
                                       },
-                                      errorBuilder: (context, error, stackTrace) => const Icon(
-                                          Icons.image_not_supported_outlined,
-                                          color: AppTheme.greyColor,
-                                          size: 24),
+                                      errorBuilder: (context, error,
+                                              stackTrace) =>
+                                          const Icon(
+                                              Icons
+                                                  .image_not_supported_outlined,
+                                              color: AppTheme.greyColor,
+                                              size: 24),
                                     )
                                   : const Icon(Icons.play_circle_filled,
                                       color: AppTheme.greyColor, size: 32),
@@ -810,9 +927,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
+                                    color: AppTheme.whiteColor
+                                        .withValues(alpha: 0.2), // FIX #8
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Text('In Progress',
@@ -826,8 +945,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                           Container(
                             decoration: BoxDecoration(
-                                color: AppTheme.whiteColor, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.arrow_forward, color: AppTheme.primaryGreen, size: 20),
+                                color: AppTheme.whiteColor,
+                                borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.arrow_forward,
+                                color: AppTheme.primaryGreen, size: 20),
                           ),
                         ],
                       ),
@@ -844,7 +965,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // FIX #3: Restored correct method structure; original had mismatched braces
   // causing the method body to bleed into _buildResponsivePopularCourses.
-  Widget _buildPopularCourses(BuildContext context, List<Course> popularCourses) {
+  Widget _buildPopularCourses(
+      BuildContext context, List<Course> popularCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -863,7 +985,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onPressed: () => context.push('/courses'),
               child: const Text('View All',
                   style: TextStyle(
-                      color: AppTheme.primaryGreen, fontSize: 14, fontWeight: FontWeight.w500)),
+                      color: AppTheme.primaryGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500)),
             ),
           ],
         ),
@@ -876,8 +1000,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             itemBuilder: (context, index) {
               final course = popularCourses[index];
               return GestureDetector(
-                onTap: () =>
-                    CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+                    context, ref, course),
                 child: Container(
                   width: 240,
                   margin: const EdgeInsets.only(right: 15),
@@ -891,7 +1015,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildResponsivePopularCourses(BuildContext context, List<Course> popularCourses) {
+  Widget _buildResponsivePopularCourses(
+      BuildContext context, List<Course> popularCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final gridCount = ResponsiveGridCount(context);
 
@@ -934,8 +1059,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             itemBuilder: (context, index) {
               final course = popularCourses[index];
               return InkWell(
-                onTap: () =>
-                    CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+                    context, ref, course),
                 borderRadius: BorderRadius.circular(16),
                 child: _buildResponsiveCourseCard(context, course),
               );
@@ -951,7 +1076,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 final course = popularCourses[index];
                 return GestureDetector(
                   onTap: () =>
-                      CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                      CourseNavigationUtils.navigateToCourseWithContext(
+                          context, ref, course),
                   child: Container(
                     width: 240,
                     margin: const EdgeInsets.only(right: 15),
@@ -974,13 +1100,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
+            color:
+                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
             blurRadius: isDesktop ? 10 : 8,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+          color:
+              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
           width: 0.5,
         ),
       ),
@@ -1004,12 +1132,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           return const Icon(Icons.play_circle_filled,
                               color: AppTheme.greyColor, size: 30);
                         },
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppTheme.greyColor,
-                            size: 30),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported_outlined,
+                                color: AppTheme.greyColor, size: 30),
                       )
-                    : const Icon(Icons.play_circle_filled, color: AppTheme.greyColor, size: 35),
+                    : const Icon(Icons.play_circle_filled,
+                        color: AppTheme.greyColor, size: 35),
               ),
             ),
             SizedBox(height: isDesktop ? 12 : 10),
@@ -1025,7 +1153,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(height: 4),
             Text('by ${course.createdBy.fullName}',
-                style: TextStyle(color: AppTheme.greyColor, fontSize: isDesktop ? 13.0 : 12.0)),
+                style: TextStyle(
+                    color: AppTheme.greyColor,
+                    fontSize: isDesktop ? 13.0 : 12.0)),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1034,18 +1164,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const Icon(Icons.star, color: Colors.amber, size: 14),
                   const SizedBox(width: 3),
                   Text('4.8',
-                      style: TextStyle(color: AppTheme.getTextColor(context), fontSize: 11)),
+                      style: TextStyle(
+                          color: AppTheme.getTextColor(context), fontSize: 11)),
                 ]),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
+                    color:
+                        AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'RWF ${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
-                        color: AppTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.w600),
+                        color: AppTheme.primaryGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -1063,13 +1198,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
+            color:
+                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+          color:
+              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
           width: 0.5,
         ),
       ),
@@ -1093,12 +1230,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           return const Icon(Icons.play_circle_filled,
                               color: AppTheme.greyColor, size: 30);
                         },
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppTheme.greyColor,
-                            size: 30),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported_outlined,
+                                color: AppTheme.greyColor, size: 30),
                       )
-                    : const Icon(Icons.play_circle_filled, color: AppTheme.greyColor, size: 35),
+                    : const Icon(Icons.play_circle_filled,
+                        color: AppTheme.greyColor, size: 35),
               ),
             ),
             const SizedBox(height: 10),
@@ -1113,7 +1250,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(height: 4),
             Text('by ${course.createdBy.fullName}',
-                style: const TextStyle(color: AppTheme.greyColor, fontSize: 12)),
+                style:
+                    const TextStyle(color: AppTheme.greyColor, fontSize: 12)),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1122,18 +1260,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const Icon(Icons.star, color: Colors.amber, size: 14),
                   const SizedBox(width: 3),
                   Text('4.8',
-                      style: TextStyle(color: AppTheme.getTextColor(context), fontSize: 11)),
+                      style: TextStyle(
+                          color: AppTheme.getTextColor(context), fontSize: 11)),
                 ]),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
+                    color:
+                        AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'RWF ${course.price.toStringAsFixed(0)}',
                     style: const TextStyle(
-                        color: AppTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.w600),
+                        color: AppTheme.primaryGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -1151,7 +1294,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
             AppTheme.getCardColor(context),
         border: Border(
-          top: BorderSide(color: AppTheme.greyColor.withValues(alpha: 0.2), width: 1), // FIX #8
+          top: BorderSide(
+              color: AppTheme.greyColor.withValues(alpha: 0.2),
+              width: 1), // FIX #8
         ),
       ),
       child: Row(
@@ -1165,8 +1310,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           }),
           _buildNavItem(context, Icons.search_outlined, 'Search', false,
               () => context.push('/courses')),
-          _buildNavItem(context, Icons.bookmark_border_outlined, 'My Courses', false,
-              () => context.push('/my-courses')),
+          _buildNavItem(context, Icons.bookmark_border_outlined, 'My Courses',
+              false, () => context.push('/my-courses')),
           _buildNavItem(context, Icons.person_outline, 'Profile', false,
               () => context.push('/profile')),
         ],
@@ -1174,8 +1319,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, IconData icon, String label, bool isSelected,
-      Function onTap) {
+  Widget _buildNavItem(BuildContext context, IconData icon, String label,
+      bool isSelected, Function onTap) {
     final theme = Theme.of(context);
     return InkWell(
       onTap: () => onTap(),
@@ -1184,7 +1329,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: [
           Icon(icon,
               color: isSelected
-                  ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
+                  ? (theme.bottomNavigationBarTheme.selectedItemColor ??
+                      AppTheme.primaryGreen)
                   : (theme.bottomNavigationBarTheme.unselectedItemColor ??
                       AppTheme.getSecondaryTextColor(context)),
               size: 28),
@@ -1192,7 +1338,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(label,
               style: TextStyle(
                 color: isSelected
-                    ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
+                    ? (theme.bottomNavigationBarTheme.selectedItemColor ??
+                        AppTheme.primaryGreen)
                     : (theme.bottomNavigationBarTheme.unselectedItemColor ??
                         AppTheme.getSecondaryTextColor(context)),
                 fontSize: 12,
@@ -1211,13 +1358,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppTheme.whiteColor,
-          title: const Text('Logout', style: TextStyle(color: AppTheme.blackColor)),
+          title: const Text('Logout',
+              style: TextStyle(color: AppTheme.blackColor)),
           content: const Text('Are you sure you want to logout?',
               style: TextStyle(color: AppTheme.greyColor)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.greyColor)),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppTheme.greyColor)),
             ),
             TextButton(
               onPressed: () {
@@ -1249,13 +1398,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.1), // FIX #8
+                color: Theme.of(context)
+                    .shadowColor
+                    .withValues(alpha: 0.1), // FIX #8
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
             ],
             border: Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.2), // FIX #8
+              color: Theme.of(context)
+                  .dividerColor
+                  .withValues(alpha: 0.2), // FIX #8
               width: 1,
             ),
           ),
@@ -1268,7 +1421,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildErrorCard(BuildContext context, String title, String errorMessage) {
+  Widget _buildErrorCard(
+      BuildContext context, String title, String errorMessage) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1284,13 +1438,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.1), // FIX #8
+                color: Theme.of(context)
+                    .shadowColor
+                    .withValues(alpha: 0.1), // FIX #8
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
             ],
             border: Border.all(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.2), // FIX #8
+              color: Theme.of(context)
+                  .dividerColor
+                  .withValues(alpha: 0.2), // FIX #8
               width: 1,
             ),
           ),
@@ -1307,7 +1465,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // FIX #5: Replaced Navigator.push with context.push for consistent go_router navigation.
-  void _navigateToCategories(BuildContext context) => context.push('/categories');
+  void _navigateToCategories(BuildContext context) =>
+      context.push('/categories');
 
   Widget _buildWishlistSection(BuildContext context) {
     final wishlistAsync = ref.watch(wishlistProvider);
@@ -1333,7 +1492,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+                    color: Theme.of(context)
+                        .dividerColor
+                        .withValues(alpha: 0.1), // FIX #8
                     width: 1,
                   ),
                 ),
@@ -1351,7 +1512,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).textTheme.bodyMedium?.color)),
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color)),
                     const SizedBox(height: 8),
                     Text("Start adding courses you're interested in",
                         style: TextStyle(
@@ -1363,11 +1525,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ?.withValues(alpha: 0.7))), // FIX #8
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => _navigateToCategories(context), // FIX #5: use consistent nav
+                      onPressed: () => _navigateToCategories(
+                          context), // FIX #5: use consistent nav
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       child: const Text('Browse Courses'),
                     ),
@@ -1382,13 +1546,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
+                    color: Theme.of(context)
+                        .shadowColor
+                        .withValues(alpha: 0.08), // FIX #8
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
                 ],
                 border: Border.all(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+                  color: Theme.of(context)
+                      .dividerColor
+                      .withValues(alpha: 0.1), // FIX #8
                   width: 0.5,
                 ),
               ),
@@ -1400,12 +1568,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Saved Courses (${courses.length})',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
                         TextButton(
-                          onPressed: () => context.push('/wishlist'), // FIX #5: go_router
+                          onPressed: () =>
+                              context.push('/wishlist'), // FIX #5: go_router
                           child: const Text('View All',
                               style: TextStyle(
-                                  color: AppTheme.primaryGreen, fontWeight: FontWeight.w600)),
+                                  color: AppTheme.primaryGreen,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -1417,7 +1588,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: courses.length,
                       itemBuilder: (context, index) =>
-                          _buildWishlistCoursePreview(context, courses[index], ref),
+                          _buildWishlistCoursePreview(
+                              context, courses[index], ref),
                     ),
                   ),
                 ],
@@ -1425,13 +1597,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             );
           },
           loading: () => _buildLoadingCard(context, 'My Wishlist'),
-          error: (error, stack) => _buildErrorCard(context, 'My Wishlist', error.toString()),
+          error: (error, stack) =>
+              _buildErrorCard(context, 'My Wishlist', error.toString()),
         ),
       ],
     );
   }
 
-  Widget _buildWishlistCoursePreview(BuildContext context, Course course, WidgetRef ref) {
+  Widget _buildWishlistCoursePreview(
+      BuildContext context, Course course, WidgetRef ref) {
     return Container(
       width: 200,
       margin: const EdgeInsets.only(right: 12),
@@ -1439,12 +1613,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
+          color:
+              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
           width: 1,
         ),
       ),
       child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+            context, ref, course),
         borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1453,14 +1629,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               height: 60,
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
                 image: course.thumbnail != null && course.thumbnail!.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(course.thumbnail!), fit: BoxFit.cover)
+                        image: NetworkImage(course.thumbnail!),
+                        fit: BoxFit.cover)
                     : null,
               ),
               child: course.thumbnail == null || course.thumbnail!.isEmpty
-                  ? Icon(Icons.play_circle_outline, color: Colors.grey[400], size: 24)
+                  ? Icon(Icons.play_circle_outline,
+                      color: Colors.grey[400], size: 24)
                   : null,
             ),
             Padding(
@@ -1491,11 +1670,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+                        course.price == 0
+                            ? 'FREE'
+                            : 'RWF ${course.price.toStringAsFixed(0)}',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: course.price == 0 ? Colors.green : AppTheme.blackColor),
+                            color: course.price == 0
+                                ? Colors.green
+                                : AppTheme.blackColor),
                       ),
                       IconButton(
                         icon: Icon(Icons.close,
@@ -1505,8 +1688,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 .bodyMedium
                                 ?.color
                                 ?.withValues(alpha: 0.6)), // FIX #8
-                        onPressed: () =>
-                            ref.read(wishlistNotifierProvider.notifier).removeCourse(course.id),
+                        onPressed: () => ref
+                            .read(wishlistNotifierProvider.notifier)
+                            .removeCourse(course.id),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -1558,13 +1742,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     icon: Icons.email,
                     title: 'Email Us',
                     subtitle: 'info@excellencecoachinghub.com',
-                    onTap: () => _launchEmail('info@excellencecoachinghub.com')),
+                    onTap: () =>
+                        _launchEmail('info@excellencecoachinghub.com')),
               ],
             ),
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close')),
           ],
         );
       },
@@ -1584,7 +1770,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         decoration: BoxDecoration(
           color: AppTheme.primaryGreen.withValues(alpha: 0.05), // FIX #8
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.2), width: 1), // FIX #8
+          border: Border.all(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+              width: 1), // FIX #8
         ),
         child: Row(
           children: [
@@ -1603,11 +1791,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Text(subtitle,
                       style: TextStyle(
                           fontSize: 14,
-                          color: Theme.of(context).textTheme.bodyMedium?.color)),
+                          color:
+                              Theme.of(context).textTheme.bodyMedium?.color)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primaryGreen),
+            const Icon(Icons.arrow_forward_ios,
+                size: 16, color: AppTheme.primaryGreen),
           ],
         ),
       ),
@@ -1646,9 +1836,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('WhatsApp is not installed or not accessible on this device.'),
+              const Text(
+                  'WhatsApp is not installed or not accessible on this device.'),
               const SizedBox(height: 16),
-              const Text('Alternative options:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Alternative options:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildFallbackOption(context,
                   icon: Icons.phone,
@@ -1660,12 +1852,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   icon: Icons.copy,
                   title: 'Copy Number',
                   subtitle: 'Copy to clipboard',
-                  onTap: () => _copyToClipboard(context, phoneNumber, 'Phone number')), // FIX #11
+                  onTap: () => _copyToClipboard(
+                      context, phoneNumber, 'Phone number')), // FIX #11
             ],
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close')),
           ],
         );
       },
@@ -1703,11 +1897,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Text(subtitle,
                       style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).textTheme.bodyMedium?.color)),
+                          color:
+                              Theme.of(context).textTheme.bodyMedium?.color)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.primaryGreen),
+            const Icon(Icons.arrow_forward_ios,
+                size: 14, color: AppTheme.primaryGreen),
           ],
         ),
       ),
@@ -1715,7 +1911,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // FIX #11: Implemented clipboard copy using flutter/services Clipboard API.
-  Future<void> _copyToClipboard(BuildContext context, String value, String label) async {
+  Future<void> _copyToClipboard(
+      BuildContext context, String value, String label) async {
     await Clipboard.setData(ClipboardData(text: value));
     if (context.mounted) {
       Navigator.of(context).pop();
@@ -1757,7 +1954,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               const Text('Phone calls are not supported on this device.'),
               const SizedBox(height: 16),
-              const Text('Alternative options:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Alternative options:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildFallbackOption(context,
                   icon: Icons.message,
@@ -1769,12 +1967,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   icon: Icons.copy,
                   title: 'Copy Number',
                   subtitle: 'Copy to clipboard',
-                  onTap: () => _copyToClipboard(context, phoneNumber, 'Phone number')), // FIX #11
+                  onTap: () => _copyToClipboard(
+                      context, phoneNumber, 'Phone number')), // FIX #11
             ],
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close')),
           ],
         );
       },
@@ -1810,18 +2010,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               const Text('Email client is not available on this device.'),
               const SizedBox(height: 16),
-              const Text('Alternative options:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Alternative options:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildFallbackOption(context,
                   icon: Icons.copy,
                   title: 'Copy Email',
                   subtitle: 'Copy to clipboard',
-                  onTap: () => _copyToClipboard(context, email, 'Email address')), // FIX #11
+                  onTap: () => _copyToClipboard(
+                      context, email, 'Email address')), // FIX #11
             ],
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close')),
           ],
         );
       },
@@ -1871,7 +2074,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Stack(
                   children: [
                     const Icon(Icons.notifications_outlined, size: 20),
-                    if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
+                    if (ref
+                        .watch(notificationProvider)
+                        .notifications
+                        .any((n) => !n.isRead))
                       Positioned(
                         top: 0,
                         right: 0,
@@ -1953,7 +2159,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: const Row(children: [
                       Icon(Icons.logout, color: Colors.red, size: 16),
                       SizedBox(width: 8),
-                      Text('Logout', style: TextStyle(color: Colors.red, fontSize: 14)),
+                      Text('Logout',
+                          style: TextStyle(color: Colors.red, fontSize: 14)),
                     ]),
                   ),
                 ],
@@ -2026,7 +2233,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Stack(
                   children: [
                     const Icon(Icons.notifications_outlined, size: 22),
-                    if (ref.watch(notificationProvider).notifications.any((n) => !n.isRead))
+                    if (ref
+                        .watch(notificationProvider)
+                        .notifications
+                        .any((n) => !n.isRead))
                       Positioned(
                         top: 0,
                         right: 0,
@@ -2089,7 +2299,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: const Row(children: [
                       Icon(Icons.logout, color: Colors.red, size: 17),
                       SizedBox(width: 9),
-                      Text('Logout', style: TextStyle(color: Colors.red, fontSize: 15)),
+                      Text('Logout',
+                          style: TextStyle(color: Colors.red, fontSize: 15)),
                     ]),
                   ),
                 ],
