@@ -25,7 +25,7 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   bool _hasRedirected = false;
 
-  // Provider for fetching a single course by ID - this ensures the API call is cached per course ID
+  // Provider for fetching course information
   static final _courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
     final repository = ref.watch(courseRepositoryProvider);
     return await repository.getCourseById(courseId);

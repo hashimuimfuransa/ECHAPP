@@ -64,7 +64,9 @@ class ApiClient {
     
     final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
     final authHeaders = await _getAuthHeaders();
+    print('ApiClient: Auth headers received: $authHeaders');
     final mergedHeaders = {...authHeaders, ...?headers};
+    print('ApiClient: Final headers being sent: $mergedHeaders');
     
     return _makeRequest(() => _httpClient.get(uri, headers: mergedHeaders));
   }

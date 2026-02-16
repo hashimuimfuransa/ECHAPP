@@ -3,7 +3,6 @@ const router = express.Router();
 const { 
   getCourses, 
   getCourseById, 
-  getCourseDetails, 
   createCourse, 
   updateCourse, 
   deleteCourse 
@@ -13,10 +12,7 @@ const { authorize } = require('../middleware/role.middleware');
 
 // Public routes
 router.get('/', getCourses);
-router.get('/:id/details', getCourseDetails);
-
-// Temporarily make this route protected to test authentication
-router.get('/:id', protect, getCourseById);
+router.get('/:id', getCourseById); // Make basic course info public
 
 // Admin routes
 router.post('/', protect, authorize('admin'), createCourse);

@@ -1,6 +1,8 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
+const Section = require('../models/Section');
+const Lesson = require('../models/Lesson');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 const emailService = require('../services/email.service');
 
@@ -112,45 +114,6 @@ const getCourseById = async (req, res) => {
     sendSuccess(res, course, 'Course retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve course', 500, error.message);
-  }
-};
-
-// Get course details with sections and lessons
-const getCourseDetails = async (req, res) => {
-  try {
-    const courseId = req.params.id;
-    
-    // Check if user is enrolled (if authenticated)
-    let isEnrolled = false;
-    if (req.user) {
-      const enrollment = await Enrollment.findOne({
-        userId: req.user.id,
-        courseId: courseId
-      });
-      isEnrolled = !!enrollment;
-    }
-    
-    const course = await Course.findById(courseId)
-      .populate('createdBy', 'fullName');
-    
-    if (!course) {
-      return sendNotFound(res, 'Course not found');
-    }
-    
-    if (!course.isPublished && req.user?.role !== 'admin') {
-      return sendNotFound(res, 'Course not found');
-    }
-    
-    // Get sections and lessons (this would be implemented in next steps)
-    const sections = []; // Placeholder for now
-    
-    sendSuccess(res, {
-      course,
-      sections,
-      isEnrolled
-    }, 'Course details retrieved successfully');
-  } catch (error) {
-    sendError(res, 'Failed to retrieve course details', 500, error.message);
   }
 };
 
@@ -269,7 +232,6 @@ const deleteCourse = async (req, res) => {
 module.exports = {
   getCourses,
   getCourseById,
-  getCourseDetails,
   createCourse,
   updateCourse,
   deleteCourse
