@@ -274,7 +274,9 @@ const uploadVideo = async (req, res) => {
 
         // If courseId and sectionId are provided AND createLesson is true (or not specified), create a lesson with the video
         let lesson = null;
-        const createLesson = req.body.createLesson !== false; // Default to true if not specified
+        console.log('createLesson value:', req.body.createLesson, 'type:', typeof req.body.createLesson);
+        const createLesson = req.body.createLesson !== 'false' && req.body.createLesson !== false;
+        console.log('createLesson evaluated to:', createLesson);
         if (createLesson && req.body.courseId && req.body.sectionId) {
           const Lesson = require('../models/Lesson');
           const Section = require('../models/Section');
