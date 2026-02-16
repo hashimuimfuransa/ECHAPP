@@ -18,6 +18,7 @@ class VideoService {
     String? sectionId,
     String? title,
     String? description,
+    bool createLesson = true, // New parameter to control automatic lesson creation
     Function(double)? onProgress,
   }) async {
     try {
@@ -46,6 +47,7 @@ class VideoService {
       if (sectionId != null) request.fields['sectionId'] = sectionId;
       request.fields['title'] = title ?? 'Untitled Video';
       if (description != null) request.fields['description'] = description;
+      request.fields['createLesson'] = createLesson.toString(); // Add createLesson parameter
       
       // Add file
       final multipartFile = http.MultipartFile.fromBytes(

@@ -37,6 +37,7 @@ class VideoRepository {
     String? sectionId,
     String? title,
     String? description,
+    bool createLesson = true, // New parameter to control automatic lesson creation
     Function(double)? onProgress,
   }) async {
     return await _videoService.uploadVideo(
@@ -45,6 +46,7 @@ class VideoRepository {
       sectionId: sectionId,
       title: title,
       description: description,
+      createLesson: createLesson, // Pass through the parameter
       onProgress: onProgress,
     );
   }

@@ -156,6 +156,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
         sectionId: widget.sectionId,
         title: _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : null,
         description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
+        createLesson: false, // Disable automatic lesson creation during upload
         onProgress: (progress) {
           // Handle progress updates if needed
           print('Upload progress: $progress%');
@@ -238,7 +239,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           print('=== WEB UPLOAD ERROR ===');
           print('Error type: ${e.runtimeType}');
           print('Error message: $e');
-          print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+          print('Stack trace: ${e is Error ? (e).stackTrace : 'No stack trace'}');
           print('=======================');
           rethrow;
         }

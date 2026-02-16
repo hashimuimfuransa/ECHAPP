@@ -272,9 +272,10 @@ const uploadVideo = async (req, res) => {
         // Update progress to indicate completion
         UploadProgressService.updateProgress(uploadId, 100, 'completed', 'Upload completed successfully!');
 
-        // If courseId and sectionId are provided, create a lesson with the video
+        // If courseId and sectionId are provided AND createLesson is true (or not specified), create a lesson with the video
         let lesson = null;
-        if (req.body.courseId && req.body.sectionId) {
+        const createLesson = req.body.createLesson !== false; // Default to true if not specified
+        if (createLesson && req.body.courseId && req.body.sectionId) {
           const Lesson = require('../models/Lesson');
           const Section = require('../models/Section');
           
