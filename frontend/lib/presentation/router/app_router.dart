@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:excellencecoachinghub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/login_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/register_screen.dart';
@@ -39,32 +38,14 @@ import 'package:excellencecoachinghub/presentation/screens/notifications/notific
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
-import 'dart:io' show Platform;
 
 class AppRouter {
-  String _getInitialLocation() {
-    // On web, start with the landing page; on mobile, start with splash
-    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      return '/'; // Landing page for desktop
-    } else if (kIsWeb) {
-      return '/'; // Landing page for web
-    } else {
-      return '/splash'; // Splash screen for mobile
-    }
-  }
-  
   GoRouter get router => GoRouter(
-        initialLocation: _getInitialLocation(),
+        initialLocation: '/',
         routes: [
-          // Landing Page (Web Only)
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const LandingScreen(),
-          ),
-          
           // Splash Screen
           GoRoute(
-            path: '/splash',
+            path: '/',
             builder: (context, state) => const SplashScreen(),
           ),
           
