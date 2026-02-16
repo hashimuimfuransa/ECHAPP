@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io';
@@ -314,9 +312,11 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                   const SizedBox(height: 4),
                   Text(
                     _responseText!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black87,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.blackColor,
                     ),
                   ),
                   if (_audioResponseUrl != null) ...[

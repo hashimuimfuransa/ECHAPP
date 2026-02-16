@@ -390,7 +390,9 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
               decoration: BoxDecoration(
                 color: isUser 
                     ? AppTheme.primary 
-                    : AppTheme.grey.withOpacity(0.1),
+                    : (Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.darkCard
+                        : AppTheme.card),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Text(
@@ -426,14 +428,16 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
   }
 
   Widget _buildInputArea() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkCard : AppTheme.card,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
         border: Border(
-          left: BorderSide(color: AppTheme.borderGrey),
-          right: BorderSide(color: AppTheme.borderGrey),
-          bottom: BorderSide(color: AppTheme.borderGrey),
+          left: BorderSide(color: isDarkMode ? AppTheme.darkTextSecondary.withOpacity(0.3) : AppTheme.borderGrey),
+          right: BorderSide(color: isDarkMode ? AppTheme.darkTextSecondary.withOpacity(0.3) : AppTheme.borderGrey),
+          bottom: BorderSide(color: isDarkMode ? AppTheme.darkTextSecondary.withOpacity(0.3) : AppTheme.borderGrey),
         ),
       ),
       child: Padding(

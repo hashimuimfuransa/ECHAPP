@@ -133,8 +133,8 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: widget.isCurrentUser
-                        ? (isDarkMode ? AppTheme.primary : AppTheme.primary)
-                        : (isDarkMode ? AppTheme.darkSurface : Colors.white),
+                        ? AppTheme.primary
+                        : (isDarkMode ? AppTheme.darkCard : AppTheme.card),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(20),
                       topRight: const Radius.circular(20),
@@ -160,8 +160,8 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                       color: widget.isCurrentUser
                           ? Colors.transparent
                           : (isDarkMode
-                              ? AppTheme.darkTextSecondary.withOpacity(0.2)
-                              : Colors.grey[200]!),
+                              ? AppTheme.darkTextSecondary.withOpacity(0.3)
+                              : Colors.grey[300]!),
                       width: 1,
                     ),
                   ),
@@ -174,7 +174,7 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                         style: TextStyle(
                           color: widget.isCurrentUser
                               ? Colors.white
-                              : (isDarkMode ? AppTheme.darkTextPrimary : Colors.black87),
+                              : (isDarkMode ? AppTheme.darkTextPrimary : AppTheme.blackColor),
                           fontSize: 15,
                           height: 1.4,
                         ),
