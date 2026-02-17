@@ -30,7 +30,7 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
@@ -39,11 +39,11 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: Curves.easeOut,
+      curve: Curves.easeOutQuad,
     ));
 
     _slideAnimation = Tween<Offset>(
-      begin: widget.isCurrentUser ? const Offset(0.5, 0) : const Offset(-0.5, 0),
+      begin: widget.isCurrentUser ? const Offset(0.3, 0.1) : const Offset(-0.3, 0.1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
@@ -56,7 +56,10 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
     _flutterTts.setVolume(1.0);
     _flutterTts.setPitch(1.0);
 
-    _animationController.forward();
+    // Staggered animation for better visual flow
+    Future.delayed(Duration(milliseconds: widget.isCurrentUser ? 100 : 0), () {
+      _animationController.forward();
+    });
   }
 
   @override
@@ -127,42 +130,74 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                   ),
                 ),
 
-              // Message bubble
+              // Enhanced Message bubble with modern design
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: widget.isCurrentUser
-                        ? AppTheme.primary
-                        : (isDarkMode ? AppTheme.darkCard : AppTheme.card),
+                    gradient: widget.isCurrentUser
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.primary,
+                              AppTheme.primaryDark,
+                            ],
+                          )
+                        : (isDarkMode 
+                            ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.darkCard,
+                                  AppTheme.darkSurface,
+                                ],
+                              )
+                            : LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.card,
+                                  AppTheme.surface,
+                                ],
+                              )),
                     borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(20),
-                      topRight: const Radius.circular(20),
+                      topLeft: const Radius.circular(24),
+                      topRight: const Radius.circular(24),
                       bottomLeft: widget.isCurrentUser
-                          ? const Radius.circular(20)
-                          : const Radius.circular(4),
+                          ? const Radius.circular(24)
+                          : const Radius.circular(6),
                       bottomRight: widget.isCurrentUser
-                          ? const Radius.circular(4)
-                          : const Radius.circular(20),
+                          ? const Radius.circular(6)
+                          : const Radius.circular(24),
                     ),
                     boxShadow: [
+                      // Primary shadow
                       BoxShadow(
                         color: widget.isCurrentUser
-                            ? AppTheme.primary.withOpacity(0.3)
+                            ? AppTheme.primary.withOpacity(0.4)
                             : (isDarkMode 
-                                ? Colors.black.withOpacity(0.3)
-                                : Colors.grey.withOpacity(0.15)),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
+                                ? Colors.black.withOpacity(0.4)
+                                : Colors.grey.withOpacity(0.2)),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                      // Subtle highlight
+                      BoxShadow(
+                        color: widget.isCurrentUser
+                            ? Colors.white.withOpacity(0.15)
+                            : Colors.white.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                     border: Border.all(
                       color: widget.isCurrentUser
                           ? Colors.transparent
                           : (isDarkMode
-                              ? AppTheme.darkTextSecondary.withOpacity(0.3)
-                              : Colors.grey[300]!),
-                      width: 1,
+                              ? AppTheme.primary.withOpacity(0.2)
+                              : AppTheme.primary.withOpacity(0.1)),
+                      width: 1.5,
                     ),
                   ),
                   child: Column(

@@ -16,6 +16,9 @@ import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_scr
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
+import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -36,6 +39,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   bool _isLoading = true;
   bool _isCompletingSection = false;
   int _currentSectionIndex = 0;
+  List<Certificate>? _courseCertificates;
+  bool _isLoadingCertificates = false;
 
   @override
   void initState() {
@@ -76,6 +81,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         _courseAccessData = null;
       }
 
+      // Load certificates for this course
+      await _loadCourseCertificates();
+
       setState(() {
         _isLoading = false;
       });
@@ -83,6 +91,22 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       print('Error loading course data: $e');
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadCourseCertificates() async {
+    try {
+      final certificateRepo = CertificateRepository();
+      final certificates = await certificateRepo.getCertificatesByCourse(widget.courseId);
+      
+      setState(() {
+        _courseCertificates = certificates;
+      });
+    } catch (e) {
+      print('Error loading certificates: $e');
+      setState(() {
+        _courseCertificates = [];
       });
     }
   }
@@ -251,7 +275,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 // Progress header
                 _buildProgressHeader(),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                
+                // Course expiration countdown
+                _buildCourseExpirationCounter(),
+                
+                const SizedBox(height: 16),
                 
                 // Sections list
                 Expanded(
@@ -399,6 +428,49 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         ),
       ],
     );
+  }
+
+  Widget _buildCourseExpirationCounter() {
+    if (_courseAccessData != null) {
+      print('Course access data: $_courseAccessData');
+      
+      if (_courseAccessData!['accessExpirationDate'] != null) {
+        try {
+          final expirationDateString = _courseAccessData!['accessExpirationDate'];
+          print('Expiration date string: $expirationDateString');
+          
+          // Parse the date string to a DateTime object
+          DateTime expirationDate;
+          
+          // Handle different date formats
+          if (expirationDateString is String) {
+            expirationDate = DateTime.parse(expirationDateString);
+          } else if (expirationDateString is int) {
+            // Handle timestamp format
+            expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationDateString);
+          } else {
+            print('Unexpected expiration date format: ${expirationDateString.runtimeType}');
+            return const SizedBox.shrink();
+          }
+          
+          print('Parsed expiration date: $expirationDate');
+          
+          return CountdownTimer(
+            expirationDate: expirationDate,
+            onExpiration: () {
+              // Handle expiration if needed
+              print('Course access has expired');
+            },
+          );
+        } catch (e) {
+          print('Error parsing expiration date: $e');
+          return const SizedBox.shrink();
+        }
+      }
+    }
+    
+    // If no expiration date or access data, don't show the counter
+    return const SizedBox.shrink();
   }
 
   Widget _buildSectionsList() {
@@ -687,6 +759,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             }),
             // Add exam button after lessons
             _buildExamButton(sectionId),
+            // Add certificate display if available
+            if (_courseCertificates != null && _courseCertificates!.isNotEmpty)
+              _buildCertificateSection(),
           ],
         );
       },
@@ -1536,5 +1611,137 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         builder: (context) => const ExamHistoryScreen(),
       ),
     );
+  }
+
+  Widget _buildCertificateSection() {
+    if (_courseCertificates == null || _courseCertificates!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final certificate = _courseCertificates!.first; // Take the first certificate
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF047857)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.school,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Certificate of Completion',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Congratulations! You have completed the final exam and earned a certificate.',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 12 : 14,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Score: ${certificate.score.toStringAsFixed(1)}/${certificate.percentage.toStringAsFixed(1)}%',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _downloadCertificate(certificate.id),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF10B981),
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.download, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Download Certificate',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadCertificate(String certificateId) async {
+    try {
+      final certificateRepo = CertificateRepository();
+      final downloadUrl = await certificateRepo.downloadCertificate(certificateId);
+      
+      // Launch the download URL
+      final Uri url = Uri.parse(downloadUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch $downloadUrl';
+      }
+    } catch (e) {
+      print('Error downloading certificate: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading certificate: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

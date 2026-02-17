@@ -34,22 +34,22 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     
-    // Pulse animation for attention
+    // Enhanced pulse animation with breathing effect
     _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
     
     _pulseAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.1,
+      end: 1.15,
     ).animate(CurvedAnimation(
       parent: _pulseController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutSine,
     ));
   }
 
@@ -136,10 +136,10 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
           ),
         ),
         
-        // Theme-aware floating chat button with enhanced micro-interactions
+        // Enhanced floating chat button with modern glass morphism effect
         Positioned(
-          right: 12,
-          bottom: 12,
+          right: 16,
+          bottom: 16,
           child: ScaleTransition(
             scale: _pulseAnimation,
             child: Container(
@@ -154,45 +154,80 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                   ],
                 ),
                 boxShadow: [
+                  // Primary glow effect
                   BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                    color: AppTheme.primary.withOpacity(0.5),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
+                  // Secondary accent glow
                   BoxShadow(
-                    color: AppTheme.accent.withOpacity(0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
+                    color: AppTheme.accent.withOpacity(0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
+                  // Subtle ambient light
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: FloatingActionButton(
-                onPressed: _toggleChat,
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                hoverElevation: 0,
-                focusElevation: 0,
-                highlightElevation: 0,
-                mini: true,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, animation) {
-                    return ScaleTransition(
-                      scale: animation,
-                      child: RotationTransition(
-                        turns: Tween<double>(
-                          begin: 0.0,
-                          end: 0.25,
-                        ).animate(animation),
-                        child: child,
+              child: Stack(
+                children: [
+                  // Inner glow effect
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.2),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                  child: _isExpanded
-                      ? const Icon(Icons.close, key: ValueKey('close'), size: 22)
-                      : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 22),
-                ),
+                    ),
+                  ),
+                  FloatingActionButton(
+                    onPressed: _toggleChat,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    hoverElevation: 0,
+                    focusElevation: 0,
+                    highlightElevation: 0,
+                    mini: false,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      transitionBuilder: (child, animation) {
+                        return ScaleTransition(
+                          scale: Tween<double>(
+                            begin: 0.8,
+                            end: 1.0,
+                          ).animate(animation),
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: RotationTransition(
+                              turns: Tween<double>(
+                                begin: 0.0,
+                                end: 0.25,
+                              ).animate(CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOutBack,
+                              )),
+                              child: child,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _isExpanded
+                          ? const Icon(Icons.close, key: ValueKey('close'), size: 24)
+                          : const Icon(Icons.auto_awesome, key: ValueKey('chat'), size: 24),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

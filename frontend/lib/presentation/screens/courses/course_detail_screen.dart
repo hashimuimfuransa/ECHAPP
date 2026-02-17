@@ -2058,35 +2058,97 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedContinueLearningButton(BuildContext context, Course course) {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Colors.orange, Colors.deepOrange],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextButton(
-        onPressed: () {
-          // Navigate directly to the learning screen using GoRouter
-          context.push('/learning/${course.id}');
-        },
-        child: const Text(
-          'Continue Learning',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    return Consumer(
+      builder: (context, ref, child) {
+        final courseAccessAsync = ref.watch(courseAccessProvider(course.id));
+        
+        return Column(
+          children: [
+            // Course expiration countdown
+            courseAccessAsync.when(
+              data: (accessData) {
+                if (accessData != null) {
+                  print('Course access data in detail screen: $accessData');
+                  
+                  if (accessData['accessExpirationDate'] != null) {
+                    try {
+                      final expirationDateString = accessData['accessExpirationDate'];
+                      print('Expiration date string in detail screen: $expirationDateString');
+                      
+                      // Parse the date string to a DateTime object
+                      DateTime expirationDate;
+                      
+                      // Handle different date formats
+                      if (expirationDateString is String) {
+                        expirationDate = DateTime.parse(expirationDateString);
+                      } else if (expirationDateString is int) {
+                        // Handle timestamp format
+                        expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationDateString);
+                      } else {
+                        print('Unexpected expiration date format in detail screen: ${expirationDateString.runtimeType}');
+                        return const SizedBox.shrink();
+                      }
+                      
+                      print('Parsed expiration date in detail screen: $expirationDate');
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: CountdownTimer(
+                          expirationDate: expirationDate,
+                          onExpiration: () {
+                            // Handle expiration if needed
+                            print('Course access has expired');
+                          },
+                        ),
+                      );
+                    } catch (e) {
+                      print('Error parsing expiration date in detail screen: $e');
+                      return const SizedBox.shrink();
+                    }
+                  }
+                }
+                
+                // If no expiration date or access data, don't show the counter
+                return const SizedBox.shrink();
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (error, stack) => const SizedBox.shrink(),
+            ),
+            
+            // Continue Learning Button
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.orange, Colors.deepOrange],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextButton(
+                onPressed: () {
+                  // Navigate directly to the learning screen using GoRouter
+                  context.push('/learning/${course.id}');
+                },
+                child: const Text(
+                  'Continue Learning',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

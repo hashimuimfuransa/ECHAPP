@@ -38,7 +38,7 @@ class _AIChatInputWidgetState extends State<AIChatInputWidget>
   void initState() {
     super.initState();
     _sendButtonController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 

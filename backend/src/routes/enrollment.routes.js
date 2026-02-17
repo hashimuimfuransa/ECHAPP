@@ -8,7 +8,8 @@ const {
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,
-  checkCourseAccess
+  checkCourseAccess,
+  downloadCertificateFile
 } = require('../controllers/enrollment.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -22,6 +23,9 @@ router.put('/:id/progress', protect, updateEnrollmentProgress);
 router.get('/certificates', protect, getCertificates);
 router.get('/:courseId/certificate-eligibility', protect, checkCertificateEligibility);
 router.get('/:courseId/certificate/download', protect, downloadCertificate);
+
+// New route for downloading certificate files
+router.get('/certificates/:certificateId/download-file', protect, downloadCertificateFile);
 
 // Course access check route
 router.get('/:courseId/access-check', protect, checkCourseAccess);

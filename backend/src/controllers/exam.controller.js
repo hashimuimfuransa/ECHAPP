@@ -5,8 +5,10 @@ const Course = require('../models/Course');
 const Section = require('../models/Section');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
+const Certificate = require('../models/Certificate');
 const GrokService = require('../services/grok_service');
 const emailService = require('../services/email.service');
+const CertificatePDFService = require('../services/certificate_pdf_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Get all exams for admin
@@ -295,6 +297,56 @@ const submitExam = async (req, res) => {
       percentage,
       passed
     });
+
+    // Check if this is a final exam and user passed - generate certificate
+    if (exam.type === 'final' && passed) {
+      // Generate certificate
+      try {
+        // Get user and course info
+        const user = await User.findById(userId).select('fullName email');
+        const course = await Course.findById(exam.courseId).select('title description');
+        
+        // Generate unique serial number
+        const serialNumber = `CERT-${userId.slice(-4)}-${examId.slice(-4)}-${Date.now()}`;
+        
+        // Generate PDF certificate
+        const pdfPath = await CertificatePDFService.generateCertificatePDF({
+          studentName: user.fullName,
+          userFullName: user.fullName,
+          courseTitle: course.title,
+          courseDescription: course.description,
+          score,
+          totalPoints,
+          percentage,
+          issuedDate: new Date(),
+          serialNumber
+        });
+        
+        // Create certificate record
+        const certificate = await Certificate.create({
+          userId,
+          courseId: exam.courseId,
+          examId,
+          score,
+          percentage,
+          certificatePdfPath: pdfPath,
+          serialNumber,
+          isValid: true
+        });
+        
+        // Update enrollment to mark certificate eligibility
+        await Enrollment.findOneAndUpdate(
+          { userId, courseId: exam.courseId },
+          { certificateEligible: true, completionStatus: 'completed' },
+          { new: true }
+        );
+        
+        console.log(`Certificate generated for user ${userId} for final exam ${examId}`);
+      } catch (certError) {
+        console.error('Error generating certificate:', certError);
+        // Don't fail the exam submission if certificate generation fails
+      }
+    }
 
     // Get user and exam details for email notification
     const user = await User.findById(userId).select('fullName email');

@@ -1,9 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -94,9 +92,22 @@ class RealAIChatService implements AIChatService {
   @override
   Future<List<AIChatMessage>> getConversation(String conversationId) async {
     try {
+      // If conversationId is a temporary string ID, we need to create a real conversation first
+      if (conversationId.startsWith('conversation_')) {
+        // Create a new conversation
+        await createConversation(AIChatContext());
+        // The conversation ID should be updated after creation
+        // For now, return empty list as the conversation will be created with proper ID
+        return [];
+      }
+      
+      final token = await _getAuthToken();
       final response = await _httpClient.get(
         Uri.parse('$_baseUrl/conversations/$conversationId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -114,8 +125,14 @@ class RealAIChatService implements AIChatService {
   @override
   Future<AIChatMessage> sendMessage(String conversationId, String message, AIChatContext context) async {
     try {
+      // If conversationId is a temporary string ID, create a real conversation first
+      String actualConversationId = conversationId;
+      if (conversationId.startsWith('conversation_')) {
+        actualConversationId = await createConversation(context);
+      }
+      
       final requestBody = {
-        'conversationId': conversationId,
+        'conversationId': actualConversationId,
         'message': message,
         'context': {
           'courseTitle': context.currentCourse?.title ?? '',
@@ -125,10 +142,12 @@ class RealAIChatService implements AIChatService {
         },
       };
 
+      final token = await _getAuthToken();
       final response = await _httpClient.post(
         Uri.parse('$_baseUrl/chat/send'),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: json.encode(requestBody),
       );
@@ -136,9 +155,9 @@ class RealAIChatService implements AIChatService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         return AIChatMessage(
-          id: responseData['id'] ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          id: responseData['messages'][1]['id'] ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
           sender: 'ai',
-          message: responseData['message'] ?? 'Sorry, I couldn\'t process that request.',
+          message: responseData['messages'][1]['message'] ?? 'Sorry, I couldn\'t process that request.',
           timestamp: DateTime.now(),
           isContextAware: true,
           audioUrl: responseData['audioUrl'],
@@ -162,10 +181,12 @@ class RealAIChatService implements AIChatService {
   @override
   Future<AIChatMessage> sendVoiceMessage(String conversationId, File audioFile, AIChatContext context) async {
     try {
+      final token = await _getAuthToken();
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$_voiceBaseUrl/send'), // Use centralized voice API config
       );
+      request.headers['Authorization'] = 'Bearer $token';
       
       request.fields['conversationId'] = conversationId;
       request.fields['context'] = jsonEncode({
@@ -213,7 +234,7 @@ class RealAIChatService implements AIChatService {
   }
 
   @override
-  Future<void> createConversation(AIChatContext context) async {
+  Future<String> createConversation(AIChatContext context) async {
     try {
       final requestBody = {
         'context': {
@@ -224,15 +245,20 @@ class RealAIChatService implements AIChatService {
         },
       };
 
+      final token = await _getAuthToken();
       final response = await _httpClient.post(
         Uri.parse('$_baseUrl/conversations/create'),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: json.encode(requestBody),
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        return responseData['conversation']['id'].toString();
+      } else {
         throw Exception('Failed to create conversation: ${response.statusCode}');
       }
     } catch (e) {
@@ -244,6 +270,12 @@ class RealAIChatService implements AIChatService {
   @override
   Future<void> updateContext(String conversationId, AIChatContext context) async {
     try {
+      // If conversationId is a temporary string ID, we can't update context
+      if (conversationId.startsWith('conversation_')) {
+        print('Cannot update context for temporary conversation ID');
+        return;
+      }
+      
       final requestBody = {
         'conversationId': conversationId,
         'context': {
@@ -254,10 +286,12 @@ class RealAIChatService implements AIChatService {
         },
       };
 
+      final token = await _getAuthToken();
       final response = await _httpClient.put(
         Uri.parse('$_baseUrl/conversations/update-context'),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: json.encode(requestBody),
       );
@@ -276,9 +310,33 @@ class RealAIChatService implements AIChatService {
       id: json['id'] ?? 'msg_${DateTime.now().millisecondsSinceEpoch}',
       sender: json['sender'] ?? 'ai',
       message: json['message'] ?? '',
-      timestamp: DateTime.fromMillisecondsSinceEpoch(json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch),
+      timestamp: json['timestamp'] is String 
+        ? DateTime.parse(json['timestamp']) 
+        : DateTime.fromMillisecondsSinceEpoch(json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch),
       isContextAware: json['isContextAware'] ?? false,
       audioUrl: json['audioUrl'],
     );
+  }
+
+  // Helper method to get auth token (implement based on your auth system)
+  Future<String> _getAuthToken() async {
+    try {
+      // Get the current user from Firebase
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Get the Firebase ID token
+        final token = await user.getIdToken();
+        if (token != null) {
+          return token;
+        } else {
+          throw Exception('Failed to get ID token');
+        }
+      } else {
+        throw Exception('No authenticated user found');
+      }
+    } catch (e) {
+      print('Error getting auth token: $e');
+      rethrow;
+    }
   }
 }

@@ -1,9 +1,8 @@
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
-import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class CertificatesScreen extends ConsumerWidget {
@@ -25,7 +24,7 @@ class CertificatesScreen extends ConsumerWidget {
   Widget _buildCertificateContent(BuildContext context) {
     // For now, we'll simulate fetching certificates from enrollment records
     // where certificateEligible is true
-    return FutureBuilder<List<Course>>(
+    return FutureBuilder<List<Certificate>>(
       future: _fetchCertificates(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -105,7 +104,7 @@ class CertificatesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCertificateGrid(BuildContext context, List<Course> certificates) {
+  Widget _buildCertificateGrid(BuildContext context, List<Certificate> certificates) {
     return Padding(
       padding: ResponsiveBreakpoints.isDesktop(context)
           ? const EdgeInsets.all(32)
@@ -143,7 +142,7 @@ class CertificatesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCertificateCard(BuildContext context, Course course) {
+  Widget _buildCertificateCard(BuildContext context, Certificate certificate) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -155,7 +154,7 @@ class CertificatesScreen extends ConsumerWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _viewCertificate(context, course),
+        onTap: () => _viewCertificate(context, certificate),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -176,7 +175,7 @@ class CertificatesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                course.title,
+                'Course Certificate', // certificate.title is not available, using generic text
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -193,6 +192,14 @@ class CertificatesScreen extends ConsumerWidget {
                   color: AppTheme.greyColor,
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Score: ${certificate.score.toStringAsFixed(1)}/${certificate.percentage.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.greyColor,
+                ),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -201,10 +208,10 @@ class CertificatesScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Completed',
+                  'Issued: ${certificate.issuedDate.day}/${certificate.issuedDate.month}/${certificate.issuedDate.year}',
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -216,7 +223,7 @@ class CertificatesScreen extends ConsumerWidget {
     );
   }
 
-  Future<List<Course>> _fetchCertificates() async {
+  Future<List<Certificate>> _fetchCertificates() async {
     // Fetch actual certificates from the API
     try {
       final certRepo = CertificateRepository();
@@ -227,14 +234,22 @@ class CertificatesScreen extends ConsumerWidget {
     }
   }
 
-  void _viewCertificate(BuildContext context, Course course) {
+  void _viewCertificate(BuildContext context, Certificate certificate) {
     // Navigate to certificate details view
     // In a real implementation, this would show the actual certificate
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Certificate'),
-        content: Text('Congratulations on completing ${course.title}!'),
+        title: const Text('Certificate Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Score: ${certificate.score.toStringAsFixed(1)}/${certificate.percentage.toStringAsFixed(1)}%'),
+            Text('Date: ${certificate.issuedDate.day}/${certificate.issuedDate.month}/${certificate.issuedDate.year}'),
+            Text('Serial: ${certificate.serialNumber}'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

@@ -2,6 +2,7 @@ const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
+const Certificate = require('../models/Certificate');
 const emailService = require('../services/email.service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
@@ -301,6 +302,45 @@ const checkCourseAccess = async (req, res) => {
   } catch (error) {
     sendError(res, 'Failed to check course access', 500, error.message);
   }
+}
+
+// Download certificate file
+const downloadCertificateFile = async (req, res) => {
+  try {
+    const { certificateId } = req.params;
+    const userId = req.user.id;
+    
+    // Find the certificate
+    const certificate = await Certificate.findOne({ 
+      _id: certificateId,
+      userId,
+      isValid: true
+    }).populate('courseId', 'title');
+    
+    if (!certificate) {
+      return sendNotFound(res, 'Certificate not found or not authorized');
+    }
+    
+    // Check if the file exists
+    const fs = require('fs');
+    const path = require('path');
+    
+    if (!fs.existsSync(certificate.certificatePdfPath)) {
+      return sendNotFound(res, 'Certificate file not found');
+    }
+    
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="certificate_${certificate.courseId.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`);
+    
+    // Stream the file
+    const fileStream = fs.createReadStream(certificate.certificatePdfPath);
+    fileStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error downloading certificate file:', error);
+    sendError(res, 'Failed to download certificate', 500, error.message);
+  }
 };
 
 module.exports = {
@@ -311,5 +351,6 @@ module.exports = {
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,
-  checkCourseAccess
+  checkCourseAccess,
+  downloadCertificateFile
 };
