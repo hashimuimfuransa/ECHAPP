@@ -30,7 +30,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     _loadStudents();
   }
 
-  Future<void> _loadStudents({String? searchQuery}) async {
+  Future<void> _loadStudents({String? searchQuery, String? source}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -40,6 +40,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
       final studentsData = await _adminService.getStudents(
         page: _currentPage,
         search: searchQuery,
+        source: source ?? 'mongodb',
       );
       
       setState(() {
@@ -345,7 +346,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
   void _searchStudents(String query) {
     _currentPage = 1;
-    _loadStudents(searchQuery: query);
+    _loadStudents(searchQuery: query, source: 'mongodb');
   }
 
   void _changePage(int page) {
@@ -595,6 +596,21 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (student.deviceId != null && student.deviceId!.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.devices,
+                        size: 16,
+                        color: Colors.green,
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.phonelink_off,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -617,7 +633,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                         _loadStudentEnrollments(student.id);
                         break;
                       case 'device_info':
-                        _loadUserDeviceInfo(student.id);
+                        _loadUserDeviceInfo(student.id); // student.id is the MongoDB _id
                         break;
                       case 'reset_password':
                         _showResetPasswordDialog(student);
@@ -1222,11 +1238,28 @@ class StudentDetailModal extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                studentDetail.user.deviceId != null && studentDetail.user.deviceId!.isNotEmpty ? 'Bound to device' : 'Not bound to device',
+                studentDetail.user.deviceId != null && studentDetail.user.deviceId!.isNotEmpty 
+                    ? 'Bound to device'
+                    : 'Not bound to device',
                 style: TextStyle(
                   color: studentDetail.user.deviceId != null && studentDetail.user.deviceId!.isNotEmpty ? Colors.green : Colors.orange,
                 ),
               ),
+              if (studentDetail.user.deviceId != null && studentDetail.user.deviceId!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Device ID:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                SelectableText(
+                  studentDetail.user.deviceId!,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
+                ),
+              ],
               if (onResetDevice != null) ...[
                 const SizedBox(height: 15),
                 ElevatedButton.icon(

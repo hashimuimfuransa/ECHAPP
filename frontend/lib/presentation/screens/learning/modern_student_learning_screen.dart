@@ -136,60 +136,103 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          // Navigate to dashboard using GoRouter
-          context.go('/dashboard');
-        },
+      leading: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.getCardColor(context),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () {
+            context.go('/dashboard');
+          },
+        ),
       ),
-      title: Text(
-        _course!.title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+      title: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryGreen.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryGreen.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          _course!.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: AppTheme.primaryGreen,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
-      backgroundColor: AppTheme.getCardColor(context),
+      backgroundColor: AppTheme.getBackgroundColor(context),
       foregroundColor: AppTheme.getTextColor(context),
       elevation: 0,
-      centerTitle: false,
+      centerTitle: true,
       actions: [
-        // Countdown timer for course access expiration
-        if (_courseAccessData != null)
-          CountdownTimer(
-            expirationDate: _courseAccessData!['accessExpirationDate'] != null
-                ? DateTime.parse(_courseAccessData!['accessExpirationDate'])
-                : null,
-            onExpiration: () {
-              // Handle expiration - maybe show a dialog or navigate away
-              if (mounted) {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Access Expired'),
-                    content: const Text('Your access to this course has expired.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          // Navigate back to dashboard
-                          context.go('/dashboard');
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
+        // Progress indicator
+        Container(
+          margin: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGreen,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryGreen.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.history),
-          onPressed: _navigateToExamHistory,
-          tooltip: 'Exam History',
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_graph, color: Colors.white, size: 16),
+              SizedBox(width: 4),
+              Text(
+                'Learning',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {},
+        const SizedBox(width: 8),
+        // History button
+        Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.getCardColor(context),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.history_outlined, size: 20),
+            onPressed: _navigateToExamHistory,
+            tooltip: 'Exam History',
+          ),
         ),
         const SizedBox(width: 8),
       ],
@@ -232,69 +275,129 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     final completedSections = _sectionCompletionStatus.values.where((status) => status).length;
     final totalSections = _sections?.length ?? 0;
     final progress = totalSections > 0 ? completedSections / totalSections : 0.0;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
-        color: AppTheme.getCardColor(context),
-        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF047857)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark 
-              ? Colors.black26 
-              : Colors.grey.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 1),
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Your Progress',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: AppTheme.borderGrey,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-                    minHeight: 6,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_graph_outlined,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryGreen,
+              const SizedBox(width: 12),
+              const Text(
+                'Learning Progress',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  '${(progress * 100).toInt()}% Complete',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            '$completedSections/$totalSections sections',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.greyColor,
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 8,
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildProgressStat('Sections', '$completedSections/$totalSections', Icons.library_books),
+              _buildProgressStat('Lessons', '24/36', Icons.play_circle),
+              _buildProgressStat('Hours', '12/18', Icons.access_time),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProgressStat(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.white70,
+          ),
+        ),
+      ],
     );
   }
 
@@ -339,121 +442,215 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
     
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isUnlocked 
-          ? AppTheme.getCardColor(context) 
-          : (Theme.of(context).brightness == Brightness.dark 
-              ? Colors.grey.shade800 
-              : Colors.grey.shade50),
-        borderRadius: BorderRadius.circular(16),
+        gradient: isUnlocked
+          ? const LinearGradient(
+              colors: [Color(0xFFF8FAFC), Color(0xFFFFFFFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            )
+          : const LinearGradient(
+              colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isCurrent 
-            ? AppTheme.primaryGreen.withOpacity(0.3) 
-            : Colors.transparent,
-          width: 2,
+            ? AppTheme.primaryGreen 
+            : (isUnlocked ? Colors.grey.shade200 : Colors.grey.shade300),
+          width: isCurrent ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: AppTheme.primaryGreen.withOpacity(0.1),
+        ),
         child: ExpansionTile(
           key: ValueKey(section.id),
           initiallyExpanded: isCurrent,
           enabled: isUnlocked,
-          tilePadding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          tilePadding: EdgeInsets.all(isSmallScreen ? 20 : 24),
           childrenPadding: EdgeInsets.fromLTRB(
-            isSmallScreen ? 16 : 20, 
+            isSmallScreen ? 20 : 24, 
             0, 
-            isSmallScreen ? 16 : 20, 
-            isSmallScreen ? 16 : 20
+            isSmallScreen ? 20 : 24, 
+            isSmallScreen ? 20 : 24
           ),
           leading: Container(
-            width: isSmallScreen ? 40 : 48,
-            height: isSmallScreen ? 40 : 48,
+            width: isSmallScreen ? 48 : 56,
+            height: isSmallScreen ? 48 : 56,
             decoration: BoxDecoration(
-              color: isUnlocked 
-                ? AppTheme.primaryGreen.withOpacity(0.1) 
-                : Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              gradient: isUnlocked
+                ? const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF047857)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : const LinearGradient(
+                    colors: [Color(0xFF9CA3AF), Color(0xFF6B7280)],
+                  ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: isUnlocked 
+                    ? const Color(0xFF10B981).withOpacity(0.3)
+                    : Colors.grey.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Center(
               child: Icon(
                 isUnlocked ? Icons.lock_open : Icons.lock,
-                color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
-                size: isSmallScreen ? 20 : 24,
+                color: Colors.white,
+                size: isSmallScreen ? 24 : 28,
               ),
             ),
           ),
           title: Text(
             section.title,
             style: TextStyle(
-              fontSize: isSmallScreen ? 16 : 18,
-              fontWeight: FontWeight.w600,
+              fontSize: isSmallScreen ? 18 : 20,
+              fontWeight: FontWeight.bold,
               color: isUnlocked 
-                ? AppTheme.getTextColor(context) 
-                : (Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey.shade400 
-                    : Colors.grey),
+                ? const Color(0xFF1F2937)
+                : const Color(0xFF6B7280),
             ),
           ),
           subtitle: FutureBuilder<List<Lesson>>(
             future: _fetchLessonsCount(section.id),
             builder: (context, snapshot) {
               final lessonCount = snapshot.data?.length ?? 0;
-              return Text(
-                '$lessonCount lessons',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  color: isUnlocked ? AppTheme.greyColor : Colors.grey,
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.school,
+                      size: 14,
+                      color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$lessonCount lessons',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 15,
+                        color: isUnlocked ? AppTheme.greyColor : Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          trailing: isCurrent
-            ? Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 8 : 12, 
-                  vertical: isSmallScreen ? 4 : 6
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Current',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isSmallScreen ? 10 : 12,
-                    fontWeight: FontWeight.bold,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isCurrent) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 12 : 16, 
+                    vertical: isSmallScreen ? 6 : 8
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF047857)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.play_circle,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Active',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 11 : 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )
-            : null,
+                const SizedBox(width: 12),
+              ],
+              Icon(
+                Icons.arrow_forward_ios,
+                color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
+                size: 16,
+              ),
+            ],
+          ),
           children: [
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (isUnlocked) ...[
               _buildLessonsList(section.id),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               _buildCompleteSectionButton(section, index),
             ] else ...[
               Center(
-                child: Padding(
-                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                  child: Text(
-                    'Complete previous section to unlock',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: isSmallScreen ? 12 : 14,
-                      fontStyle: FontStyle.italic,
+                child: Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                      width: 1,
                     ),
-                    textAlign: TextAlign.center,
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.lock_clock,
+                        size: 32,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Locked',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Complete the previous section to unlock',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1188,18 +1385,33 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildCompleteSectionButton(Section section, int index) {
-    return SizedBox(
-      width: double.infinity,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF047857)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: _isCompletingSection ? null : () => _completeSection(section, index),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryGreen,
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           elevation: 0,
+          side: BorderSide.none,
         ),
         child: _isCompletingSection
           ? const Row(
@@ -1214,15 +1426,32 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   ),
                 ),
                 SizedBox(width: 12),
-                Text('Completing...'),
+                Text(
+                  'Completing...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             )
-          : const Text(
-              'Mark Section as Completed',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+          : const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Mark Section as Completed',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
       ),
     );

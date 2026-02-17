@@ -472,7 +472,8 @@ const getStudentDetail = async (req, res) => {
         role: mongoUser.role,
         provider: mongoUser.provider,
         createdAt: mongoUser.createdAt,
-        lastLogin: mongoUser.lastLogin
+        lastLogin: mongoUser.lastLogin,
+        deviceId: mongoUser.deviceId
       };
       
       mongoUserId = mongoUser._id;

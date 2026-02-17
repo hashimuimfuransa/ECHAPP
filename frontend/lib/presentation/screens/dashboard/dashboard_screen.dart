@@ -25,6 +25,102 @@ class DashboardScreen extends ConsumerStatefulWidget {
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
+// Device binding policy widget for dashboard
+class _DashboardDeviceBindingPolicy extends StatelessWidget {
+  const _DashboardDeviceBindingPolicy();
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0), // Light orange background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFFB74D), // Orange border
+          width: 1,
+        ),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.security,
+            color: Color(0xFFF57C00), // Orange icon
+            size: 20,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Device Security: Your account is bound to this device. Logging in from other devices will be blocked. Contact support to change devices.',
+              style: TextStyle(
+                color: Color(0xFF333333), // Dark text for visibility
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Stat item widget for statistics dialog
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  
+  const _StatItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _hasCheckedRole = false;
   Timer? _autoRefreshTimer;
@@ -121,6 +217,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildWelcomeCard(context, user),
+                                const SizedBox(height: 20),
+                                const _DashboardDeviceBindingPolicy(),
                                 const SizedBox(height: 25),
                                 if (ref
                                     .watch(authProvider.notifier)
@@ -201,6 +299,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildWelcomeCard(context, user),
+                          const SizedBox(height: 20),
+                          const _DashboardDeviceBindingPolicy(),
                           const SizedBox(height: 25),
                           if (ref.watch(authProvider.notifier).isAdmin) ...[
                             _buildAdminAccessButton(context),
@@ -260,6 +360,61 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.invalidate(popularCoursesProvider);
   }
 
+  void _showStatsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.auto_graph, color: Color(0xFF10B981)),
+              SizedBox(width: 12),
+              Text('Learning Statistics'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _StatItem(
+                icon: Icons.school,
+                label: 'Courses Enrolled',
+                value: '5',
+                color: const Color(0xFF10B981),
+              ),
+              const SizedBox(height: 16),
+              _StatItem(
+                icon: Icons.play_circle,
+                label: 'Lessons Completed',
+                value: '24',
+                color: const Color(0xFF3B82F6),
+              ),
+              const SizedBox(height: 16),
+              _StatItem(
+                icon: Icons.quiz,
+                label: 'Exams Taken',
+                value: '8',
+                color: const Color(0xFF8B5CF6),
+              ),
+              const SizedBox(height: 16),
+              _StatItem(
+                icon: Icons.access_time,
+                label: 'Hours Learned',
+                value: '12.5',
+                color: const Color(0xFFF59E0B),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildHeader(BuildContext context, user) {
     // Use enhanced responsive layout
     if (ResponsiveBreakpoints.isSmallMobile(context)) {
@@ -278,25 +433,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back,',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                  fontSize: 16,
-                ),
+          // Welcome section with enhanced styling
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF10B981), Color(0xFF047857)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              Text(
-                user?.fullName ?? 'Student',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.waving_hand,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome back,',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      user?.fullName ?? 'Student',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           Row(
             children: [

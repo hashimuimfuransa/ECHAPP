@@ -75,8 +75,8 @@ const login = async (req, res) => {
         return sendError(res, 'Account is deactivated', 401);
       }
       
-      // Device binding logic
-      if (deviceId) {
+      // Device binding logic - skip for admin users
+      if (deviceId && user.role !== 'admin') {
         if (!user.deviceId) {
           // First login - bind account to device
           user.deviceId = deviceId;
@@ -300,8 +300,8 @@ const firebaseLogin = async (req, res) => {
       // Case 2: Existing user (login) - user already in MongoDB
       console.log('Existing user logging in:', user.email);
       
-      // Device binding logic
-      if (deviceId) {
+      // Device binding logic - skip for admin users
+      if (deviceId && user.role !== 'admin') {
         if (!user.deviceId) {
           // First login - bind account to device
           user.deviceId = deviceId;

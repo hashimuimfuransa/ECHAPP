@@ -120,12 +120,13 @@ class AdminService {
   }
 
   /// Get students with pagination and search
-  Future<StudentListResponse> getStudents({int page = 1, int limit = 10, String? search}) async {
+  Future<StudentListResponse> getStudents({int page = 1, int limit = 10, String? search, String? source}) async {
     try {
       final queryParams = {
         'page': page.toString(),
         'limit': limit.toString(),
         if (search != null && search.isNotEmpty) 'search': search,
+        if (source != null) 'source': source,
       };
       
       final response = await _apiClient.get('${ApiConfig.admin}/students', queryParams: queryParams);

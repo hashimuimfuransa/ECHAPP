@@ -3,17 +3,23 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
-class PrivacyScreen extends StatelessWidget {
-  const PrivacyScreen({super.key});
+class TermsScreen extends StatelessWidget {
+  const TermsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientBackground(
-        colors: [
-          const Color(0xFF4facfe), // Blue gradient start
-          const Color(0xFF00f2fe), // Teal gradient end
-        ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF3B82F6), // Blue
+              Color(0xFF8B5CF6), // Purple
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -27,7 +33,7 @@ class PrivacyScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Privacy Overview
+                      // Header Section
                       GlassContainer(
                         child: Padding(
                           padding: const EdgeInsets.all(25),
@@ -39,11 +45,11 @@ class PrivacyScreen extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: const BoxDecoration(
-                                      color: Color(0xFF4facfe),
+                                      color: Color(0xFF8B5CF6),
                                       borderRadius: BorderRadius.all(Radius.circular(12)),
                                     ),
                                     child: const Icon(
-                                      Icons.privacy_tip_outlined,
+                                      Icons.description_outlined,
                                       color: Colors.white,
                                       size: 28,
                                     ),
@@ -54,7 +60,7 @@ class PrivacyScreen extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Privacy Policy',
+                                          'Terms of Service',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 20,
@@ -63,7 +69,7 @@ class PrivacyScreen extends StatelessWidget {
                                         ),
                                         SizedBox(height: 5),
                                         Text(
-                                          'Last updated: February 1, 2026',
+                                          'Last updated: February 2026',
                                           style: TextStyle(
                                             color: Colors.white70,
                                             fontSize: 14,
@@ -76,7 +82,7 @@ class PrivacyScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 20),
                               const Text(
-                                'We are committed to protecting your privacy and ensuring your personal information is handled in a safe and responsible manner.',
+                                'By using Excellence Coaching Hub, you agree to these terms and conditions that govern your access to and use of our educational platform.',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 15,
@@ -90,64 +96,111 @@ class PrivacyScreen extends StatelessWidget {
                       
                       const SizedBox(height: 25),
                       
-                      // Privacy Sections
-                      _buildPrivacySection(
+                      // Acceptance of Terms
+                      _buildTermsSection(
                         context,
-                        'Information We Collect',
+                        'Acceptance of Terms',
                         [
-                          '• Personal information you provide during registration',
-                          '• Email address and basic profile information',
-                          '• Course enrollment and progress data',
-                          '• Device information and usage analytics',
-                          '• Payment information (processed securely by third parties)',
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      _buildPrivacySection(
-                        context,
-                        'How We Use Your Information',
-                        [
-                          '• Provide and improve our educational services',
-                          '• Process your course enrollments and payments',
-                          '• Send you important updates and notifications',
-                          '• Analyze usage patterns to enhance user experience',
-                          '• Comply with legal requirements and regulations',
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      _buildPrivacySection(
-                        context,
-                        'Data Protection',
-                        [
-                          '• All data is encrypted both in transit and at rest',
-                          '• We use industry-standard security measures',
-                          '• Regular security audits and updates',
-                          '• Limited access to personal information',
-                          '• Data retention only for as long as necessary',
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      _buildPrivacySection(
-                        context,
-                        'Your Rights',
-                        [
-                          '• Access your personal data at any time',
-                          '• Request correction of inaccurate information',
-                          '• Request deletion of your data',
-                          '• Export your data in portable format',
-                          '• Opt-out of marketing communications',
+                          '• By accessing or using Excellence Coaching Hub, you agree to be bound by these Terms of Service',
+                          '• If you do not agree to these terms, you must not use our services',
+                          '• We may update these terms at any time, and your continued use constitutes acceptance of changes',
+                          '• You are responsible for reviewing these terms periodically for updates',
                         ],
                       ),
                       
                       const SizedBox(height: 25),
                       
-                      // Contact
+                      // User Eligibility
+                      _buildTermsSection(
+                        context,
+                        'User Eligibility',
+                        [
+                          '• You must be at least 13 years old to use this service',
+                          '• If you are under 18, you must have parental consent',
+                          '• You must provide accurate and complete information when creating an account',
+                          '• You are responsible for maintaining the security of your account credentials',
+                          '• One account per user - sharing accounts is prohibited',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Service Usage
+                      _buildTermsSection(
+                        context,
+                        'Service Usage',
+                        [
+                          '• All content is provided for educational purposes only',
+                          '• You may not copy, distribute, or modify course materials without permission',
+                          '• You agree to use the service only for lawful purposes',
+                          '• You must not attempt to interfere with the proper functioning of our platform',
+                          '• We reserve the right to suspend or terminate accounts for violations',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Payments and Refunds
+                      _buildTermsSection(
+                        context,
+                        'Payments and Refunds',
+                        [
+                          '• All course payments are non-refundable after 7 days of purchase',
+                          '• Refunds may be considered within the first 7 days for technical issues',
+                          '• Subscription fees are billed in advance and non-refundable',
+                          '• We reserve the right to modify pricing with 30 days notice',
+                          '• Payment processing is handled securely through our payment partners',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Intellectual Property
+                      _buildTermsSection(
+                        context,
+                        'Intellectual Property',
+                        [
+                          '• All course content, materials, and trademarks are owned by Excellence Coaching Hub',
+                          '• You are granted a limited license to access content for personal educational use',
+                          '• Unauthorized reproduction or distribution of content is prohibited',
+                          '• You retain ownership of content you create and submit to the platform',
+                          '• By submitting content, you grant us a license to display and distribute it',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Limitation of Liability
+                      _buildTermsSection(
+                        context,
+                        'Limitation of Liability',
+                        [
+                          '• Our service is provided "as is" without warranties of any kind',
+                          '• We are not liable for indirect, incidental, or consequential damages',
+                          '• We do not guarantee specific results from using our educational content',
+                          '• Your use of the service is at your own risk',
+                          '• We are not responsible for content provided by third-party instructors',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Termination
+                      _buildTermsSection(
+                        context,
+                        'Termination',
+                        [
+                          '• We may terminate or suspend your account at any time for violations',
+                          '• You may terminate your account by contacting support',
+                          '• Upon termination, you lose access to paid content',
+                          '• We reserve the right to refuse service to anyone for any reason',
+                          '• Termination does not affect our rights to content you have submitted',
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 25),
+                      
+                      // Contact Information
                       GlassContainer(
                         child: Padding(
                           padding: const EdgeInsets.all(20),
@@ -164,7 +217,7 @@ class PrivacyScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 15),
                               const Text(
-                                'If you have any questions about this Privacy Policy, please contact us:',
+                                'If you have questions about these Terms of Service, please contact us:',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 15,
@@ -172,15 +225,22 @@ class PrivacyScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _buildContactInfo('Email:', 'info@excellencecoachinghub.com'),
-                              const SizedBox(height: 10),
-                              _buildContactInfo('Phone:', '+250 788 535 156'),
-                              const SizedBox(height: 10),
-                              _buildContactInfo('Website:', 'excellencecoachinghub.com'),
+                              const Text(
+                                '📧 info@excellencecoachinghub.com\n'
+                                '🌐 excellencecoachinghub.com\n'
+                                '📱 +250 788 535 156',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  height: 1.6,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
+                      
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
@@ -191,7 +251,7 @@ class PrivacyScreen extends StatelessWidget {
       ),
     );
   }
-
+  
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -203,7 +263,7 @@ class PrivacyScreen extends StatelessWidget {
             icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           ),
           const Text(
-            'Privacy Policy',
+            'Terms of Service',
             style: TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -215,8 +275,8 @@ class PrivacyScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildPrivacySection(BuildContext context, String title, List<String> items) {
+  
+  Widget _buildTermsSection(BuildContext context, String title, List<String> items) {
     return GlassContainer(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -242,38 +302,10 @@ class PrivacyScreen extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
-            )),
+            )).toList(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildContactInfo(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 70,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

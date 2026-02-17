@@ -16,6 +16,48 @@ class SettingsScreen extends ConsumerStatefulWidget {
   _SettingsScreenState createState() => _SettingsScreenState();
 }
 
+// Device binding policy widget for settings screen
+class _SettingsDeviceBindingPolicy extends StatelessWidget {
+  const _SettingsDeviceBindingPolicy();
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0), // Light orange background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFFB74D), // Orange border
+          width: 1,
+        ),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.security,
+            color: Color(0xFFF57C00), // Orange icon
+            size: 20,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Device Security: Your account is permanently bound to your first login device. To use a different device, please contact our support team.',
+              style: TextStyle(
+                color: Color(0xFF333333), // Dark text for visibility
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
@@ -41,6 +83,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Device Security Policy
+                      const _SettingsDeviceBindingPolicy(),
+                      const SizedBox(height: 25),
+                      
                       // Account Settings
                       _buildSection(
                         context,

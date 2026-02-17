@@ -15,6 +15,7 @@ import 'package:excellencecoachinghub/presentation/screens/profile/profile_scree
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/privacy/privacy_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/terms/terms_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/categories/categories_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/enrolled/enrolled_courses_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/help/help_screen.dart';
@@ -295,6 +296,10 @@ class AppRouter {
             builder: (context, state) => _buildPrivacyScreen(),
           ),
           GoRoute(
+            path: '/terms',
+            builder: (context, state) => _buildTermsScreen(),
+          ),
+          GoRoute(
             path: '/help',
             builder: (context, state) => _buildHelpScreen(),
           ),
@@ -338,6 +343,10 @@ class AppRouter {
 
   Widget _buildPrivacyScreen() {
     return const PrivacyScreen();
+  }
+
+  Widget _buildTermsScreen() {
+    return const TermsScreen();
   }
 
   Widget _buildCategoriesScreen() {
