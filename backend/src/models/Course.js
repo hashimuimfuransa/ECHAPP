@@ -53,7 +53,12 @@ const courseSchema = new mongoose.Schema({
   }],
   requirements: [{
     type: String
-  }]
+  }],
+  accessDurationDays: {
+    type: Number,
+    default: null, // null means unlimited access
+    min: [1, 'Access duration must be at least 1 day']
+  }
 }, {
   timestamps: true
 });

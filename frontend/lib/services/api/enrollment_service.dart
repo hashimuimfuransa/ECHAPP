@@ -106,4 +106,25 @@ class EnrollmentService {
       return false;
     }
   }
+  
+  /// Check course access with expiration details
+  Future<Map<String, dynamic>?> checkCourseAccess(String courseId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.enrollments}/$courseId/access-check');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        return jsonBody['data'] as Map<String, dynamic>?;
+      } else {
+        // Return null if access is denied (expired)
+        return null;
+      }
+    } catch (e) {
+      print('Error checking course access for course $courseId: $e');
+      // Return null on error
+      return null;
+    }
+  }
 }

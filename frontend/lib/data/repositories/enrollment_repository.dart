@@ -21,4 +21,9 @@ class EnrollmentRepository {
   Future<bool> isEnrolledInCourse(String courseId) async {
     return await _enrollmentService.isEnrolledInCourse(courseId);
   }
+  
+  /// Check course access with expiration details
+  Future<Map<String, dynamic>?> checkCourseAccess(String courseId) async {
+    return await _enrollmentService.checkCourseAccess(courseId);
+  }
 }

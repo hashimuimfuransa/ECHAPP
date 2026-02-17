@@ -120,7 +120,7 @@ const getCourseById = async (req, res) => {
 // Create course (admin only)
 const createCourse = async (req, res) => {
   try {
-    const { title, description, price, duration, level, thumbnail, categoryId } = req.body;
+    const { title, description, price, duration, level, thumbnail, categoryId, accessDurationDays } = req.body;
     
     // Validate required fields
     if (!title || !title.trim()) {
@@ -166,6 +166,11 @@ const createCourse = async (req, res) => {
       courseData.category = categoryId;
     }
     
+    // Add access duration if provided
+    if (accessDurationDays !== undefined) {
+      courseData.accessDurationDays = parseInt(accessDurationDays);
+    }
+    
     const course = await Course.create(courseData);
     
     // Populate the course with user details before sending response
@@ -198,9 +203,17 @@ const createCourse = async (req, res) => {
 // Update course (admin only)
 const updateCourse = async (req, res) => {
   try {
+    // Prepare update data
+    const updateData = { ...req.body };
+    
+    // Handle accessDurationDays separately to ensure proper parsing
+    if (req.body.accessDurationDays !== undefined) {
+      updateData.accessDurationDays = req.body.accessDurationDays === null || req.body.accessDurationDays === '' ? null : parseInt(req.body.accessDurationDays);
+    }
+    
     const course = await Course.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     

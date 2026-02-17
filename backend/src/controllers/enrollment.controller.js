@@ -5,6 +5,16 @@ const User = require('../models/User');
 const emailService = require('../services/email.service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
+// Helper function to check if enrollment access has expired
+const isEnrollmentExpired = (enrollment) => {
+  if (!enrollment.accessExpirationDate) {
+    return false; // No expiration set, access is unlimited
+  }
+  
+  const currentDate = new Date();
+  return currentDate > enrollment.accessExpirationDate;
+};
+
 // Enroll in a course
 const enrollInCourse = async (req, res) => {
   try {
@@ -36,12 +46,20 @@ const enrollInCourse = async (req, res) => {
       }
     }
 
+    // Calculate access expiration date based on course duration
+    let accessExpirationDate = null;
+    if (course.accessDurationDays) {
+      accessExpirationDate = new Date();
+      accessExpirationDate.setDate(accessExpirationDate.getDate() + course.accessDurationDays);
+    }
+
     // Create enrollment
     const enrollment = await Enrollment.create({
       userId,
       courseId,
       enrollmentDate: new Date(),
-      completionStatus: 'enrolled'
+      completionStatus: 'enrolled',
+      accessExpirationDate
     });
 
     // Get user and course details for email notification
@@ -78,7 +96,10 @@ const getMyCourses = async (req, res) => {
       })
       .sort({ enrollmentDate: -1 });
 
-    sendSuccess(res, enrollments, 'Enrolled courses retrieved successfully');
+    // Filter out expired enrollments
+    const activeEnrollments = enrollments.filter(enrollment => !isEnrollmentExpired(enrollment));
+
+    sendSuccess(res, activeEnrollments, 'Enrolled courses retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve enrolled courses', 500, error.message);
   }
@@ -97,6 +118,10 @@ const getEnrollmentProgress = async (req, res) => {
 
     if (!enrollment) {
       return sendNotFound(res, 'Enrollment not found');
+    }
+    
+    if (isEnrollmentExpired(enrollment)) {
+      return sendError(res, 'Access to this course has expired', 403);
     }
 
     sendSuccess(res, enrollment, 'Enrollment progress retrieved successfully');
@@ -119,6 +144,10 @@ const updateEnrollmentProgress = async (req, res) => {
 
     if (!enrollment) {
       return sendNotFound(res, 'Enrollment not found');
+    }
+    
+    if (isEnrollmentExpired(enrollment)) {
+      return sendError(res, 'Access to this course has expired', 403);
     }
 
     if (completed && !enrollment.completedLessons.includes(lessonId)) {
@@ -226,6 +255,54 @@ const downloadCertificate = async (req, res) => {
   }
 };
 
+// Check if user has access to a course (handles expiration)
+const checkCourseAccess = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+    
+    // Find enrollment
+    const enrollment = await Enrollment.findOne({ 
+      userId, 
+      courseId 
+    }).populate('courseId', 'title accessDurationDays');
+    
+    if (!enrollment) {
+      return sendNotFound(res, 'Enrollment not found');
+    }
+    
+    // Check if access has expired
+    const isExpired = isEnrollmentExpired(enrollment);
+    
+    const responseData = {
+      hasAccess: !isExpired,
+      enrollmentId: enrollment._id,
+      courseId: enrollment.courseId,
+      enrollmentDate: enrollment.enrollmentDate,
+      accessExpirationDate: enrollment.accessExpirationDate,
+      courseTitle: enrollment.courseId.title,
+      accessDurationDays: enrollment.courseId.accessDurationDays,
+    };
+    
+    if (isExpired) {
+      responseData.expiredAt = enrollment.accessExpirationDate;
+      responseData.message = 'Access to this course has expired';
+    }
+    
+    const statusCode = isExpired ? 403 : 200;
+    const message = isExpired ? 'Access expired' : 'Access granted';
+    
+    res.status(statusCode).send({
+      success: !isExpired,
+      data: responseData,
+      message: message
+    });
+    
+  } catch (error) {
+    sendError(res, 'Failed to check course access', 500, error.message);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
@@ -233,5 +310,6 @@ module.exports = {
   updateEnrollmentProgress,
   getCertificates,
   checkCertificateEligibility,
-  downloadCertificate
+  downloadCertificate,
+  checkCourseAccess
 };

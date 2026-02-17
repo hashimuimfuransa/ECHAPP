@@ -37,6 +37,10 @@ const enrollmentSchema = new mongoose.Schema({
   paymentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment'
+  },
+  accessExpirationDate: {
+    type: Date,
+    default: null // Will be calculated when enrollment is created based on course accessDurationDays
   }
 }, {
   timestamps: true

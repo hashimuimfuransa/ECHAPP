@@ -14,6 +14,8 @@ import 'package:excellencecoachinghub/widgets/lesson_viewer.dart';
 import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
+import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class ModernStudentLearningScreen extends ConsumerStatefulWidget {
 class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearningScreen> {
   Course? _course;
   List<Section>? _sections;
+  Map<String, dynamic>? _courseAccessData;
   final Map<String, bool> _sectionCompletionStatus = {};
   final Map<String, bool> _lessonCompletionStatus = {};
   bool _isLoading = true;
@@ -63,6 +66,15 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
       // Initialize section completion status
       _initializeSectionCompletionStatus();
+      
+      // Load course access information
+      try {
+        final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
+        _courseAccessData = await enrollmentRepo.checkCourseAccess(widget.courseId);
+      } catch (e) {
+        print('Error loading course access data: $e');
+        _courseAccessData = null;
+      }
 
       setState(() {
         _isLoading = false;
@@ -140,6 +152,36 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       elevation: 0,
       centerTitle: false,
       actions: [
+        // Countdown timer for course access expiration
+        if (_courseAccessData != null)
+          CountdownTimer(
+            expirationDate: _courseAccessData!['accessExpirationDate'] != null
+                ? DateTime.parse(_courseAccessData!['accessExpirationDate'])
+                : null,
+            onExpiration: () {
+              // Handle expiration - maybe show a dialog or navigate away
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Access Expired'),
+                    content: const Text('Your access to this course has expired.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Navigate back to dashboard
+                          context.go('/dashboard');
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+          ),
+        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.history),
           onPressed: _navigateToExamHistory,

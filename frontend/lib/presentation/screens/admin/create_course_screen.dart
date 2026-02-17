@@ -27,6 +27,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   final _durationController = TextEditingController();
   final _requirementsController = TextEditingController();
   final _objectivesController = TextEditingController();
+  final _accessDurationController = TextEditingController();
 
   bool _isFree = false;
   bool _isLoading = false;
@@ -95,6 +96,13 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       _isPublished = course.isPublished; // Set publish status
       _selectedCategoryId = course.category?['id'];
       _thumbnailKey = UniqueKey(); // Refresh key when loading course details
+      
+      // Load access duration days if available
+      if (course.accessDurationDays != null) {
+        _accessDurationController.text = course.accessDurationDays.toString();
+      } else {
+        _accessDurationController.text = '';
+      }
       
       if (course.learningObjectives != null) {
         _learningObjectives = List.from(course.learningObjectives!);
@@ -291,6 +299,10 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
 
       if (_isEditing && widget.courseId != null) {
         // Update existing course
+        final accessDurationDays = _accessDurationController.text.trim().isEmpty 
+            ? null 
+            : int.tryParse(_accessDurationController.text.trim());
+        
         final course = await repository.updateCourse(
           id: widget.courseId!,
           title: title,
@@ -302,6 +314,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           thumbnail: _thumbnailUrl,
           learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
           requirements: _requirementsList.isEmpty ? null : _requirementsList,
+          accessDurationDays: accessDurationDays,
         );
 
         if (mounted) {
@@ -315,6 +328,10 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
         }
       } else {
         // Create new course
+        final accessDurationDays = _accessDurationController.text.trim().isEmpty 
+            ? null 
+            : int.tryParse(_accessDurationController.text.trim());
+        
         final course = await repository.createCourse(
           title: title,
           description: description,
@@ -326,6 +343,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           isPublished: _isPublished, // Add publish status
           learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
           requirements: _requirementsList.isEmpty ? null : _requirementsList,
+          accessDurationDays: accessDurationDays,
         );
 
         if (mounted) {
@@ -939,6 +957,26 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _accessDurationController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Access Duration (days) - Leave empty for unlimited access',
+                hintText: 'e.g., 30, 60, 90 (Leave empty for unlimited)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.timer),
+              ),
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  final parsedValue = int.tryParse(value);
+                  if (parsedValue == null || parsedValue <= 0) {
+                    return 'Please enter a valid positive number of days';
+                  }
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             if (!_isFree)

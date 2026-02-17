@@ -8,6 +8,12 @@ const connectDB = require('./src/config/database');
 // Initialize Firebase Admin SDK
 require('./src/config/firebase');
 
+// Initialize Course Expiration Service
+const CourseExpirationService = require('./src/services/course-expiration.service');
+
+// Schedule course expiration checks (every 60 minutes)
+CourseExpirationService.scheduleExpirationChecks(60);
+
 // Load environment variables
 dotenv.config();
 

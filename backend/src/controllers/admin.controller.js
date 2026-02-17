@@ -735,6 +735,155 @@ const getStudentAnalytics = async (req, res) => {
   }
 };
 
+// Get user device information and enrolled courses
+const getUserDeviceInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Try to find user in Firebase first
+    let user;
+    let mongoUserId;
+    
+    try {
+      const firebaseUser = await admin.auth().getUser(id);
+      user = {
+        _id: firebaseUser.uid,
+        id: firebaseUser.uid,
+        firebaseUid: firebaseUser.uid,
+        fullName: firebaseUser.displayName || 'Unknown User',
+        email: firebaseUser.email || 'No email',
+        phone: firebaseUser.phoneNumber,
+        role: firebaseUser.customClaims?.role || 'student',
+        provider: firebaseUser.providerData[0]?.providerId || 'unknown',
+        createdAt: firebaseUser.metadata.creationTime ? 
+          new Date(firebaseUser.metadata.creationTime) : new Date(),
+        lastLogin: firebaseUser.metadata.lastSignInTime ? 
+          new Date(firebaseUser.metadata.lastSignInTime) : null,
+        emailVerified: firebaseUser.emailVerified,
+        disabled: firebaseUser.disabled
+      };
+      
+      // Try to find the corresponding MongoDB user
+      const mongoUser = await User.findOne({ firebaseUid: id });
+      mongoUserId = mongoUser?._id;
+      
+    } catch (firebaseError) {
+      console.log(`Firebase user ${id} not found, falling back to MongoDB:`, firebaseError.message);
+      // Fallback to MongoDB - handle potential CastError
+      try {
+        const mongoUser = await User.findById(id).select('-password');
+        if (!mongoUser) {
+          return sendError(res, 'User not found in either Firebase or MongoDB', 404);
+        }
+        
+        user = {
+          _id: mongoUser._id,
+          id: mongoUser._id,
+          firebaseUid: mongoUser.firebaseUid,
+          fullName: mongoUser.fullName,
+          email: mongoUser.email,
+          phone: mongoUser.phone,
+          role: mongoUser.role,
+          provider: mongoUser.provider,
+          createdAt: mongoUser.createdAt,
+          lastLogin: mongoUser.lastLogin,
+          deviceId: mongoUser.deviceId
+        };
+        
+        mongoUserId = mongoUser._id;
+      } catch (mongoError) {
+        if (mongoError.name === 'CastError') {
+          // If it's a CastError, try finding by firebaseUid
+          const mongoUser = await User.findOne({ firebaseUid: id }).select('-password');
+          if (!mongoUser) {
+            return sendError(res, 'User not found in either Firebase or MongoDB', 404);
+          }
+          
+          user = {
+            _id: mongoUser._id,
+            id: mongoUser._id,
+            firebaseUid: mongoUser.firebaseUid,
+            fullName: mongoUser.fullName,
+            email: mongoUser.email,
+            phone: mongoUser.phone,
+            role: mongoUser.role,
+            provider: mongoUser.provider,
+            createdAt: mongoUser.createdAt,
+            lastLogin: mongoUser.lastLogin,
+            deviceId: mongoUser.deviceId
+          };
+          
+          mongoUserId = mongoUser._id;
+        } else {
+          throw mongoError;
+        }
+      }
+    }
+    
+    // Get user's enrolled courses using the MongoDB user ID if available
+    const enrollments = mongoUserId 
+      ? await Enrollment.find({ userId: mongoUserId })
+          .populate({
+            path: 'courseId',
+            select: 'title description price duration level thumbnail isPublished'
+          })
+          .sort({ enrollmentDate: -1 })
+      : [];
+    
+    sendSuccess(res, {
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        deviceId: user.deviceId,
+        role: user.role,
+        createdAt: user.createdAt
+      },
+      enrolledCourses: enrollments,
+      totalEnrollments: enrollments.length
+    }, 'User device info and enrolled courses retrieved successfully');
+    
+  } catch (error) {
+    console.error('Error in getUserDeviceInfo:', error);
+    sendError(res, 'Failed to retrieve user device info', 500, error.message);
+  }
+};
+
+// Reset user device binding
+const resetUserDevice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deviceId } = req.body;
+    
+    // Find user in MongoDB
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+    
+    // Store old device ID for logging
+    const oldDeviceId = user.deviceId;
+    
+    // Reset the device ID
+    user.deviceId = deviceId || null;
+    await user.save();
+    
+    console.log(`Admin ${req.user.id} reset device binding for user ${user.id}. Old device ID: ${oldDeviceId}, New device ID: ${deviceId || 'cleared'}`);
+    
+    sendSuccess(res, {
+      userId: user._id,
+      oldDeviceId,
+      newDeviceId: user.deviceId,
+      message: 'User device binding reset successfully'
+    }, 'User device binding reset successfully');
+    
+  } catch (error) {
+    console.error('Error in resetUserDevice:', error);
+    sendError(res, 'Failed to reset user device binding', 500, error.message);
+  }
+};
+
 // Delete a student and all related data
 const deleteStudent = async (req, res) => {
   try {
@@ -832,5 +981,7 @@ module.exports = {
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,
-  manualSyncAllUsers
+  manualSyncAllUsers,
+  getUserDeviceInfo,
+  resetUserDevice
 };

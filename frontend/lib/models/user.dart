@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 class User {
   final String id;
@@ -6,6 +5,7 @@ class User {
   final String email;
   final String? phone;
   final String role;
+  final String? deviceId;
   final DateTime createdAt;
 
   User({
@@ -14,16 +14,29 @@ class User {
     required this.email,
     this.phone,
     required this.role,
+    this.deviceId,
     required this.createdAt,
   });
 
+  static String? _getStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic>) {
+      // If it's a Map, try to convert to string representation
+      return value.toString();
+    }
+    // For other types, convert to string
+    return value.toString();
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as String? ?? json['_id']?.toString() ?? '',
-      fullName: json['fullName'] as String? ?? 'Unknown User',
-      email: json['email'] as String? ?? '',
-      phone: json['phone'] as String?,
-      role: json['role'] as String? ?? 'user',
+      id: _getStringValue(json['id']) ?? _getStringValue(json['_id']) ?? '',
+      fullName: _getStringValue(json['fullName']) ?? 'Unknown User',
+      email: _getStringValue(json['email']) ?? '',
+      phone: _getStringValue(json['phone']),
+      role: _getStringValue(json['role']) ?? 'user',
+      deviceId: _getStringValue(json['deviceId']),
       createdAt: _parseDateTime(json['createdAt']),
     );
   }
@@ -35,6 +48,7 @@ class User {
       'email': email,
       'phone': phone,
       'role': role,
+      'deviceId': deviceId,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -52,6 +66,23 @@ class User {
       return DateTime.fromMillisecondsSinceEpoch(dateValue);
     } else if (dateValue is DateTime) {
       return dateValue;
+    } else if (dateValue is Map<String, dynamic>) {
+      // Handle case where date is stored as an object (e.g., Firestore timestamp)
+      try {
+        // Check if it's a Firestore Timestamp-like object with seconds and nanoseconds
+        if (dateValue.containsKey('seconds') && dateValue.containsKey('nanoseconds')) {
+          int seconds = dateValue['seconds'] as int? ?? 0;
+          int nanoseconds = dateValue['nanoseconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000 + (nanoseconds ~/ 1000000));
+        } else if (dateValue.containsKey('_seconds')) {
+          // Alternative format with _seconds
+          int seconds = dateValue['_seconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+        }
+      } catch (e) {
+        // If conversion fails, return current time
+        return DateTime.now();
+      }
     }
     
     return DateTime.now();

@@ -26,15 +26,21 @@ class AuthRepository {
 
   AuthRepository({http.Client? client}) : _client = client ?? http.Client();
 
-  Future<AuthResponse> login(String email, String password) async {
+  Future<AuthResponse> login(String email, String password, {String? deviceId}) async {
     try {
+      final body = {
+        'email': email,
+        'password': password,
+      };
+      
+      if (deviceId != null) {
+        body['deviceId'] = deviceId;
+      }
+      
       final response = await _client.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
@@ -98,10 +104,11 @@ class AuthRepository {
     }
   }
 
-  Future<AuthResponse> firebaseLogin(String idToken, {String? fullName}) async {
+  Future<AuthResponse> firebaseLogin(String idToken, {String? fullName, String? deviceId}) async {
     print('AuthRepository.firebaseLogin called with idToken type: ${idToken.runtimeType}');
     print('AuthRepository.firebaseLogin idToken value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
     print('AuthRepository.firebaseLogin fullName parameter: ${fullName ?? 'null'}');
+    print('AuthRepository.firebaseLogin deviceId parameter: ${deviceId ?? 'null'}');
     
     try {
       print('Attempting to encode JSON body');
@@ -113,6 +120,10 @@ class AuthRepository {
         if (fullName != null) {
           body['fullName'] = fullName;
           print('Adding fullName to request body: $fullName');
+        }
+        if (deviceId != null) {
+          body['deviceId'] = deviceId;
+          print('Adding deviceId to request body: $deviceId');
         }
         encodedBody = jsonEncode(body);
         print('Final request body: $encodedBody');

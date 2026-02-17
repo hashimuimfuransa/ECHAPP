@@ -65,7 +65,7 @@ const register = async (req, res) => {
 // Login user
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId } = req.body;
 
     // Find user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
@@ -73,6 +73,19 @@ const login = async (req, res) => {
     if (user && (await user.comparePassword(password))) {
       if (!user.isActive) {
         return sendError(res, 'Account is deactivated', 401);
+      }
+      
+      // Device binding logic
+      if (deviceId) {
+        if (!user.deviceId) {
+          // First login - bind account to device
+          user.deviceId = deviceId;
+          await user.save();
+          console.log(`Device bound to user ${user.email}: ${deviceId}`);
+        } else if (user.deviceId !== deviceId) {
+          // Different device - reject login
+          return sendError(res, 'This account is already registered on another device.', 401);
+        }
       }
 
       const token = generateToken({ id: user._id });
@@ -215,12 +228,13 @@ const googleSignIn = async (req, res) => {
 // Firebase login/signup - handles both new and existing users
 const firebaseLogin = async (req, res) => {
   try {
-    const { idToken, fullName } = req.body;
+    const { idToken, fullName, deviceId } = req.body;
     
     // Debug logging
     console.log('=== Firebase Login Debug ===');
     console.log('Received idToken:', idToken ? 'Present' : 'Missing');
     console.log('Received fullName:', fullName || 'Not provided');
+    console.log('Received deviceId:', deviceId || 'Not provided');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     if (!idToken) {
@@ -269,7 +283,9 @@ const firebaseLogin = async (req, res) => {
         isVerified: decodedToken.email_verified || false,
         isActive: true,
         // Firebase users don't need password
-        password: undefined
+        password: undefined,
+        // Bind device ID if provided
+        ...(deviceId && { deviceId })
       });
 
       // Send welcome email to the new user
@@ -283,6 +299,20 @@ const firebaseLogin = async (req, res) => {
     } else {
       // Case 2: Existing user (login) - user already in MongoDB
       console.log('Existing user logging in:', user.email);
+      
+      // Device binding logic
+      if (deviceId) {
+        if (!user.deviceId) {
+          // First login - bind account to device
+          user.deviceId = deviceId;
+          await user.save();
+          console.log(`Device bound to user ${user.email}: ${deviceId}`);
+        } else if (user.deviceId !== deviceId) {
+          // Different device - reject login
+          return sendError(res, 'This account is already registered on another device.', 401);
+        }
+      }
+      
       // Update user info from Firebase Auth
       try {
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
@@ -321,6 +351,38 @@ const firebaseLogin = async (req, res) => {
       return sendError(res, 'Invalid Firebase ID token', 401);
     }
     sendError(res, 'Authentication failed', 500, error.message);
+  }
+};
+
+// Admin endpoint to reset user's device binding
+const resetUserDevice = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { deviceId } = req.body;
+    
+    // Find the user by ID
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+    
+    // Reset the user's device ID
+    const oldDeviceId = user.deviceId;
+    user.deviceId = deviceId || null; // Allow setting to a new device ID or clearing it
+    await user.save();
+    
+    console.log(`Admin ${req.user.id} reset device binding for user ${user.id}. Old device ID: ${oldDeviceId}, New device ID: ${deviceId || 'cleared'}`);
+    
+    sendSuccess(res, {
+      userId: user._id,
+      oldDeviceId,
+      newDeviceId: user.deviceId
+    }, 'User device binding reset successfully');
+    
+  } catch (error) {
+    console.error('Reset user device error:', error);
+    sendError(res, 'Failed to reset user device binding', 500, error.message);
   }
 };
 
@@ -424,5 +486,6 @@ module.exports = {
   googleSignIn,
   firebaseLogin,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  resetUserDevice
 };

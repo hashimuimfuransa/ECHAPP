@@ -21,6 +21,20 @@ final isEnrolledInCourseProvider = FutureProvider.family<bool, String>((ref, cou
   }
 });
 
+// Provider to get course access information including expiration
+final courseAccessProvider = FutureProvider.family<Map<String, dynamic>?, String>((ref, courseId) async {
+  final repository = ref.read(enrollmentRepositoryProvider);
+  print('Checking course access for course: $courseId');
+  try {
+    final result = await repository.checkCourseAccess(courseId);
+    print('Course access check result for course $courseId: $result');
+    return result;
+  } catch (e) {
+    print('Error checking course access for course $courseId: $e');
+    return null;
+  }
+});
+
 // Provider for enrolled courses
 final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
   final repository = ref.read(enrollmentRepositoryProvider);

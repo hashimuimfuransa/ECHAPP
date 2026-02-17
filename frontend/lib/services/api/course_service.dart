@@ -110,6 +110,7 @@ class CourseService {
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDurationDays,
   }) async {
     try {
       final requestBody = {
@@ -123,6 +124,7 @@ class CourseService {
         if (isPublished != null) 'isPublished': isPublished,
         if (learningObjectives != null) 'learningObjectives': learningObjectives,
         if (requirements != null) 'requirements': requirements,
+        if (accessDurationDays != null) 'accessDurationDays': accessDurationDays,
       };
 
       final response = await _apiClient.post(
@@ -157,6 +159,7 @@ class CourseService {
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDurationDays,
   }) async {
     try {
       final requestBody = <String, dynamic>{
@@ -170,6 +173,7 @@ class CourseService {
         if (isPublished != null) 'isPublished': isPublished,
         if (learningObjectives != null) 'learningObjectives': learningObjectives,
         if (requirements != null) 'requirements': requirements,
+        if (accessDurationDays != null) 'accessDurationDays': accessDurationDays,
       };
 
       final response = await _apiClient.put(

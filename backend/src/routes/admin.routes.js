@@ -11,7 +11,9 @@ const {
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,
-  manualSyncAllUsers
+  manualSyncAllUsers,
+  getUserDeviceInfo,
+  resetUserDevice
 } = require('../controllers/admin.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
@@ -32,5 +34,9 @@ router.get('/course-stats', protect, authorize('admin'), getCourseStats);
 router.get('/payment-stats', protect, authorize('admin'), getPaymentStats);
 router.get('/exam-stats', protect, authorize('admin'), getExamStats);
 router.get('/analytics/students', protect, authorize('admin'), getStudentAnalytics);
+
+// Device management routes
+router.get('/students/:id/device-info', protect, authorize('admin'), getUserDeviceInfo);
+router.put('/students/:id/device-reset', protect, authorize('admin'), resetUserDevice);
 
 module.exports = router;

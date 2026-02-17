@@ -15,6 +15,7 @@ class Course {
   final DateTime createdAt;
   final List<String>? learningObjectives;
   final List<String>? requirements;
+  final int? accessDurationDays;
 
   Course({
     required this.id,
@@ -31,34 +32,47 @@ class Course {
     required this.createdAt,
     this.learningObjectives,
     this.requirements,
+    this.accessDurationDays,
   });
+
+  static String? _getStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic>) {
+      // If it's a Map, try to convert to string representation
+      return value.toString();
+    }
+    // For other types, convert to string
+    return value.toString();
+  }
 
   factory Course.fromJson(Map<String, dynamic> json) {
     return Course(
-      id: json['id'] as String? ?? json['_id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Untitled Course',
-      description: json['description'] as String? ?? '',
+      id: _getStringValue(json['id']) ?? _getStringValue(json['_id']) ?? '',
+      title: _getStringValue(json['title']) ?? 'Untitled Course',
+      description: _getStringValue(json['description']) ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       duration: json['duration'] as int? ?? 0,
-      level: json['level'] as String? ?? 'Beginner',
-      thumbnail: json['thumbnail'] as String?,
+      level: _getStringValue(json['level']) ?? 'Beginner',
+      thumbnail: _getStringValue(json['thumbnail']),
       isPublished: json['isPublished'] as bool? ?? false,
       createdBy: json['createdBy'] is Map<String, dynamic>
           ? User.fromJson(json['createdBy'] as Map<String, dynamic>)
-          : User(id: json['createdBy']?.toString() ?? '', fullName: 'Unknown', email: '', role: 'user', createdAt: DateTime.now()),
-      categoryId: json['categoryId'] as String?,
+          : User(id: _getStringValue(json['createdBy']) ?? '', fullName: 'Unknown', email: '', role: 'user', createdAt: DateTime.now()),
+      categoryId: _getStringValue(json['categoryId']),
       category: json['category'] is Map<String, dynamic>
           ? json['category'] as Map<String, dynamic>
-          : json['category'] is String
-              ? {'id': json['category']}
+          : _getStringValue(json['category']) is String
+              ? {'id': _getStringValue(json['category'])}
               : null,
       createdAt: _parseDateTime(json['createdAt']),
       learningObjectives: json['learningObjectives'] is List
-          ? List<String>.from(json['learningObjectives'])
+          ? List<String>.from((json['learningObjectives'] as List).map((e) => _getStringValue(e) ?? '').toList())
           : null,
       requirements: json['requirements'] is List
-          ? List<String>.from(json['requirements'])
+          ? List<String>.from((json['requirements'] as List).map((e) => _getStringValue(e) ?? '').toList())
           : null,
+      accessDurationDays: json['accessDurationDays'] as int?,
     );
   }
 
@@ -78,6 +92,7 @@ class Course {
       'createdAt': createdAt.toIso8601String(),
       'learningObjectives': learningObjectives,
       'requirements': requirements,
+      'accessDurationDays': accessDurationDays,
     };
   }
 
@@ -94,6 +109,23 @@ class Course {
       return DateTime.fromMillisecondsSinceEpoch(dateValue);
     } else if (dateValue is DateTime) {
       return dateValue;
+    } else if (dateValue is Map<String, dynamic>) {
+      // Handle case where date is stored as an object (e.g., Firestore timestamp)
+      try {
+        // Check if it's a Firestore Timestamp-like object with seconds and nanoseconds
+        if (dateValue.containsKey('seconds') && dateValue.containsKey('nanoseconds')) {
+          int seconds = dateValue['seconds'] as int? ?? 0;
+          int nanoseconds = dateValue['nanoseconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000 + (nanoseconds ~/ 1000000));
+        } else if (dateValue.containsKey('_seconds')) {
+          // Alternative format with _seconds
+          int seconds = dateValue['_seconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+        }
+      } catch (e) {
+        // If conversion fails, return current time
+        return DateTime.now();
+      }
     }
     
     return DateTime.now();

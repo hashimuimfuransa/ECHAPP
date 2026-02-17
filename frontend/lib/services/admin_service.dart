@@ -151,6 +151,41 @@ class AdminService {
     }
   }
 
+  static DateTime _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+    
+    if (dateValue is String) {
+      try {
+        return DateTime.parse(dateValue);
+      } catch (e) {
+        return DateTime.now();
+      }
+    } else if (dateValue is int) {
+      return DateTime.fromMillisecondsSinceEpoch(dateValue);
+    } else if (dateValue is DateTime) {
+      return dateValue;
+    } else if (dateValue is Map<String, dynamic>) {
+      // Handle case where date is stored as an object (e.g., Firestore timestamp)
+      try {
+        // Check if it's a Firestore Timestamp-like object with seconds and nanoseconds
+        if (dateValue.containsKey('seconds') && dateValue.containsKey('nanoseconds')) {
+          int seconds = dateValue['seconds'] as int? ?? 0;
+          int nanoseconds = dateValue['nanoseconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000 + (nanoseconds ~/ 1000000));
+        } else if (dateValue.containsKey('_seconds')) {
+          // Alternative format with _seconds
+          int seconds = dateValue['_seconds'] as int? ?? 0;
+          return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+        }
+      } catch (e) {
+        // If conversion fails, return current time
+        return DateTime.now();
+      }
+    }
+    
+    return DateTime.now();
+  }
+
   /// Get detailed student information including enrollments
   Future<StudentDetail> getStudentDetail(String studentId) async {
     try {
@@ -173,7 +208,7 @@ class AdminService {
         inProgressCourses: data['inProgressCourses'] as int? ?? 0,
         totalSpent: (data['totalSpent'] as num?)?.toDouble() ?? 0.0,
         lastActive: data['lastActive'] != null 
-            ? DateTime.parse(data['lastActive'].toString()) 
+            ? _parseDateTime(data['lastActive'])
             : null,
       );
     } catch (e) {
@@ -290,6 +325,48 @@ class AdminService {
     return activity.take(5).toList();
   }
 
+  /// Get user device information and enrolled courses
+  Future<UserDeviceInfo> getUserDeviceInfo(String userId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/students/$userId/device-info');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      final user = User.fromJson(data['user'] as Map<String, dynamic>);
+      final enrolledCourses = (data['enrolledCourses'] as List)
+          .map((item) => Enrollment.fromJson(item as Map<String, dynamic>))
+          .toList();
+      
+      return UserDeviceInfo(
+        user: user,
+        enrolledCourses: enrolledCourses,
+        totalEnrollments: data['totalEnrollments'] as int? ?? 0,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch user device info: $e');
+    }
+  }
+  
+  /// Reset user device binding
+  Future<Map<String, dynamic>> resetUserDevice(String userId, {String? deviceId}) async {
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/students/$userId/device-reset',
+        body: {'deviceId': deviceId},
+      );
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonBody['data'] as Map<String, dynamic>;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to reset user device: $e');
+    }
+  }
+  
   /// Dispose of resources
   void dispose() {
     _apiClient.dispose();
@@ -494,6 +571,29 @@ class StudentActivityStats {
       monthlyActiveStudents: json['monthlyActiveStudents'] as int,
       avgSessionDuration: (json['avgSessionDuration'] as num).toDouble(),
       totalStudyHours: json['totalStudyHours'] as int,
+    );
+  }
+}
+
+/// Model for user device information
+class UserDeviceInfo {
+  final User user;
+  final List<Enrollment> enrolledCourses;
+  final int totalEnrollments;
+
+  UserDeviceInfo({
+    required this.user,
+    required this.enrolledCourses,
+    required this.totalEnrollments,
+  });
+
+  factory UserDeviceInfo.fromJson(Map<String, dynamic> json) {
+    return UserDeviceInfo(
+      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      enrolledCourses: (json['enrolledCourses'] as List)
+          .map((item) => Enrollment.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      totalEnrollments: json['totalEnrollments'] as int? ?? 0,
     );
   }
 }

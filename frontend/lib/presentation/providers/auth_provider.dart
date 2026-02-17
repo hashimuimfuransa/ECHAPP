@@ -5,6 +5,7 @@ import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
 import 'package:excellencecoachinghub/data/repositories/auth_repository.dart';
+import 'package:excellencecoachinghub/utils/device_id_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager());
@@ -47,6 +48,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      // Get device ID for device binding
+      String? deviceId;
+      try {
+        deviceId = await DeviceIdUtils.getAppDeviceId();
+        debugPrint('AuthProvider: Retrieved device ID: $deviceId');
+      } catch (e) {
+        debugPrint('AuthProvider: Error getting device ID: $e');
+        // Continue without device ID if it fails
+      }
+      
       // Step 1: Login with Firebase Auth
       final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
         email: email,
@@ -69,7 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         
         // Step 3: Send token to backend for authentication
         debugPrint('AuthProvider: Sending token to backend for authentication');
-        final authResponse = await _authRepository.firebaseLogin(idToken);
+        final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
         debugPrint('AuthProvider: Backend authentication successful');
         
         // Step 4: Save tokens and user data
@@ -115,6 +126,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      // Get device ID for device binding
+      String? deviceId;
+      try {
+        deviceId = await DeviceIdUtils.getAppDeviceId();
+        debugPrint('AuthProvider: Retrieved device ID: $deviceId');
+      } catch (e) {
+        debugPrint('AuthProvider: Error getting device ID: $e');
+        // Continue without device ID if it fails
+      }
+      
       // Step 1: Register with Firebase Auth first
       debugPrint('AuthProvider: Registering with Firebase Auth');
       final userCredential = await FirebaseAuthService.registerWithEmailAndPassword(
@@ -144,7 +165,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         
         // Step 3: Send token to backend for user creation in MongoDB
         debugPrint('AuthProvider: Sending token to backend for authentication');
-        final authResponse = await _authRepository.firebaseLogin(idToken, fullName: fullName);
+        final authResponse = await _authRepository.firebaseLogin(idToken, fullName: fullName, deviceId: deviceId);
         debugPrint('AuthProvider: Backend authentication successful');
         
         // Step 4: Save tokens and user data
@@ -215,6 +236,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
+      // Get device ID for device binding
+      String? deviceId;
+      try {
+        deviceId = await DeviceIdUtils.getAppDeviceId();
+        debugPrint('AuthProvider: Retrieved device ID: $deviceId');
+      } catch (e) {
+        debugPrint('AuthProvider: Error getting device ID: $e');
+        // Continue without device ID if it fails
+      }
+      
       debugPrint('AuthProvider: Calling Firebase service');
       final userCredential = await FirebaseAuthService.signInWithGoogle();
       debugPrint('AuthProvider: Firebase service returned: ${userCredential?.user?.email}');
@@ -239,7 +270,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: idToken is confirmed to be a String');
               
         // Send token to backend for authentication
-        final authResponse = await _authRepository.firebaseLogin(idToken);
+        final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
         debugPrint('AuthProvider: Backend authentication successful');
         
         // Save tokens for future API requests

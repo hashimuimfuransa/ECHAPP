@@ -55,6 +55,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     sparse: true
   },
+  deviceId: {
+    type: String,
+    sparse: true
+  },
   resetPasswordToken: {
     type: String
   },

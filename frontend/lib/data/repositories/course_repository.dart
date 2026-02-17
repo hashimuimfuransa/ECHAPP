@@ -27,6 +27,7 @@ class CourseRepository {
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDurationDays,
   }) async {
     return await _courseService.createCourse(
       title: title,
@@ -39,6 +40,7 @@ class CourseRepository {
       isPublished: isPublished,
       learningObjectives: learningObjectives,
       requirements: requirements,
+      accessDurationDays: accessDurationDays,
     );
   }
 
@@ -54,6 +56,7 @@ class CourseRepository {
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDurationDays,
   }) async {
     return await _courseService.updateCourse(
       id: id,
@@ -67,6 +70,7 @@ class CourseRepository {
       isPublished: isPublished,
       learningObjectives: learningObjectives,
       requirements: requirements,
+      accessDurationDays: accessDurationDays,
     );
   }
 
