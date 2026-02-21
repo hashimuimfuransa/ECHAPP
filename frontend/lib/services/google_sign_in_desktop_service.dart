@@ -8,11 +8,31 @@ import 'dart:io';
 class GoogleSignInDesktopService {
   static final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   
-  // Web OAuth client ID from Google Cloud Console (must match Firebase project)
-  static const String _desktopClientId = '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com';
-  static const String _clientSecret = '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';
   static const String _redirectUrl = 'http://localhost:8080/callback';
-  static const String _firebaseApiKey = 'AIzaSyBjWFgcO6gWOjmk5vqUjxDTcFpGFj_hOd8';
+  
+  static String get _desktopClientId {
+    const clientId = String.fromEnvironment('GOOGLE_DESKTOP_CLIENT_ID');
+    if (clientId.isEmpty) {
+      throw Exception('GOOGLE_DESKTOP_CLIENT_ID environment variable is not set');
+    }
+    return clientId;
+  }
+  
+  static String get _clientSecret {
+    const secret = String.fromEnvironment('GOOGLE_CLIENT_SECRET');
+    if (secret.isEmpty) {
+      throw Exception('GOOGLE_CLIENT_SECRET environment variable is not set');
+    }
+    return secret;
+  }
+  
+  static String get _firebaseApiKey {
+    const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+    if (apiKey.isEmpty) {
+      throw Exception('FIREBASE_API_KEY environment variable is not set');
+    }
+    return apiKey;
+  }
 
   static Future<firebase_auth.UserCredential?> signInWithGoogleDesktop() async {
     debugPrint('GoogleSignInDesktopService: Starting Google Sign-In for Windows desktop');

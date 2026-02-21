@@ -1,4 +1,12 @@
-﻿
+
 # Firebase tools executable
 frontend/firebase-tools-instant-win.exe
-frontend/firebase_cpp_sdk_windows_12.7.0_fresh.zip 
+frontend/firebase_cpp_sdk_windows_12.7.0_fresh.zip
+
+# Environment variables - NEVER commit secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
