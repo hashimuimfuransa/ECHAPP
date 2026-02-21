@@ -24,10 +24,17 @@ else()
   endif()
 endif()
 # Define settings for the Profile build mode.
-set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-set(CMAKE_SHARED_LINKER_FLAGS_PROFILE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+set(CMAKE_SHARED_LINKER_FLAGS_PROFILE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_DEBUG}")
+
+# Define settings for the Release build mode
+# Removed the debug runtime override - use standard release runtime
+# set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+# set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+# set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_DEBUG}")
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG}")
 
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
@@ -56,6 +63,34 @@ add_subdirectory("runner")
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+
+
+# Copy plugin DLLs into output directory
+file(GLOB PLUGIN_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/*/*/Debug/*.dll" "${CMAKE_CURRENT_SOURCE_DIR}/../build/windows/x64/plugins/*/*/Release/*.dll")
+foreach(DLL_FILE ${PLUGIN_DLLS})
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${DLL_FILE}
+        $<TARGET_FILE_DIR:${BINARY_NAME}>)
+endforeach()
+
+# Copy audioplayers plugin DLLs into release folder
+file(GLOB AUDIO_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/../.dart_tool/flutter_build/intermediates/windows/flutter/plugins/audio_players_windows/*.dll")
+foreach(DLL_FILE ${AUDIO_DLLS})
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${DLL_FILE}
+        $<TARGET_FILE_DIR:${BINARY_NAME}>)
+endforeach()
+
+# Copy other plugin DLLs that may be needed
+file(GLOB OTHER_PLUGIN_DLLS "${CMAKE_CURRENT_SOURCE_DIR}/../.dart_tool/flutter_build/intermediates/windows/flutter/plugins/*_windows/*.dll")
+foreach(DLL_FILE ${OTHER_PLUGIN_DLLS})
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${DLL_FILE}
+        $<TARGET_FILE_DIR:${BINARY_NAME}>)
+endforeach()
 
 
 # === Installation ===

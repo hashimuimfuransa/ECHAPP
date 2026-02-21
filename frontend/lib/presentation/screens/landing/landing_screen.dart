@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:go_router/go_router.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -486,8 +487,8 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   void _openWebVersion(BuildContext context) {
-    // Navigate to the main app
-    Navigator.pushReplacementNamed(context, '/auth-selection');
+    // Navigate to the main app using GoRouter
+    context.go('/auth-selection');
   }
 
   void _shareLink() {

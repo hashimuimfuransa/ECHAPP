@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:go_router/go_router.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String? oobCode;
@@ -54,13 +54,21 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       return;
     }
 
-    // For our backend-based reset, we just need to ensure the token is present
-    // Verification will happen when the password is reset
-    setState(() {
-      _isVerifying = false;
-      _isValidLink = true;
-      _errorMessage = null;
-    });
+    // Verify the token with backend before allowing reset
+    try {
+      final isValid = await ref.read(authProvider.notifier).verifyResetToken(codeToUse);
+      setState(() {
+        _isVerifying = false;
+        _isValidLink = isValid;
+        _errorMessage = isValid ? null : 'Invalid or expired reset link. Please request a new password reset.';
+      });
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+        _isValidLink = false;
+        _errorMessage = 'Invalid or expired reset link. Please request a new password reset.';
+      });
+    }
   }
 
   Future<void> _resetPassword() async {
@@ -79,7 +87,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         // Reset password using backend API
         await ref.read(authProvider.notifier).resetPassword(codeToUse, newPassword);
         
-        // Show success and navigate to login
+          // Show success and navigate to login
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -89,8 +97,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             ),
           );
           
-          // Navigate to login screen
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          // Navigate to login screen using GoRouter
+          context.go('/login');
         }
       } catch (e) {
         String errorMessage = e.toString();
@@ -197,7 +205,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         children: [
                           ElevatedButton(
                             onPressed: () {
-                              Navigator.pushNamedAndRemoveUntil(context, '/forgot-password', (route) => false);
+                              context.go('/forgot-password');
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF4facfe),
@@ -216,10 +224,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                             ),
                           ),
                           const SizedBox(height: 15),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-                            },
+                              TextButton(
+                                onPressed: () {
+                                  context.go('/login');
+                                },
                             child: const Text(
                               'Back to Login',
                               style: TextStyle(
@@ -275,7 +283,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       ),
                       const SizedBox(height: 25),
                       const Text(
-                        'Reset Your Password',
+                        'Create New Password',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -284,9 +292,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Create a new strong password for your account',
-                        style: TextStyle(
+                      Text(
+                        'Create a new strong password for your account\nusing the reset code from your email',
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
                           height: 1.5,
@@ -344,6 +352,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               if (value.length < 6) {
                                 return 'Password must be at least 6 characters';
                               }
+                              if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{6,}$').hasMatch(value)) {
+                                return 'Password must contain at least one letter and one number';
+                              }
                               return null;
                             },
                           ),
@@ -398,7 +409,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
                           // Reset Button
                           AnimatedButton(
-                            text: 'Reset Password',
+                            text: 'Update Password',
                             onPressed: authState.isLoading ? () {} : _resetPassword,
                             isLoading: authState.isLoading,
                             color: const Color(0xFF4facfe),
@@ -458,14 +469,14 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Password Requirements:',
+                                  '🔒 Password Requirements:',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                SizedBox(height: 12),
                                 Text(
                                   '• At least 6 characters long',
                                   style: TextStyle(
@@ -473,8 +484,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                                     fontSize: 13,
                                   ),
                                 ),
+                                SizedBox(height: 4),
                                 Text(
-                                  '• Include letters and numbers',
+                                  '• Must contain letters and numbers',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '• Strong passwords help protect your account',
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 13,
@@ -503,7 +523,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                          context.go('/login');
                         },
                         child: const Text(
                           'Sign In',

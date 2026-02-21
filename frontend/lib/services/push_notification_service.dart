@@ -3,11 +3,17 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 
 class PushNotificationService {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  static FirebaseMessaging get _firebaseMessaging => FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   
   // Initialize push notifications
   static Future<void> initialize() async {
+    // Only initialize if not on Windows
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      debugPrint('Push notifications not supported on Windows');
+      return;
+    }
+    
     try {
       // Request permission for iOS
       if (!kIsWeb) {

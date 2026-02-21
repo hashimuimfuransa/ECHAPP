@@ -1,7 +1,7 @@
 name: excellencecoachinghub
 description: ExcellenceCoachingHub e-learning platform
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -53,6 +53,7 @@ dev_dependencies:
   json_serializable: ^6.9.5
   freezed: ^3.2.5
   flutter_launcher_icons: ^0.14.4
+  msix: ^3.16.0
 
 flutter_launcher_icons:
   android: true
@@ -80,3 +81,15 @@ flutter:
   assets:
     - assets/
     - assets/images/
+
+msix_config:
+  display_name: excellencecoachinghub
+  publisher_display_name: ECH
+  publisher: CN=6B4466E8-E27C-410F-804C-21877F7B22F6
+  identity_name: ECH.excellencecoachinghub
+  msix_version: 1.0.1.0
+  logo_path: windows/runner/resources/app_icon.ico
+  store: true
+  store_id: 9NW5V60BNHNN
+  certificate_path: ExcellenceHubCert.pfx
+  certificate_password: Excellence123!

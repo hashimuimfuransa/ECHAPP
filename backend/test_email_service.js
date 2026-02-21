@@ -51,10 +51,11 @@ async function testEmailService() {
       console.log('❌ Welcome email failed:', error.message);
     }
     
-    // Test password reset email
+    // Test password reset email (using a full reset link)
     console.log('\n🔑 Testing Password Reset Email...');
     try {
-      const resetResult = await emailService.sendPasswordResetEmail(testUser.email, 'test-token', testUser);
+      const testResetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?oobCode=test-token`;
+      const resetResult = await emailService.sendPasswordResetEmail(testUser.email, testResetLink, testUser);
       console.log('✅ Password reset email sent successfully:', resetResult.messageId);
     } catch (error) {
       console.log('❌ Password reset email failed:', error.message);

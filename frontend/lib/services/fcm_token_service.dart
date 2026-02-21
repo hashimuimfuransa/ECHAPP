@@ -1,8 +1,8 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/api_config.dart';
 import '../services/push_notification_service.dart';
+import '../services/infrastructure/token_manager.dart';
 
 class FCMTokenService {
   
@@ -11,13 +11,19 @@ class FCMTokenService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/notifications/fcm-token');
       
-      // In a real implementation, you would get the auth token
-      // For now, using a placeholder
+      // Get authentication token
+      final authToken = await TokenManager().getIdToken();
+      
+      if (authToken == null) {
+        print('No auth token available, skipping FCM token update');
+        return false;
+      }
+      
       final response = await http.put(
         url,
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': 'Bearer $authToken', // Add when auth is implemented
+          'Authorization': 'Bearer $authToken',
         },
         body: json.encode({
           'fcmToken': token,
@@ -32,7 +38,10 @@ class FCMTokenService {
         }
       }
       
-      print('Failed to update FCM token: ${response.statusCode}');
+      // Don't log 401 errors as failures since they're expected when not logged in
+      if (response.statusCode != 401) {
+        print('Failed to update FCM token: ${response.statusCode}');
+      }
       return false;
     } catch (e) {
       print('Error updating FCM token: $e');

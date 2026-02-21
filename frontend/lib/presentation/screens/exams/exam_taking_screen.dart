@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
@@ -37,7 +38,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
   void dispose() {
     _timer?.cancel();
     // Dispose all text controllers
-    _textControllers.values.forEach((controller) => controller.dispose());
+    for (var controller in _textControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -1113,7 +1116,7 @@ class Question {
     return Question(
       id: json['_id'] ?? json['id'] ?? '',
       question: json['question'] ?? '',
-      type: json['type'] != null ? json['type'] : 'mcq', // Handle null type explicitly
+      type: json['type'] ?? 'mcq', // Handle null type explicitly
       options: List<String>.from(json['options'] ?? []),
       points: json['points'] ?? 1,
       section: json['section'],
@@ -1469,7 +1472,7 @@ class ExamResultsScreen extends StatelessWidget {
           width: double.infinity,
           height: 55,
           child: ElevatedButton(
-            onPressed: () => Navigator.popUntil(context, ModalRoute.withName('/')),
+            onPressed: () => context.go('/dashboard'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,

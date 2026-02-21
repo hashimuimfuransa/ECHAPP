@@ -301,7 +301,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Provide more user-friendly error messages for web-specific issues
       if (kIsWeb) {
         if (errorMessage.contains('popup_closed') || errorMessage.toLowerCase().contains('popup') && errorMessage.toLowerCase().contains('closed')) {
-          errorMessage = 'Google Sign-In popup was closed. The legacy signIn method is deprecated on web. Please ensure pop-ups are allowed for this site and try again. A future update will implement the new button-based approach.';
+          errorMessage = 'Google Sign-In popup was closed. Please ensure pop-ups are allowed for this site and try again.';
         } else if (errorMessage.contains('popup') || errorMessage.toLowerCase().contains('blocked')) {
           errorMessage = 'Pop-up blocked. Please allow pop-ups for this site and try again.';
         } else if (errorMessage.toLowerCase().contains('domain') || errorMessage.toLowerCase().contains('authorized')) {
@@ -309,7 +309,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         } else if (errorMessage.toLowerCase().contains('itp') || errorMessage.toLowerCase().contains('optimization')) {
           errorMessage = 'Browser security settings prevented sign-in. Try using a different browser or disabling privacy features.';
         } else if (errorMessage.toLowerCase().contains('deprecated') || errorMessage.toLowerCase().contains('discouraged')) {
-          errorMessage = 'Using legacy Google Sign-In method on web. A future update will implement the new button-based approach as recommended by Google.';
+          errorMessage = 'Using legacy Google Sign-In method on web. Updated implementation in place.';
         }
       }
       
@@ -364,6 +364,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return response;
     } catch (e) {
       debugPrint('AuthProvider: Password reset failed - $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyResetToken(String token) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      final result = await _authRepository.verifyResetToken(token);
+      state = state.copyWith(isLoading: false);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
   }

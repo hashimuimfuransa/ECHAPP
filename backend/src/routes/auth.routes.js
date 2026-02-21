@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, refreshToken, getProfile, logout, googleSignIn, firebaseLogin, forgotPassword, resetPassword, resetUserDevice } = require('../controllers/auth.controller');
+const { register, login, refreshToken, getProfile, logout, googleSignIn, firebaseLogin, forgotPassword, resetPassword, verifyResetToken, resetUserDevice } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { adminOnly } = require('../middleware/admin.middleware');
 
@@ -11,6 +11,7 @@ router.post('/refresh-token', refreshToken);
 router.post('/google', googleSignIn);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.post('/verify-reset-token', verifyResetToken);
 
 // Firebase authentication route
 router.post('/firebase-login', firebaseLogin);

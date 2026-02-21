@@ -23,8 +23,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Start initialization check
     _checkInitializationStatus();
     
-    // Start listening for auth changes
-    _checkAuthAndNavigate();
+    // Start listening for auth changes (delayed to avoid build conflicts)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndNavigate();
+    });
     
     // Simple navigation after reasonable delay as fallback
     Future.delayed(const Duration(milliseconds: 3000), () {
@@ -33,7 +35,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           _isInitializing = false;
           _loadingMessage = 'Almost ready...';
         });
-        _navigateBasedOnAuth();
+        // Delay navigation to ensure build is complete
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _navigateBasedOnAuth();
+        });
       }
     });
   }
@@ -72,28 +77,34 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final authState = ref.read(authProvider);
     debugPrint('Splash: Initial auth check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
     
-    // Navigate based on current state
+    // Navigate based on current state (delayed to avoid build conflicts)
     if (!authState.isLoading) {
-      if (authState.user != null) {
-        debugPrint('Splash: Navigating to dashboard');
-        context.go('/dashboard');
-      } else {
-        debugPrint('Splash: Navigating to auth selection');
-        context.go('/auth-selection');
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (authState.user != null) {
+          debugPrint('Splash: Navigating to dashboard');
+          context.go('/dashboard');
+        } else {
+          debugPrint('Splash: Navigating to auth selection');
+          context.go('/auth-selection');
+        }
+      });
     }
     
     // Also check initial state after delay
     Future.delayed(const Duration(milliseconds: 2500), () {
+      if (!mounted) return; // Check if widget is still mounted
       final authState = ref.read(authProvider);
       debugPrint('Splash: Initial check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
       
       if (!authState.isLoading) {
-        if (authState.user != null) {
-          context.go('/dashboard');
-        } else {
-          context.go('/auth-selection');
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return; // Check again before navigation
+          if (authState.user != null) {
+            context.go('/dashboard');
+          } else {
+            context.go('/auth-selection');
+          }
+        });
       }
     });
   }

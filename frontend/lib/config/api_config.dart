@@ -4,7 +4,7 @@ class ApiConfig {
   static String get baseUrl {
     // For web development, use localhost
     // For mobile development, use your machine's IP address
-    const String ipAddress = 'http://192.168.1.9:5000'; // Updated to your current IP with correct port
+    const String ipAddress = 'https://echappbackend.onrender.com'; // Updated to your current IP with correct port
     return '$ipAddress/api';
   }
   

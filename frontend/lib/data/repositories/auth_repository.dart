@@ -245,6 +245,25 @@ class AuthRepository {
     }
   }
 
+  Future<bool> verifyResetToken(String token) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/verify-reset-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': token}),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Invalid or expired reset token');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
   Future<User> getProfile() async {
     try {
       // This would typically use a stored token to fetch user profile

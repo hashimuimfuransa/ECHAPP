@@ -2,16 +2,25 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/firebase_options.dart';
+import 'package:excellencecoachinghub/services/google_sign_in_desktop_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/material.dart';
 
 class FirebaseAuthService {
-  static final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+  static firebase_auth.FirebaseAuth get _auth => firebase_auth.FirebaseAuth.instance;
 
   // Initialize Firebase
   static Future<void> initializeFirebase() async {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    try {
+      debugPrint('FirebaseAuthService: Initializing Firebase with timeout...');
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(const Duration(seconds: 15));
+      debugPrint('FirebaseAuthService: Firebase initialization complete');
+    } catch (e) {
+      debugPrint('FirebaseAuthService: Firebase initialization error: $e');
+      rethrow;
+    }
   }
 
   // Email/Password Registration
@@ -21,6 +30,21 @@ class FirebaseAuthService {
     required String fullName,
   }) async {
     try {
+      // Input validation
+      if (email.isEmpty) {
+        throw Exception('Email address is required.');
+      }
+      if (password.isEmpty) {
+        throw Exception('Password is required.');
+      }
+      if (fullName.isEmpty) {
+        throw Exception('Full name is required.');
+      }
+      
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+        throw Exception('Please enter a valid email address.');
+      }
+      
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -42,6 +66,7 @@ class FirebaseAuthService {
       throw _mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Registration Error: $e');
+      if (e is Exception) rethrow;
       throw Exception('Registration failed. Please try again.');
     }
   }
@@ -52,6 +77,18 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
+      // Input validation
+      if (email.isEmpty) {
+        throw Exception('Email address is required.');
+      }
+      if (password.isEmpty) {
+        throw Exception('Password is required.');
+      }
+      
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+        throw Exception('Please enter a valid email address.');
+      }
+      
       return await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -61,6 +98,7 @@ class FirebaseAuthService {
       throw _mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Login Error: $e');
+      if (e is Exception) rethrow;
       throw Exception('Login failed. Please try again.');
     }
   }
@@ -167,12 +205,23 @@ class FirebaseAuthService {
   // Google Sign-In
   static Future<firebase_auth.UserCredential?> signInWithGoogle() async {
     debugPrint('Starting Google Sign-In process...');
+    debugPrint('Platform: ${kIsWeb ? 'Web' : 'Native'}, TargetPlatform: $defaultTargetPlatform');
+    
     try {
+      // Handle Windows desktop separately
+      if (defaultTargetPlatform == TargetPlatform.windows) {
+        debugPrint('Using desktop Google Sign-In for Windows...');
+        // Import is at the top, but we need to use it conditionally
+        // Import GoogleSignInDesktopService at top first
+        return await _signInWithGoogleDesktop();
+      }
+
       GoogleSignIn googleSignIn;
       
       // Configure GoogleSignIn differently for web vs mobile
       if (kIsWeb) {
         // For web, we need to specify the client ID explicitly
+        // Use the web client ID from Firebase config
         googleSignIn = GoogleSignIn(
           clientId: '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com',
           scopes: [
@@ -246,35 +295,89 @@ class FirebaseAuthService {
         String errorStr = e.toString().toLowerCase();
         if (errorStr.contains('popup_closed') || errorStr.contains('popup') && errorStr.contains('closed')) {
           throw Exception('Google Sign-In popup was closed. Please try again and complete the sign-in process.');
+        } else if (errorStr.contains('popup_blocked')) {
+          throw Exception('Google Sign-In popup was blocked. Please allow popups for this site and try again.');
         }
       }
       throw Exception('Google Sign-In failed. Please try again. Error: $e');
     }
   }
 
+  // Desktop-specific Google Sign-In using google_sign_in package
+  static Future<firebase_auth.UserCredential?> _signInWithGoogleDesktop() async {
+    debugPrint('Firebase Auth Service: Using Google Sign-In package for Windows desktop...');
+    try {
+      final userCredential = await GoogleSignInDesktopService.signInWithGoogleDesktop();
+      debugPrint('Firebase Auth Service: Desktop Google Sign-In successful');
+      return userCredential;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Firebase Auth Service: Desktop Sign-In Firebase Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Firebase Auth Service: Desktop Sign-In Error: $e');
+      throw Exception('Google Sign-In failed. Please try again. Error: $e');
+    }
+  }
+
   // Map Firebase Auth exceptions to user-friendly messages
+  // Supported on Windows desktop
   static Exception _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
+    debugPrint('Firebase Auth Exception - Code: ${e.code}, Message: ${e.message}');
+    
     switch (e.code) {
+      // Email validation errors
       case 'invalid-email':
-        return Exception('The email address is invalid.');
-      case 'user-disabled':
-        return Exception('This user account has been disabled.');
-      case 'user-not-found':
-        return Exception('No user found with this email address.');
+        return Exception('The email address is invalid. Please check and try again.');
+      
+      // Login/password errors (most common on desktop)
       case 'wrong-password':
-        return Exception('Incorrect password.');
+        return Exception('Incorrect password. Please try again.');
+      case 'user-not-found':
+        return Exception('No user found with this email address. Please check and try again.');
+      
+      // Registration errors
       case 'email-already-in-use':
-        return Exception('An account already exists with this email address.');
-      case 'operation-not-allowed':
-        return Exception('Email/password accounts are not enabled.');
+        return Exception('An account already exists with this email address. Please use a different email or try logging in.');
       case 'weak-password':
-        return Exception('The password is too weak.');
+        return Exception('The password is too weak. Please use at least 6 characters.');
+      
+      // Account status errors
+      case 'user-disabled':
+        return Exception('This user account has been disabled. Please contact support.');
+      
+      // Rate limiting and security
       case 'too-many-requests':
-        return Exception('Too many requests. Please try again later.');
+        return Exception('Too many failed login attempts. Please try again later or reset your password.');
+      
+      // Network errors
       case 'network-request-failed':
-        return Exception('Network error. Please check your connection.');
+        return Exception('Network error. Please check your internet connection and try again.');
+      
+      // Configuration errors
+      case 'operation-not-allowed':
+        return Exception('Email/password authentication is not enabled. Please try another sign-in method.');
+      
+      // Multi-provider errors
+      case 'account-exists-with-different-credential':
+        return Exception('An account already exists with a different sign-in method.');
+      
+      // Additional Windows desktop error codes
+      case 'invalid-credential':
+        return Exception('Incorrect email or password. Please try again.');
+      case 'requires-recent-login':
+        return Exception('Please sign in again to perform this action.');
+      case 'unknown-error':
+        // Check if it's the desktop Google Sign-In error
+        if (e.message?.contains('Operation is not supported on non-mobile systems') ?? false) {
+          return Exception('Google Sign-In is initializing. Please try again.');
+        }
+        return Exception('An unknown error occurred. Please try again.');
+      
+      // Fallback for unmapped error codes
       default:
-        return Exception(e.message ?? 'Authentication failed.');
+        final message = e.message ?? 'An authentication error occurred.';
+        debugPrint('Unmapped Firebase error code on Windows: ${e.code}');
+        return Exception(message);
     }
   }
 }

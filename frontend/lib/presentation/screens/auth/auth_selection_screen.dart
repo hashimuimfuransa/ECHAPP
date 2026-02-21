@@ -5,75 +5,394 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
-class AuthSelectionScreen extends ConsumerStatefulWidget {
-  const AuthSelectionScreen({super.key});
+// ─── Palette ─────────────────────────────────────────────────────────────────
+const _kDeep       = Color(0xFF0A1628);
+const _kMid        = Color(0xFF112240);
+const _kAccent     = Color(0xFF00C896);
+const _kAccentDark = Color(0xFF009E76);
+const _kGold       = Color(0xFFFFD166);
+const _kSurface    = Color(0xFFF7F9FC);
+const _kBorder     = Color(0xFFE4EAF2);
+const _kText1      = Color(0xFF0D1B2A);
+const _kText2      = Color(0xFF4A5568);
+const _kText3      = Color(0xFF8A97AA);
 
+// ─── Small helpers ────────────────────────────────────────────────────────────
+
+class _GlowCircle extends StatelessWidget {
+  final double size;
+  final Color color;
+  const _GlowCircle({required this.size, required this.color});
   @override
-  _AuthSelectionScreenState createState() => _AuthSelectionScreenState();
+  Widget build(BuildContext context) => Container(
+        width: size, height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      );
 }
 
-// Feature item widget
-class _FeatureItem extends StatelessWidget {
-  final String icon;
-  final String text;
-  
-  const _FeatureItem({required this.icon, required this.text});
-  
+class _VertDivider extends StatelessWidget {
+  const _VertDivider();
+  @override
+  Widget build(BuildContext context) =>
+      Container(width: 1, height: 36, color: Colors.white.withOpacity(0.12));
+}
+
+class _LogoBadge extends StatelessWidget {
+  final double size;
+  const _LogoBadge({this.size = 52});
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          icon,
-          style: const TextStyle(fontSize: 20),
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(size * 0.26),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.26),
+        child: Image.asset(
+          'assets/logo.webp',
+          fit: BoxFit.cover,
+          errorBuilder: (c, e, s) =>
+              Icon(Icons.school_outlined, color: _kAccent, size: size * 0.55),
         ),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+// ─── Stat pill ────────────────────────────────────────────────────────────────
+
+class _StatPill extends StatelessWidget {
+  final String value;
+  final String label;
+  const _StatPill({required this.value, required this.label});
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  color: _kGold, fontSize: 20, fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 11.5,
+                  fontWeight: FontWeight.w500)),
+        ],
+      );
+}
+
+// ─── Feature row ──────────────────────────────────────────────────────────────
+
+class _FeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _FeatureRow({required this.icon, required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            width: 34, height: 34,
+            decoration: BoxDecoration(
+              color: _kAccent.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: _kAccent, size: 17),
           ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 14,
+                    fontWeight: FontWeight.w500, height: 1.4)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Mini stat chip (compact/mobile brand panel) ──────────────────────────────
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  const _MiniStat({required this.label});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Text(label,
+          style: const TextStyle(
+              color: Colors.white70, fontSize: 11,
+              fontWeight: FontWeight.w500)),
+    );
+  }
+}
+
+// ─── Brand panel ──────────────────────────────────────────────────────────────
+
+class _BrandPanel extends StatelessWidget {
+  final bool compact;
+  const _BrandPanel({this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_kDeep, _kMid, Color(0xFF0E3460)],
+          stops: [0.0, 0.55, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(top: -70, right: -70,
+              child: _GlowCircle(size: 230, color: _kAccent.withOpacity(0.07))),
+          Positioned(bottom: -50, left: -50,
+              child: _GlowCircle(size: 190, color: _kGold.withOpacity(0.05))),
+          Positioned(top: 110, left: -35,
+              child: _GlowCircle(size: 110, color: _kAccent.withOpacity(0.04))),
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.all(compact ? 24 : 40),
+              child: compact ? _compactContent() : _fullContent(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fullContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        // Logo row
+        Row(children: [
+          const _LogoBadge(),
+          const SizedBox(width: 14),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Excellence',
+                  style: TextStyle(color: Colors.white, fontSize: 17,
+                      fontWeight: FontWeight.w800, letterSpacing: -0.2)),
+              Text('Coaching Hub',
+                  style: TextStyle(color: Colors.white60, fontSize: 13,
+                      fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ]),
+        const Spacer(),
+        // Headline
+        const Text('Unlock your\nfull potential.',
+            style: TextStyle(color: Colors.white, fontSize: 36,
+                fontWeight: FontWeight.w800, height: 1.18,
+                letterSpacing: -1.0)),
+        const SizedBox(height: 10),
+        Container(
+            width: 44, height: 3,
+            decoration: BoxDecoration(
+                color: _kAccent,
+                borderRadius: BorderRadius.circular(2))),
+        const SizedBox(height: 18),
+        const Text(
+          'Expert-led courses designed to transform how you learn, work, and grow.',
+          style: TextStyle(color: Colors.white54, fontSize: 14.5, height: 1.65),
+        ),
+        const SizedBox(height: 32),
+        const _FeatureRow(icon: Icons.play_circle_outline_rounded,
+            text: '1,000+ on-demand video courses'),
+        const _FeatureRow(icon: Icons.verified_outlined,
+            text: 'Industry-recognised certifications'),
+        const _FeatureRow(icon: Icons.people_outline_rounded,
+            text: 'Live mentorship & coaching sessions'),
+        const Spacer(),
+        // Stats block
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.09)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _StatPill(value: '5,200+', label: 'Active learners'),
+              _VertDivider(),
+              _StatPill(value: '98%', label: 'Satisfaction'),
+              _VertDivider(),
+              _StatPill(value: '120+', label: 'Expert coaches'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _compactContent() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const _LogoBadge(size: 58),
+        const SizedBox(height: 12),
+        const Text('Excellence Coaching Hub',
+            style: TextStyle(color: Colors.white, fontSize: 18,
+                fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+        const SizedBox(height: 4),
+        const Text('Unlock your full potential.',
+            style: TextStyle(color: Colors.white60, fontSize: 13)),
+        const SizedBox(height: 16),
+        const Wrap(
+          spacing: 8, runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            _MiniStat(label: '5,200+ Learners'),
+            _MiniStat(label: '98% Satisfaction'),
+            _MiniStat(label: '120+ Coaches'),
+          ],
         ),
       ],
     );
   }
 }
 
-// Device binding policy widget
-class _DeviceBindingPolicy extends StatelessWidget {
-  const _DeviceBindingPolicy();
-  
+// ─── Animated auth button ─────────────────────────────────────────────────────
+
+class _AuthButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isPrimary;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+  const _AuthButton({
+    required this.icon,
+    required this.label,
+    this.isPrimary = false,
+    this.isLoading = false,
+    this.onPressed,
+  });
+  @override
+  State<_AuthButton> createState() => _AuthButtonState();
+}
+
+class _AuthButtonState extends State<_AuthButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 110));
+    _scale = Tween<double>(begin: 1, end: 0.965).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: widget.isPrimary
+                ? const LinearGradient(
+                    colors: [_kAccent, _kAccentDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight)
+                : null,
+            color: widget.isPrimary ? null : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: widget.isPrimary
+                ? null
+                : Border.all(color: _kBorder, width: 1.5),
+            boxShadow: widget.isPrimary
+                ? [BoxShadow(color: _kAccent.withOpacity(0.32),
+                    blurRadius: 20, offset: const Offset(0, 7))]
+                : [BoxShadow(color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.isLoading)
+                SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        widget.isPrimary ? Colors.white : _kText1),
+                  ),
+                )
+              else
+                Icon(widget.icon, size: 20,
+                    color: widget.isPrimary ? Colors.white : _kText1),
+              const SizedBox(width: 10),
+              Text(widget.label,
+                  style: TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                    color: widget.isPrimary ? Colors.white : _kText1,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Device warning badge ─────────────────────────────────────────────────────
+
+class _DeviceWarningBadge extends StatelessWidget {
+  const _DeviceWarningBadge();
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0), // Light orange background for warning
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFFFB74D), // Orange border
-          width: 1,
-        ),
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.55)),
       ),
-      child: const Row(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.security,
-            color: Color(0xFFF57C00), // Orange icon
-            size: 16,
-          ),
-          SizedBox(width: 8),
+          const Icon(Icons.lock_outline_rounded,
+              color: Color(0xFFF59E0B), size: 15),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Account binds to first device - contact support to change devices',
+              'Account binds to first device. Contact support to change devices.',
               style: TextStyle(
-                color: Color(0xFF333333), // Dark text for visibility
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                color: _kText1.withOpacity(0.72), fontSize: 12,
+                fontWeight: FontWeight.w500, height: 1.5,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -82,74 +401,55 @@ class _DeviceBindingPolicy extends StatelessWidget {
   }
 }
 
-// Terms text widget with clickable links
-class _TermsText extends StatelessWidget {
-  const _TermsText();
-  
+// ─── Terms footer ─────────────────────────────────────────────────────────────
+
+class _TermsFooter extends StatelessWidget {
+  const _TermsFooter();
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // Show dialog with both options
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Legal Documents'),
-              content: const Text(
-                'What would you like to view?',
-                style: TextStyle(fontSize: 16),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/privacy');
-                  },
-                  child: const Text('Privacy Policy'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/terms');
-                  },
-                  child: const Text('Terms of Service'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-      child: const Text.rich(
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18)),
+          title: const Text('Legal Documents',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          content: const Text('What would you like to view?'),
+          actions: [
+            TextButton(
+              onPressed: () { Navigator.pop(context); context.push('/privacy'); },
+              child: const Text('Privacy Policy'),
+            ),
+            TextButton(
+              onPressed: () { Navigator.pop(context); context.push('/terms'); },
+              child: const Text('Terms of Service'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel',
+                  style: TextStyle(color: _kText3)),
+            ),
+          ],
+        ),
+      ),
+      child: Text.rich(
         TextSpan(
-          style: TextStyle(
-            color: Color(0xFF6B7280), // More visible dark gray instead of light gray
-            fontSize: 14,
-            height: 1.5,
-          ),
+          style: const TextStyle(
+              color: _kText3, fontSize: 12.5, height: 1.6),
           children: [
-            TextSpan(text: 'By continuing, you agree to our '),
-            TextSpan(
-              text: 'Terms of Service',
-              style: TextStyle(
-                color: Color(0xFF10B981), // Brand green for emphasis
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-            TextSpan(text: ' and ' ),
-            TextSpan(
-              text: 'Privacy Policy',
-              style: TextStyle(
-                color: Color(0xFF10B981), // Brand green for emphasis
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
+            const TextSpan(text: 'By continuing you agree to our '),
+            TextSpan(text: 'Terms of Service',
+                style: const TextStyle(
+                    color: _kAccentDark, fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                    decorationColor: _kAccentDark)),
+            const TextSpan(text: ' & '),
+            TextSpan(text: 'Privacy Policy',
+                style: const TextStyle(
+                    color: _kAccentDark, fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                    decorationColor: _kAccentDark)),
           ],
         ),
         textAlign: TextAlign.center,
@@ -158,566 +458,255 @@ class _TermsText extends StatelessWidget {
   }
 }
 
-// Auth button widget
-class _AuthButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color textColor;
-  final Color? borderColor;
+// ─── Auth card ────────────────────────────────────────────────────────────────
+
+class _AuthCard extends StatelessWidget {
   final bool isLoading;
-  final VoidCallback? onPressed;
-  
-  const _AuthButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.textColor,
-    this.borderColor,
-    this.isLoading = false,
-    this.onPressed,
+  final String? error;
+  final VoidCallback onGoogle;
+  final VoidCallback onEmail;
+
+  const _AuthCard({
+    required this.isLoading,
+    required this.error,
+    required this.onGoogle,
+    required this.onEmail,
   });
-  
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor,
-          side: borderColor != null 
-              ? BorderSide(color: borderColor!, width: 2)
-              : null,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: color == Colors.white ? 0 : 2,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Welcome back',
+            style: TextStyle(
+                color: _kText1, fontSize: 27, fontWeight: FontWeight.w800,
+                letterSpacing: -0.6)),
+        const SizedBox(height: 6),
+        const Text('Sign in to continue your learning journey.',
+            style: TextStyle(
+                color: _kText2, fontSize: 14.5, height: 1.5)),
+        const SizedBox(height: 28),
+
+        _AuthButton(
+          icon: Icons.account_circle_outlined,
+          label: isLoading ? 'Signing in…' : 'Continue with Google',
+          isLoading: isLoading,
+          onPressed: isLoading ? null : onGoogle,
         ),
-        icon: isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                ),
-              )
-            : Icon(icon, size: 20),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+        const SizedBox(height: 14),
+
+        Row(children: [
+          const Expanded(child: Divider(color: _kBorder, thickness: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text('or', style: TextStyle(
+                color: _kText3, fontSize: 13, fontWeight: FontWeight.w500)),
           ),
+          const Expanded(child: Divider(color: _kBorder, thickness: 1)),
+        ]),
+        const SizedBox(height: 14),
+
+        _AuthButton(
+          icon: Icons.mail_outline_rounded,
+          label: 'Continue with Email',
+          isPrimary: true,
+          onPressed: onEmail,
         ),
-      ),
+
+        if (error != null && error!.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(children: [
+              Icon(Icons.error_outline, color: Colors.red.shade400, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(error!,
+                    style: TextStyle(
+                        color: Colors.red.shade700, fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+              ),
+            ]),
+          ),
+        ],
+
+        const SizedBox(height: 20),
+        const _DeviceWarningBadge(),
+        const SizedBox(height: 16),
+        const _TermsFooter(),
+        const SizedBox(height: 12),
+
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+          Icon(Icons.verified_user_outlined, size: 13, color: _kText3),
+          SizedBox(width: 5),
+          Text('Secure login  ·  Trusted by 5,200+ learners',
+              style: TextStyle(
+                  color: _kText3, fontSize: 11.5, fontWeight: FontWeight.w500)),
+        ]),
+      ],
     );
   }
 }
 
-class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
-  bool _hasNavigated = false;
-  
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+class AuthSelectionScreen extends ConsumerStatefulWidget {
+  const AuthSelectionScreen({super.key});
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Only check navigation if we haven't navigated yet
-    if (!_hasNavigated) {
-      _checkAndNavigate();
-    }
+  _AuthSelectionScreenState createState() => _AuthSelectionScreenState();
+}
+
+class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
+    with SingleTickerProviderStateMixin {
+  bool _hasNavigated = false;
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 480));
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fadeCtrl.forward());
   }
 
   @override
-  void didUpdateWidget(covariant AuthSelectionScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Only check navigation if we haven't navigated yet
-    if (!_hasNavigated) {
-      _checkAndNavigate();
-    }
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasNavigated) _checkAndNavigate();
+  }
+
+  @override
+  void didUpdateWidget(covariant AuthSelectionScreen old) {
+    super.didUpdateWidget(old);
+    if (!_hasNavigated) _checkAndNavigate();
   }
 
   void _checkAndNavigate() {
     final authState = ref.watch(authProvider);
-    debugPrint('AuthSelection: Checking navigation - User: ${authState.user != null}, Loading: ${authState.isLoading}, Error: ${authState.error}');
-    
-    // Navigate to dashboard when user is authenticated and not loading
     if (authState.user != null && !authState.isLoading && !_hasNavigated) {
       _hasNavigated = true;
-      debugPrint('AuthSelection: Navigating to dashboard for role: ${authState.user?.role}');
-      
-      // Show success message if available
-      if (authState.error != null && authState.error!.isNotEmpty) {
-        // Show snackbar with success message
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authState.error!),
-              backgroundColor: AppTheme.primaryGreen,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        });
-      }
-      
-      // Navigate to appropriate dashboard based on user role
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (authState.user?.role == 'admin') {
-          debugPrint('AuthSelection: Navigating to admin dashboard');
           context.go('/admin');
         } else {
-          debugPrint('AuthSelection: Navigating to student dashboard');
           context.go('/dashboard');
         }
       });
     }
   }
 
-  void _signInWithGoogle(BuildContext context) {
-    debugPrint('AuthSelection: Google Sign-In initiated');
-    _resetNavigationFlag();
-    ref.read(authProvider.notifier).signInWithGoogle();
-  }
-  
-  void _resetNavigationFlag() {
+  void _signInWithGoogle() {
     _hasNavigated = false;
+    ref.read(authProvider.notifier).signInWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final padding = ResponsiveBreakpoints.getPadding(context);
-    final spacing = ResponsiveBreakpoints.getSpacing(context, base: 24);
-    
-    // Listen for auth state changes to trigger navigation
-    ref.listen(authProvider, (previous, current) {
-      if (previous?.user?.id != current.user?.id && current.user != null && !current.isLoading && !_hasNavigated) {
-        debugPrint('AuthSelection: Auth state changed - triggering navigation for user: ${current.user?.email}, role: ${current.user?.role}');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _checkAndNavigate();
-        });
+
+    ref.listen(authProvider, (_, current) {
+      if (current.user != null && !current.isLoading && !_hasNavigated) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _checkAndNavigate());
       }
     });
 
-    if (isDesktop) {
-      return Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF10B981),
-                const Color(0xFF047857),
-              ],
-            ),
-          ),
-          child: SafeArea(
+    return Scaffold(
+      backgroundColor: _kSurface,
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: isDesktop ? _desktopLayout(authState) : _mobileLayout(authState),
+      ),
+    );
+  }
+
+  // ── Desktop layout ────────────────────────────────────────────────────────
+
+  Widget _desktopLayout(dynamic authState) {
+    return Row(
+      children: [
+        // Left brand panel — 42 % width
+        const Expanded(flex: 42, child: _BrandPanel()),
+
+        // Right auth panel — 58 % width
+        Expanded(
+          flex: 58,
+          child: Container(
+            color: _kSurface,
             child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                margin: const EdgeInsets.all(24),
-                child: Card(
-                  elevation: 20,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    children: [
-                      // Left side - Branding
-                      Expanded(
-                        flex: 2,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF059669),
-                                Color(0xFF047857),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(24),
-                              bottomLeft: Radius.circular(24),
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(48),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Logo
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.asset(
-                                    'assets/logo.webp',
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.school,
-                                        size: 60,
-                                        color: Colors.white,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              
-                              // App Name
-                              const Text(
-                                'Excellence Coaching Hub',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              
-                              // Tagline
-                              const Text(
-                                'Transform your learning journey with world-class education',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                  height: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              
-                              // Feature highlights
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const _FeatureItem(
-                                    icon: '📚',
-                                    text: '1000+ Courses',
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const _FeatureItem(
-                                    icon: '🎓',
-                                    text: 'Expert Instructors',
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const _FeatureItem(
-                                    icon: '🏆',
-                                    text: 'Certified Learning',
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // Right side - Auth Options
-                      Expanded(
-                        flex: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(48),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Welcome header
-                              const Text(
-                                'Welcome Back',
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1f2937),
-                                  height: 1.2,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Sign in to continue your learning journey',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Color(0xFF6b7280),
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 48),
-                              
-                              // Google Sign In
-                              _AuthButton(
-                                icon: Icons.account_circle_outlined,
-                                label: authState.isLoading ? 'Signing in...' : 'Continue with Google',
-                                color: const Color(0xFF6366F1), // Vibrant indigo for better attention
-                                textColor: Colors.white,
-                                isLoading: authState.isLoading,
-                                onPressed: authState.isLoading 
-                                    ? null 
-                                    : () => _signInWithGoogle(context),
-                              ),
-                              
-                              const SizedBox(height: 20),
-                              
-                              // Divider
-                              const Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(
-                                      color: Color(0xFFe5e7eb),
-                                      thickness: 1,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 16),
-                                    child: Text(
-                                      'or',
-                                      style: TextStyle(
-                                        color: Color(0xFF9ca3af),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(
-                                      color: Color(0xFFe5e7eb),
-                                      thickness: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              
-                              const SizedBox(height: 20),
-                              
-                              // Email Sign In
-                              _AuthButton(
-                                icon: Icons.email_outlined,
-                                label: 'Continue with Email',
-                                color: const Color(0xFFF97316), // Vibrant orange for attention
-                                textColor: Colors.white,
-                                onPressed: () => context.push('/email-auth-option'),
-                              ),
-                              
-                              const SizedBox(height: 48),
-                              
-                              // Terms with clickable links
-                              const _TermsText(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 44, vertical: 52),
+                  child: _AuthCard(
+                    isLoading: authState.isLoading,
+                    error: authState.error,
+                    onGoogle: _signInWithGoogle,
+                    onEmail: () => context.push('/email-auth-option'),
                   ),
                 ),
               ),
             ),
           ),
         ),
-      );
-    } else {
-      // Mobile layout - Modern design
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF10B981),
-                Color(0xFF047857),
+      ],
+    );
+  }
+
+  // ── Mobile layout ─────────────────────────────────────────────────────────
+
+  Widget _mobileLayout(dynamic authState) {
+    return Column(
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.28,
+          child: const SafeArea(
+            bottom: false,
+            child: _BrandPanel(compact: true),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 24, offset: Offset(0, -4)),
               ],
             ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 40),
-                    
-                    // Logo and Branding
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset(
-                          'assets/logo.webp',
-                          width: 100,
-                          height: 100,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.school,
-                              size: 60,
-                              color: Colors.white,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    const Text(
-                      'Excellence Coaching Hub',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    const Text(
-                      'Transform your learning journey with world-class education',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    
-                    const SizedBox(height: 48),
-                    
-                    // Welcome Card
-                    Card(
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Welcome Back',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1f2937),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            
-                            const SizedBox(height: 12),
-                            
-                            const Text(
-                              'Sign in to continue your learning journey',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF6b7280),
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            
-                            const SizedBox(height: 32),
-                            
-                            // Google Sign In
-                            _AuthButton(
-                              icon: Icons.account_circle_outlined,
-                              label: authState.isLoading ? 'Signing in...' : 'Continue with Google',
-                              color: const Color(0xFF6366F1), // Vibrant indigo for better attention
-                              textColor: Colors.white,
-                              isLoading: authState.isLoading,
-                              onPressed: authState.isLoading 
-                                  ? null 
-                                  : () => _signInWithGoogle(context),
-                            ),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Divider
-                            const Row(
-                              children: [
-                                Expanded(
-                                  child: Divider(
-                                    color: Color(0xFFe5e7eb),
-                                    thickness: 1,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    'or',
-                                    style: TextStyle(
-                                      color: Color(0xFF9ca3af),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Divider(
-                                    color: Color(0xFFe5e7eb),
-                                    thickness: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Email Sign In
-                            _AuthButton(
-                              icon: Icons.email_outlined,
-                              label: 'Continue with Email',
-                              color: const Color(0xFFF97316), // Vibrant orange for attention
-                              textColor: Colors.white,
-                              onPressed: () => context.push('/email-auth-option'),
-                            ),
-                            
-                            const SizedBox(height: 32),
-                            
-                            // Device binding policy
-                            const _DeviceBindingPolicy(),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Terms with clickable links
-                            const _TermsText(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 40),
-                  ],
-                ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+              child: _AuthCard(
+                isLoading: authState.isLoading,
+                error: authState.error,
+                onGoogle: _signInWithGoogle,
+                onEmail: () => context.push('/email-auth-option'),
               ),
             ),
           ),
         ),
-      );
-    }
+      ],
+    );
   }
 }

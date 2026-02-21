@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'dart:async';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -14,16 +17,60 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _showResendButton = false;
+  int _resendCountdown = 0;
+  Timer? _resendTimer;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _resendTimer?.cancel();
     super.dispose();
   }
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).sendPasswordResetEmail(_emailController.text.trim());
+      try {
+        await ref.read(authProvider.notifier).sendPasswordResetEmail(_emailController.text.trim());
+      } catch (_) {
+        // Error handled by provider state; continue to show messages
+      }
+      if (!mounted) return;
+      // Start resend countdown
+      _startResendCountdown();
+    }
+  }
+
+  void _startResendCountdown() {
+    setState(() {
+      _showResendButton = false;
+      _resendCountdown = 60; // 60 seconds
+    });
+    
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _resendCountdown--;
+      });
+      
+      if (_resendCountdown <= 0) {
+        timer.cancel();
+        setState(() {
+          _showResendButton = true;
+        });
+      }
+    });
+  }
+
+  Future<void> _resendEmail() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await ref.read(authProvider.notifier).sendPasswordResetEmail(_emailController.text.trim());
+      } catch (_) {
+        // Error handled by provider state
+      }
+      if (!mounted) return;
+      _startResendCountdown();
     }
   }
 
@@ -75,7 +122,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Enter your email and we\'ll send you a link to reset your password',
+                        'Enter your email and we\'ll send you a reset code to reset your password',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               color: Colors.white70,
                               height: 1.5,
@@ -115,8 +162,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
                           // Reset Button
                           AnimatedButton(
-                            text: 'Send Reset Link',
-                            onPressed: authState.isLoading ? () {} : _resetPassword,
+                            text: authState.error != null && authState.error!.contains('sent') 
+                                ? 'Resend Code' 
+                                : 'Send Reset Code',
+                            onPressed: authState.isLoading || (!_showResendButton && authState.error != null && authState.error!.contains('sent')) 
+                                ? () {} 
+                                : (authState.error != null && authState.error!.contains('sent') ? _resendEmail : _resetPassword),
                             isLoading: authState.isLoading,
                             color: const Color(0xFF4facfe),
                           ),
@@ -140,39 +191,57 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   width: 1,
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
                                 children: [
-                                  if (authState.error!.contains('sent'))
-                                    const Icon(
-                                      Icons.check_circle_outline,
-                                      color: Colors.green,
-                                      size: 24,
-                                    ),
-                                  if (authState.error!.contains('sent'))
-                                    const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      authState.error!,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500,
+                                  Row(
+                                    children: [
+                                      if (authState.error!.contains('sent'))
+                                        const Icon(
+                                          Icons.check_circle_outline,
+                                          color: Colors.green,
+                                          size: 24,
+                                        ),
+                                      if (authState.error!.contains('sent'))
+                                        const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          authState.error!,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    ],
                                   ),
+                                  // Show countdown timer when email is sent
+                                  if (authState.error!.contains('sent') && !_showResendButton && _resendCountdown > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        'Resend available in $_resendCountdown seconds',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 14,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
 
                           // Show a button to navigate to enter reset code screen after success
-                          if (authState.error != null && authState.error!.contains('sent'))
+                          if (authState.error != null && (authState.error!.contains('sent') || authState.error!.contains('Successfully')))
                             Column(
                               children: [
                                 const SizedBox(height: 20),
                                 ElevatedButton(
                                   onPressed: () {
-                                    Navigator.pushNamed(context, '/enter-reset-code');
-                                  },
+                                      debugPrint('Navigating to enter reset code screen');
+                                      context.push('/enter-reset-code');
+                                    },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4facfe),
                                     foregroundColor: Colors.white,
@@ -180,6 +249,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
+                                    elevation: 2,
                                   ),
                                   child: const Text(
                                     'Enter Reset Code',
@@ -189,6 +259,32 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Didn\'t receive the email? Check your spam folder',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white70,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                // Debug information
+                                if (kDebugMode) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Debug: Error message = "${authState.error}"',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
 
@@ -207,7 +303,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.pop(context);
+                                  context.go('/login');
                                 },
                                 child: const Text(
                                   'Sign In',

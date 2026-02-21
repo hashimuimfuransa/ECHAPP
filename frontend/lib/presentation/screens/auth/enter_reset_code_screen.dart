@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
@@ -14,6 +15,7 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -26,11 +28,8 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
       final resetCode = _codeController.text.trim();
       
       // Navigate to reset password screen with the code
-      Navigator.pushNamed(
-        context, 
-        '/reset-password', 
-        arguments: {'oobCode': resetCode}
-      );
+      // Navigate using GoRouter and pass the code as query parameter
+      context.push('/reset-password?oobCode=${Uri.encodeComponent(resetCode)}');
     }
   }
 
@@ -216,7 +215,7 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                          context.go('/login');
                         },
                         child: const Text(
                           'Sign In',
@@ -235,7 +234,7 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
                   // Didn't receive code?
                   TextButton(
                     onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(context, '/forgot-password', (route) => false);
+                      context.go('/forgot-password');
                     },
                     child: const Text(
                       'Didn\'t receive the code? Request again',

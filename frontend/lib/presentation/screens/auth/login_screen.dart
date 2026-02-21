@@ -97,12 +97,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _resetNavigationFlag() {
+    _hasNavigated = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final padding = ResponsiveBreakpoints.getPadding(context);
     final spacing = ResponsiveBreakpoints.getSpacing(context, base: 24);
+
+    // Listen for auth state changes and ensure navigation occurs when a user becomes available.
+    ref.listen(authProvider, (previous, current) {
+      if (current.user != null && !current.isLoading && !_hasNavigated) {
+        debugPrint('LoginScreen: Auth state listener detected authenticated user: ${current.user?.email}');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _checkAndNavigate();
+        });
+      }
+    });
 
     if (isDesktop) {
       return Scaffold(
@@ -455,6 +469,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               // Dismiss keyboard before Google Sign-In
                                               FocusScope.of(context).unfocus();
                                               debugPrint('LoginScreen: Google Sign-In button pressed');
+                                              _resetNavigationFlag();
                                               ref.read(authProvider.notifier).signInWithGoogle();
                                             },
                                       style: OutlinedButton.styleFrom(
@@ -845,6 +860,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         // Dismiss keyboard before Google Sign-In
                                         FocusScope.of(context).unfocus();
                                         debugPrint('LoginScreen: Google Sign-In button pressed');
+                                        _resetNavigationFlag();
                                         ref.read(authProvider.notifier).signInWithGoogle();
                                       },
                                 style: OutlinedButton.styleFrom(

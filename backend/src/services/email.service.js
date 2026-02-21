@@ -14,10 +14,19 @@ class EmailService {
   /**
    * Send password reset email
    */
-  async sendPasswordResetEmail(email, resetToken, user) {
+  async sendPasswordResetEmail(email, resetTokenOrUrl, user) {
     try {
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?oobCode=${resetToken}`;
-      
+      // If caller provided a full URL (Firebase link or legacy constructed link), use it.
+      // Otherwise, treat the value as a token and construct a frontend URL.
+      let resetUrl = '';
+      let resetToken = '';
+      if (typeof resetTokenOrUrl === 'string' && resetTokenOrUrl.startsWith('http')) {
+        resetUrl = resetTokenOrUrl;
+      } else {
+        resetToken = resetTokenOrUrl;
+        resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?oobCode=${resetToken}`;
+      }
+
       const msg = {
         to: email,
         from: {
@@ -25,7 +34,7 @@ class EmailService {
           name: this.fromName
         },
         subject: 'Password Reset Request - Excellence Coaching Hub',
-        html: this.getPasswordResetTemplate(user.fullName, resetUrl)
+        html: this.getPasswordResetTemplate(user.fullName, resetUrl, resetToken)
       };
 
       const response = await this.sgMail.send(msg);
@@ -92,7 +101,7 @@ class EmailService {
   /**
    * Password reset email template
    */
-  getPasswordResetTemplate(fullName, resetUrl) {
+  getPasswordResetTemplate(fullName, resetUrl, resetToken) {
     return `
     <!DOCTYPE html>
     <html>
@@ -146,10 +155,10 @@ class EmailService {
                 <p>To reset your password, please follow these steps:</p>
                 
                 <ol>
-                    <li>Open the Excellence Coaching Hub app on your device</li>
-                    <li>Navigate to the "Forgot Password" section</li>
-                    <li>Enter the following reset code: <strong>${resetToken}</strong></li>
-                    <li>Create your new password</li>
+                  <li>Open the Excellence Coaching Hub app on your device</li>
+                  <li>Navigate to the "Forgot Password" section</li>
+                  ${resetToken ? `<li>Enter the following reset code: <strong>${resetToken}</strong></li>` : ''}
+                  <li>Create your new password</li>
                 </ol>
                 
                 <div class="warning">

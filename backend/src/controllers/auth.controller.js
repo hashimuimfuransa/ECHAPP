@@ -405,25 +405,55 @@ const forgotPassword = async (req, res) => {
       return sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
     }
 
-    // Generate password reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour expiry
-
-    // Save reset token and expiry to user
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = resetTokenExpiry;
-    await user.save();
-
-    // Send password reset email using SendGrid
+    // Try to generate a Firebase password reset link and send it via SendGrid.
+    // If Firebase link generation fails (user not in Firebase), fall back to
+    // the legacy custom-token flow so the reset still works.
     try {
-      await emailService.sendPasswordResetEmail(user.email, resetToken, user);
-      console.log(`Password reset email sent to: ${user.email}`);
-    } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      // Don't fail the request if email sending fails, but log the error
-    }
+      const actionCodeSettings = {
+        url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password`,
+        handleCodeInApp: false
+      };
 
-    sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
+      const resetLink = await admin.auth().generatePasswordResetLink(user.email, actionCodeSettings);
+      // Extract oobCode from the Firebase reset link and save it to the user record
+      try {
+        const urlObj = new URL(resetLink);
+        const oobCode = urlObj.searchParams.get('oobCode');
+        if (oobCode) {
+          user.resetPasswordToken = oobCode;
+          user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour expiry
+          await user.save();
+        }
+      } catch (_) {
+        // Parsing failed; continue without logging debug info
+      }
+
+      try {
+        await emailService.sendPasswordResetEmail(user.email, resetLink, user);
+      } catch (_) {
+        // Suppress email send errors here to avoid leaking debug info
+      }
+
+      return sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
+    } catch (_) {
+      // Legacy fallback: generate custom token and save to user
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour expiry
+
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = resetTokenExpiry;
+      await user.save();
+
+      // Construct frontend link for legacy token so frontend can continue to use same flow
+      const legacyResetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?oobCode=${resetToken}`;
+      try {
+        await emailService.sendPasswordResetEmail(user.email, legacyResetUrl, user);
+      } catch (_) {
+        // Suppress email send errors here as well
+      }
+
+      return sendSuccess(res, null, 'Password reset email sent if user exists. Please check your inbox (including spam folder).');
+    }
   } catch (error) {
     console.error('Forgot password error:', error);
     sendError(res, 'Failed to send password reset email', 500, error.message);
@@ -476,6 +506,30 @@ const resetPassword = async (req, res) => {
     sendError(res, 'Failed to reset password', 500, error.message);
   }
 };
+// Verify reset token (used by frontend to validate code before submitting new password)
+const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return sendError(res, 'Token is required', 400);
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return sendError(res, 'Invalid or expired reset token', 400);
+    }
+
+    return sendSuccess(res, null, 'Reset token is valid');
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+    return sendError(res, 'Failed to verify reset token', 500, error.message);
+  }
+};
 
 module.exports = {
   register,
@@ -487,5 +541,6 @@ module.exports = {
   firebaseLogin,
   forgotPassword,
   resetPassword,
+  verifyResetToken,
   resetUserDevice
 };
