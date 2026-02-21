@@ -371,6 +371,15 @@ class FirebaseAuthService {
         if (e.message?.contains('Operation is not supported on non-mobile systems') ?? false) {
           return Exception('Google Sign-In is initializing. Please try again.');
         }
+        // Check if it's a wrong password error from desktop Firebase
+        final message = (e.message ?? '').toLowerCase();
+        if (message.contains('password') || message.contains('credential') || message.contains('invalid')) {
+          return Exception('Incorrect password. Please try again.');
+        }
+        // Check for "An internal error has occurred" - usually password related on desktop
+        if (message.contains('internal error')) {
+          return Exception('An error occurred during login. Please verify your email and password are correct, and try again.');
+        }
         return Exception('An unknown error occurred. Please try again.');
       
       // Fallback for unmapped error codes

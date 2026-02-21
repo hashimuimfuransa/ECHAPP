@@ -217,23 +217,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: isDarkMode
+          ? LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF1E1E1E),
+                const Color(0xFF2A2A2A),
+              ],
+            )
+          : LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.primaryGreen,
+                AppTheme.primaryGreen.withOpacity(0.85),
+              ],
+            ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
             icon: Icon(Icons.arrow_back, 
-              color: AppTheme.getIconColor(context), 
-              size: 28),
+              color: isDarkMode ? Colors.white : Colors.white,
+              size: 26),
+            splashRadius: 24,
           ),
           Text(
             'Settings',
             style: TextStyle(
-              color: AppTheme.getTextColor(context),
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(width: 40),
@@ -243,24 +278,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSection(BuildContext context, String title, List<Widget> children) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.greyColor.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: isDarkMode 
+              ? Colors.black.withOpacity(0.2)
+              : AppTheme.greyColor.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
         border: Border.all(
-          color: AppTheme.greyColor.withOpacity(0.2),
+          color: isDarkMode
+            ? AppTheme.greyColor.withOpacity(0.1)
+            : AppTheme.greyColor.withOpacity(0.12),
           width: 1,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -270,11 +310,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 color: Theme.of(context).brightness == Brightness.dark 
                   ? AppTheme.whiteColor 
                   : AppTheme.blackColor,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 14),
             Column(
               children: children,
             ),
@@ -291,57 +332,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String subtitle,
     required Function onTap,
   }) {
-    return InkWell(
-      onTap: () => onTap(),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.greyColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, 
-                color: Theme.of(context).brightness == Brightness.dark 
-                  ? AppTheme.whiteColor 
-                  : AppTheme.greyColor, 
-                size: 24),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.whiteColor 
-                        : AppTheme.blackColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onTap(),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppTheme.primaryGreen.withOpacity(0.12),
+                      AppTheme.primaryGreen.withOpacity(0.05),
+                    ],
                   ),
-                  SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: AppTheme.getSecondaryTextColor(context),
-                      fontSize: 13,
-                    ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    width: 0.5,
                   ),
-                ],
+                ),
+                child: Icon(icon, 
+                  color: AppTheme.primaryGreen,
+                  size: 22),
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: AppTheme.greyColor,
-              size: 16,
-            ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: isDarkMode 
+                          ? AppTheme.whiteColor 
+                          : AppTheme.blackColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: AppTheme.getSecondaryTextColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: AppTheme.primaryGreen.withOpacity(0.5),
+                size: 14,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,23 +411,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required bool value,
     required Function(bool) onChanged,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppTheme.greyColor.withOpacity(0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryGreen.withOpacity(0.12),
+                  AppTheme.primaryGreen.withOpacity(0.05),
+                ],
+              ),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppTheme.primaryGreen.withOpacity(0.1),
+                width: 0.5,
+              ),
             ),
             child: Icon(icon, 
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.greyColor, 
-              size: 24),
+              color: AppTheme.primaryGreen,
+              size: 22),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,19 +445,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
+                    color: isDarkMode 
                       ? AppTheme.whiteColor 
                       : AppTheme.blackColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: TextStyle(
                     color: AppTheme.getSecondaryTextColor(context),
-                    fontSize: 13,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -400,9 +468,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppTheme.primaryGreen,
-            inactiveThumbColor: Colors.grey[400],
-            inactiveTrackColor: Colors.grey[600],
+            activeColor: AppTheme.primaryGreen,
+            inactiveTrackColor: Colors.grey.withOpacity(0.3),
           ),
         ],
       ),
@@ -417,23 +484,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required bool value,
     required Function(bool) onChanged,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppTheme.greyColor.withOpacity(0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryGreen.withOpacity(0.12),
+                  AppTheme.primaryGreen.withOpacity(0.05),
+                ],
+              ),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppTheme.primaryGreen.withOpacity(0.1),
+                width: 0.5,
+              ),
             ),
             child: Icon(icon, 
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.greyColor, 
-              size: 24),
+              color: AppTheme.primaryGreen,
+              size: 22),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,19 +518,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
+                    color: isDarkMode 
                       ? AppTheme.whiteColor 
                       : AppTheme.blackColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: TextStyle(
                     color: AppTheme.getSecondaryTextColor(context),
-                    fontSize: 13,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -462,9 +541,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppTheme.primaryGreen,
-            inactiveThumbColor: Colors.grey[400],
-            inactiveTrackColor: Colors.grey[600],
+            activeColor: AppTheme.primaryGreen,
+            inactiveTrackColor: Colors.grey.withOpacity(0.3),
           ),
         ],
       ),
@@ -732,7 +810,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               child: Text('Cancel', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
@@ -743,7 +823,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () {
                 if (newPasswordController.text == confirmController.text && 
                     newPasswordController.text.length >= 6) {
-                  Navigator.of(context).pop();
+                  if (context.canPop()) context.pop();
                   _showSnackbar(context, 'Password changed successfully');
                 } else {
                   _showSnackbar(context, 'Passwords do not match or too short');
@@ -817,7 +897,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           : null,
       onTap: () {
         if (!isSelected) {
-          Navigator.of(context).pop();
+          if (context.canPop()) context.pop();
           _showSnackbar(context, 'Language changed to $language');
         }
       },
@@ -860,7 +940,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               child: Text('Cancel', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
@@ -869,7 +951,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                if (context.canPop()) context.pop();
                 _showSnackbar(context, 'Thank you for your feedback!');
               },
               child: const Text('Send', 
@@ -930,7 +1012,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               child: Text('Close', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
@@ -963,7 +1047,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               child: Text('Cancel', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
@@ -972,7 +1058,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                if (context.canPop()) context.pop();
                 _showSnackbar(context, 'Account scheduled for deletion');
               },
               child: const Text('Delete', 
@@ -1006,7 +1092,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               child: Text('Cancel', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
@@ -1015,7 +1103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                if (context.canPop()) context.pop();
                 ref.read(authProvider.notifier).logout();
                 context.go('/login');
                 _showSnackbar(context, 'Signed out successfully');

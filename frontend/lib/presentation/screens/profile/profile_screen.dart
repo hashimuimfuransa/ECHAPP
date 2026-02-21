@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -61,44 +62,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final padding = ResponsiveBreakpoints.getPadding(context);
 
     return Scaffold(
       body: Container(
-        color: AppTheme.getBackgroundColor(context),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: Theme.of(context).brightness == Brightness.dark
+                ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                : [const Color(0xFFF8FAFC), const Color(0xFFF0F9FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final maxWidth = isDesktop ? 1000.0 : double.infinity;
+              final horizontalPadding = isDesktop ? (constraints.maxWidth - maxWidth) / 2 : 0.0;
+              
               return Column(
                 children: [
-                  // Enhanced Header
                   _buildEnhancedHeader(context),
                   
-                  // Content with constrained height
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(20, 20, 20, 30), // More bottom padding
+                      padding: EdgeInsets.fromLTRB(
+                        padding.left + horizontalPadding, 
+                        padding.top, 
+                        padding.right + horizontalPadding, 
+                        padding.bottom * 1.5
+                      ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 100, // Account for header
+                          minHeight: constraints.maxHeight - 100,
+                          maxWidth: maxWidth,
                         ),
                         child: Column(
                           children: [
-                            // Profile Picture Section with enhanced design
                             _buildEnhancedProfilePicture(user),
                             
-                            const SizedBox(height: 30),
+                            SizedBox(height: isDesktop ? 40 : 30),
                             
-                            // Profile Information with modern card design
                             _buildEnhancedProfileInfo(user),
                             
-                            const SizedBox(height: 30),
+                            SizedBox(height: isDesktop ? 40 : 30),
                             
-                            // Stats Section with real data
                             _buildStatsSection(),
                             
-                            const SizedBox(height: 30),
+                            SizedBox(height: isDesktop ? 40 : 30),
                             
-                            // Enhanced Action Buttons
                             _buildEnhancedActionButtons(),
                           ],
                         ),
@@ -115,58 +130,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildEnhancedHeader(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final padding = isDesktop ? 24.0 : 16.0;
+    final fontSize = isDesktop ? 26.0 : 22.0;
+    
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: (Theme.of(context).cardTheme.color ?? Colors.white).withOpacity(0.2),
+        color: AppTheme.getCardColor(context).withOpacity(0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.3),
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(padding * 0.6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.white.withOpacity(0.3),
+                color: AppTheme.primaryGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                onPressed: () => context.pop(),
-                icon: Icon(Icons.arrow_back, 
-                  color: Theme.of(context).iconTheme.color, 
+                onPressed: () {
+                  final user = ref.read(authProvider).user;
+                  if (user?.role == 'admin') {
+                    context.go('/admin');
+                  } else {
+                    context.go('/dashboard');
+                  }
+                },
+                icon: Icon(Icons.arrow_back_rounded, 
+                  color: AppTheme.primaryGreen, 
                   size: 24),
               ),
             ),
-            const Text(
+            Text(
               'My Profile',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    offset: Offset(0, 2),
-                    blurRadius: 4,
-                    color: Colors.black26,
-                  ),
-                ],
+                color: AppTheme.getTextColor(context),
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
               ),
             ),
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.white.withOpacity(0.3),
+                color: AppTheme.primaryGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
                 onPressed: _toggleEdit,
                 icon: Icon(
-                  _isEditing ? Icons.close : Icons.edit_outlined,
-                  color: Theme.of(context).iconTheme.color,
+                  _isEditing ? Icons.close_rounded : Icons.edit_rounded,
+                  color: AppTheme.primaryGreen,
                   size: 24,
                 ),
               ),
@@ -211,46 +238,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildEnhancedProfilePicture(user) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final avatarSize = isDesktop ? 140.0 : 120.0;
+    final nameFontSize = isDesktop ? 28.0 : 24.0;
+    final emailFontSize = isDesktop ? 18.0 : 16.0;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Theme.of(context).shadowColor.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(isDesktop ? 40 : 25),
         child: Column(
           children: [
             Stack(
               children: [
                 Container(
-                  width: 120,
-                  height: 120,
+                  width: avatarSize,
+                  height: avatarSize,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryGreen.withOpacity(0.8),
+                        AppTheme.primaryGreen,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(60),
+                    borderRadius: BorderRadius.circular(avatarSize / 2),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF667eea).withOpacity(0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
+                        color: AppTheme.primaryGreen.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
                   child: Center(
                     child: Text(
                       user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 50,
+                        fontSize: avatarSize * 0.35,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -262,51 +303,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppTheme.primaryGreen,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryGreen,
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
+                            color: AppTheme.primaryGreen.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: const Icon(
-                        Icons.camera_alt_outlined,
-                        color: AppTheme.whiteColor,
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
                         size: 24,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: isDesktop ? 28 : 20),
             Text(
               user?.fullName ?? 'User Name',
               style: TextStyle(
                 color: AppTheme.getTextColor(context),
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: nameFontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             Text(
               user?.email ?? 'user@example.com',
               style: TextStyle(
                 color: AppTheme.getSecondaryTextColor(context),
-                fontSize: 16,
+                fontSize: emailFontSize,
+                fontWeight: FontWeight.w500,
               ),
             ),
             if (_isEditing)
               Padding(
-                padding: const EdgeInsets.only(top: 15),
-                child: Text(
-                  'Tap to change photo',
-                  style: TextStyle(
-                    color: AppTheme.getSecondaryTextColor(context),
-                    fontSize: 14,
+                padding: const EdgeInsets.only(top: 16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Tap to change photo',
+                    style: TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -366,20 +417,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildEnhancedProfileInfo(user) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final padding = isDesktop ? 32.0 : 25.0;
+    final titleFontSize = isDesktop ? 24.0 : 22.0;
+    final spacing = isDesktop ? 28.0 : 20.0;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -387,43 +447,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               'Personal Information',
               style: TextStyle(
                 color: AppTheme.getTextColor(context),
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+                fontSize: titleFontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 25),
+            SizedBox(height: spacing),
             
-            // Name Field with enhanced design
             _buildEnhancedInfoField(
               label: 'Full Name',
               controller: _nameController,
-              icon: Icons.person_outline,
+              icon: Icons.person_rounded,
               isEditable: _isEditing,
             ),
             
-            const SizedBox(height: 20),
+            SizedBox(height: spacing),
             
-            // Email Field with enhanced design
             _buildEnhancedInfoField(
               label: 'Email Address',
               controller: _emailController,
-              icon: Icons.email_outlined,
+              icon: Icons.email_rounded,
               isEditable: false,
             ),
             
-            const SizedBox(height: 20),
+            SizedBox(height: spacing),
             
-            // Phone Field with enhanced design
             _buildEnhancedInfoField(
               label: 'Phone Number',
               controller: _phoneController,
-              icon: Icons.phone_outlined,
+              icon: Icons.phone_rounded,
               isEditable: _isEditing,
             ),
             
-            const SizedBox(height: 20),
+            SizedBox(height: spacing),
             
-            // Member Since field
             _buildEnhancedInfoField(
               label: 'Member Since',
               controller: TextEditingController(
@@ -431,7 +488,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ? '${user!.createdAt.month}/${user.createdAt.year}' 
                   : 'Unknown'
               ),
-              icon: Icons.calendar_today_outlined,
+              icon: Icons.calendar_today_rounded,
               isEditable: false,
             ),
           ],
@@ -446,6 +503,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required IconData icon,
     required bool isEditable,
   }) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final padding = isDesktop ? 20.0 : 16.0;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -453,58 +513,82 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           label,
           style: TextStyle(
             color: AppTheme.getSecondaryTextColor(context),
-            fontSize: 14,
+            fontSize: isDesktop ? 15 : 13,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: isDesktop ? 12 : 10),
         if (isEditable)
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).inputDecorationTheme.fillColor ?? 
+                      AppTheme.greyColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: Theme.of(context).dividerColor,
-                width: 1,
+                color: Theme.of(context).dividerColor.withOpacity(0.2),
+                width: 1.5,
               ),
             ),
             child: TextField(
               controller: controller,
               style: TextStyle(
                 color: AppTheme.getTextColor(context),
-                fontSize: 16,
+                fontSize: isDesktop ? 17 : 16,
+                fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
-                prefixIcon: Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 20),
+                prefixIcon: Icon(
+                  icon, 
+                  color: AppTheme.primaryGreen.withOpacity(0.6), 
+                  size: 22
+                ),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: padding, 
+                  vertical: isDesktop ? 18 : 16
+                ),
                 hintText: 'Enter $label',
-                hintStyle: TextStyle(color: AppTheme.getSecondaryTextColor(context)),
+                hintStyle: TextStyle(
+                  color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
+                  fontSize: 14,
+                ),
               ),
+              onTap: () {
+                // Add visual feedback on focus
+              },
             ),
           )
         else
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            padding: EdgeInsets.symmetric(
+              horizontal: padding, 
+              vertical: isDesktop ? 18 : 16
+            ),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(16),
+              color: Theme.of(context).inputDecorationTheme.fillColor ?? 
+                      AppTheme.greyColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: Theme.of(context).dividerColor,
-                width: 1,
+                color: Theme.of(context).dividerColor.withOpacity(0.2),
+                width: 1.5,
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 20),
-                const SizedBox(width: 12),
+                Icon(
+                  icon, 
+                  color: AppTheme.primaryGreen.withOpacity(0.6), 
+                  size: 22
+                ),
+                SizedBox(width: isDesktop ? 16 : 12),
                 Expanded(
                   child: Text(
                     controller.text,
                     style: TextStyle(
                       color: AppTheme.getTextColor(context),
-                      fontSize: 16,
+                      fontSize: isDesktop ? 17 : 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -689,24 +773,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           },
         ];
 
+        final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+        final isTablet = ResponsiveBreakpoints.isTablet(context);
+        final gridCount = isDesktop ? 4 : (isTablet ? 3 : 2);
+        final spacing = isDesktop ? 20.0 : 15.0;
+        final padding = isDesktop ? 32.0 : 20.0;
+        
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(20),
+            color: AppTheme.getCardColor(context),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).shadowColor.withOpacity(0.1),
                 blurRadius: 20,
-                offset: const Offset(0, 10),
+                offset: const Offset(0, 8),
               ),
             ],
             border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              color: Theme.of(context).dividerColor.withOpacity(0.1),
               width: 1,
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(padding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -714,68 +804,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   'Learning Statistics',
                   style: TextStyle(
                     color: AppTheme.getTextColor(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontSize: isDesktop ? 24 : 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 15),
+                SizedBox(height: spacing),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 15,
-                    mainAxisSpacing: 15,
-                    childAspectRatio: 1.5,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: gridCount,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    childAspectRatio: isDesktop ? 1.0 : 1.3,
                   ),
                   itemCount: statData.length,
                   itemBuilder: (context, index) {
                     final stat = statData[index];
+                    final color = stat['color'] as Color;
+                    
                     return Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).inputDecorationTheme.fillColor ?? 
+                                AppTheme.greyColor.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Theme.of(context).dividerColor.withOpacity(0.3),
-                          width: 1,
+                          color: Theme.of(context).dividerColor.withOpacity(0.1),
+                          width: 1.5,
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isDesktop ? 16 : 12),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: EdgeInsets.all(isDesktop ? 12 : 10),
                               decoration: BoxDecoration(
-                                color: (stat['color'] as Color).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
+                                color: color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
                                 stat['icon'] as IconData,
-                                color: stat['color'] as Color,
-                                size: 24,
+                                color: color,
+                                size: isDesktop ? 28 : 24,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: isDesktop ? 12 : 8),
                             Text(
                               stat['value'] as String,
                               style: TextStyle(
                                 color: AppTheme.getTextColor(context),
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontSize: isDesktop ? 22 : 18,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isDesktop ? 6 : 4),
                             Text(
                               stat['title'] as String,
-                              style: const TextStyle(
-                                color: AppTheme.greyColor,
-                                fontSize: 12,
+                              style: TextStyle(
+                                color: AppTheme.getSecondaryTextColor(context),
+                                fontSize: isDesktop ? 13 : 12,
+                                fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 2),
                           ],
                         ),
                       ),
@@ -836,26 +930,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildEnhancedActionButtons() {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final buttonHeight = isDesktop ? 56.0 : 54.0;
+    final spacing = isDesktop ? 32.0 : 25.0;
+    final padding = isDesktop ? 24.0 : 15.0;
+    
     return Column(
       children: [
         if (_isEditing)
           Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primaryGreen,
+                  AppTheme.primaryGreen.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryGreen.withOpacity(0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
+                  color: AppTheme.primaryGreen.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: SizedBox(
               width: double.infinity,
-              height: 55,
+              height: buttonHeight,
               child: ElevatedButton(
                 onPressed: _saveProfile,
                 style: ElevatedButton.styleFrom(
@@ -865,72 +969,86 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Save Changes',
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                    fontSize: isDesktop ? 18 : 17,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),
             ),
           ),
-        const SizedBox(height: 25),
+        SizedBox(height: spacing),
         Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(20),
+            color: AppTheme.getCardColor(context),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).shadowColor.withOpacity(0.1),
                 blurRadius: 20,
-                offset: const Offset(0, 10),
+                offset: const Offset(0, 8),
               ),
             ],
             border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              color: Theme.of(context).dividerColor.withOpacity(0.1),
               width: 1,
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(15),
+            padding: EdgeInsets.all(padding),
             child: Column(
               children: [
                 _buildEnhancedActionButton(
-                  icon: Icons.settings_outlined,
+                  icon: Icons.settings_rounded,
                   title: 'Account Settings',
                   subtitle: 'Manage your account preferences',
                   onTap: () {
                     context.push('/settings');
                   },
                 ),
-                Divider(color: Theme.of(context).dividerColor, height: 1),
+                Divider(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                  height: 1,
+                  thickness: 1,
+                ),
                 _buildEnhancedActionButton(
-                  icon: Icons.privacy_tip_outlined,
+                  icon: Icons.privacy_tip_rounded,
                   title: 'Privacy & Security',
                   subtitle: 'Manage your privacy settings',
                   onTap: () {
                     context.push('/privacy');
                   },
                 ),
-                Divider(color: Theme.of(context).dividerColor, height: 1),
+                Divider(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                  height: 1,
+                  thickness: 1,
+                ),
                 _buildEnhancedActionButton(
-                  icon: Icons.help_outline,
+                  icon: Icons.help_rounded,
                   title: 'Help & Support',
                   subtitle: 'Get help with your account',
                   onTap: () {
                     context.push('/help');
                   },
                 ),
-                Divider(color: Theme.of(context).dividerColor, height: 1),
+                Divider(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                  height: 1,
+                  thickness: 1,
+                ),
                 _buildEnhancedActionButton(
-                  icon: Icons.logout_outlined,
+                  icon: Icons.logout_rounded,
                   title: 'Sign Out',
                   subtitle: 'Log out from your account',
                   onTap: () {
                     _showLogoutDialog(context);
                   },
+                  isDestructive: true,
                 ),
               ],
             ),
@@ -945,23 +1063,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String title,
     required String subtitle,
     required Function onTap,
+    bool isDestructive = false,
   }) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final iconColor = isDestructive 
+        ? Colors.red.shade600 
+        : AppTheme.primaryGreen.withOpacity(0.6);
+    final titleColor = isDestructive 
+        ? Colors.red.shade600 
+        : AppTheme.getTextColor(context);
+    final iconBgColor = isDestructive 
+        ? Colors.red.withOpacity(0.1) 
+        : AppTheme.primaryGreen.withOpacity(0.1);
+    
     return InkWell(
       onTap: () => onTap(),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 15),
+        padding: EdgeInsets.symmetric(
+          vertical: isDesktop ? 18 : 15,
+          horizontal: 4,
+        ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isDesktop ? 14 : 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
+                color: iconBgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppTheme.getSecondaryTextColor(context), size: 24),
+              child: Icon(
+                icon, 
+                color: iconColor, 
+                size: isDesktop ? 24 : 22,
+              ),
             ),
-            const SizedBox(width: 15),
+            SizedBox(width: isDesktop ? 18 : 15),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -969,26 +1106,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      color: AppTheme.getTextColor(context),
-                      fontSize: 16,
+                      color: titleColor,
+                      fontSize: isDesktop ? 17 : 16,
                       fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: TextStyle(
                       color: AppTheme.getSecondaryTextColor(context),
-                      fontSize: 13,
+                      fontSize: isDesktop ? 14 : 13,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.arrow_forward_ios,
+              Icons.arrow_forward_ios_rounded,
               color: AppTheme.getSecondaryTextColor(context),
-              size: 16,
+              size: isDesktop ? 18 : 16,
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -508,9 +509,6 @@ class _GoogleGPainter extends CustomPainter {
   bool shouldRepaint(_) => false;
 }
 
-// Need dart:math for pi
-import 'dart:math' show pi;
-
 // ─── Email / primary button ───────────────────────────────────────────────────
 
 class _PrimaryButton extends StatefulWidget {
@@ -805,13 +803,11 @@ class _TrustBar extends StatelessWidget {
 class _AuthCard extends StatelessWidget {
   final bool isLoading;
   final String? error;
-  final VoidCallback onGoogle;
   final VoidCallback onEmail;
 
   const _AuthCard({
     required this.isLoading,
     required this.error,
-    required this.onGoogle,
     required this.onEmail,
   });
 
@@ -847,35 +843,12 @@ class _AuthCard extends StatelessWidget {
 
         const SizedBox(height: 28),
 
-        // ── Google button ────────────────────────────────────────────
-        _GoogleButton(
-          isLoading: isLoading,
-          onPressed: isLoading ? null : onGoogle,
-        ),
-
-        const SizedBox(height: 16),
-
-        // ── OR divider ───────────────────────────────────────────────
-        Row(children: [
-          const Expanded(child: Divider(color: _kBorder, thickness: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('or',
-                style: TextStyle(
-                    color: _kText3,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500)),
-          ),
-          const Expanded(child: Divider(color: _kBorder, thickness: 1)),
-        ]),
-
-        const SizedBox(height: 16),
-
         // ── Email button ─────────────────────────────────────────────
         _PrimaryButton(
           icon: Icons.mail_outline_rounded,
           label: 'Continue with Email',
-          onPressed: onEmail,
+          isLoading: isLoading,
+          onPressed: isLoading ? null : onEmail,
         ),
 
         // ── Error message ────────────────────────────────────────────
@@ -981,11 +954,6 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     }
   }
 
-  void _signInWithGoogle() {
-    _hasNavigated = false;
-    ref.read(authProvider.notifier).signInWithGoogle();
-  }
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -1031,7 +999,6 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                   child: _AuthCard(
                     isLoading: authState.isLoading,
                     error: authState.error,
-                    onGoogle: _signInWithGoogle,
                     onEmail: () => context.push('/email-auth-option'),
                   ),
                 ),
@@ -1073,7 +1040,6 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
               child: _AuthCard(
                 isLoading: authState.isLoading,
                 error: authState.error,
-                onGoogle: _signInWithGoogle,
                 onEmail: () => context.push('/email-auth-option'),
               ),
             ),

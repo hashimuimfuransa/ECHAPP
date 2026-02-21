@@ -113,23 +113,48 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryGreen,
+            AppTheme.primaryGreen.withOpacity(0.8),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => context.pop(),
-            icon: Icon(Icons.arrow_back, 
-              color: AppTheme.blackColor, 
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
+            icon: const Icon(Icons.arrow_back, 
+              color: Colors.white, 
               size: 24),
+            splashRadius: 24,
           ),
           const Text(
-            'Coaching Categories',
+            'Categories',
             style: TextStyle(
-              color: AppTheme.blackColor,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(width: 40),
@@ -139,12 +164,16 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionTitle(BuildContext context, String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: AppTheme.blackColor,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppTheme.blackColor,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
@@ -215,57 +244,94 @@ class CategoriesScreen extends ConsumerWidget {
   Widget _buildCategoryCard(BuildContext context, dynamic category) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryGreen.withOpacity(0.05),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Colors.grey.withOpacity(0.02),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryGreen.withOpacity(0.2),
+          color: AppTheme.primaryGreen.withOpacity(0.15),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () => _navigateToCategory(context, category),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    category.icon,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _navigateToCategory(context, category),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryGreen.withOpacity(0.2),
+                        AppTheme.primaryGreen.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryGreen.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      category.icon,
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                category.name,
-                style: const TextStyle(
-                  color: AppTheme.blackColor,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 10),
+                Text(
+                  category.name,
+                  style: const TextStyle(
+                    color: AppTheme.blackColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${category.subcategories.length} courses',
-                style: TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: 11,
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${category.subcategories.length} courses',
+                    style: TextStyle(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -274,56 +340,102 @@ class CategoriesScreen extends ConsumerWidget {
 
   Widget _buildCategoryListItem(BuildContext context, dynamic category) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppTheme.whiteColor,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Colors.grey.withOpacity(0.01),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppTheme.greyColor.withOpacity(0.2),
+          color: AppTheme.greyColor.withOpacity(0.12),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: ListTile(
-        onTap: () => _navigateToCategory(context, category),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              category.icon,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _navigateToCategory(context, category),
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryGreen.withOpacity(0.15),
+                        AppTheme.primaryGreen.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(
+                      color: AppTheme.primaryGreen.withOpacity(0.15),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      category.icon,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.name,
+                        style: const TextStyle(
+                          color: AppTheme.blackColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        category.description,
+                        style: TextStyle(
+                          color: AppTheme.greyColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: AppTheme.primaryGreen.withOpacity(0.6),
+                  size: 14,
+                ),
+              ],
             ),
           ),
-        ),
-        title: Text(
-          category.name,
-          style: const TextStyle(
-            color: AppTheme.blackColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            category.description,
-            style: TextStyle(
-              color: AppTheme.greyColor,
-              fontSize: 13,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          color: AppTheme.greyColor,
-          size: 16,
         ),
       ),
     );

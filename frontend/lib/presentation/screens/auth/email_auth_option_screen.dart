@@ -1,644 +1,611 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
-class EmailAuthOptionScreen extends StatelessWidget {
+class EmailAuthOptionScreen extends StatefulWidget {
   const EmailAuthOptionScreen({super.key});
+
+  @override
+  State<EmailAuthOptionScreen> createState() => _EmailAuthOptionScreenState();
+}
+
+class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final padding = ResponsiveBreakpoints.getPadding(context);
-    final spacing = ResponsiveBreakpoints.getSpacing(context, base: 24);
 
     if (isDesktop) {
-      return Scaffold(
-        body: GradientBackground(
-          colors: AppTheme.oceanGradient,
-          child: SafeArea(
+      return _buildDesktopLayout();
+    }
+
+    return _buildMobileLayout();
+  }
+
+  Widget _buildDesktopLayout() {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0F172A),
+                  Color(0xFF1E293B),
+                  Color(0xFF0F4C75),
+                  Color(0xFF041B2D),
+                ],
+                stops: [0.0, 0.3, 0.7, 1.0],
+              ),
+            ),
+          ),
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF00C896).withOpacity(0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFBF00).withOpacity(0.05),
+              ),
+            ),
+          ),
+          SafeArea(
             child: Row(
               children: [
-                // Left side - Branding area
                 Expanded(
-                  flex: 1,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFF4facfe),
-                          Color(0xFF00f2fe),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(40),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(35),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.mail_outline,
-                              size: 80,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                          const Text(
-                            'Email Authentication',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Choose how you want to\nuse your email',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 20,
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 50),
-                          
-                          // Feature highlights
-                          Container(
-                            padding: const EdgeInsets.all(25),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _EmailFeatureItem(
-                                      icon: Icons.login,
-                                      label: 'Sign In',
-                                      description: 'Existing users',
-                                    ),
-                                    _EmailFeatureItem(
-                                      icon: Icons.app_registration,
-                                      label: 'Register',
-                                      description: 'New users',
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 20),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    _EmailFeatureItem(
-                                      icon: Icons.lock_reset,
-                                      label: 'Reset Password',
-                                      description: 'Forgot password',
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: _buildLeftPanel(),
                 ),
-                
-                // Right side - Options
                 Expanded(
-                  flex: 1,
-                  child: SingleChildScrollView(
-                    padding: padding,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(height: spacing),
-                        
-                        // Header with back button
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () => context.pop(),
-                              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                            ),
-                            const Spacer(),
-                          ],
-                        ),
-                        
-                        SizedBox(height: spacing * 0.5),
-                        
-                        // Options Card
-                        GlassContainer(
-                          child: Padding(
-                            padding: EdgeInsets.all(spacing),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Login Option
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(15),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF4CAF50),
-                                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                                      ),
-                                      child: const Icon(
-                                        Icons.login,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    title: const Text(
-                                      'Sign In',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: const Text(
-                                      'Already have an account? Sign in with your email and password.',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 15,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    trailing: const Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Colors.white,
-                                    ),
-                                    onTap: () => context.push('/login'),
-                                  ),
-                                ),
-                                
-                                SizedBox(height: spacing * 0.8),
-                                
-                                // Register Option
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(15),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF2196F3),
-                                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                                      ),
-                                      child: const Icon(
-                                        Icons.app_registration,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    title: const Text(
-                                      'Create Account',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: const Text(
-                                      'New to Excellence Coaching Hub? Create a new account.',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 15,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    trailing: const Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Colors.white,
-                                    ),
-                                    onTap: () => context.push('/register'),
-                                  ),
-                                ),
-                                
-                                SizedBox(height: spacing * 0.8),
-                                
-                                // Forgot Password Option
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(15),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFFF9800),
-                                        borderRadius: BorderRadius.all(Radius.circular(15)),
-                                      ),
-                                      child: const Icon(
-                                        Icons.lock_reset,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    title: const Text(
-                                      'Forgot Password',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: const Text(
-                                      'Reset your password if you forgot it.',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 15,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    trailing: const Icon(
-                                      Icons.arrow_forward_ios,
-                                      color: Colors.white,
-                                    ),
-                                    onTap: () => context.push('/forgot-password'),
-                                  ),
-                                ),
-                                
-                                SizedBox(height: spacing),
-                                
-                                // Additional info
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.security,
-                                        color: Colors.white70,
-                                        size: 24,
-                                      ),
-                                      SizedBox(height: 10),
-                                      Text(
-                                        'Secure Authentication',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Your credentials are securely encrypted and protected. We never share your personal information with third parties.',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14,
-                                          height: 1.4,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        
-                        SizedBox(height: spacing),
-                      ],
-                    ),
-                  ),
+                  child: _buildRightPanel(),
                 ),
               ],
             ),
           ),
-        ),
-      );
-    } else {
-      // Mobile layout (existing code)
-      return Scaffold(
-        body: GradientBackground(
-          colors: AppTheme.oceanGradient,
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 50),
-                  
-                  // Header with back button
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                  
-                  // Email Option Selection
-                  Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(25),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.mail_outline,
-                          size: 65,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-                      Text(
-                        'Email Authentication',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Choose how you want to use your email',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.white70,
-                              height: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 45),
-                    ],
-                  ),
+        ],
+      ),
+    );
+  }
 
-                  // Options Card
-                  GlassContainer(
-                    child: Padding(
-                      padding: const EdgeInsets.all(28.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Login Option
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF4CAF50),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                                ),
-                                child: const Icon(
-                                  Icons.login,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              title: const Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'Already have an account? Sign in with your email and password',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.white70,
-                              ),
-                              onTap: () {
-                                context.push('/login');
-                              },
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 20),
-                          
-                          // Register Option
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF2196F3),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                                ),
-                                child: const Icon(
-                                  Icons.person_add,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              title: const Text(
-                                'Create Account',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'New to Excellence Coaching Hub? Create a new account',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.white70,
-                              ),
-                              onTap: () {
-                                context.push('/register');
-                              },
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 20),
-                          
-                          // Forgot Password Option
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFF9800),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                                ),
-                                child: const Icon(
-                                  Icons.lock_reset,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              title: const Text(
-                                'Forgot Password',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'Reset your password if you forgot it',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Colors.white70,
-                              ),
-                              onTap: () {
-                                context.push('/forgot-password');
-                              },
-                            ),
-                          ),
-                        ],
+  Widget _buildLeftPanel() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF00C896).withOpacity(0.15),
+            const Color(0xFF0A4A5A).withOpacity(0.1),
+          ],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Column(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00C896).withOpacity(0.3),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.mail_outline_rounded,
+                      size: 60,
+                      color: Colors.white,
                     ),
                   ),
-                  
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 50),
+                  const Text(
+                    'Welcome to',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Excellence\nCoaching Hub',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: 50,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00C896),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  const Text(
+                    'Unlock your full potential with expert-led courses and personalized mentorship. Choose your path to success.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      height: 1.6,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 60),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _StatItem('5,200+', 'Active Learners'),
+                      const SizedBox(width: 60),
+                      _StatItem('98%', 'Satisfaction'),
+                      const SizedBox(width: 60),
+                      _StatItem('120+', 'Expert Coaches'),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRightPanel() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 40),
+              IconButton(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+                tooltip: 'Go back',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: Tween<Offset>(begin: const Offset(0.3, 0), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Choose Your Path',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Select how you\'d like to proceed with your account',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 50),
+                  _AuthOptionButton(
+                    icon: Icons.login_rounded,
+                    title: 'Sign In',
+                    subtitle: 'Access your existing account',
+                    color: const Color(0xFF4CAF50),
+                    onTap: () => context.push('/login'),
+                    delay: 100,
+                  ),
+                  const SizedBox(height: 20),
+                  _AuthOptionButton(
+                    icon: Icons.person_add_rounded,
+                    title: 'Create Account',
+                    subtitle: 'Join our community of learners',
+                    color: const Color(0xFF2196F3),
+                    onTap: () => context.push('/register'),
+                    delay: 200,
+                  ),
+                  const SizedBox(height: 20),
+                  _AuthOptionButton(
+                    icon: Icons.lock_reset_rounded,
+                    title: 'Reset Password',
+                    subtitle: 'Recover your account access',
+                    color: const Color(0xFFFF9800),
+                    onTap: () => context.push('/forgot-password'),
+                    delay: 300,
+                  ),
+                  const SizedBox(height: 40),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Your account is protected with enterprise-grade security',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0F172A),
+                  Color(0xFF1E293B),
+                  Color(0xFF0F4C75),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.mail_outline_rounded,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  const Text(
+                    'Choose Your Path',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Select how you\'d like to proceed',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  _AuthOptionButton(
+                    icon: Icons.login_rounded,
+                    title: 'Sign In',
+                    subtitle: 'Access your existing account',
+                    color: const Color(0xFF4CAF50),
+                    onTap: () => context.push('/login'),
+                  ),
+                  const SizedBox(height: 16),
+                  _AuthOptionButton(
+                    icon: Icons.person_add_rounded,
+                    title: 'Create Account',
+                    subtitle: 'Join our community',
+                    color: const Color(0xFF2196F3),
+                    onTap: () => context.push('/register'),
+                  ),
+                  const SizedBox(height: 16),
+                  _AuthOptionButton(
+                    icon: Icons.lock_reset_rounded,
+                    title: 'Reset Password',
+                    subtitle: 'Recover your access',
+                    color: const Color(0xFFFF9800),
+                    onTap: () => context.push('/forgot-password'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-// Helper widget for email feature items (desktop only)
-class _EmailFeatureItem extends StatelessWidget {
+class _AuthOptionButton extends StatefulWidget {
   final IconData icon;
-  final String label;
-  final String description;
-  
-  const _EmailFeatureItem({
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final int delay;
+
+  const _AuthOptionButton({
     required this.icon,
-    required this.label,
-    required this.description,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.delay = 0,
   });
-  
+
+  @override
+  State<_AuthOptionButton> createState() => _AuthOptionButtonState();
+}
+
+class _AuthOptionButtonState extends State<_AuthOptionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _isHovered
+                  ? [
+                      widget.color.withOpacity(0.15),
+                      widget.color.withOpacity(0.08),
+                    ]
+                  : [
+                      Colors.white.withOpacity(0.08),
+                      Colors.white.withOpacity(0.05),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _isHovered
+                  ? widget.color.withOpacity(0.5)
+                  : Colors.white.withOpacity(0.1),
+              width: _isHovered ? 2 : 1,
+            ),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      widget.color,
+                      widget.color.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: _isHovered ? widget.color : Colors.white.withOpacity(0.5),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _StatItem(this.value, this.label);
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Icon(
-            icon,
-            size: 32,
-            color: Colors.white,
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF00C896),
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
         ),

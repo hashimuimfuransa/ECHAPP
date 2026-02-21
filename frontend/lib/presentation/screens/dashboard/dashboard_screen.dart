@@ -941,6 +941,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildContinueLearning(
       BuildContext context, List<Course> enrolledCourses) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    
     if (enrolledCourses.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -949,20 +952,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             'Continue Learning',
             style: TextStyle(
               color: AppTheme.getTextColor(context),
-              fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
+              fontSize: isDesktop ? 24 : 20,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: isDesktop ? 20 : 15),
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: Theme.of(context)
                       .shadowColor
-                      .withValues(alpha: 0.08), // FIX #8
+                      .withValues(alpha: 0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -970,26 +973,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               border: Border.all(
                 color: Theme.of(context)
                     .dividerColor
-                    .withValues(alpha: 0.1), // FIX #8
+                    .withValues(alpha: 0.1),
                 width: 0.5,
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isDesktop ? 24 : 16),
               child: Row(
                 children: [
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: isDesktop ? 70 : 60,
+                    height: isDesktop ? 70 : 60,
                     decoration: BoxDecoration(
                       color:
-                          AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
+                          AppTheme.greyColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.play_circle_outline,
-                        color: AppTheme.greyColor, size: 30),
+                    child: Icon(Icons.play_circle_outline,
+                        color: AppTheme.greyColor, size: isDesktop ? 36 : 30),
                   ),
-                  const SizedBox(width: 15),
+                  SizedBox(width: isDesktop ? 20 : 15),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -997,27 +1000,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Text('No courses in progress',
                             style: TextStyle(
                                 color: AppTheme.getTextColor(context),
-                                fontSize: 16,
+                                fontSize: isDesktop ? 18 : 16,
                                 fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 6),
                         Text('Start a course to see your progress here',
                             style: TextStyle(
-                                color: AppTheme.greyColor, fontSize: 13)),
+                                color: AppTheme.greyColor, fontSize: isDesktop ? 14 : 13)),
                       ],
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 16 : 12, vertical: isDesktop ? 8 : 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryGreen
-                          .withValues(alpha: 0.1), // FIX #8
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text('Start Now',
+                    child: Text('Start Now',
                         style: TextStyle(
                             color: AppTheme.primaryGreen,
-                            fontSize: 12,
+                            fontSize: isDesktop ? 13 : 12,
                             fontWeight: FontWeight.w500)),
                   ),
                 ],
@@ -1027,132 +1030,252 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       );
     } else {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Continue Learning',
-            style: TextStyle(
-              color: AppTheme.getTextColor(context),
-              fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
-              fontWeight: FontWeight.w600,
+      final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
+      
+      if (isDesktop || isTablet) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Continue Learning',
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
+                fontSize: isDesktop ? 24 : 20,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 15),
-          SizedBox(
-            height: 130,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
+            SizedBox(height: isDesktop ? 24 : 20),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: isDesktop ? 20 : 15,
+                mainAxisSpacing: isDesktop ? 20 : 15,
+                childAspectRatio: 0.75,
+              ),
               itemCount: enrolledCourses.length,
               itemBuilder: (context, index) {
                 final course = enrolledCourses[index];
-                return GestureDetector(
-                  onTap: () =>
-                      CourseNavigationUtils.navigateToCourseWithContext(
-                          context, ref, course),
-                  child: Container(
-                    width: 320,
-                    margin: const EdgeInsets.only(right: 15),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryGreen
-                              .withValues(alpha: 0.2), // FIX #8
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              color: AppTheme.greyColor
-                                  .withValues(alpha: 0.1), // FIX #8
-                              child: course.thumbnail != null &&
-                                      course.thumbnail!.isNotEmpty
-                                  ? Image.network(
-                                      course.thumbnail!,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return const Icon(
-                                            Icons.play_circle_filled,
-                                            color: AppTheme.greyColor,
-                                            size: 24);
-                                      },
-                                      errorBuilder: (context, error,
-                                              stackTrace) =>
-                                          const Icon(
-                                              Icons
-                                                  .image_not_supported_outlined,
-                                              color: AppTheme.greyColor,
-                                              size: 24),
-                                    )
-                                  : const Icon(Icons.play_circle_filled,
-                                      color: AppTheme.greyColor, size: 32),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  course.title,
-                                  style: TextStyle(
-                                      color: AppTheme.whiteColor,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.whiteColor
-                                        .withValues(alpha: 0.2), // FIX #8
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Text('In Progress',
-                                      style: TextStyle(
-                                          color: AppTheme.whiteColor,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                                color: AppTheme.whiteColor,
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.arrow_forward,
-                                color: AppTheme.primaryGreen, size: 20),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                return InkWell(
+                  onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+                      context, ref, course),
+                  borderRadius: BorderRadius.circular(16),
+                  child: _buildEnrolledCourseCard(context, course),
                 );
               },
             ),
+          ],
+        );
+      } else {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Continue Learning',
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 15),
+            SizedBox(
+              height: 150,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: enrolledCourses.length,
+                itemBuilder: (context, index) {
+                  final course = enrolledCourses[index];
+                  return GestureDetector(
+                    onTap: () =>
+                        CourseNavigationUtils.navigateToCourseWithContext(
+                            context, ref, course),
+                    child: Container(
+                      width: 280,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: _buildMobileEnrolledCourseCard(context, course),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      }
+    }
+  }
+  
+  Widget _buildEnrolledCourseCard(BuildContext context, Course course) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+            blurRadius: isDesktop ? 12 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
-      );
-    }
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isDesktop ? 16 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: isDesktop ? 100 : 80,
+                width: double.infinity,
+                color: AppTheme.greyColor.withValues(alpha: 0.1),
+                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? Image.network(
+                        course.thumbnail!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Icon(Icons.play_circle_filled,
+                              color: AppTheme.greyColor, size: 24);
+                        },
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported_outlined,
+                                color: AppTheme.greyColor, size: 24),
+                      )
+                    : const Icon(Icons.play_circle_filled,
+                        color: AppTheme.greyColor, size: 32),
+              ),
+            ),
+            SizedBox(height: isDesktop ? 12 : 10),
+            Text(
+              course.title,
+              style: TextStyle(
+                color: AppTheme.whiteColor,
+                fontSize: isDesktop ? 15 : 14,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: isDesktop ? 8 : 6),
+            Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: 8, vertical: isDesktop ? 4 : 3),
+              decoration: BoxDecoration(
+                color: AppTheme.whiteColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('In Progress',
+                  style: TextStyle(
+                      color: AppTheme.whiteColor,
+                      fontSize: isDesktop ? 12 : 11,
+                      fontWeight: FontWeight.w500)),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: 0.65,
+                      backgroundColor: AppTheme.whiteColor.withValues(alpha: 0.2),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.whiteColor),
+                      minHeight: 4,
+                    ),
+                  ),
+                ),
+                SizedBox(width: isDesktop ? 8 : 6),
+                Container(
+                  decoration: BoxDecoration(
+                      color: AppTheme.whiteColor,
+                      borderRadius: BorderRadius.circular(6)),
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.arrow_forward,
+                      color: AppTheme.primaryGreen, size: isDesktop ? 16 : 14),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMobileEnrolledCourseCard(BuildContext context, Course course) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                height: 80,
+                width: double.infinity,
+                color: AppTheme.greyColor.withValues(alpha: 0.1),
+                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? Image.network(
+                        course.thumbnail!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Icon(Icons.play_circle_filled,
+                              color: AppTheme.greyColor, size: 24);
+                        },
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported_outlined,
+                                color: AppTheme.greyColor, size: 24),
+                      )
+                    : const Icon(Icons.play_circle_filled,
+                        color: AppTheme.greyColor, size: 28),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              course.title,
+              style: const TextStyle(
+                color: AppTheme.whiteColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppTheme.whiteColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('In Progress',
+                  style: TextStyle(
+                      color: AppTheme.whiteColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // FIX #3: Restored correct method structure; original had mismatched braces
@@ -1210,7 +1333,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildResponsivePopularCourses(
       BuildContext context, List<Course> popularCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
     final gridCount = ResponsiveGridCount(context);
+    
+    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : gridCount.crossAxisCount);
+    final spacing = isDesktop ? 20.0 : 15.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1236,16 +1363,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
-        SizedBox(height: isDesktop ? 20 : 15),
-        if (isDesktop)
+        SizedBox(height: isDesktop ? 24 : 15),
+        if (isDesktop || isTablet)
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: gridCount.crossAxisCount,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: gridCount.childAspectRatio,
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+              childAspectRatio: isDesktop ? 0.75 : gridCount.childAspectRatio,
             ),
             itemCount: popularCourses.length,
             itemBuilder: (context, index) {
@@ -1260,7 +1387,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           )
         else
           SizedBox(
-            height: 180,
+            height: 200,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: popularCourses.length,

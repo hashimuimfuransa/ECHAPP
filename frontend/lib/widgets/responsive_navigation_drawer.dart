@@ -74,38 +74,59 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
           right: BorderSide(
-            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
             width: 1,
           ),
         ),
       ),
       child: Column(
         children: [
-          // Logo/Header section
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryGreen.withOpacity(0.2),
+                        AppTheme.primaryGreen.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.primaryGreen.withOpacity(0.2),
+                      width: 1.5,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.school,
-                    color: AppTheme.primaryGreen,
-                    size: 32,
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Excellence\nCoaching Hub',
+                  'Excellence Hub',
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: AppTheme.getTextColor(context),
-                    height: 1.2,
+                    letterSpacing: 0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Your learning platform',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.greyColor,
+                    fontWeight: FontWeight.w400,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -113,12 +134,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             ),
           ),
           
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
+          ),
           
-          // Navigation items
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               children: items.map((item) => _buildNavItem(
                 context,
                 item['title'] as String,
@@ -130,7 +153,6 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             ),
           ),
           
-          // Logout section
           Padding(
             padding: const EdgeInsets.all(16),
             child: _buildLogoutButton(context, ref),
@@ -144,44 +166,60 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     return Drawer(
       child: Column(
         children: [
-          // Drawer header
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryGreen,
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primaryGreen,
+                  AppTheme.primaryGreen.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.whiteColor.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.school,
-                    color: AppTheme.whiteColor,
-                    size: 32,
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 const Text(
-                  'Excellence Coaching Hub',
+                  'Excellence Hub',
                   style: TextStyle(
-                    color: AppTheme.whiteColor,
+                    color: Colors.white,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Your learning platform',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
             ),
           ),
           
-          // Navigation items
           Expanded(
             child: ListView(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 12),
               children: items.map((item) => _buildNavItem(
                 context,
                 item['title'] as String,
@@ -193,10 +231,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             ),
           ),
           
-          const Divider(),
-          
-          // Logout
-          _buildLogoutButton(context, ref),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildLogoutButton(context, ref),
+          ),
         ],
       ),
     );
@@ -212,53 +250,178 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   ) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
-        size: isDesktop ? 24 : 28,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          fontSize: isDesktop ? 14 : 16,
+    if (isDesktop) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isSelected ? null : () => context.go(route),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: isSelected
+                  ? BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryGreen.withOpacity(0.15),
+                          AppTheme.primaryGreen.withOpacity(0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppTheme.primaryGreen.withOpacity(0.2),
+                        width: 1.5,
+                      ),
+                    )
+                  : null,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primaryGreen.withOpacity(0.15)
+                          : AppTheme.greyColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Container(
+                      width: 4,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-      selected: isSelected,
-      selectedTileColor: AppTheme.primaryGreen.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isDesktop ? 8 : 0),
-      ),
-      onTap: () {
-        if (!isSelected) {
-          context.go(route);
-        }
-        if (!isDesktop) {
-          Navigator.of(context).pop(); // Close drawer on mobile
-        }
-      },
-    );
+      );
+    } else {
+      return ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primaryGreen.withOpacity(0.15)
+                : AppTheme.greyColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
+            size: 24,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 16,
+          ),
+        ),
+        selected: isSelected,
+        selectedTileColor: AppTheme.primaryGreen.withOpacity(0.1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        onTap: () {
+          if (!isSelected) {
+            context.go(route);
+          }
+          Navigator.of(context).pop();
+        },
+      );
+    }
   }
 
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: const Icon(
-        Icons.logout,
-        color: Colors.red,
-      ),
-      title: const Text(
-        'Logout',
-        style: TextStyle(
-          color: Colors.red,
-          fontWeight: FontWeight.w500,
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    
+    if (isDesktop) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showLogoutDialog(context, ref),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.logout_rounded,
+                    size: 18,
+                    color: Colors.red.shade600,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-      onTap: () {
-        _showLogoutDialog(context, ref);
-      },
-    );
+      );
+    } else {
+      return ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.logout_rounded,
+            color: Colors.red.shade600,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          'Logout',
+          style: TextStyle(
+            color: Colors.red.shade600,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        onTap: () {
+          _showLogoutDialog(context, ref);
+        },
+      );
+    }
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {

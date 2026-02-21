@@ -8,8 +8,9 @@ import 'dart:io';
 class GoogleSignInDesktopService {
   static final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   
-  // Desktop OAuth client ID from Google Cloud Console (Desktop application type)
-  static const String _desktopClientId = '192720000772-4gckpvbqm0raq4vl7g8lsphbl0rbi325.apps.googleusercontent.com';
+  // Web OAuth client ID from Google Cloud Console (must match Firebase project)
+  static const String _desktopClientId = '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com';
+  static const String _clientSecret = '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';
   static const String _redirectUrl = 'http://localhost:8080/callback';
   static const String _firebaseApiKey = 'AIzaSyBjWFgcO6gWOjmk5vqUjxDTcFpGFj_hOd8';
 
@@ -17,7 +18,6 @@ class GoogleSignInDesktopService {
     debugPrint('GoogleSignInDesktopService: Starting Google Sign-In for Windows desktop');
     
     try {
-      // Open Google's OAuth consent screen in browser
       final authUrl = _buildAuthUrl();
       debugPrint('GoogleSignInDesktopService: Opening browser for OAuth...');
       
@@ -27,7 +27,6 @@ class GoogleSignInDesktopService {
       
       debugPrint('GoogleSignInDesktopService: Waiting for user to complete sign-in in browser...');
       
-      // Start local server to receive the callback
       final authCode = await _waitForOAuthCallback();
       
       if (authCode == null) {
@@ -37,7 +36,6 @@ class GoogleSignInDesktopService {
       
       debugPrint('GoogleSignInDesktopService: Received auth code, exchanging for tokens...');
       
-      // Exchange authorization code for ID token using Firebase's signInWithIdp
       final userCredential = await _exchangeCodeForToken(authCode);
       
       debugPrint('GoogleSignInDesktopService: Successfully signed in: ${userCredential.user?.email}');
@@ -88,7 +86,6 @@ class GoogleSignInDesktopService {
         request.response.close();
       });
       
-      // Wait for callback with 2 minute timeout
       int attempts = 0;
       while (attempts < 240) {
         await Future.delayed(const Duration(milliseconds: 500));
@@ -109,13 +106,13 @@ class GoogleSignInDesktopService {
 
   static Future<firebase_auth.UserCredential> _exchangeCodeForToken(String authCode) async {
     try {
-      // Exchange auth code for ID token using Google's token endpoint
       final tokenResponse = await http.post(
         Uri.parse('https://oauth2.googleapis.com/token'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'code': authCode,
           'client_id': _desktopClientId,
+          'client_secret': _clientSecret,
           'redirect_uri': _redirectUrl,
           'grant_type': 'authorization_code',
         },
@@ -123,22 +120,44 @@ class GoogleSignInDesktopService {
 
       if (tokenResponse.statusCode != 200) {
         final error = jsonDecode(tokenResponse.body);
+        debugPrint('GoogleSignInDesktopService: Token response error: ${error['error']} - ${error['error_description']}');
         throw Exception('Token exchange failed: ${error['error_description']}');
       }
 
       final tokenData = jsonDecode(tokenResponse.body);
       final idToken = tokenData['id_token'];
+      final accessToken = tokenData['access_token'];
 
       if (idToken == null) {
+        debugPrint('GoogleSignInDesktopService: Response body: ${tokenResponse.body}');
         throw Exception('No ID token received from Google');
       }
 
-      debugPrint('GoogleSignInDesktopService: Received ID token from Google');
+      debugPrint('GoogleSignInDesktopService: Exchanging Google token with Firebase REST API');
+      
+      final firebaseResponse = await http.post(
+        Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$_firebaseApiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'postBody': 'id_token=$idToken&access_token=$accessToken&providerId=google.com',
+          'requestUri': _redirectUrl,
+          'returnIdpCredential': true,
+          'returnSecureToken': true,
+        }),
+      );
 
-      // Sign in to Firebase using the ID token
-      final credential = firebase_auth.GoogleAuthProvider.credential(idToken: idToken);
-      final userCredential = await _auth.signInWithCredential(credential);
+      if (firebaseResponse.statusCode != 200) {
+        final error = jsonDecode(firebaseResponse.body);
+        debugPrint('GoogleSignInDesktopService: Firebase response error: ${error['error']}');
+        throw Exception('Firebase authentication failed: ${error['error']['message']}');
+      }
 
+      final firebaseData = jsonDecode(firebaseResponse.body);
+      final firebaseIdToken = firebaseData['idToken'];
+
+      debugPrint('GoogleSignInDesktopService: Got Firebase ID token, signing in...');
+
+      final userCredential = await _auth.signInWithCustomToken(firebaseIdToken);
       return userCredential;
     } catch (e) {
       debugPrint('GoogleSignInDesktopService: Token exchange error: $e');

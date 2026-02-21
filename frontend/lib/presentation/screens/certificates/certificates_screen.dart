@@ -1,6 +1,7 @@
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -82,7 +83,13 @@ class CertificatesScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -252,7 +259,11 @@ class CertificatesScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              }
+            },
             child: const Text('Close'),
           ),
         ],

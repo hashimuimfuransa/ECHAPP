@@ -13,7 +13,7 @@ class CertificateService {
   /// Get user's certificates
   Future<List<Certificate>> getCertificates() async {
     try {
-      final response = await _apiClient.get('/enrollments/certificates');
+      final response = await _apiClient.get('${ApiConfig.enrollments}/certificates');
       response.validateStatus();
       
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
@@ -37,7 +37,7 @@ class CertificateService {
   Future<String> downloadCertificate(String certificateId) async {
     try {
       // Construct the direct download URL
-      final downloadUrl = '${ApiConfig.baseUrl}/api/enrollments/certificates/$certificateId/download-file';
+      final downloadUrl = '${ApiConfig.baseUrl}/enrollments/certificates/$certificateId/download-file';
       
       // Return the download URL so the UI can handle the download
       return downloadUrl;
@@ -50,7 +50,7 @@ class CertificateService {
   /// Get certificates by course ID
   Future<List<Certificate>> getCertificatesByCourse(String courseId) async {
     try {
-      final response = await _apiClient.get('/enrollments/certificates');
+      final response = await _apiClient.get('${ApiConfig.enrollments}/certificates');
       response.validateStatus();
       
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
@@ -77,7 +77,7 @@ class CertificateService {
   /// Check if user is eligible for a certificate for a specific course
   Future<bool> isCertificateEligible(String courseId) async {
     try {
-      final response = await _apiClient.get('/enrollments/$courseId/certificate-eligibility');
+      final response = await _apiClient.get('${ApiConfig.enrollments}/$courseId/certificate-eligibility');
       response.validateStatus();
       
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;

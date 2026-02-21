@@ -64,17 +64,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   
   void _navigateBasedOnAuth() {
     final authState = ref.read(authProvider);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     if (authState.user != null && !authState.isLoading) {
       context.go('/dashboard');
     } else {
-      context.go('/auth-selection');
+      if (isDesktop) {
+        context.go('/email-auth-option');
+      } else {
+        context.go('/auth-selection');
+      }
     }
   }
 
   void _checkAuthAndNavigate() {
     // Check initial auth state
     final authState = ref.read(authProvider);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     debugPrint('Splash: Initial auth check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
     
     // Navigate based on current state (delayed to avoid build conflicts)
@@ -84,8 +90,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           debugPrint('Splash: Navigating to dashboard');
           context.go('/dashboard');
         } else {
-          debugPrint('Splash: Navigating to auth selection');
-          context.go('/auth-selection');
+          if (isDesktop) {
+            debugPrint('Splash: Navigating to email auth option (desktop)');
+            context.go('/email-auth-option');
+          } else {
+            debugPrint('Splash: Navigating to auth selection (mobile)');
+            context.go('/auth-selection');
+          }
         }
       });
     }
@@ -102,7 +113,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           if (authState.user != null) {
             context.go('/dashboard');
           } else {
-            context.go('/auth-selection');
+            if (isDesktop) {
+              context.go('/email-auth-option');
+            } else {
+              context.go('/auth-selection');
+            }
           }
         });
       }
