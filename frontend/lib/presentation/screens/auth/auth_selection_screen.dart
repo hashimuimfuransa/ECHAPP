@@ -5,19 +5,23 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
-// ─── Palette ─────────────────────────────────────────────────────────────────
-const _kDeep       = Color(0xFF0A1628);
-const _kMid        = Color(0xFF112240);
-const _kAccent     = Color(0xFF00C896);
+// ─── Palette (matches image exactly) ─────────────────────────────────────────
+const _kDeep       = Color(0xFF041B2D);   // very dark navy
+const _kMid        = Color(0xFF072A3E);   // deep teal-navy
+const _kTeal       = Color(0xFF0A4A5A);   // mid teal
+const _kAccent     = Color(0xFF00C896);   // bright mint green
 const _kAccentDark = Color(0xFF009E76);
-const _kGold       = Color(0xFFFFD166);
-const _kSurface    = Color(0xFFF7F9FC);
+const _kGold       = Color(0xFFFFBF00);   // vivid gold/amber
+const _kSurface    = Color(0xFFF5F7FA);
 const _kBorder     = Color(0xFFE4EAF2);
 const _kText1      = Color(0xFF0D1B2A);
 const _kText2      = Color(0xFF4A5568);
 const _kText3      = Color(0xFF8A97AA);
+const _kAmber      = Color(0xFFF59E0B);
+const _kAmberBg    = Color(0xFFFFFBEB);
+const _kAmberBorder= Color(0xFFFDE68A);
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// ─── Glow circle ─────────────────────────────────────────────────────────────
 
 class _GlowCircle extends StatelessWidget {
   final double size;
@@ -30,12 +34,7 @@ class _GlowCircle extends StatelessWidget {
       );
 }
 
-class _VertDivider extends StatelessWidget {
-  const _VertDivider();
-  @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 36, color: Colors.white.withOpacity(0.12));
-}
+// ─── Logo badge ───────────────────────────────────────────────────────────────
 
 class _LogoBadge extends StatelessWidget {
   final double size;
@@ -45,12 +44,12 @@ class _LogoBadge extends StatelessWidget {
     return Container(
       width: size, height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(size * 0.26),
-        border: Border.all(color: Colors.white.withOpacity(0.22)),
+        color: _kAccent.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(size * 0.24),
+        border: Border.all(color: _kAccent.withOpacity(0.45), width: 1.5),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * 0.26),
+        borderRadius: BorderRadius.circular(size * 0.24),
         child: Image.asset(
           'assets/logo.webp',
           fit: BoxFit.cover,
@@ -62,30 +61,7 @@ class _LogoBadge extends StatelessWidget {
   }
 }
 
-// ─── Stat pill ────────────────────────────────────────────────────────────────
-
-class _StatPill extends StatelessWidget {
-  final String value;
-  final String label;
-  const _StatPill({required this.value, required this.label});
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value,
-              style: const TextStyle(
-                  color: _kGold, fontSize: 20, fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white54, fontSize: 11.5,
-                  fontWeight: FontWeight.w500)),
-        ],
-      );
-}
-
-// ─── Feature row ──────────────────────────────────────────────────────────────
+// ─── Feature row (icon chip + bold text matching image) ───────────────────────
 
 class _FeatureRow extends StatelessWidget {
   final IconData icon;
@@ -94,23 +70,26 @@ class _FeatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Row(
         children: [
           Container(
-            width: 34, height: 34,
+            width: 40, height: 40,
             decoration: BoxDecoration(
-              color: _kAccent.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(9),
+              color: _kAccent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _kAccent.withOpacity(0.30)),
             ),
-            child: Icon(icon, color: _kAccent, size: 17),
+            child: Icon(icon, color: _kAccent, size: 20),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(text,
                 style: const TextStyle(
-                    color: Colors.white70, fontSize: 14,
-                    fontWeight: FontWeight.w500, height: 1.4)),
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1)),
           ),
         ],
       ),
@@ -118,26 +97,74 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
-// ─── Mini stat chip (compact/mobile brand panel) ──────────────────────────────
+// ─── Stat pill ────────────────────────────────────────────────────────────────
+
+class _StatPill extends StatelessWidget {
+  final String value;
+  final String label;
+  final Widget? extra;  // e.g. stars
+  const _StatPill({required this.value, required this.label, this.extra});
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  color: _kGold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5)),
+          const SizedBox(height: 3),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
+          if (extra != null) ...[const SizedBox(height: 4), extra!],
+        ],
+      );
+}
+
+// ─── Star rating row ─────────────────────────────────────────────────────────
+
+class _StarRating extends StatelessWidget {
+  final int count;
+  const _StarRating({this.count = 5});
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(count, (i) =>
+            Icon(Icons.star_rounded, color: _kGold, size: 14)),
+      );
+}
+
+// ─── Vertical divider ─────────────────────────────────────────────────────────
+
+class _VertDivider extends StatelessWidget {
+  const _VertDivider();
+  @override
+  Widget build(BuildContext context) =>
+      Container(width: 1, height: 44, color: Colors.white.withOpacity(0.10));
+}
+
+// ─── Mini stat chip (compact/mobile) ─────────────────────────────────────────
 
 class _MiniStat extends StatelessWidget {
   final String label;
   const _MiniStat({required this.label});
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
-      ),
-      child: Text(label,
-          style: const TextStyle(
-              color: Colors.white70, fontSize: 11,
-              fontWeight: FontWeight.w500)),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _kAccent.withOpacity(0.25)),
+        ),
+        child: Text(label,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 11.5,
+                fontWeight: FontWeight.w600)),
+      );
 }
 
 // ─── Brand panel ──────────────────────────────────────────────────────────────
@@ -153,21 +180,23 @@ class _BrandPanel extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_kDeep, _kMid, Color(0xFF0E3460)],
-          stops: [0.0, 0.55, 1.0],
+          // Matches the dark teal-to-navy gradient in the image
+          colors: [Color(0xFF041420), Color(0xFF062838), Color(0xFF041B2D)],
+          stops: [0.0, 0.5, 1.0],
         ),
       ),
       child: Stack(
         children: [
-          Positioned(top: -70, right: -70,
-              child: _GlowCircle(size: 230, color: _kAccent.withOpacity(0.07))),
-          Positioned(bottom: -50, left: -50,
-              child: _GlowCircle(size: 190, color: _kGold.withOpacity(0.05))),
-          Positioned(top: 110, left: -35,
-              child: _GlowCircle(size: 110, color: _kAccent.withOpacity(0.04))),
+          // Subtle teal glow top-right (matches image)
+          Positioned(top: -40, right: -40,
+              child: _GlowCircle(size: 200,
+                  color: _kAccent.withOpacity(0.08))),
+          Positioned(bottom: 80, left: -30,
+              child: _GlowCircle(size: 160,
+                  color: _kGold.withOpacity(0.04))),
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(compact ? 24 : 40),
+              padding: EdgeInsets.all(compact ? 24 : 36),
               child: compact ? _compactContent() : _fullContent(),
             ),
           ),
@@ -180,64 +209,114 @@ class _BrandPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 4),
-        // Logo row
+        // ── Logo + name row ──────────────────────────────────────────
         Row(children: [
           const _LogoBadge(),
-          const SizedBox(width: 14),
-          const Column(
+          const SizedBox(width: 12),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Excellence',
-                  style: TextStyle(color: Colors.white, fontSize: 17,
-                      fontWeight: FontWeight.w800, letterSpacing: -0.2)),
+              const Text('Excellence',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2)),
               Text('Coaching Hub',
-                  style: TextStyle(color: Colors.white60, fontSize: 13,
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.55),
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w500)),
             ],
           ),
         ]),
-        const Spacer(),
-        // Headline
-        const Text('Unlock your\nfull potential.',
-            style: TextStyle(color: Colors.white, fontSize: 36,
-                fontWeight: FontWeight.w800, height: 1.18,
-                letterSpacing: -1.0)),
-        const SizedBox(height: 10),
-        Container(
-            width: 44, height: 3,
-            decoration: BoxDecoration(
-                color: _kAccent,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 18),
-        const Text(
-          'Expert-led courses designed to transform how you learn, work, and grow.',
-          style: TextStyle(color: Colors.white54, fontSize: 14.5, height: 1.65),
-        ),
+
         const SizedBox(height: 32),
-        const _FeatureRow(icon: Icons.play_circle_outline_rounded,
-            text: '1,000+ on-demand video courses'),
-        const _FeatureRow(icon: Icons.verified_outlined,
-            text: 'Industry-recognised certifications'),
-        const _FeatureRow(icon: Icons.people_outline_rounded,
-            text: 'Live mentorship & coaching sessions'),
+
+        // ── Headline ─────────────────────────────────────────────────
+        // Bold large white text like in image
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                height: 1.12,
+                letterSpacing: -1.2),
+            children: [
+              const TextSpan(text: 'Unlock your\nfull '),
+              TextSpan(
+                text: 'potential.',
+                style: TextStyle(color: _kAccent),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // ── Subheading matching image italic/mixed weight ─────────────
+        RichText(
+          text: const TextSpan(
+            style: TextStyle(
+                color: Colors.white70, fontSize: 14.5, height: 1.6),
+            children: [
+              TextSpan(text: 'Expert-led courses designed to '),
+              TextSpan(
+                text: 'transform',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700),
+              ),
+              TextSpan(text: '\nhow you learn, work, and '),
+              TextSpan(
+                text: 'grow.',
+                style: TextStyle(
+                    color: _kAccent,
+                    fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 28),
+
+        // ── Feature rows ─────────────────────────────────────────────
+        const _FeatureRow(
+            icon: Icons.play_circle_outline_rounded,
+            text: '1,000+ On-Demand Video Courses'),
+        const _FeatureRow(
+            icon: Icons.verified_outlined,
+            text: 'Industry-Recognised Certifications'),
+        const _FeatureRow(
+            icon: Icons.people_outline_rounded,
+            text: 'Live Mentorship & Coaching Sessions'),
+
         const Spacer(),
-        // Stats block
+
+        // ── Stats bar (matches image: gold numbers, stars, white labels) ──
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.09)),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
           ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _StatPill(value: '5,200+', label: 'Active learners'),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: const [
+              _StatPill(
+                  value: '5,200+',
+                  label: 'Active Learners'),
               _VertDivider(),
-              _StatPill(value: '98%', label: 'Satisfaction'),
+              _StatPill(
+                  value: '98%',
+                  label: 'Satisfaction',
+                  extra: _StarRating()),
               _VertDivider(),
-              _StatPill(value: '120+', label: 'Expert coaches'),
+              _StatPill(
+                  value: '120+',
+                  label: 'Expert Coaches'),
             ],
           ),
         ),
@@ -250,17 +329,32 @@ class _BrandPanel extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const _LogoBadge(size: 58),
-        const SizedBox(height: 12),
+        const _LogoBadge(size: 60),
+        const SizedBox(height: 10),
         const Text('Excellence Coaching Hub',
-            style: TextStyle(color: Colors.white, fontSize: 18,
-                fontWeight: FontWeight.w700, letterSpacing: -0.2)),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        const Text('Unlock your full potential.',
-            style: TextStyle(color: Colors.white60, fontSize: 13)),
-        const SizedBox(height: 16),
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(fontSize: 13),
+            children: [
+              const TextSpan(
+                  text: 'Unlock your full ',
+                  style: TextStyle(color: Colors.white60)),
+              TextSpan(
+                  text: 'potential.',
+                  style: TextStyle(
+                      color: _kAccent, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
         const Wrap(
-          spacing: 8, runSpacing: 8,
+          spacing: 8,
+          runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
             _MiniStat(label: '5,200+ Learners'),
@@ -273,26 +367,17 @@ class _BrandPanel extends StatelessWidget {
   }
 }
 
-// ─── Animated auth button ─────────────────────────────────────────────────────
+// ─── Google sign-in button (matches image: white bg, coloured G icon) ─────────
 
-class _AuthButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final bool isPrimary;
+class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback? onPressed;
-  const _AuthButton({
-    required this.icon,
-    required this.label,
-    this.isPrimary = false,
-    this.isLoading = false,
-    this.onPressed,
-  });
+  const _GoogleButton({this.isLoading = false, this.onPressed});
   @override
-  State<_AuthButton> createState() => _AuthButtonState();
+  State<_GoogleButton> createState() => _GoogleButtonState();
 }
 
-class _AuthButtonState extends State<_AuthButton>
+class _GoogleButtonState extends State<_GoogleButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
@@ -301,8 +386,8 @@ class _AuthButtonState extends State<_AuthButton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 110));
-    _scale = Tween<double>(begin: 1, end: 0.965).animate(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween<double>(begin: 1, end: 0.97).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
@@ -318,47 +403,44 @@ class _AuthButtonState extends State<_AuthButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: 54,
+          height: 56,
           decoration: BoxDecoration(
-            gradient: widget.isPrimary
-                ? const LinearGradient(
-                    colors: [_kAccent, _kAccentDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight)
-                : null,
-            color: widget.isPrimary ? null : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: widget.isPrimary
-                ? null
-                : Border.all(color: _kBorder, width: 1.5),
-            boxShadow: widget.isPrimary
-                ? [BoxShadow(color: _kAccent.withOpacity(0.32),
-                    blurRadius: 20, offset: const Offset(0, 7))]
-                : [BoxShadow(color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8, offset: const Offset(0, 2))],
+            border: Border.all(color: _kBorder, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3)),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (widget.isLoading)
-                SizedBox(
-                  width: 20, height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        widget.isPrimary ? Colors.white : _kText1),
-                  ),
+                const SizedBox(
+                  width: 22, height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else
-                Icon(widget.icon, size: 20,
-                    color: widget.isPrimary ? Colors.white : _kText1),
-              const SizedBox(width: 10),
-              Text(widget.label,
-                  style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                    color: widget.isPrimary ? Colors.white : _kText1,
-                  )),
+                // Google "G" logo using coloured segments
+                _GoogleGIcon(size: 22),
+              const SizedBox(width: 12),
+              Text(
+                widget.isLoading ? 'Signing in…' : 'Continue with Google',
+                style: const TextStyle(
+                    color: _kText1,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1),
+              ),
+              const Spacer(),
+              const Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: Icon(Icons.chevron_right_rounded,
+                    color: _kText3, size: 22),
+              ),
             ],
           ),
         ),
@@ -367,31 +449,192 @@ class _AuthButtonState extends State<_AuthButton>
   }
 }
 
-// ─── Device warning badge ─────────────────────────────────────────────────────
+// ─── Minimal Google G icon built with CustomPainter ───────────────────────────
+
+class _GoogleGIcon extends StatelessWidget {
+  final double size;
+  const _GoogleGIcon({this.size = 22});
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: size, height: size,
+        child: CustomPaint(painter: _GoogleGPainter()),
+      );
+}
+
+class _GoogleGPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final cx = r;
+    final cy = r;
+
+    final colors = [
+      const Color(0xFF4285F4), // blue - top-right arc
+      const Color(0xFF34A853), // green - bottom-right
+      const Color(0xFFFBBC05), // yellow - bottom-left
+      const Color(0xFFEA4335), // red - top-left
+    ];
+
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = size.width * 0.17;
+    final sweeps = [pi / 2, pi / 2, pi / 2, pi / 2];
+
+    double startAngle = -pi / 4;
+    for (int i = 0; i < 4; i++) {
+      paint.color = colors[i];
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset(cx, cy), radius: r - paint.strokeWidth / 2),
+        startAngle,
+        sweeps[i],
+        false,
+        paint,
+      );
+      startAngle += sweeps[i];
+    }
+
+    // White cutout bar for the "G" crossbar
+    final barPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.17
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(cx, cy),
+      Offset(cx + r * 0.7, cy),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// Need dart:math for pi
+import 'dart:math' show pi;
+
+// ─── Email / primary button ───────────────────────────────────────────────────
+
+class _PrimaryButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+  const _PrimaryButton({
+    required this.icon,
+    required this.label,
+    this.isLoading = false,
+    this.onPressed,
+  });
+  @override
+  State<_PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<_PrimaryButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween<double>(begin: 1, end: 0.97).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00C896), Color(0xFF009E76)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: _kAccent.withOpacity(0.38),
+                  blurRadius: 22,
+                  offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.isLoading)
+                const SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white)),
+                )
+              else
+                Icon(widget.icon, color: Colors.white, size: 21),
+              const SizedBox(width: 10),
+              Text(widget.label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Device warning banner (amber, matches image) ─────────────────────────────
 
 class _DeviceWarningBadge extends StatelessWidget {
   const _DeviceWarningBadge();
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF8EC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.55)),
+        color: _kAmberBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kAmberBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.lock_outline_rounded,
-              color: Color(0xFFF59E0B), size: 15),
-          const SizedBox(width: 8),
+              color: _kAmber, size: 17),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              'Account binds to first device. Contact support to change devices.',
-              style: TextStyle(
-                color: _kText1.withOpacity(0.72), fontSize: 12,
-                fontWeight: FontWeight.w500, height: 1.5,
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                    color: _kText1.withOpacity(0.75),
+                    fontSize: 12.5,
+                    height: 1.55,
+                    fontWeight: FontWeight.w500),
+                children: [
+                  const TextSpan(text: 'Account binds to first device. '),
+                  TextSpan(
+                    text: 'Contact support',
+                    style: const TextStyle(
+                        color: _kAmber,
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                        decorationColor: _kAmber),
+                  ),
+                  const TextSpan(text: ' to change devices.'),
+                ],
               ),
             ),
           ),
@@ -426,7 +669,7 @@ class _TermsFooter extends StatelessWidget {
               child: const Text('Terms of Service'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: Navigator.of(context).pop,
               child: const Text('Cancel',
                   style: TextStyle(color: _kText3)),
             ),
@@ -439,21 +682,120 @@ class _TermsFooter extends StatelessWidget {
               color: _kText3, fontSize: 12.5, height: 1.6),
           children: [
             const TextSpan(text: 'By continuing you agree to our '),
-            TextSpan(text: 'Terms of Service',
-                style: const TextStyle(
-                    color: _kAccentDark, fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    decorationColor: _kAccentDark)),
-            const TextSpan(text: ' & '),
-            TextSpan(text: 'Privacy Policy',
-                style: const TextStyle(
-                    color: _kAccentDark, fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    decorationColor: _kAccentDark)),
+            TextSpan(
+              text: 'Terms of Service',
+              style: const TextStyle(
+                  color: _kAccentDark,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                  decorationColor: _kAccentDark),
+            ),
+            const TextSpan(text: '\n& '),
+            TextSpan(
+              text: 'Privacy Policy',
+              style: const TextStyle(
+                  color: _kAccentDark,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                  decorationColor: _kAccentDark),
+            ),
           ],
         ),
         textAlign: TextAlign.center,
       ),
+    );
+  }
+}
+
+// ─── Avatar row (matches image trust badge) ───────────────────────────────────
+
+class _AvatarRow extends StatelessWidget {
+  const _AvatarRow();
+
+  static const _avatarColors = [
+    Color(0xFF6366F1),
+    Color(0xFF10B981),
+    Color(0xFFF59E0B),
+    Color(0xFFEF4444),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Overlapping avatar circles
+        SizedBox(
+          width: 80,
+          height: 28,
+          child: Stack(
+            children: List.generate(4, (i) => Positioned(
+              left: i * 18.0,
+              child: Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _avatarColors[i],
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    ['A', 'B', 'C', 'D'][i],
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            )),
+          ),
+        ),
+        const SizedBox(width: 8),
+        RichText(
+          text: TextSpan(
+            style: const TextStyle(
+                color: _kText3, fontSize: 12, fontWeight: FontWeight.w500),
+            children: [
+              const TextSpan(text: 'Trusted by '),
+              const TextSpan(
+                text: '5,200+',
+                style: TextStyle(
+                    color: _kText1,
+                    fontWeight: FontWeight.w800),
+              ),
+              const TextSpan(text: ' learners'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Trust bar (secure login + avatars, matching image bottom) ────────────────
+
+class _TrustBar extends StatelessWidget {
+  const _TrustBar();
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.verified_user_outlined, size: 15, color: _kAccentDark),
+        const SizedBox(width: 5),
+        Text('Secure Login',
+            style: const TextStyle(
+                color: _kText2, fontSize: 12.5,
+                fontWeight: FontWeight.w600)),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+          width: 4, height: 4,
+          decoration: const BoxDecoration(
+              shape: BoxShape.circle, color: _kText3),
+        ),
+        const _AvatarRow(),
+      ],
     );
   }
 }
@@ -479,42 +821,64 @@ class _AuthCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Welcome back',
+        // ── Headline ────────────────────────────────────────────────
+        const Text('Welcome back!',
             style: TextStyle(
-                color: _kText1, fontSize: 27, fontWeight: FontWeight.w800,
-                letterSpacing: -0.6)),
+                color: _kText1,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.7)),
         const SizedBox(height: 6),
-        const Text('Sign in to continue your learning journey.',
-            style: TextStyle(
-                color: _kText2, fontSize: 14.5, height: 1.5)),
+        // Subtitle with teal underline accent (matches image)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Sign in to continue your learning journey.',
+                style: TextStyle(
+                    color: _kText2, fontSize: 15, height: 1.4)),
+            const SizedBox(height: 5),
+            Container(
+                width: 60, height: 2.5,
+                decoration: BoxDecoration(
+                    color: _kAccent,
+                    borderRadius: BorderRadius.circular(2))),
+          ],
+        ),
+
         const SizedBox(height: 28),
 
-        _AuthButton(
-          icon: Icons.account_circle_outlined,
-          label: isLoading ? 'Signing in…' : 'Continue with Google',
+        // ── Google button ────────────────────────────────────────────
+        _GoogleButton(
           isLoading: isLoading,
           onPressed: isLoading ? null : onGoogle,
         ),
-        const SizedBox(height: 14),
 
+        const SizedBox(height: 16),
+
+        // ── OR divider ───────────────────────────────────────────────
         Row(children: [
           const Expanded(child: Divider(color: _kBorder, thickness: 1)),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text('or', style: TextStyle(
-                color: _kText3, fontSize: 13, fontWeight: FontWeight.w500)),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text('or',
+                style: TextStyle(
+                    color: _kText3,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500)),
           ),
           const Expanded(child: Divider(color: _kBorder, thickness: 1)),
         ]),
-        const SizedBox(height: 14),
 
-        _AuthButton(
+        const SizedBox(height: 16),
+
+        // ── Email button ─────────────────────────────────────────────
+        _PrimaryButton(
           icon: Icons.mail_outline_rounded,
           label: 'Continue with Email',
-          isPrimary: true,
           onPressed: onEmail,
         ),
 
+        // ── Error message ────────────────────────────────────────────
         if (error != null && error!.isNotEmpty) ...[
           const SizedBox(height: 14),
           Container(
@@ -530,7 +894,8 @@ class _AuthCard extends StatelessWidget {
               Expanded(
                 child: Text(error!,
                     style: TextStyle(
-                        color: Colors.red.shade700, fontSize: 13,
+                        color: Colors.red.shade700,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500)),
               ),
             ]),
@@ -538,18 +903,21 @@ class _AuthCard extends StatelessWidget {
         ],
 
         const SizedBox(height: 20),
-        const _DeviceWarningBadge(),
-        const SizedBox(height: 16),
-        const _TermsFooter(),
-        const SizedBox(height: 12),
 
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-          Icon(Icons.verified_user_outlined, size: 13, color: _kText3),
-          SizedBox(width: 5),
-          Text('Secure login  ·  Trusted by 5,200+ learners',
-              style: TextStyle(
-                  color: _kText3, fontSize: 11.5, fontWeight: FontWeight.w500)),
-        ]),
+        // ── Device warning ───────────────────────────────────────────
+        const _DeviceWarningBadge(),
+
+        const SizedBox(height: 18),
+
+        // ── Terms footer ─────────────────────────────────────────────
+        const _TermsFooter(),
+
+        const SizedBox(height: 20),
+
+        // ── Trust bar ────────────────────────────────────────────────
+        const _TrustBar(),
+
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -574,9 +942,11 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 480));
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fadeCtrl.forward());
+        vsync: this, duration: const Duration(milliseconds: 520));
+    _fadeAnim =
+        CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _fadeCtrl.forward());
   }
 
   @override
@@ -632,7 +1002,9 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
       backgroundColor: _kSurface,
       body: FadeTransition(
         opacity: _fadeAnim,
-        child: isDesktop ? _desktopLayout(authState) : _mobileLayout(authState),
+        child: isDesktop
+            ? _desktopLayout(authState)
+            : _mobileLayout(authState),
       ),
     );
   }
@@ -642,17 +1014,17 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   Widget _desktopLayout(dynamic authState) {
     return Row(
       children: [
-        // Left brand panel — 42 % width
-        const Expanded(flex: 42, child: _BrandPanel()),
+        // Left brand panel — 45% width (image has roughly equal halves)
+        const Expanded(flex: 45, child: _BrandPanel()),
 
-        // Right auth panel — 58 % width
+        // Right auth panel — 55% width
         Expanded(
-          flex: 58,
+          flex: 55,
           child: Container(
-            color: _kSurface,
+            color: Colors.white,
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
+                constraints: const BoxConstraints(maxWidth: 440),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 44, vertical: 52),
@@ -677,7 +1049,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     return Column(
       children: [
         SizedBox(
-          height: MediaQuery.of(context).size.height * 0.28,
+          height: MediaQuery.of(context).size.height * 0.30,
           child: const SafeArea(
             bottom: false,
             child: _BrandPanel(compact: true),
@@ -691,8 +1063,9 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                   BorderRadius.vertical(top: Radius.circular(28)),
               boxShadow: [
                 BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 24, offset: Offset(0, -4)),
+                    color: Color(0x16000000),
+                    blurRadius: 28,
+                    offset: Offset(0, -6)),
               ],
             ),
             child: SingleChildScrollView(
