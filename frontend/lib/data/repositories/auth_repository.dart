@@ -44,6 +44,9 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+        }
         final data = jsonDecode(response.body);
         // Ensure data['data'] is properly formatted for fromJson
         if (data['data'] is Map<String, dynamic>) {
@@ -76,6 +79,9 @@ class AuthRepository {
       );
 
       if (response.statusCode == 201) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+        }
         final data = jsonDecode(response.body);
         // Ensure data['data'] is properly formatted for fromJson
         if (data['data'] is Map<String, dynamic>) {
@@ -144,6 +150,9 @@ class AuthRepository {
       print('Firebase login response body: ${response.body}');
       
       if (response.statusCode == 200) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+        }
         final data = jsonDecode(response.body);
         print('Parsed response data: $data');
         print('Data type: ${data.runtimeType}');
@@ -203,6 +212,9 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+        }
         final data = jsonDecode(response.body);
         // Return a success response
         return PasswordResetResponse(
@@ -230,6 +242,9 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+        }
         final data = jsonDecode(response.body);
         // Return a success response
         return PasswordResetResponse(

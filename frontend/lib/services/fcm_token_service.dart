@@ -31,6 +31,10 @@ class FCMTokenService {
       );
       
       if (response.statusCode == 200) {
+        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+          print('FCM: Server returned HTML instead of JSON');
+          return false;
+        }
         final data = json.decode(response.body);
         if (data['success'] == true) {
           print('FCM token updated successfully on backend');
