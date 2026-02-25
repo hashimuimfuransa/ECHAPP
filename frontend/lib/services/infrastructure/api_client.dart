@@ -230,9 +230,13 @@ extension ApiResponseExtension on http.Response {
   /// Parse successful response into ApiResponse<T>
   ApiResponse<T> toApiResponse<T>(T Function(Map<String, dynamic>) fromJsonT) {
     try {
+      if (!body.trim().startsWith('{') && !body.trim().startsWith('[')) {
+        throw ApiException('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.', statusCode);
+      }
       final json = jsonDecode(body) as Map<String, dynamic>;
       return ApiResponse.fromJson(json, fromJsonT);
     } catch (e) {
+      if (e is ApiException) rethrow;
       throw ApiException('Failed to parse response: $e', statusCode);
     }
   }
@@ -241,6 +245,9 @@ extension ApiResponseExtension on http.Response {
   ApiResponse<List<T>> toApiResponseList<T>(T Function(Map<String, dynamic>) fromJsonT) {
     try {
       print('API Client: Parsing response body: $body');
+      if (!body.trim().startsWith('{') && !body.trim().startsWith('[')) {
+        throw ApiException('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.', statusCode);
+      }
       final json = jsonDecode(body) as Map<String, dynamic>;
       print('API Client: JSON parsed, success: ${json['success']}, data type: ${json['data']?.runtimeType}');
       List<T>? dataList;
@@ -318,8 +325,12 @@ extension ApiResponseExtension on http.Response {
     
     String message;
     try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      message = json['message'] as String? ?? 'Request failed';
+      if (!body.trim().startsWith('{') && !body.trim().startsWith('[')) {
+        message = 'Server returned HTML instead of JSON. The backend might be waking up or misconfigured.';
+      } else {
+        final json = jsonDecode(body) as Map<String, dynamic>;
+        message = json['message'] as String? ?? 'Request failed';
+      }
     } catch (e) {
       message = body.isEmpty ? 'Empty response' : 'Invalid response format';
     }
