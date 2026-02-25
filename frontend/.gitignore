@@ -45,8 +45,3 @@ app.*.map.json
 # Android build intermediates that cause line ending warnings
 /build/*
 !/build/web/
-
-*.xml
-*.json
-*.txt
-*.map
