@@ -1,4 +1,5 @@
 import 'dart:math' show pi;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,13 +7,12 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
-// ─── Palette (matches image exactly) ─────────────────────────────────────────
-const _kDeep       = Color(0xFF041B2D);   // very dark navy
-const _kMid        = Color(0xFF072A3E);   // deep teal-navy
-const _kTeal       = Color(0xFF0A4A5A);   // mid teal
-const _kAccent     = Color(0xFF00C896);   // bright mint green
-const _kAccentDark = Color(0xFF009E76);
-const _kGold       = Color(0xFFFFBF00);   // vivid gold/amber
+const _kDeep       = Color(0xFF041B2D);
+const _kMid        = Color(0xFF072A3E);
+const _kTeal       = Color(0xFF0A4A5A);
+const _kAccent     = Color(0xFF10B981);
+const _kAccentDark = Color(0xFF047857);
+const _kGold       = Color(0xFFFFBF00);
 const _kSurface    = Color(0xFFF5F7FA);
 const _kBorder     = Color(0xFFE4EAF2);
 const _kText1      = Color(0xFF0D1B2A);
@@ -42,20 +42,49 @@ class _LogoBadge extends StatelessWidget {
   const _LogoBadge({this.size = 52});
   @override
   Widget build(BuildContext context) {
+    final isLarge = size > 70;
     return Container(
       width: size, height: size,
       decoration: BoxDecoration(
-        color: _kAccent.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(size * 0.24),
-        border: Border.all(color: _kAccent.withOpacity(0.45), width: 1.5),
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _kAccent.withOpacity(0.25),
+            _kAccent.withOpacity(0.12),
+          ],
+        ),
+        border: Border.all(
+          color: _kAccent.withOpacity(isLarge ? 0.5 : 0.45),
+          width: isLarge ? 2 : 1.5,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * 0.24),
-        child: Image.asset(
-          'assets/logo.webp',
-          fit: BoxFit.cover,
-          errorBuilder: (c, e, s) =>
-              Icon(Icons.school_outlined, color: _kAccent, size: size * 0.55),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: _kAccent.withOpacity(0.2),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: Image.asset(
+            'assets/logo.webp',
+            fit: BoxFit.cover,
+            errorBuilder: (c, e, s) =>
+                Container(
+                  color: _kAccent.withOpacity(0.1),
+                  child: Icon(
+                    Icons.school_rounded,
+                    color: _kAccent,
+                    size: size * 0.5,
+                  ),
+                ),
+          ),
         ),
       ),
     );
@@ -176,29 +205,47 @@ class _BrandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Container(
-      decoration: const BoxDecoration(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          // Matches the dark teal-to-navy gradient in the image
-          colors: [Color(0xFF041420), Color(0xFF062838), Color(0xFF041B2D)],
-          stops: [0.0, 0.5, 1.0],
+          colors: isMobile 
+            ? [const Color(0xFF0D1F2D), const Color(0xFF1a3a4a), const Color(0xFF0F2835)]
+            : [const Color(0xFF041420), const Color(0xFF062838), const Color(0xFF041B2D)],
+          stops: const [0.0, 0.5, 1.0],
         ),
       ),
       child: Stack(
         children: [
-          // Subtle teal glow top-right (matches image)
-          Positioned(top: -40, right: -40,
-              child: _GlowCircle(size: 200,
-                  color: _kAccent.withOpacity(0.08))),
-          Positioned(bottom: 80, left: -30,
-              child: _GlowCircle(size: 160,
-                  color: _kGold.withOpacity(0.04))),
+          if (!compact)
+            Positioned(top: -40, right: -40,
+                child: _GlowCircle(size: 200,
+                    color: _kAccent.withOpacity(0.08))),
+          if (!compact)
+            Positioned(bottom: 80, left: -30,
+                child: _GlowCircle(size: 160,
+                    color: _kGold.withOpacity(0.04))),
+          if (compact) ...[
+            Positioned(top: -80, right: -80,
+                child: _GlowCircle(size: 220,
+                    color: _kAccent.withOpacity(0.14))),
+            Positioned(bottom: -100, left: -60,
+                child: _GlowCircle(size: 180,
+                    color: _kAccent.withOpacity(0.08))),
+          ],
           SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(compact ? 24 : 36),
-              child: compact ? _compactContent() : _fullContent(),
+            child: SizedBox.expand(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? (isMobile ? 20 : 32) : 36,
+                  vertical: compact ? (isMobile ? 16 : 24) : 32,
+                ),
+                child: compact ? _compactContent(isMobile) : _fullContent(),
+              ),
             ),
           ),
         ],
@@ -294,74 +341,85 @@ class _BrandPanel extends StatelessWidget {
             text: 'Live Mentorship & Coaching Sessions'),
 
         const Spacer(),
-
-        // ── Stats bar (matches image: gold numbers, stars, white labels) ──
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: const [
-              _StatPill(
-                  value: '5,200+',
-                  label: 'Active Learners'),
-              _VertDivider(),
-              _StatPill(
-                  value: '98%',
-                  label: 'Satisfaction',
-                  extra: _StarRating()),
-              _VertDivider(),
-              _StatPill(
-                  value: '120+',
-                  label: 'Expert Coaches'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
       ],
     );
   }
 
-  Widget _compactContent() {
+  Widget _compactContent(bool isMobile) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const _LogoBadge(size: 60),
-        const SizedBox(height: 10),
-        const Text('Excellence Coaching Hub',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800)),
-        const SizedBox(height: 4),
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(fontSize: 13),
-            children: [
-              const TextSpan(
-                  text: 'Unlock your full ',
-                  style: TextStyle(color: Colors.white60)),
-              TextSpan(
-                  text: 'potential.',
-                  style: TextStyle(
-                      color: _kAccent, fontWeight: FontWeight.w700)),
+        Container(
+          width: isMobile ? 76 : 90,
+          height: isMobile ? 76 : 90,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withOpacity(0.35),
+                blurRadius: 32,
+                spreadRadius: 6,
+              ),
             ],
           ),
+          child: _LogoBadge(size: isMobile ? 76 : 90),
         ),
-        const SizedBox(height: 14),
-        const Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
+        SizedBox(height: isMobile ? 16 : 24),
+        Column(
           children: [
-            _MiniStat(label: '5,200+ Learners'),
-            _MiniStat(label: '98% Satisfaction'),
-            _MiniStat(label: '120+ Coaches'),
+            Text('Excellence',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 22 : 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    height: 1.0)),
+            SizedBox(height: isMobile ? 2 : 4),
+            Text('Coaching Hub',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.68),
+                    fontSize: isMobile ? 13 : 15,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3)),
           ],
+        ),
+        SizedBox(height: isMobile ? 14 : 20),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 15 : 18,
+            vertical: isMobile ? 9 : 12,
+          ),
+          decoration: BoxDecoration(
+            color: _kAccent.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _kAccent.withOpacity(0.35),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withOpacity(0.15),
+                blurRadius: 12,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle_rounded,
+                  color: _kAccent, size: isMobile ? 16 : 20),
+              SizedBox(width: isMobile ? 7 : 10),
+              Text('Expert-Led Learning',
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isMobile ? 11.5 : 13.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3)),
+            ],
+          ),
         ),
       ],
     );
@@ -372,7 +430,7 @@ class _BrandPanel extends StatelessWidget {
 
 class _GoogleButton extends StatefulWidget {
   final bool isLoading;
-  final VoidCallback? onPressed;
+  final Function()? onPressed;
   const _GoogleButton({this.isLoading = false, this.onPressed});
   @override
   State<_GoogleButton> createState() => _GoogleButtonState();
@@ -395,16 +453,28 @@ class _GoogleButtonState extends State<_GoogleButton>
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
 
+  void _handleTap() async {
+    _ctrl.reverse();
+    if (widget.onPressed != null) {
+      try {
+        await widget.onPressed?.call();
+      } catch (e) {
+        debugPrint('Google button tap error: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
+      onTapUp: (_) => _handleTap(),
       onTapCancel: () => _ctrl.reverse(),
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: 56,
+          height: isMobile ? 52 : 56,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
@@ -421,26 +491,22 @@ class _GoogleButtonState extends State<_GoogleButton>
             children: [
               if (widget.isLoading)
                 const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation(_kAccent),
+                  ),
                 )
               else
-                // Google "G" logo using coloured segments
                 _GoogleGIcon(size: 22),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Text(
-                widget.isLoading ? 'Signing in…' : 'Continue with Google',
-                style: const TextStyle(
+                widget.isLoading ? 'Connecting...' : 'Continue with Google',
+                style: TextStyle(
                     color: _kText1,
-                    fontSize: 15.5,
+                    fontSize: isMobile ? 15 : 16,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1),
-              ),
-              const Spacer(),
-              const Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: Icon(Icons.chevron_right_rounded,
-                    color: _kText3, size: 22),
+                    letterSpacing: -0.2),
               ),
             ],
           ),
@@ -545,6 +611,7 @@ class _PrimaryButtonState extends State<_PrimaryButton>
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
@@ -552,18 +619,19 @@ class _PrimaryButtonState extends State<_PrimaryButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: 56,
+          height: isMobile ? 54 : 60,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF00C896), Color(0xFF009E76)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            gradient: LinearGradient(
+              colors: [_kAccent, _kAccentDark],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: _kAccent.withOpacity(0.38),
-                  blurRadius: 22,
+                  color: _kAccent.withOpacity(0.4),
+                  blurRadius: 24,
+                  spreadRadius: -4,
                   offset: const Offset(0, 8)),
             ],
           ),
@@ -574,18 +642,18 @@ class _PrimaryButtonState extends State<_PrimaryButton>
                 const SizedBox(
                   width: 20, height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                      strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation(Colors.white)),
                 )
               else
-                Icon(widget.icon, color: Colors.white, size: 21),
-              const SizedBox(width: 10),
+                Icon(widget.icon, color: Colors.white, size: 22),
+              const SizedBox(width: 14),
               Text(widget.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Colors.white,
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2)),
+                      fontSize: isMobile ? 15 : 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2)),
             ],
           ),
         ),
@@ -600,8 +668,12 @@ class _DeviceWarningBadge extends StatelessWidget {
   const _DeviceWarningBadge();
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 14, 
+        vertical: isMobile ? 10 : 12
+      ),
       decoration: BoxDecoration(
         color: _kAmberBg,
         borderRadius: BorderRadius.circular(12),
@@ -611,18 +683,18 @@ class _DeviceWarningBadge extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.lock_outline_rounded,
-              color: _kAmber, size: 17),
-          const SizedBox(width: 10),
+              color: _kAmber, size: 16),
+          const SizedBox(width: 9),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
                     color: _kText1.withOpacity(0.75),
-                    fontSize: 12.5,
-                    height: 1.55,
+                    fontSize: isMobile ? 11.5 : 12.5,
+                    height: 1.4,
                     fontWeight: FontWeight.w500),
                 children: [
-                  const TextSpan(text: 'Account binds to first device. '),
+                  const TextSpan(text: 'Binds to first device. '),
                   TextSpan(
                     text: 'Contact support',
                     style: const TextStyle(
@@ -631,7 +703,7 @@ class _DeviceWarningBadge extends StatelessWidget {
                         decoration: TextDecoration.underline,
                         decorationColor: _kAmber),
                   ),
-                  const TextSpan(text: ' to change devices.'),
+                  const TextSpan(text: ' to switch.'),
                 ],
               ),
             ),
@@ -648,23 +720,24 @@ class _TermsFooter extends StatelessWidget {
   const _TermsFooter();
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return GestureDetector(
       onTap: () => showDialog(
         context: context,
         builder: (_) => AlertDialog(
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18)),
-          title: const Text('Legal Documents',
+          title: const Text('Legal',
               style: TextStyle(fontWeight: FontWeight.w700)),
           content: const Text('What would you like to view?'),
           actions: [
             TextButton(
               onPressed: () { Navigator.pop(context); context.push('/privacy'); },
-              child: const Text('Privacy Policy'),
+              child: const Text('Privacy'),
             ),
             TextButton(
               onPressed: () { Navigator.pop(context); context.push('/terms'); },
-              child: const Text('Terms of Service'),
+              child: const Text('Terms'),
             ),
             TextButton(
               onPressed: Navigator.of(context).pop,
@@ -676,21 +749,23 @@ class _TermsFooter extends StatelessWidget {
       ),
       child: Text.rich(
         TextSpan(
-          style: const TextStyle(
-              color: _kText3, fontSize: 12.5, height: 1.6),
+          style: TextStyle(
+              color: _kText3, 
+              fontSize: isMobile ? 11.5 : 12.5, 
+              height: 1.5),
           children: [
-            const TextSpan(text: 'By continuing you agree to our '),
+            const TextSpan(text: 'By continuing, you agree to '),
             TextSpan(
-              text: 'Terms of Service',
+              text: 'Terms',
               style: const TextStyle(
                   color: _kAccentDark,
                   fontWeight: FontWeight.w700,
                   decoration: TextDecoration.underline,
                   decorationColor: _kAccentDark),
             ),
-            const TextSpan(text: '\n& '),
+            const TextSpan(text: ' & '),
             TextSpan(
-              text: 'Privacy Policy',
+              text: 'Privacy',
               style: const TextStyle(
                   color: _kAccentDark,
                   fontWeight: FontWeight.w700,
@@ -719,29 +794,30 @@ class _AvatarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Overlapping avatar circles
         SizedBox(
-          width: 80,
-          height: 28,
+          width: isMobile ? 68 : 80,
+          height: isMobile ? 24 : 28,
           child: Stack(
             children: List.generate(4, (i) => Positioned(
-              left: i * 18.0,
+              left: i * (isMobile ? 15.0 : 18.0),
               child: Container(
-                width: 28, height: 28,
+                width: isMobile ? 24 : 28, 
+                height: isMobile ? 24 : 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _avatarColors[i],
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: Colors.white, width: 1.5),
                 ),
                 child: Center(
                   child: Text(
                     ['A', 'B', 'C', 'D'][i],
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: isMobile ? 9 : 10,
                         fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -752,8 +828,10 @@ class _AvatarRow extends StatelessWidget {
         const SizedBox(width: 8),
         RichText(
           text: TextSpan(
-            style: const TextStyle(
-                color: _kText3, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+                color: _kText3, 
+                fontSize: isMobile ? 11 : 12, 
+                fontWeight: FontWeight.w500),
             children: [
               const TextSpan(text: 'Trusted by '),
               const TextSpan(
@@ -777,22 +855,19 @@ class _TrustBar extends StatelessWidget {
   const _TrustBar();
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.verified_user_outlined, size: 15, color: _kAccentDark),
-        const SizedBox(width: 5),
-        Text('Secure Login',
-            style: const TextStyle(
-                color: _kText2, fontSize: 12.5,
+        Icon(Icons.verified_user_outlined, 
+          size: isMobile ? 13 : 15, 
+          color: _kAccentDark),
+        const SizedBox(width: 4),
+        Text('Secure & Encrypted',
+            style: TextStyle(
+                color: _kText2, 
+                fontSize: isMobile ? 11 : 12.5,
                 fontWeight: FontWeight.w600)),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10),
-          width: 4, height: 4,
-          decoration: const BoxDecoration(
-              shape: BoxShape.circle, color: _kText3),
-        ),
-        const _AvatarRow(),
       ],
     );
   }
@@ -804,46 +879,45 @@ class _AuthCard extends StatelessWidget {
   final bool isLoading;
   final String? error;
   final VoidCallback onEmail;
+  final VoidCallback? onGoogle;
 
   const _AuthCard({
     required this.isLoading,
     required this.error,
     required this.onEmail,
+    this.onGoogle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Headline ────────────────────────────────────────────────
-        const Text('Welcome back!',
+        Text('Sign In',
             style: TextStyle(
                 color: _kText1,
-                fontSize: 28,
+                fontSize: isMobile ? 26 : 32,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -0.7)),
+                letterSpacing: -0.6)),
+        const SizedBox(height: 4),
+        Text('Continue your learning',
+            style: TextStyle(
+                color: _kText2, 
+                fontSize: isMobile ? 13.5 : 15,
+                height: 1.4,
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
-        // Subtitle with teal underline accent (matches image)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Sign in to continue your learning journey.',
-                style: TextStyle(
-                    color: _kText2, fontSize: 15, height: 1.4)),
-            const SizedBox(height: 5),
-            Container(
-                width: 60, height: 2.5,
-                decoration: BoxDecoration(
-                    color: _kAccent,
-                    borderRadius: BorderRadius.circular(2))),
-          ],
-        ),
+        Container(
+            width: 40, height: 2.5,
+            decoration: BoxDecoration(
+                color: _kAccent,
+                borderRadius: BorderRadius.circular(2))),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
 
-        // ── Email button ─────────────────────────────────────────────
         _PrimaryButton(
           icon: Icons.mail_outline_rounded,
           label: 'Continue with Email',
@@ -851,11 +925,10 @@ class _AuthCard extends StatelessWidget {
           onPressed: isLoading ? null : onEmail,
         ),
 
-        // ── Error message ────────────────────────────────────────────
         if (error != null && error!.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
               borderRadius: BorderRadius.circular(10),
@@ -868,29 +941,35 @@ class _AuthCard extends StatelessWidget {
                 child: Text(error!,
                     style: TextStyle(
                         color: Colors.red.shade700,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500)),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3)),
               ),
             ]),
           ),
         ],
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        // ── Device warning ───────────────────────────────────────────
+        if (!ResponsiveBreakpoints.isDesktop(context) && onGoogle != null && !kIsWeb) ...[
+          _GoogleButton(
+            isLoading: isLoading,
+            onPressed: !isLoading ? onGoogle : null,
+          ),
+          const SizedBox(height: 18),
+        ],
+
         const _DeviceWarningBadge(),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
 
-        // ── Terms footer ─────────────────────────────────────────────
         const _TermsFooter(),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
-        // ── Trust bar ────────────────────────────────────────────────
         const _TrustBar(),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -954,6 +1033,16 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     }
   }
 
+  void _handleGoogleSignIn() async {
+    try {
+      debugPrint('Screen: Starting Google Sign-In');
+      await ref.read(authProvider.notifier).signInWithGoogle();
+      debugPrint('Screen: Google Sign-In completed');
+    } catch (e) {
+      debugPrint('Google Sign-In error in screen: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -1000,6 +1089,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                     isLoading: authState.isLoading,
                     error: authState.error,
                     onEmail: () => context.push('/email-auth-option'),
+                    onGoogle: null,
                   ),
                 ),
               ),
@@ -1013,39 +1103,45 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   // ── Mobile layout ─────────────────────────────────────────────────────────
 
   Widget _mobileLayout(dynamic authState) {
-    return Column(
-      children: [
-        SizedBox(
-          height: MediaQuery.of(context).size.height * 0.30,
-          child: const SafeArea(
-            bottom: false,
-            child: _BrandPanel(compact: true),
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          SizedBox(
+            width: screenWidth,
+            height: screenHeight * 0.35,
+            child: const SafeArea(
+              bottom: false,
+              child: _BrandPanel(compact: true),
+            ),
           ),
-        ),
-        Expanded(
-          child: Container(
+          Container(
+            width: screenWidth,
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(28)),
+                  BorderRadius.vertical(top: Radius.circular(32)),
               boxShadow: [
                 BoxShadow(
-                    color: Color(0x16000000),
+                    color: Color(0x12000000),
                     blurRadius: 28,
-                    offset: Offset(0, -6)),
+                    offset: Offset(0, -8)),
               ],
             ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
               child: _AuthCard(
                 isLoading: authState.isLoading,
                 error: authState.error,
                 onEmail: () => context.push('/email-auth-option'),
+                onGoogle: _handleGoogleSignIn,
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -30,25 +30,24 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   @override
   void initState() {
     super.initState();
-    // If widget.categoryId is provided, load courses for that category
-    _coursesFuture = CourseRepository().getCourses(categoryId: widget.categoryId);
+    // Always load ALL courses initially so that 'All' category works
+    // and we can filter client-side as needed.
+    _coursesFuture = CourseRepository().getCourses();
     _coursesFuture.then((courses) {
-      setState(() {
-        _allCourses = courses;
-        _filteredCourses = courses;
-        if (widget.categoryId != null) {
-          _selectedCategory = widget.categoryId!;
-        }
-      });
-      // Apply initial filter if needed
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.categoryId != null) {
-          setState(() {
+      if (mounted) {
+        setState(() {
+          _allCourses = courses;
+          _filteredCourses = courses;
+          if (widget.categoryId != null) {
             _selectedCategory = widget.categoryId!;
-          });
+          }
+        });
+        
+        // Apply initial filter if needed
+        if (widget.categoryId != null && widget.categoryId != 'all') {
           _filterCourses();
         }
-      });
+      }
     });
   }
 
@@ -59,6 +58,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   }
 
   void _filterCourses() {
+    if (!mounted) return;
+    
+    debugPrint('CoursesScreen: Filtering courses for category $_selectedCategory');
+    
     setState(() {
       List<Course> filtered = _allCourses;
       
@@ -69,12 +72,13 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           bool matchesCategory = false;
           
           // If course has categoryId field set
-          if (course.categoryId != null && course.categoryId == _selectedCategory) {
+          if (course.categoryId != null && (course.categoryId == _selectedCategory || course.categoryId.toString() == _selectedCategory)) {
             matchesCategory = true;
           }
           // If course has category object with id field
           else if (course.category != null) {
-            if (course.category!['id'] == _selectedCategory || course.category!['_id'] == _selectedCategory) {
+            final catId = course.category!['id'] ?? course.category!['_id'];
+            if (catId != null && catId.toString() == _selectedCategory) {
               matchesCategory = true;
             }
           }
@@ -91,6 +95,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ).toList();
       }
       
+      debugPrint('CoursesScreen: Found ${filtered.length} courses after filtering');
       _filteredCourses = filtered;
     });
   }

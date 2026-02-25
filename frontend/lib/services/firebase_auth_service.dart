@@ -230,8 +230,9 @@ class FirebaseAuthService {
           ],
         );
       } else {
-        // For mobile platforms, use the default configuration
+        // For mobile platforms, use the Android client ID from Firebase config
         googleSignIn = GoogleSignIn(
+          clientId: '216678536759-d4onuunfvjsv27lvb70urfogcltqr2c0.apps.googleusercontent.com',
           scopes: [
             'email',
             'profile',

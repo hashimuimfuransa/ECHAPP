@@ -11,7 +11,7 @@
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
         <activity
-            android:name="com.example.excellencecoachinghub.MainActivity"
+            android:name="com.example.excellenceCoachingHub.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

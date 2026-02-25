@@ -243,33 +243,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: Retrieved device ID: $deviceId');
       } catch (e) {
         debugPrint('AuthProvider: Error getting device ID: $e');
-        // Continue without device ID if it fails
       }
       
       debugPrint('AuthProvider: Calling Firebase service');
       final userCredential = await FirebaseAuthService.signInWithGoogle();
       debugPrint('AuthProvider: Firebase service returned: ${userCredential?.user?.email}');
       
-      if (userCredential?.user != null) {
-        final firebaseUser = userCredential!.user!;
-        
+      if (userCredential?.user == null) {
+        debugPrint('AuthProvider: Google Sign-In returned null - user cancelled');
+        state = state.copyWith(isLoading: false, error: 'Google Sign-In cancelled');
+        return;
+      }
+
+      final firebaseUser = userCredential!.user!;
+      
+      try {
         // Get Firebase ID token
         debugPrint('AuthProvider: About to call getIdToken()');
         final idToken = await firebaseUser.getIdToken();
         debugPrint('AuthProvider: Got Firebase ID token');
-        debugPrint('AuthProvider: Token type: ${idToken.runtimeType}');
-        debugPrint('AuthProvider: Token value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
         
-        if (idToken == null) {
-          debugPrint('AuthProvider: ERROR - idToken is null');
-          throw Exception('Failed to get Firebase ID token');
+        if (idToken == null || idToken.toString().isEmpty) {
+          throw Exception('Failed to get valid Firebase ID token');
         }
         
-        // Verify that idToken is a String before passing to repository
-        debugPrint('AuthProvider: Verifying idToken is String, runtimeType: ${idToken.runtimeType}');
-        debugPrint('AuthProvider: idToken is confirmed to be a String');
-              
         // Send token to backend for authentication
+        debugPrint('AuthProvider: Sending token to backend');
         final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
         debugPrint('AuthProvider: Backend authentication successful');
         
@@ -280,36 +279,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserId(authResponse.user.id);
         
         debugPrint('AuthProvider: Setting success state');
-        // Update state immediately
         state = state.copyWith(
           isLoading: false, 
           user: authResponse.user,
           error: null
         );
-        debugPrint('AuthProvider: State updated - User: ${authResponse.user.email}, ID: ${authResponse.user.id}');
+        debugPrint('AuthProvider: State updated - User: ${authResponse.user.email}');
+      } catch (tokenError) {
+        debugPrint('AuthProvider: Token/Backend Error: $tokenError');
         
-        // Small delay to ensure state is properly propagated for navigation
-        await Future.delayed(const Duration(milliseconds: 50));
-      } else {
-        debugPrint('AuthProvider: Google Sign-In returned null');
-        state = state.copyWith(isLoading: false, error: 'Google Sign-In cancelled');
+        // Sign out from Firebase if backend auth fails
+        try {
+          await FirebaseAuthService.signOut();
+        } catch (_) {}
+        
+        String errorMessage = tokenError.toString();
+        if (errorMessage.contains('Network') || errorMessage.toLowerCase().contains('socket')) {
+          errorMessage = 'Network connection failed. Please check your internet connection and try again.';
+        } else if (errorMessage.contains('backend') || errorMessage.contains('firebase-login')) {
+          errorMessage = 'Server authentication failed. Please try again.';
+        }
+        
+        state = state.copyWith(isLoading: false, error: errorMessage);
       }
     } catch (e) {
-      debugPrint('Google Sign-In Provider Error: $e');
+      debugPrint('AuthProvider Google Sign-In Error: $e');
       String errorMessage = e.toString();
       
-      // Provide more user-friendly error messages for web-specific issues
-      if (kIsWeb) {
-        if (errorMessage.contains('popup_closed') || errorMessage.toLowerCase().contains('popup') && errorMessage.toLowerCase().contains('closed')) {
-          errorMessage = 'Google Sign-In popup was closed. Please ensure pop-ups are allowed for this site and try again.';
-        } else if (errorMessage.contains('popup') || errorMessage.toLowerCase().contains('blocked')) {
-          errorMessage = 'Pop-up blocked. Please allow pop-ups for this site and try again.';
-        } else if (errorMessage.toLowerCase().contains('domain') || errorMessage.toLowerCase().contains('authorized')) {
-          errorMessage = 'Domain not authorized. Contact the administrator to configure Google Sign-In for this domain.';
-        } else if (errorMessage.toLowerCase().contains('itp') || errorMessage.toLowerCase().contains('optimization')) {
-          errorMessage = 'Browser security settings prevented sign-in. Try using a different browser or disabling privacy features.';
-        } else if (errorMessage.toLowerCase().contains('deprecated') || errorMessage.toLowerCase().contains('discouraged')) {
-          errorMessage = 'Using legacy Google Sign-In method on web. Updated implementation in place.';
+      // Handle specific error codes
+      if (errorMessage.contains('ApiException: 10')) {
+        errorMessage = 'Google Sign-In is not properly configured. Please contact support.';
+      } else if (errorMessage.contains('sign_in_failed')) {
+        errorMessage = 'Google Sign-In failed. Please check your account and try again.';
+      } else if (kIsWeb) {
+        if (errorMessage.contains('popup_closed') || (errorMessage.toLowerCase().contains('popup') && errorMessage.toLowerCase().contains('closed'))) {
+          errorMessage = 'Google Sign-In popup was closed. Please try again.';
+        } else if (errorMessage.contains('popup_blocked')) {
+          errorMessage = 'Pop-up blocked. Please allow pop-ups and try again.';
         }
       }
       

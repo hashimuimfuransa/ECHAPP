@@ -11,6 +11,8 @@ import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.d
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_payment_providers.dart';
+import 'package:excellencecoachinghub/services/categories_service.dart';
+import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -416,13 +418,119 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildHeader(BuildContext context, user) {
-    // Use enhanced responsive layout
+    Widget header;
     if (ResponsiveBreakpoints.isSmallMobile(context)) {
-      return _buildSmallMobileHeader(context, user);
+      header = _buildSmallMobileHeader(context, user);
     } else if (ResponsiveBreakpoints.isStandardMobile(context)) {
-      return _buildStandardMobileHeader(context, user);
+      header = _buildStandardMobileHeader(context, user);
     } else {
-      return _buildDesktopHeader(context, user);
+      header = _buildDesktopHeader(context, user);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
+        _buildCategoryFilters(context),
+      ],
+    );
+  }
+
+  Widget _buildCategoryFilters(BuildContext context) {
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: categoriesAsync.when(
+        data: (categories) => ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: categories.length + 1,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  label: const Text('All Courses'),
+                  onPressed: () {
+                    context.push('/courses', extra: {
+                      'categoryId': 'all',
+                      'categoryName': 'All Courses',
+                    });
+                  },
+                  backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                  labelStyle: const TextStyle(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: const BorderSide(color: Colors.transparent),
+                  ),
+                ),
+              );
+            }
+            final category = categories[index - 1];
+            final color = _getCategoryColor(category.id);
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ActionChip(
+                avatar: Text(category.icon ?? '📚'),
+                label: Text(category.name),
+                onPressed: () {
+                  debugPrint('Dashboard: Navigating to category ${category.name} with ID ${category.id}');
+                  context.push('/courses', extra: {
+                    'categoryId': category.id,
+                    'categoryName': category.name,
+                  });
+                },
+                backgroundColor: color.withOpacity(0.15),
+                labelStyle: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: Colors.transparent),
+                ),
+              ),
+            );
+          },
+        ),
+        loading: () => const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        error: (err, stack) => ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemBuilder: (context, index) => ActionChip(
+            label: const Text('All Courses'),
+            onPressed: () => context.push('/courses', extra: {'categoryId': 'all', 'categoryName': 'All Courses'}),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String categoryId) {
+    switch (categoryId) {
+      case 'professional_coaching':
+        return const Color(0xFF3B82F6); // Blue
+      case 'business_entrepreneurship':
+        return const Color(0xFFF59E0B); // Amber
+      case 'academic_coaching':
+        return const Color(0xFF10B981); // Emerald
+      case 'language_coaching':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'technical_digital':
+        return const Color(0xFF6366F1); // Indigo
+      case 'job_seeker':
+        return const Color(0xFFF43F5E); // Rose
+      case 'personal_corporate':
+        return const Color(0xFF06B6D4); // Cyan
+      default:
+        return AppTheme.primaryGreen;
     }
   }
 

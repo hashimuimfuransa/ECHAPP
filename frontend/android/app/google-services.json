@@ -7,12 +7,41 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:216678536759:android:f024947f5605bbbc2b91b2",
+        "mobilesdk_app_id": "1:216678536759:android:2510b08e237c51d02b91b2",
         "android_client_info": {
-          "package_name": "com.example.excellence_coaching_hub"
+          "package_name": "com.excellencecoachinghub.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "216678536759-8apifc9f7bv7ej1jgvquuvc1s9gmoa57.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.excellencecoachinghub.app",
+            "certificate_hash": "ba8a5c6d4a8742ba2e299e4aabc7460976e123f5"
+          }
+        },
+        {
+          "client_id": "216678536759-f6peah66oanh9g9sqm7sv13e9ve7k4bh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.excellencecoachinghub.app",
+            "certificate_hash": "0087cd60bb095a588fabe4545885dd525a513fa2"
+          }
+        },
+        {
+          "client_id": "216678536759-ksgsecv4htlgstr9g11t5b3khftm1bof.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.excellencecoachinghub.app",
+            "certificate_hash": "6de10e99f7e6f70d38e207b2091ee66faae9a68b"
+          }
+        },
+        {
+          "client_id": "216678536759-d4onuunfvjsv27lvb70urfogcltqr2c0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDrDh_HTXexEbp98YOsTb5Y_NRcxufj-iI"
@@ -20,7 +49,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "216678536759-d4onuunfvjsv27lvb70urfogcltqr2c0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "216678536759-3lus7vod1ej6mhenqh25t0g256kb808m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.excellenceCoachingHub"
+              }
+            }
+          ]
         }
       }
     }

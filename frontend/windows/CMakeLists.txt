@@ -1,5 +1,12 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+set(CMAKE_POLICY_VERSION_MINIMUM "3.10")
+
+# Explicitly add project root to PATH for finding tools like nuget.exe
+set(ENV{PATH} "$ENV{PATH};D:/ECHAPP/frontend")
+# Also set a hint for find_program
+set(CMAKE_PROGRAM_PATH ${CMAKE_PROGRAM_PATH} "D:/ECHAPP/frontend")
+
 project(excellence_coaching_hub LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
