@@ -118,7 +118,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   builder: (context) => PaymentPendingScreen(
                     course: course,
                     transactionId: 'pending',
-                    amount: course.price,
+                    amount: course.price ?? 0.0,
                   ),
                 ),
               );
@@ -140,14 +140,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
 
   // Method to handle sharing
   void _handleShare(Course course) async {
-    final String shareText = 'Check out this amazing course: \${course.title}\n'
+    final String shareText = 'Check out this amazing course: ${course.title}\n'
         'Instructor: ${course.createdBy.fullName}\n'
-        'Price: ${course.price == 0 ? 'Free' : 'RWF ${course.price.toStringAsFixed(0)}'}\n'
+        'Price: ${(course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
         'Duration: ${course.duration} minutes\n\n'
         'Learn more at Excellence Coaching Hub!';
     
-    await Share.share(shareText, subject: 'Course Recommendation: \${course.title}');
+    await Share.share(shareText, subject: 'Course Recommendation: ${course.title}');
   }
 
   @override
@@ -650,9 +650,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+              (course.price ?? 0) == 0 ? 'FREE' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
               style: TextStyle(
-                color: course.price == 0 ? Colors.white : Colors.white,
+                color: (course.price ?? 0) == 0 ? Colors.white : Colors.white,
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
                 shadows: [
@@ -664,10 +664,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 ],
               ),
             ),
-            if (course.price != 0) ...[
+            if ((course.price ?? 0) != 0) ...[
               const SizedBox(width: 12),
               Text(
-                'RWF ${(course.price * 1.2).toStringAsFixed(0)}',
+                'RWF ${((course.price ?? 0) * 1.2).toStringAsFixed(0)}',
                 style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 20,
@@ -705,17 +705,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         Row(
           children: [
             Text(
-              course.price == 0 ? 'Free' : 'RWF ${course.price.toStringAsFixed(0)}',
+              (course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
               style: TextStyle(
-                color: course.price == 0 ? Colors.green : Colors.white,
+                color: (course.price ?? 0) == 0 ? Colors.green : Colors.white,
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (course.price != 0) ...[
+            if ((course.price ?? 0) != 0) ...[
               const SizedBox(width: 10),
               Text(
-                'RWF ${(course.price * 1.2).toStringAsFixed(0)}',
+                'RWF ${((course.price ?? 0) * 1.2).toStringAsFixed(0)}',
                 style: const TextStyle(
                   color: Colors.white54,
                   fontSize: 18,
@@ -777,7 +777,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                           builder: (context) => PaymentPendingScreen(
                             course: course,
                             transactionId: 'pending',
-                            amount: course.price,
+                            amount: course.price ?? 0.0,
                           ),
                         ),
                       );
@@ -809,7 +809,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  'Pay ${course.price.toStringAsFixed(0)} RWF',
+                  'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -850,7 +850,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  'Pay ${course.price.toStringAsFixed(0)} RWF',
+                  'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -914,7 +914,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             _handlePayment(ref, course);
           },
           child: Text(
-            'Buy Now - RWF ${course.price.toStringAsFixed(0)}',
+            'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -959,7 +959,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                           builder: (context) => PaymentPendingScreen(
                             course: course,
                             transactionId: 'pending',
-                            amount: course.price,
+                            amount: course.price ?? 0.0,
                           ),
                         ),
                       );
@@ -1977,7 +1977,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       );
     } else {
       return AnimatedButton(
-        text: 'Buy Course - RWF ${course.price.toStringAsFixed(0)}',
+        text: 'Buy Course - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
         onPressed: () {
           _handlePayment(ref, course);
         },

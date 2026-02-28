@@ -1238,7 +1238,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 1.1),
+            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 0.85),
           ),
           itemCount: courses.take(isDesktop ? 3 : 2).length,
           itemBuilder: (context, index) {
@@ -1289,11 +1289,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: (course.price == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
+                        color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        course.price == 0 ? 'FREE' : 'PAID',
+                        (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
                         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
                       ),
                     ),
@@ -1318,12 +1318,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            course.averageRating > 0 ? course.averageRating.toStringAsFixed(1) : '4.5', // Default 4.5 if no rating
+                            (course.averageRating ?? 0) > 0 ? (course.averageRating ?? 4.5).toStringAsFixed(1) : '4.5', // Default 4.5 if no rating
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '(${course.enrollmentCount > 0 ? course.enrollmentCount : "125"}+ students)',
+                            '(${(course.enrollmentCount ?? 0) > 0 ? (course.enrollmentCount ?? 0) : "125"}+ students)',
                             style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                           ),
                         ],
@@ -1335,31 +1335,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: (course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
+                              color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               children: [
                                 Icon(
-                                  course.price == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                                  (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
                                   size: 12,
-                                  color: course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                  color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  course.price == 0 ? 'FREE' : 'PAID',
+                                  (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
-                                    color: course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                    color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          if (course.price > 0)
+                          if ((course.price ?? 0) > 0)
                             Text(
-                              'RWF ${course.price.toStringAsFixed(0)}',
+                              'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
                             ),
                         ],
@@ -1476,7 +1476,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+                          (course.price ?? 0) == 0 ? 'FREE' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primary),
                         ),
                         Container(

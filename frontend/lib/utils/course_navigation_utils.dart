@@ -62,7 +62,7 @@ class CourseNavigationUtils {
                 builder: (context) => PaymentPendingScreen(
                   course: course,
                   transactionId: 'pending',
-                  amount: course.price,
+                  amount: course.price ?? 0.0,
                 ),
               ),
             ).then((_) {
@@ -149,7 +149,7 @@ class CourseNavigationUtils {
               builder: (context) => PaymentPendingScreen(
                 course: course,
                 transactionId: 'pending',
-                amount: course.price,
+                amount: course.price ?? 0.0,
               ),
             ),
           );

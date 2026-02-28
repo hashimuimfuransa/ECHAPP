@@ -4,7 +4,7 @@ class Course {
   final String id;
   final String title;
   final String description;
-  final double price;
+  final double? price;
   final int duration;
   final String level;
   final String? thumbnail;
@@ -16,14 +16,14 @@ class Course {
   final List<String>? learningObjectives;
   final List<String>? requirements;
   final int? accessDurationDays;
-  final int enrollmentCount;
-  final double averageRating;
+  final int? enrollmentCount;
+  final double? averageRating;
 
   Course({
     required this.id,
     required this.title,
     required this.description,
-    required this.price,
+    this.price,
     required this.duration,
     required this.level,
     this.thumbnail,
@@ -35,8 +35,8 @@ class Course {
     this.learningObjectives,
     this.requirements,
     this.accessDurationDays,
-    this.enrollmentCount = 0,
-    this.averageRating = 0.0,
+    this.enrollmentCount,
+    this.averageRating,
   });
 
   static String? _getStringValue(dynamic value) {

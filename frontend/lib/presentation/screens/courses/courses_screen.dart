@@ -1082,7 +1082,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'RWF ${course.price.toStringAsFixed(0)}',
+                    'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
                     style: TextStyle(
                       color: AppTheme.primaryGreen,
                       fontSize: isDesktop ? 18 : 16,

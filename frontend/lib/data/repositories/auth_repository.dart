@@ -1,5 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/models/user.dart';
@@ -288,6 +291,75 @@ class AuthRepository {
       throw Exception('Not implemented - would fetch user profile with token');
     } catch (e) {
       throw Exception('Failed to fetch profile: ${e.toString()}');
+    }
+  }
+
+  Future<User> updateProfile(String token, {String? fullName, String? phone, String? avatar}) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('${ApiConfig.baseUrl}/auth/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          if (fullName != null) 'fullName': fullName,
+          if (phone != null) 'phone': phone,
+          if (avatar != null) 'avatar': avatar,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userData = data['data'] is Map<String, dynamic> 
+            ? data['data'] as Map<String, dynamic>
+            : jsonDecode(data['data'].toString()) as Map<String, dynamic>;
+        return User.fromJson(userData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to update profile');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
+  Future<String> uploadImage(String token, File imageFile) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/upload/image'),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+
+      final stream = http.ByteStream(imageFile.openRead());
+      final length = await imageFile.length();
+
+      final multipartFile = http.MultipartFile(
+        'image',
+        stream,
+        length,
+        filename: path.basename(imageFile.path),
+        contentType: MediaType('image', path.extension(imageFile.path).replaceFirst('.', '')),
+      );
+
+      request.files.add(multipartFile);
+
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseData);
+        return data['data']['imageUrl'];
+      } else {
+        final errorData = jsonDecode(responseData);
+        throw Exception(errorData['message'] ?? 'Failed to upload image');
+      }
+    } catch (e) {
+      throw Exception('Upload error: ${e.toString()}');
     }
   }
 

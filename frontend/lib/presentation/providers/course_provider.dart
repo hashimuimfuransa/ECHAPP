@@ -29,7 +29,7 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
     print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
   }
   // Sort by popularity (more enrolled)
-  final sortedByEnrolled = List<Course>.from(allCourses)..sort((a, b) => b.enrollmentCount.compareTo(a.enrollmentCount));
+  final sortedByEnrolled = List<Course>.from(allCourses)..sort((a, b) => (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0));
   final result = sortedByEnrolled.take(6).toList();
   print('PopularCoursesProvider: Returning ${result.length} popular courses');
   if (result.isNotEmpty) {

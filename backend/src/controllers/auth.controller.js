@@ -49,6 +49,7 @@ const register = async (req, res) => {
           email: user.email,
           role: user.role,
           phone: user.phone,
+          avatar: user.avatar,
           createdAt: user.createdAt.getTime()
         },
         token,
@@ -100,6 +101,7 @@ const login = async (req, res) => {
           email: user.email,
           role: user.role,
           phone: user.phone,
+          avatar: user.avatar,
           createdAt: user.createdAt.getTime()
         },
         token,
@@ -159,10 +161,41 @@ const getProfile = async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      avatar: user.avatar,
       createdAt: user.createdAt.getTime()
     }, 'Profile retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve profile', 500, error.message);
+  }
+};
+
+// Update user profile
+const updateProfile = async (req, res) => {
+  try {
+    const { fullName, phone, avatar } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+    
+    if (fullName) user.fullName = fullName;
+    if (phone !== undefined) user.phone = phone;
+    if (avatar !== undefined) user.avatar = avatar;
+    
+    await user.save();
+    
+    sendSuccess(res, {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      avatar: user.avatar,
+      createdAt: user.createdAt.getTime()
+    }, 'Profile updated successfully');
+  } catch (error) {
+    sendError(res, 'Failed to update profile', 500, error.message);
   }
 };
 
@@ -215,6 +248,7 @@ const googleSignIn = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
         provider: user.provider,
         createdAt: user.createdAt.getTime()
       },
@@ -344,6 +378,7 @@ const firebaseLogin = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
         provider: user.provider,
         createdAt: user.createdAt.getTime()  // Convert to milliseconds for Dart DateTime
       },
@@ -582,6 +617,7 @@ module.exports = {
   login,
   refreshToken,
   getProfile,
+  updateProfile,
   logout,
   googleSignIn,
   firebaseLogin,

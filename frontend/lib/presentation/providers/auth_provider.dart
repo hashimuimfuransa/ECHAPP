@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
+import 'dart:io';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
@@ -202,6 +203,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       
       state = state.copyWith(isLoading: false, error: errorMessage);
+    }
+  }
+
+  Future<void> updateProfile({String? fullName, String? phone, File? imageFile}) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final token = await _storageManager.getAccessToken();
+      if (token == null) throw Exception('No access token found');
+
+      String? avatarUrl;
+      if (imageFile != null) {
+        avatarUrl = await _authRepository.uploadImage(token, imageFile);
+      }
+
+      final updatedUser = await _authRepository.updateProfile(
+        token,
+        fullName: fullName,
+        phone: phone,
+        avatar: avatarUrl,
+      );
+
+      state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+    } catch (e) {
+      debugPrint('AuthProvider Update Profile Error: $e');
+      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      rethrow;
     }
   }
 
