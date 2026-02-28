@@ -12,121 +12,79 @@ class CategoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Get backend categories
     final backendCategories = ref.watch(backendCategoriesProvider);
+    final spacing = ResponsiveBreakpoints.getSpacing(context);
+    final padding = ResponsiveBreakpoints.getPadding(context);
     
     return Scaffold(
-      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Content
-            Expanded(
-              child: backendCategories.when(
-                data: (categories) {
-                  // Filter featured and popular categories from backend data
-                  final featuredCategories = categories.where((cat) => cat.isFeatured ?? false).toList();
-                  final popularCategories = categories.where((cat) => cat.isPopular ?? false).toList();
-                  
-                  return SingleChildScrollView(
-                    padding: ResponsiveBreakpoints.getPadding(context),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Featured Categories
-                        if (featuredCategories.isNotEmpty) ...[
-                          _buildSectionTitle(context, 'Featured Categories'),
-                          const SizedBox(height: 15),
-                          ResponsiveBreakpoints.isDesktop(context) 
-                            ? _buildCategoryGrid(context, featuredCategories) 
-                            : _buildCategoryHorizontalList(context, featuredCategories),
-                          const SizedBox(height: 30),
-                        ],
-                        
-                        // Popular Categories
-                        if (popularCategories.isNotEmpty) ...[
-                          _buildSectionTitle(context, 'Popular Categories'),
-                          const SizedBox(height: 15),
-                          _buildCategoryList(context, popularCategories),
-                          const SizedBox(height: 30),
-                        ],
-                        
-                        // All Categories
-                        _buildSectionTitle(context, 'All Categories'),
-                        const SizedBox(height: 15),
-                        _buildCategoryGrid(context, categories),
-                        
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  );
-                },
-                loading: () {
-                  return const Center(child: CircularProgressIndicator());
-                },
-                error: (error, stack) {
-                  // Fallback to predefined categories if backend fails
-                  final categories = CategoriesService.getAllCategories();
-                  final featuredCategories = CategoriesService.getFeaturedCategories(categories);
-                  final popularCategories = CategoriesService.getPopularCategories(categories);
-                  
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Featured Categories
-                        if (featuredCategories.isNotEmpty) ...[
-                          _buildSectionTitle(context, 'Featured Categories'),
-                          const SizedBox(height: 15),
-                          ResponsiveBreakpoints.isDesktop(context) 
-                            ? _buildCategoryGrid(context, featuredCategories) 
-                            : _buildCategoryHorizontalList(context, featuredCategories),
-                          const SizedBox(height: 30),
-                        ],
-                        
-                        // Popular Categories
-                        if (popularCategories.isNotEmpty) ...[
-                          _buildSectionTitle(context, 'Popular Categories'),
-                          const SizedBox(height: 15),
-                          _buildCategoryList(context, popularCategories),
-                          const SizedBox(height: 30),
-                        ],
-                        
-                        // All Categories
-                        _buildSectionTitle(context, 'All Categories'),
-                        const SizedBox(height: 15),
-                        _buildCategoryGrid(context, categories),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+        child: backendCategories.when(
+          data: (categories) => _buildMainContent(context, categories, padding, spacing),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) {
+            final categories = CategoriesService.getAllCategories();
+            return _buildMainContent(context, categories, padding, spacing);
+          },
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppTheme.blackColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-        ),
+  Widget _buildMainContent(BuildContext context, List<dynamic> categories, EdgeInsets padding, double spacing) {
+    return SingleChildScrollView(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context),
+          SizedBox(height: spacing),
+          _buildCategoryGrid(context, categories),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
 
-  Widget _buildCategoryGrid(BuildContext context, List<Category> categories) {
+  Widget _buildHeader(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Explore Categories',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: AppTheme.blackColor,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Find the perfect course to advance your career and skills.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppTheme.greyColor,
+            fontSize: 15,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryGrid(BuildContext context, List<dynamic> categories) {
     final gridCount = ResponsiveGridCount(context);
     
+    // Modern soft color palette for categories
+    final List<Color> cardColors = [
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEF4444), // Red/Rose
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFFF97316), // Orange
+      const Color(0xFFEC4899), // Pink
+    ];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -138,76 +96,26 @@ class CategoriesScreen extends ConsumerWidget {
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
-        final category = categories[index];
-        return _buildCategoryCard(context, category);
+        final categoryColor = cardColors[index % cardColors.length];
+        return _buildCategoryCard(context, categories[index], categoryColor);
       },
     );
   }
 
-  Widget _buildCategoryList(BuildContext context, List<Category> categories) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: categories.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 15),
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _buildCategoryListItem(context, category);
-      },
-    );
-  }
-
-  Widget _buildLevelSection(BuildContext context, List<Category> allCategories, int level, String title) {
-    final levelCategories = CategoriesService.getCategoriesByLevel(allCategories, level);
-    if (levelCategories.isEmpty) return const SizedBox.shrink();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: Theme.of(context).textTheme.titleMedium?.color,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: levelCategories.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final category = levelCategories[index];
-            return _buildCategoryListItem(context, category);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryCard(BuildContext context, dynamic category) {
+  Widget _buildCategoryCard(BuildContext context, dynamic category, Color color) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Colors.grey.withOpacity(0.02),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppTheme.primaryGreen.withOpacity(0.15),
-          width: 1,
+          color: color.withOpacity(0.15),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: color.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -215,195 +123,60 @@ class CategoriesScreen extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _navigateToCategory(context, category),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.primaryGreen.withOpacity(0.2),
-                        AppTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.2),
-                      width: 1,
-                    ),
+                    color: color.withOpacity(0.12),
+                    shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       category.icon,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontSize: 34),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 Text(
                   category.name,
                   style: const TextStyle(
                     color: AppTheme.blackColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${category.subcategories.length} courses',
+                    '${category.subcategories.length} Topics',
                     style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
+                      color: color.withOpacity(0.9),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.1,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryListItem(BuildContext context, dynamic category) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Colors.grey.withOpacity(0.01),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppTheme.greyColor.withOpacity(0.12),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _navigateToCategory(context, category),
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.primaryGreen.withOpacity(0.15),
-                        AppTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.15),
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      category.icon,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        category.name,
-                        style: const TextStyle(
-                          color: AppTheme.blackColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          letterSpacing: 0.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        category.description,
-                        style: TextStyle(
-                          color: AppTheme.greyColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: AppTheme.primaryGreen.withOpacity(0.6),
-                  size: 14,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryHorizontalList(BuildContext context, List<Category> categories) {
-    return SizedBox(
-      height: 180,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return Container(
-            margin: EdgeInsets.only(
-              right: 15,
-              left: index == 0 ? 0 : 0,
-            ),
-            width: 160,
-            child: _buildCategoryCard(context, category),
-          );
-        },
       ),
     );
   }

@@ -16,6 +16,8 @@ class Course {
   final List<String>? learningObjectives;
   final List<String>? requirements;
   final int? accessDurationDays;
+  final int enrollmentCount;
+  final double averageRating;
 
   Course({
     required this.id,
@@ -33,6 +35,8 @@ class Course {
     this.learningObjectives,
     this.requirements,
     this.accessDurationDays,
+    this.enrollmentCount = 0,
+    this.averageRating = 0.0,
   });
 
   static String? _getStringValue(dynamic value) {
@@ -73,6 +77,8 @@ class Course {
           ? List<String>.from((json['requirements'] as List).map((e) => _getStringValue(e) ?? '').toList())
           : null,
       accessDurationDays: json['accessDurationDays'] as int?,
+      enrollmentCount: json['enrollmentCount'] as int? ?? 0,
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -93,6 +99,8 @@ class Course {
       'learningObjectives': learningObjectives,
       'requirements': requirements,
       'accessDurationDays': accessDurationDays,
+      'enrollmentCount': enrollmentCount,
+      'averageRating': averageRating,
     };
   }
 

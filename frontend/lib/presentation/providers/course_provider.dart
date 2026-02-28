@@ -28,10 +28,9 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
   if (allCourses.isNotEmpty) {
     print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
   }
-  // Sort by rating or popularity (assuming higher price/quality correlates with popularity)
-  // In a real scenario, you'd probably have a popularity field from the backend
-  final sortedCourses = List<Course>.from(allCourses)..sort((a, b) => b.price.compareTo(a.price));
-  final result = sortedCourses.take(3).toList();
+  // Sort by popularity (more enrolled)
+  final sortedByEnrolled = List<Course>.from(allCourses)..sort((a, b) => b.enrollmentCount.compareTo(a.enrollmentCount));
+  final result = sortedByEnrolled.take(6).toList();
   print('PopularCoursesProvider: Returning ${result.length} popular courses');
   if (result.isNotEmpty) {
     print('PopularCoursesProvider: First popular course thumbnail: ${result[0].thumbnail ?? "null"}');

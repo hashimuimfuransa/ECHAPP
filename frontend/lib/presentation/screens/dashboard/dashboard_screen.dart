@@ -33,32 +33,31 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0), // Light orange background
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFFFF7ED), // Very light orange/cream
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFFFB74D), // Orange border
+          color: const Color(0xFFFFEDD5), // Light orange border
           width: 1,
         ),
       ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(
-            Icons.security,
-            color: Color(0xFFF57C00), // Orange icon
-            size: 20,
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFFF97316), // Orange icon
+            size: 22,
           ),
-          SizedBox(width: 12),
-          Expanded(
+          const SizedBox(width: 16),
+          const Expanded(
             child: Text(
-              'Device Security: Your account is bound to this device. Logging in from other devices will be blocked. Contact support to change devices.',
+              'Device Security: Your account is secured to this device for your protection. Contact support to change devices.',
               style: TextStyle(
-                color: Color(0xFF333333), // Dark text for visibility
-                fontSize: 13,
+                color: Color(0xFF92400E), // Brownish orange text
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
-                height: 1.4,
+                letterSpacing: -0.2,
               ),
             ),
           ),
@@ -203,31 +202,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Center(
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: isDesktop ? 1200 : double.infinity,
+                maxWidth: isDesktop ? 1300 : double.infinity,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildCategoryFilters(context),
-                  const SizedBox(height: 10),
-                  _buildWelcomeCard(context, user),
-                  const SizedBox(height: 20),
+                  enrolledCoursesAsync.when(
+                    data: (enrolledCourses) => _buildWelcomeCard(context, user, enrolledCourses),
+                    loading: () => _buildWelcomeCard(context, user, []),
+                    error: (_, __) => _buildWelcomeCard(context, user, []),
+                  ),
+                  const SizedBox(height: 24),
                   const _DashboardDeviceBindingPolicy(),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 32),
                   if (ref.watch(authProvider.notifier).isAdmin) ...[
                     _buildAdminAccessButton(context),
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 32),
                   ],
                   enrolledCoursesAsync.when(
                     data: (enrolledCourses) =>
-                        _buildContinueLearning(context, enrolledCourses),
+                        _buildLearningAndOnboarding(context, enrolledCourses),
                     loading: () => _buildLoadingCard(context, 'Continue Learning'),
                     error: (error, stack) => _buildErrorCard(
                         context, 'Continue Learning', error.toString()),
                   ),
-                  const SizedBox(height: 25),
-                  const DownloadsSection(),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 32),
+                  popularCoursesAsync.when(
+                    data: (popularCourses) =>
+                        _buildRecommendedCourses(context, popularCourses),
+                    loading: () => _buildLoadingCard(context, 'Recommended Courses'),
+                    error: (error, stack) => _buildErrorCard(
+                        context, 'Recommended Courses', error.toString()),
+                  ),
+                  const SizedBox(height: 32),
                   popularCoursesAsync.when(
                     data: (popularCourses) =>
                         _buildResponsivePopularCourses(context, popularCourses),
@@ -235,8 +243,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     error: (error, stack) => _buildErrorCard(
                         context, 'Popular Courses', error.toString()),
                   ),
-                  const SizedBox(height: 25),
-                  _buildWishlistSection(context),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -319,235 +325,348 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Color _getCategoryColor(String categoryId) {
+    switch (categoryId) {
+      case 'academic_coaching':
+        return const Color(0xFF10B981); // Emerald/Green
+      case 'language_coaching':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'business_entrepreneurship':
+        return const Color(0xFFEF4444); // Red
+      case 'technical_digital':
+        return const Color(0xFF06B6D4); // Cyan
+      case 'professional_coaching':
+      case 'job_seeker':
+        return const Color(0xFF3B82F6); // Blue
+      case 'personal_corporate':
+        return const Color(0xFFF59E0B); // Amber
+      case 'all':
+        return const Color(0xFF10B981);
+      default:
+        return AppTheme.primary;
+    }
+  }
+
   Widget _buildCategoryFilters(BuildContext context) {
     final categoriesAsync = ref.watch(backendCategoriesProvider);
 
     return Container(
-      height: 50,
-      margin: const EdgeInsets.only(bottom: 8),
+      height: 44,
+      margin: const EdgeInsets.only(bottom: 20),
       child: categoriesAsync.when(
         data: (categories) => ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: categories.length + 1,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.zero,
           itemBuilder: (context, index) {
-            if (index == 0) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: const Text('All Courses'),
-                  onPressed: () {
-                    context.push('/courses', extra: {
-                      'categoryId': 'all',
-                      'categoryName': 'All Courses',
-                    });
-                  },
-                  backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                  labelStyle: const TextStyle(
-                    color: AppTheme.primaryGreen,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.transparent),
-                  ),
-                ),
-              );
-            }
-            final category = categories[index - 1];
-            final color = _getCategoryColor(category.id);
+            final isFirst = index == 0;
+            final category = isFirst ? null : categories[index - 1];
+            final color = _getCategoryColor(isFirst ? 'all' : category!.id);
+            final name = isFirst ? 'All Courses' : category!.name;
+            final icon = isFirst ? '📚' : (category!.icon ?? '📚');
 
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ActionChip(
-                avatar: Text(category.icon ?? '📚'),
-                label: Text(category.name),
-                onPressed: () {
-                  debugPrint('Dashboard: Navigating to category ${category.name} with ID ${category.id}');
+              padding: const EdgeInsets.only(right: 12),
+              child: InkWell(
+                onTap: () {
                   context.push('/courses', extra: {
-                    'categoryId': category.id,
-                    'categoryName': category.name,
+                    'categoryId': isFirst ? 'all' : category!.id,
+                    'categoryName': name,
                   });
                 },
-                backgroundColor: color.withOpacity(0.15),
-                labelStyle: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: const BorderSide(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: color.withOpacity(0.15),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(icon, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 10),
+                      Text(
+                        name,
+                        style: TextStyle(
+                          color: color.withOpacity(0.9),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
           },
         ),
         loading: () => const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-        error: (err, stack) => ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: 1,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemBuilder: (context, index) => ActionChip(
-            label: const Text('All Courses'),
-            onPressed: () => context.push('/courses', extra: {'categoryId': 'all', 'categoryName': 'All Courses'}),
-          ),
-        ),
+        error: (err, stack) => const SizedBox.shrink(),
       ),
     );
   }
 
-  Color _getCategoryColor(String categoryId) {
-    switch (categoryId) {
-      case 'professional_coaching':
-        return const Color(0xFF3B82F6); // Blue
-      case 'business_entrepreneurship':
-        return const Color(0xFFF59E0B); // Amber
-      case 'academic_coaching':
-        return const Color(0xFF10B981); // Emerald
-      case 'language_coaching':
-        return const Color(0xFF8B5CF6); // Purple
-      case 'technical_digital':
-        return const Color(0xFF6366F1); // Indigo
-      case 'job_seeker':
-        return const Color(0xFFF43F5E); // Rose
-      case 'personal_corporate':
-        return const Color(0xFF06B6D4); // Cyan
-      default:
-        return AppTheme.primaryGreen;
-    }
-  }
-
-  Widget _buildWelcomeCard(BuildContext context, user) {
-    // Responsive sizing based on screen size
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    final isStandardMobile = ResponsiveBreakpoints.isStandardMobile(context);
-
-    final padding = isSmallMobile ? 16.0 : (isStandardMobile ? 20.0 : 24.0);
-    final iconSize = isSmallMobile ? 24.0 : (isStandardMobile ? 26.0 : 28.0);
-    final titleFontSize =
-        isSmallMobile ? 18.0 : (isStandardMobile ? 20.0 : 22.0);
-    final subtitleFontSize =
-        isSmallMobile ? 12.0 : (isStandardMobile ? 13.0 : 14.0);
-    final borderRadius = isSmallMobile ? 16.0 : 20.0;
+  Widget _buildWelcomeCard(BuildContext context, user, List<Course> enrolledCourses) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final lastCourse = enrolledCourses.isNotEmpty ? enrolledCourses.first : null;
+    
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [
+            Color(0xFF10B981), // Emerald
+            Color(0xFF0EA5E9), // Sky Blue
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.3), // FIX #8
+            color: const Color(0xFF10B981).withOpacity(0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Padding(
-        padding: EdgeInsets.all(padding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Stack(
+        children: [
+          // Decorative shapes
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(isDesktop ? 24 : 20),
+            child: Row(
               children: [
-                Container(
-                  padding: EdgeInsets.all(isSmallMobile ? 10.0 : 12.0),
-                  decoration: BoxDecoration(
-                    color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
-                    borderRadius:
-                        BorderRadius.circular(isSmallMobile ? 12.0 : 16.0),
-                  ),
-                  child: Icon(Icons.school,
-                      color: AppTheme.whiteColor, size: iconSize),
-                ),
-                SizedBox(width: isSmallMobile ? 12.0 : 16.0),
                 Expanded(
+                  flex: isDesktop ? 2 : 1,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Welcome Back, ${user?.fullName ?? 'Student'}!',
-                        style: TextStyle(
-                          color: AppTheme.whiteColor,
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: isSmallMobile ? 1 : 2,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hello, ${user?.fullName?.split(" ")[0].toLowerCase() ?? 'student'}!',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                Text(
+                                  'Ready to continue your learning journey?',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: isSmallMobile ? 4.0 : 6.0),
-                      Text(
-                        isSmallMobile
-                            ? 'Continue learning and achieve goals'
-                            : 'Continue your learning journey and achieve your goals',
-                        style: TextStyle(
-                          color: AppTheme.whiteColor
-                              .withValues(alpha: 0.9), // FIX #8
-                          fontSize: subtitleFontSize,
+                      const SizedBox(height: 24),
+                      // Last Lesson Widget
+                      if (lastCourse != null)
+                        InkWell(
+                          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, lastCourse),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.play_circle_fill, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Last lesson: ${lastCourse.title}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.7), size: 18),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lightbulb_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Start a new course today!',
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
-                        maxLines: isSmallMobile ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 24),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => context.push('/my-courses'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF0F766E),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('My Courses', style: TextStyle(fontWeight: FontWeight.w800)),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/courses'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Browse All', style: TextStyle(fontWeight: FontWeight.w700)),
+                                SizedBox(width: 4),
+                                Icon(Icons.chevron_right_rounded, size: 20),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: isSmallMobile ? 16.0 : 24.0),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      ref.read(enrolledCoursesProvider).maybeWhen(
-                            data: (courses) => courses.isNotEmpty
-                                ? context.push('/my-courses')
-                                : context.push('/courses'),
-                            orElse: () => context.push('/courses'),
-                          );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen,
-                      foregroundColor: AppTheme.whiteColor,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
+                if (isDesktop) ...[
+                  const SizedBox(width: 24),
+                  Container(
+                    width: 280,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                      ],
                     ),
-                    child: const Text(
-                      'Continue Learning',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => context.push('/courses'),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppTheme.whiteColor, width: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(
-                      'View Courses',
-                      style: TextStyle(
-                        color: AppTheme.whiteColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '0% Completed',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildWelcomeStatItem(Icons.school, '${enrolledCourses.length} Courses', 'Enrolled', const Color(0xFF10B981)),
+                              const SizedBox(height: 12),
+                              _buildWelcomeStatItem(Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        _buildCircularProgress(),
+                      ],
                     ),
                   ),
-                ),
+                ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeStatItem(IconData icon, String value, String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF333333), height: 1.1)),
+              Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), height: 1.1)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCircularProgress() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        SizedBox(
+          width: 70,
+          height: 70,
+          child: CircularProgressIndicator(
+            value: 0.1, // Placeholder
+            strokeWidth: 8,
+            backgroundColor: const Color(0xFFF3F4F6),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+            strokeCap: StrokeCap.round,
+          ),
+        ),
+        const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('0%', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
+            Text('Completed', style: TextStyle(fontSize: 8, color: Color(0xFF9CA3AF))),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -746,92 +865,206 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildLearningAndOnboarding(BuildContext context, List<Course> enrolledCourses) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _buildContinueLearning(context, enrolledCourses)),
+          const SizedBox(width: 32),
+          Expanded(child: _buildGetStarted(context)),
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          _buildContinueLearning(context, enrolledCourses),
+          const SizedBox(height: 32),
+          _buildGetStarted(context),
+        ],
+      );
+    }
+  }
+
+  Widget _buildGetStarted(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isMobile = !isDesktop && !ResponsiveBreakpoints.isTablet(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Get Started',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            ),
+            TextButton(
+              onPressed: () => context.push('/courses'),
+              child: const Row(
+                children: [
+                  Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
+                  SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, size: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFF3F4F6)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: isMobile ? -20 : 0,
+                bottom: isMobile ? -10 : 0,
+                top: isMobile ? null : 0,
+                child: Opacity(
+                  opacity: isMobile ? 0.4 : 1.0,
+                  child: Image.asset(
+                    'assets/get started.png',
+                    height: isMobile ? 140 : null,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Start learning today',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: isMobile ? double.infinity : 200,
+                      child: const Text(
+                        'Begin your learning journey with one of our recommended courses.',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), height: 1.4),
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () => context.push('/courses'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1F2937),
+                        elevation: 0,
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Browse Courses', style: TextStyle(fontWeight: FontWeight.w700)),
+                          SizedBox(width: 8),
+                          Icon(Icons.chevron_right_rounded, size: 18),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildContinueLearning(
       BuildContext context, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final isMobile = !isDesktop && !isTablet;
     
     if (enrolledCourses.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Continue Learning',
-            style: TextStyle(
-              color: AppTheme.getTextColor(context),
-              fontSize: isDesktop ? 24 : 20,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
           ),
-          SizedBox(height: isDesktop ? 20 : 15),
+          const SizedBox(height: 12),
           Container(
+            width: double.infinity,
+            height: 200,
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context)
-                      .shadowColor
-                      .withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFF3F4F6)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: isMobile ? -20 : 0,
+                  bottom: isMobile ? -10 : 0,
+                  top: isMobile ? null : 0,
+                  child: Opacity(
+                    opacity: isMobile ? 0.4 : 1.0,
+                    child: Image.asset(
+                      'assets/continue learning.png',
+                      height: isMobile ? 140 : null,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'No active courses yet',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: isMobile ? double.infinity : 200,
+                        child: const Text(
+                          'Enroll in a course to start learning.',
+                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 14, height: 1.4),
+                        ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () => context.push('/courses'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Browse Courses', style: TextStyle(fontWeight: FontWeight.w700)),
+                            SizedBox(width: 8),
+                            Icon(Icons.chevron_right_rounded, size: 18),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
-              border: Border.all(
-                color: Theme.of(context)
-                    .dividerColor
-                    .withValues(alpha: 0.1),
-                width: 0.5,
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(isDesktop ? 24 : 16),
-              child: Row(
-                children: [
-                  Container(
-                    width: isDesktop ? 70 : 60,
-                    height: isDesktop ? 70 : 60,
-                    decoration: BoxDecoration(
-                      color:
-                          AppTheme.greyColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.play_circle_outline,
-                        color: AppTheme.greyColor, size: isDesktop ? 36 : 30),
-                  ),
-                  SizedBox(width: isDesktop ? 20 : 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('No courses in progress',
-                            style: TextStyle(
-                                color: AppTheme.getTextColor(context),
-                                fontSize: isDesktop ? 18 : 16,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
-                        Text('Start a course to see your progress here',
-                            style: TextStyle(
-                                color: AppTheme.greyColor, fontSize: isDesktop ? 14 : 13)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 16 : 12, vertical: isDesktop ? 8 : 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('Start Now',
-                        style: TextStyle(
-                            color: AppTheme.primaryGreen,
-                            fontSize: isDesktop ? 13 : 12,
-                            fontWeight: FontWeight.w500)),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -839,301 +1072,306 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else {
       final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
       
-      if (isDesktop || isTablet) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Continue Learning',
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: isDesktop ? 24 : 20,
-                fontWeight: FontWeight.w600,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Continue Learning',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-            SizedBox(height: isDesktop ? 24 : 20),
+              TextButton(
+                onPressed: () => context.push('/my-courses'),
+                child: const Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (isDesktop || isTablet)
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: isDesktop ? 20 : 15,
-                mainAxisSpacing: isDesktop ? 20 : 15,
-                childAspectRatio: 0.75,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 0.82,
               ),
-              itemCount: enrolledCourses.length,
+              itemCount: enrolledCourses.take(crossAxisCount).length,
               itemBuilder: (context, index) {
-                final course = enrolledCourses[index];
-                return InkWell(
-                  onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-                      context, ref, course),
-                  borderRadius: BorderRadius.circular(16),
-                  child: _buildEnrolledCourseCard(context, course),
-                );
+                return _buildEnrolledCourseCard(context, enrolledCourses[index]);
               },
-            ),
-          ],
-        );
-      } else {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Continue Learning',
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 15),
+            )
+          else
             SizedBox(
-              height: 150,
+              height: 200,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: enrolledCourses.length,
                 itemBuilder: (context, index) {
-                  final course = enrolledCourses[index];
-                  return GestureDetector(
-                    onTap: () =>
-                        CourseNavigationUtils.navigateToCourseWithContext(
-                            context, ref, course),
-                    child: Container(
-                      width: 280,
-                      margin: const EdgeInsets.only(right: 12),
-                      child: _buildMobileEnrolledCourseCard(context, course),
-                    ),
+                  return Container(
+                    width: 280,
+                    margin: const EdgeInsets.only(right: 16),
+                    child: _buildEnrolledCourseCard(context, enrolledCourses[index]),
                   );
                 },
               ),
             ),
-          ],
-        );
-      }
+        ],
+      );
     }
   }
   
   Widget _buildEnrolledCourseCard(BuildContext context, Course course) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-            blurRadius: isDesktop ? 12 : 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: AppTheme.borderGrey.withOpacity(0.2)),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(isDesktop ? 16 : 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: isDesktop ? 100 : 80,
-                width: double.infinity,
-                color: AppTheme.greyColor.withValues(alpha: 0.1),
-                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? Image.network(
-                        course.thumbnail!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Icon(Icons.play_circle_filled,
-                              color: AppTheme.greyColor, size: 24);
-                        },
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor, size: 24),
-                      )
-                    : const Icon(Icons.play_circle_filled,
-                        color: AppTheme.greyColor, size: 32),
-              ),
-            ),
-            SizedBox(height: isDesktop ? 12 : 10),
-            Text(
-              course.title,
-              style: TextStyle(
-                color: AppTheme.whiteColor,
-                fontSize: isDesktop ? 15 : 14,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: isDesktop ? 8 : 6),
-            Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: 8, vertical: isDesktop ? 4 : 3),
-              decoration: BoxDecoration(
-                color: AppTheme.whiteColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text('In Progress',
-                  style: TextStyle(
-                      color: AppTheme.whiteColor,
-                      fontSize: isDesktop ? 12 : 11,
-                      fontWeight: FontWeight.w500)),
-            ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: 0.65,
-                      backgroundColor: AppTheme.whiteColor.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          AppTheme.whiteColor),
-                      minHeight: 4,
-                    ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    height: 100,
+                    width: double.infinity,
+                    color: AppTheme.primary.withOpacity(0.1),
+                    child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                        ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                        : const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
                   ),
                 ),
-                SizedBox(width: isDesktop ? 8 : 6),
-                Container(
-                  decoration: BoxDecoration(
-                      color: AppTheme.whiteColor,
-                      borderRadius: BorderRadius.circular(6)),
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.arrow_forward,
-                      color: AppTheme.primaryGreen, size: isDesktop ? 16 : 14),
+                const SizedBox(height: 14),
+                Text(
+                  course.title,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'By ${course.createdBy.fullName}',
+                  style: TextStyle(color: AppTheme.greyColor, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: 0.45,
+                          backgroundColor: AppTheme.primary.withOpacity(0.1),
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                          minHeight: 4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('45%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildMobileEnrolledCourseCard(BuildContext context, Course course) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                height: 80,
-                width: double.infinity,
-                color: AppTheme.greyColor.withValues(alpha: 0.1),
-                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? Image.network(
-                        course.thumbnail!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Icon(Icons.play_circle_filled,
-                              color: AppTheme.greyColor, size: 24);
-                        },
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor, size: 24),
-                      )
-                    : const Icon(Icons.play_circle_filled,
-                        color: AppTheme.greyColor, size: 28),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              course.title,
-              style: const TextStyle(
-                color: AppTheme.whiteColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.whiteColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('In Progress',
-                  style: TextStyle(
-                      color: AppTheme.whiteColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500)),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  // FIX #3: Restored correct method structure; original had mismatched braces
-  // causing the method body to bleed into _buildResponsivePopularCourses.
-  Widget _buildPopularCourses(
-      BuildContext context, List<Course> popularCourses) {
+  Widget _buildRecommendedCourses(BuildContext context, List<Course> courses) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Popular Courses',
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
-                fontWeight: FontWeight.w600,
-              ),
+            const Text(
+              'Recommended Courses',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
             ),
             TextButton(
               onPressed: () => context.push('/courses'),
-              child: const Text('View All',
-                  style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500)),
+              child: const Row(
+                children: [
+                  Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
+                  SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, size: 20),
+                ],
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 15),
-        SizedBox(
-          height: 180,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: popularCourses.length,
-            itemBuilder: (context, index) {
-              final course = popularCourses[index];
-              return GestureDetector(
-                onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-                    context, ref, course),
-                child: Container(
-                  width: 240,
-                  margin: const EdgeInsets.only(right: 15),
-                  child: _buildCourseCard(context, course),
-                ),
-              );
-            },
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 1.1),
           ),
+          itemCount: courses.take(isDesktop ? 3 : 2).length,
+          itemBuilder: (context, index) {
+            return _buildCourseCardV2(context, courses[index]);
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildCourseCardV2(BuildContext context, Course course) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image with badge
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.all(Radius.circular(20)),
+                    child: Container(
+                      height: 140,
+                      width: double.infinity,
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                          ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                          : const Icon(Icons.image_outlined, size: 40, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (course.price == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        course.price == 0 ? 'FREE' : 'PAID',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course.title,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1F2937), height: 1.2),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            course.averageRating > 0 ? course.averageRating.toStringAsFixed(1) : '4.5', // Default 4.5 if no rating
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '(${course.enrollmentCount > 0 ? course.enrollmentCount : "125"}+ students)',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  course.price == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                                  size: 12,
+                                  color: course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  course.price == 0 ? 'FREE' : 'PAID',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: course.price == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (course.price > 0)
+                            Text(
+                              'RWF ${course.price.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1141,10 +1379,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       BuildContext context, List<Course> popularCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
-    final gridCount = ResponsiveGridCount(context);
-    
-    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : gridCount.crossAxisCount);
-    final spacing = isDesktop ? 20.0 : 15.0;
+    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1152,262 +1387,119 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               'Popular Courses',
               style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: isDesktop ? 24 : 20,
-                fontWeight: FontWeight.w600,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
               ),
             ),
             TextButton(
               onPressed: () => context.push('/courses'),
-              child: Text('View All',
-                  style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: isDesktop ? 16 : 14,
-                      fontWeight: FontWeight.w500)),
+              child: const Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
-        SizedBox(height: isDesktop ? 24 : 15),
-        if (isDesktop || isTablet)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: spacing,
-              mainAxisSpacing: spacing,
-              childAspectRatio: isDesktop ? 0.75 : gridCount.childAspectRatio,
-            ),
-            itemCount: popularCourses.length,
-            itemBuilder: (context, index) {
-              final course = popularCourses[index];
-              return InkWell(
-                onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-                    context, ref, course),
-                borderRadius: BorderRadius.circular(16),
-                child: _buildResponsiveCourseCard(context, course),
-              );
-            },
-          )
-        else
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: popularCourses.length,
-              itemBuilder: (context, index) {
-                final course = popularCourses[index];
-                return GestureDetector(
-                  onTap: () =>
-                      CourseNavigationUtils.navigateToCourseWithContext(
-                          context, ref, course),
-                  child: Container(
-                    width: 240,
-                    margin: const EdgeInsets.only(right: 15),
-                    child: _buildCourseCard(context, course),
-                  ),
-                );
-              },
-            ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 0.8),
           ),
+          itemCount: popularCourses.take(crossAxisCount * 2).length,
+          itemBuilder: (context, index) {
+            return _buildCourseCardV2(context, popularCourses[index]);
+          },
+        ),
       ],
-    );
-  }
-
-  Widget _buildResponsiveCourseCard(BuildContext context, Course course) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
-            blurRadius: isDesktop ? 10 : 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color:
-              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
-          width: 0.5,
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isDesktop ? 14 : 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(isDesktop ? 10 : 8),
-              child: Container(
-                height: isDesktop ? 120.0 : 80.0,
-                width: double.infinity,
-                color: AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
-                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? Image.network(
-                        course.thumbnail!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Icon(Icons.play_circle_filled,
-                              color: AppTheme.greyColor, size: 30);
-                        },
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor, size: 30),
-                      )
-                    : const Icon(Icons.play_circle_filled,
-                        color: AppTheme.greyColor, size: 35),
-              ),
-            ),
-            SizedBox(height: isDesktop ? 12 : 10),
-            Text(
-              course.title,
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: isDesktop ? 16.0 : 15.0,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text('by ${course.createdBy.fullName}',
-                style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: isDesktop ? 13.0 : 12.0)),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 14),
-                  const SizedBox(width: 3),
-                  Text('4.8',
-                      style: TextStyle(
-                          color: AppTheme.getTextColor(context), fontSize: 11)),
-                ]),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color:
-                        AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'RWF ${course.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                        color: AppTheme.primaryGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildCourseCard(BuildContext context, Course course) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color:
-                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(
-          color:
-              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
-          width: 0.5,
-        ),
+        border: Border.all(color: AppTheme.borderGrey.withOpacity(0.2)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 80,
-                width: double.infinity,
-                color: AppTheme.greyColor.withValues(alpha: 0.1), // FIX #8
-                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? Image.network(
-                        course.thumbnail!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Icon(Icons.play_circle_filled,
-                              color: AppTheme.greyColor, size: 30);
-                        },
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor, size: 30),
-                      )
-                    : const Icon(Icons.play_circle_filled,
-                        color: AppTheme.greyColor, size: 35),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              course.title,
-              style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text('by ${course.createdBy.fullName}',
-                style:
-                    const TextStyle(color: AppTheme.greyColor, fontSize: 12)),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 14),
-                  const SizedBox(width: 3),
-                  Text('4.8',
-                      style: TextStyle(
-                          color: AppTheme.getTextColor(context), fontSize: 11)),
-                ]),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color:
-                        AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'RWF ${course.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                        color: AppTheme.primaryGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                child: Container(
+                  height: 110,
+                  width: double.infinity,
+                  color: AppTheme.primary.withOpacity(0.1),
+                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                      ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                      : const Icon(Icons.image_outlined, color: AppTheme.primary, size: 40),
                 ),
-              ],
-            ),
-          ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'By ${course.createdBy.fullName}',
+                      style: TextStyle(color: AppTheme.greyColor, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primary),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                              SizedBox(width: 2),
+                              Text('4.8', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1593,243 +1685,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // FIX #5: Replaced Navigator.push with context.push for consistent go_router navigation.
   void _navigateToCategories(BuildContext context) =>
       context.push('/categories');
-
-  Widget _buildWishlistSection(BuildContext context) {
-    final wishlistAsync = ref.watch(wishlistProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'My Wishlist',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 15),
-        wishlistAsync.when(
-          data: (courses) {
-            if (courses.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .dividerColor
-                        .withValues(alpha: 0.1), // FIX #8
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.bookmark_border,
-                        size: 48,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.color
-                            ?.withValues(alpha: 0.6)), // FIX #8
-                    const SizedBox(height: 12),
-                    Text('Your wishlist is empty',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color:
-                                Theme.of(context).textTheme.bodyMedium?.color)),
-                    const SizedBox(height: 8),
-                    Text("Start adding courses you're interested in",
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.color
-                                ?.withValues(alpha: 0.7))), // FIX #8
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => _navigateToCategories(
-                          context), // FIX #5: use consistent nav
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Browse Courses'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context)
-                        .shadowColor
-                        .withValues(alpha: 0.08), // FIX #8
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(
-                  color: Theme.of(context)
-                      .dividerColor
-                      .withValues(alpha: 0.1), // FIX #8
-                  width: 0.5,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Saved Courses (${courses.length})',
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600)),
-                        TextButton(
-                          onPressed: () =>
-                              context.push('/wishlist'), // FIX #5: go_router
-                          child: const Text('View All',
-                              style: TextStyle(
-                                  color: AppTheme.primaryGreen,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: courses.length,
-                      itemBuilder: (context, index) =>
-                          _buildWishlistCoursePreview(
-                              context, courses[index], ref),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-          loading: () => _buildLoadingCard(context, 'My Wishlist'),
-          error: (error, stack) =>
-              _buildErrorCard(context, 'My Wishlist', error.toString()),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWishlistCoursePreview(
-      BuildContext context, Course course, WidgetRef ref) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-            context, ref, course),
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
-                image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(course.thumbnail!),
-                        fit: BoxFit.cover)
-                    : null,
-              ),
-              child: course.thumbnail == null || course.thumbnail!.isEmpty
-                  ? Icon(Icons.play_circle_outline,
-                      color: Colors.grey[400], size: 24)
-                  : null,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(course.title,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.getTextColor(context)),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Text('by ${course.createdBy.fullName}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.color
-                              ?.withValues(alpha: 0.7)), // FIX #8
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        course.price == 0
-                            ? 'FREE'
-                            : 'RWF ${course.price.toStringAsFixed(0)}',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: course.price == 0
-                                ? Colors.green
-                                : AppTheme.blackColor),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close,
-                            size: 16,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.color
-                                ?.withValues(alpha: 0.6)), // FIX #8
-                        onPressed: () => ref
-                            .read(wishlistNotifierProvider.notifier)
-                            .removeCourse(course.id),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showContactInfoDialog(BuildContext context) {
     showDialog(

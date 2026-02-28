@@ -41,6 +41,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   int _currentSectionIndex = 0;
   List<Certificate>? _courseCertificates;
   bool _isLoadingCertificates = false;
+  double _userRating = 0.0;
+  final TextEditingController _feedbackController = TextEditingController();
 
   @override
   void initState() {
@@ -502,15 +504,110 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     }
 
     return ListView.separated(
-      itemCount: _sections!.length,
+      itemCount: _sections!.length + 1,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
+        if (index == _sections!.length) {
+          return _buildRatingSection();
+        }
         final section = _sections![index];
         final isUnlocked = _sectionCompletionStatus[section.id] ?? false;
         final isCurrent = index == _currentSectionIndex;
         
         return _buildSectionCard(section, isUnlocked, isCurrent, index);
       },
+    );
+  }
+
+  Widget _buildRatingSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.whiteColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Enjoying this course?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.blackColor),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your feedback helps us improve and helps other students.',
+            style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return IconButton(
+                icon: Icon(
+                  index < _userRating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 32,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _userRating = index + 1.0;
+                  });
+                },
+              );
+            }),
+          ),
+          if (_userRating > 0) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _feedbackController,
+              decoration: InputDecoration(
+                hintText: 'Share your feedback (optional)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                ),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Submit rating logic
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Thank you for your rating!'),
+                      backgroundColor: AppTheme.primaryGreen,
+                    ),
+                  );
+                  setState(() {
+                    _userRating = 0;
+                    _feedbackController.clear();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Submit Rating', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
