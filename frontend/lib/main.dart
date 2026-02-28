@@ -40,7 +40,7 @@ Future<void> main() async {
       debugPrint('Main: Firebase initialized successfully');
 
       // Initialize push notifications only on supported platforms (not Windows)
-      if (defaultTargetPlatform != TargetPlatform.windows && !kIsWeb) {
+      if (defaultTargetPlatform != TargetPlatform.windows) {
         await PushNotificationService.initialize();
       }
 

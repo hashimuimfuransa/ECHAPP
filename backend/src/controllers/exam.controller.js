@@ -8,6 +8,7 @@ const User = require('../models/User');
 const Certificate = require('../models/Certificate');
 const GrokService = require('../services/grok_service');
 const emailService = require('../services/email.service');
+const notificationController = require('./notification.controller');
 const CertificatePDFService = require('../services/certificate_pdf_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
@@ -365,6 +366,14 @@ const submitExam = async (req, res) => {
     } catch (emailError) {
       console.error('Error sending exam score notification email:', emailError);
       // Don't fail the exam submission if email sending fails
+    }
+
+    // Send in-app and push notification (Professional way)
+    try {
+      const NotificationController = notificationController.constructor;
+      await NotificationController.createExamResultNotification(userId, examInfo.title, percentage, examInfo.courseId);
+    } catch (notificationError) {
+      console.error('Error creating exam result notification:', notificationError);
     }
 
     sendSuccess(res, {

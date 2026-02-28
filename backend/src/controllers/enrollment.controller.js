@@ -4,6 +4,7 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Certificate = require('../models/Certificate');
 const emailService = require('../services/email.service');
+const notificationController = require('./notification.controller');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 
 // Helper function to check if enrollment access has expired
@@ -73,6 +74,14 @@ const enrollInCourse = async (req, res) => {
     } catch (emailError) {
       console.error('Error sending enrollment confirmation email:', emailError);
       // Don't fail the enrollment if email sending fails
+    }
+
+    // Send in-app and push notification (Professional way)
+    try {
+      const NotificationController = require('./notification.controller').constructor;
+      await NotificationController.createCourseEnrollmentNotification(userId, course.title, courseId);
+    } catch (notificationError) {
+      console.error('Error creating enrollment notification:', notificationError);
     }
 
     sendSuccess(res, enrollment, 'Successfully enrolled in course', 201);

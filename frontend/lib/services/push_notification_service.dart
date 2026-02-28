@@ -1,10 +1,18 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class PushNotificationService {
   static FirebaseMessaging get _firebaseMessaging => FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  static BuildContext? _context;
+
+  // Set context for navigation
+  static void setContext(BuildContext context) {
+    _context = context;
+  }
   
   // Initialize push notifications
   static Future<void> initialize() async {
@@ -15,47 +23,47 @@ class PushNotificationService {
     }
     
     try {
-      // Request permission for iOS
-      if (!kIsWeb) {
-        NotificationSettings settings = await _firebaseMessaging.requestPermission(
-          alert: true,
-          badge: true,
-          provisional: false,
-          sound: true,
-        );
-        
-        if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-          print('User granted permission for notifications');
-        } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-          print('User granted provisional permission');
-        } else {
-          print('User declined or has not accepted permission');
-        }
-      }
+      // 1. Request Permission
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        provisional: false,
+        sound: true,
+      );
       
-      // Initialize local notifications
-      await _initializeLocalNotifications();
+      print('User granted permission: ${settings.authorizationStatus}');
       
-      // Get the token
-      final fcmToken = await _firebaseMessaging.getToken();
-      print('FCM Token: $fcmToken');
+      // 2. Create Android Notification Channel (Professional requirement)
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'high_importance_channel', // id
+        'High Importance Notifications', // title
+        description: 'This channel is used for important notifications.', // description
+        importance: Importance.max,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      // 3. Initialize local notifications
+      await _initializeLocalNotifications(channel);
       
-      // Handle background messages
+      // 4. Handle background messages
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
       
-      // Handle foreground messages
+      // 5. Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         print('Got a message in foreground: ${message.notification?.title}');
-        _showLocalNotification(message);
+        _showLocalNotification(message, channel);
       });
       
-      // Handle when app is opened from terminated state
+      // 6. Handle when app is opened from terminated state
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         print('App opened from terminated state: ${message.notification?.title}');
         _handleNotificationTap(message);
       });
       
-      // Handle initial message when app is opened from notification
+      // 7. Handle initial message when app is opened from notification
       RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
         print('App opened from notification: ${initialMessage.notification?.title}');
@@ -68,7 +76,7 @@ class PushNotificationService {
   }
   
   // Initialize local notifications
-  static Future<void> _initializeLocalNotifications() async {
+  static Future<void> _initializeLocalNotifications(AndroidNotificationChannel channel) async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     
@@ -77,10 +85,6 @@ class PushNotificationService {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      onDidReceiveLocalNotification: (id, title, body, payload) async {
-        // Handle iOS notification tap
-        print('Local notification tapped: $title');
-      },
     );
     
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -91,8 +95,10 @@ class PushNotificationService {
     await _localNotifications.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tap
-        print('Local notification tapped: ${response.payload}');
+        // Handle local notification tap
+        if (response.payload != null && response.payload!.isNotEmpty) {
+          _handleRouteNavigation(response.payload!);
+        }
       },
     );
   }
@@ -101,54 +107,75 @@ class PushNotificationService {
   @pragma('vm:entry-point')
   static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     print('Handling a background message: ${message.messageId}');
-    // Show local notification
-    _showLocalNotification(message);
   }
   
   // Show local notification
-  static Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'excellence_hub_channel', 
-      'Excellence Hub Notifications',
-      channelDescription: 'Notifications for Excellence Coaching Hub',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-      icon: '@mipmap/ic_launcher',
-    );
-    
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-    
-    await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      message.notification?.title ?? 'Notification',
-      message.notification?.body ?? 'You have a new notification',
-      platformChannelSpecifics,
-      payload: message.data['route'] ?? '',
-    );
-  }
-  
-  // Handle notification tap
-  static void _handleNotificationTap(RemoteMessage message) {
-    // Navigate to specific screen based on notification data
-    final route = message.data['route'];
-    final courseId = message.data['courseId'];
-    final examId = message.data['examId'];
-    
-    print('Handling notification tap - Route: $route, Course: $courseId, Exam: $examId');
-    
-    // This would integrate with your app's navigation system
-    // For now, we just log the action
-    if (route != null) {
-      // Example navigation logic:
-      // - If route is '/learning' and courseId is provided, navigate to course
-      // - If route is '/exams' and examId is provided, navigate to exam
-      // - etc.
+  static Future<void> _showLocalNotification(RemoteMessage message, AndroidNotificationChannel channel) async {
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+
+    if (notification != null && !kIsWeb) {
+      await _localNotifications.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channel.id,
+            channel.name,
+            channelDescription: channel.description,
+            icon: android?.smallIcon ?? '@mipmap/ic_launcher',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: message.data['route'] ?? '',
+      );
     }
   }
   
+  // Handle notification tap from FCM
+  static void _handleNotificationTap(RemoteMessage message) {
+    final route = message.data['route'];
+    if (route != null) {
+      _handleRouteNavigation(route, data: message.data);
+    }
+  }
+
+  // Handle route navigation
+  static void _handleRouteNavigation(String route, {Map<String, dynamic>? data}) {
+    if (_context == null) {
+      print('Cannot navigate: Context is null');
+      return;
+    }
+
+    print('Navigating to route: $route with data: $data');
+
+    try {
+      if (route.startsWith('/learning/') && data?['courseId'] != null) {
+        _context!.push('/learning/${data!['courseId']}');
+      } else if (route == '/notifications') {
+        _context!.push('/notifications');
+      } else if (route == '/my-courses') {
+        _context!.push('/my-courses');
+      } else if (route.startsWith('/course/') && data?['id'] != null) {
+        _context!.push('/course/${data!['id']}');
+      } else {
+        // Fallback to direct route if possible
+        _context!.push(route);
+      }
+    } catch (e) {
+      print('Error during notification navigation: $e');
+      // If push fails, try go
+      _context!.go(route);
+    }
+  }
+
   // Get FCM token
   static Future<String?> getFCMToken() async {
     try {
@@ -157,6 +184,11 @@ class PushNotificationService {
       print('Error getting FCM token: $e');
       return null;
     }
+  }
+
+  // Listen for token refresh
+  static void onTokenRefresh(Function(String) onRefresh) {
+    _firebaseMessaging.onTokenRefresh.listen(onRefresh);
   }
   
   // Subscribe to topic

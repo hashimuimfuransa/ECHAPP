@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const NotificationController = require('../controllers/notification.controller');
+const notificationController = require('../controllers/notification.controller');
 const { protect } = require('../middleware/auth.middleware');
 const User = require('../models/User');
-
-// Create controller instance
-const notificationController = new NotificationController();
 
 // All routes require authentication
 router.use(protect);

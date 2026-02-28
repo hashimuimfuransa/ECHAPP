@@ -5,6 +5,7 @@ const Section = require('../models/Section');
 const Lesson = require('../models/Lesson');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 const emailService = require('../services/email.service');
+const notificationController = require('./notification.controller');
 
 // Get all courses
 const getCourses = async (req, res) => {
@@ -177,19 +178,25 @@ const createCourse = async (req, res) => {
     const populatedCourse = await Course.findById(course._id)
       .populate('createdBy', 'id fullName email role createdAt');
 
-    // If the course is published, send notification email to all active users
+    // If the course is published, send notification email and push notification
     if (populatedCourse.isPublished) {
       try {
-        // Get all active users to notify them about the new course
+        // 1. Send emails
         const users = await User.find({ isActive: true }, 'fullName email');
-        
         if (users.length > 0) {
           await emailService.sendNewCourseEmail(users, populatedCourse);
           console.log(`New course email sent to ${users.length} users for course: ${populatedCourse.title}`);
         }
-      } catch (emailError) {
-        console.error('Error sending new course notification emails:', emailError);
-        // Don't fail the course creation if email sending fails
+        
+        // 2. Send push notification to topic (Professional way)
+        await notificationController.sendPushToTopic(
+          'courses',
+          'New Course Available!',
+          `New course "${populatedCourse.title}" is now available. Check it out!`,
+          { route: '/course/' + populatedCourse._id, id: populatedCourse._id.toString() }
+        );
+      } catch (error) {
+        console.error('Error sending new course notifications:', error);
       }
     }
 

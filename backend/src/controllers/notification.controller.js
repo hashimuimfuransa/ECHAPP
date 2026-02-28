@@ -236,29 +236,39 @@ class NotificationController {
   // Send push notification via FCM
   async sendPushNotification(userId, title, message, data = {}) {
     try {
-      // Get user's FCM token from database
-      // Handle both MongoDB ObjectId and Firebase UID
-      let user = null;
+      // Professional way: Get user's FCM token from Firestore
+      const db = admin.firestore();
       
-      // First try to find by MongoDB ObjectId
-      try {
-        user = await User.findById(userId);
-      } catch (mongoError) {
-        // If that fails, try to find by firebaseUid
-        if (mongoError.name === 'CastError') {
-          user = await User.findOne({ firebaseUid: userId });
-        } else {
-          throw mongoError;
+      let firebaseUid = userId;
+      
+      // If userId looks like a MongoDB ObjectId, find the user to get their firebaseUid
+      if (userId.toString().length === 24 && /^[0-9a-fA-F]+$/.test(userId)) {
+        const user = await User.findById(userId);
+        if (user && user.firebaseUid) {
+          firebaseUid = user.firebaseUid;
+        } else if (!user) {
+          console.log(`User ${userId} not found in MongoDB`);
+          return;
         }
       }
       
-      // If not found by ObjectId, try finding by firebaseUid
-      if (!user) {
-        user = await User.findOne({ firebaseUid: userId });
+      const userDoc = await db.collection('users').doc(firebaseUid).get();
+      
+      if (!userDoc.exists) {
+        console.log(`User document ${firebaseUid} not found in Firestore`);
+        // Fallback to MongoDB if Firestore doc doesn't exist yet
+        const user = await User.findOne({ $or: [{ _id: userId }, { firebaseUid: userId }] });
+        if (!user || !user.fcmToken) {
+          console.log('User FCM token not found in MongoDB fallback either');
+          return;
+        }
+        var fcmToken = user.fcmToken;
+      } else {
+        var fcmToken = userDoc.data().fcmToken;
       }
       
-      if (!user || !user.fcmToken) {
-        console.log('User FCM token not found');
+      if (!fcmToken) {
+        console.log('User FCM token is empty');
         return;
       }
 
@@ -272,7 +282,7 @@ class NotificationController {
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
           sound: 'default'
         },
-        token: user.fcmToken,
+        token: fcmToken,
       };
 
       const response = await admin.messaging().send(payload);
@@ -280,7 +290,7 @@ class NotificationController {
       return response;
     } catch (error) {
       console.error('Error sending push notification:', error);
-      throw error;
+      // Don't throw to prevent breaking the caller flow (e.g. payment processing)
     }
   }
 
@@ -311,6 +321,8 @@ class NotificationController {
 }
 
 // Helper functions for creating specific types of notifications
+const notificationController = new NotificationController();
+
 NotificationController.createPaymentNotification = async (userId, amount, courseId = null) => {
   try {
     const data = { amount };
@@ -325,7 +337,7 @@ NotificationController.createPaymentNotification = async (userId, amount, course
     });
     
     // Send push notification
-    await this.sendPushNotification(userId, 'Payment Received', `RWF ${amount.toLocaleString()} has been successfully processed`, data);
+    await notificationController.sendPushNotification(userId, 'Payment Received', `RWF ${amount.toLocaleString()} has been successfully processed`, data);
     
     return notification;
   } catch (error) {
@@ -346,7 +358,7 @@ NotificationController.createCourseEnrollmentNotification = async (userId, cours
     });
     
     // Send push notification
-    await this.sendPushNotification(userId, 'Course Enrollment', `You have been successfully enrolled in "${courseTitle}"`, data);
+    await notificationController.sendPushNotification(userId, 'Course Enrollment', `You have been successfully enrolled in "${courseTitle}"`, data);
     
     return notification;
   } catch (error) {
@@ -372,7 +384,7 @@ NotificationController.createExamResultNotification = async (userId, examTitle, 
     });
     
     // Send push notification
-    await this.sendPushNotification(userId, 'Exam Result Available', message, data);
+    await notificationController.sendPushNotification(userId, 'Exam Result Available', message, data);
     
     return notification;
   } catch (error) {
@@ -393,7 +405,7 @@ NotificationController.createAchievementNotification = async (userId, achievemen
     });
     
     // Send push notification
-    await this.sendPushNotification(userId, 'New Achievement Unlocked!', `Congratulations on achieving: ${achievementTitle}`, data);
+    await notificationController.sendPushNotification(userId, 'New Achievement Unlocked!', `Congratulations on achieving: ${achievementTitle}`, data);
     
     return notification;
   } catch (error) {
@@ -402,4 +414,4 @@ NotificationController.createAchievementNotification = async (userId, achievemen
   }
 };
 
-module.exports = NotificationController;
+module.exports = notificationController;

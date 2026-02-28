@@ -1,6 +1,7 @@
 const Payment = require('../models/Payment');
 const Course = require('../models/Course');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const notificationController = require('./notification.controller');
 
 // Initiate payment
 const initiatePayment = async (req, res) => {
@@ -82,6 +83,14 @@ const verifyPayment = async (req, res) => {
       payment.status = 'completed';
       payment.paymentDate = new Date();
       await payment.save();
+
+      // Send payment notification (Professional way)
+      try {
+        const NotificationController = notificationController.constructor;
+        await NotificationController.createPaymentNotification(userId, payment.amount, payment.courseId);
+      } catch (notificationError) {
+        console.error('Error creating payment notification:', notificationError);
+      }
     }, 5000);
 
     sendSuccess(res, {

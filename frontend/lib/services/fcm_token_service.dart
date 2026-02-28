@@ -1,74 +1,63 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../config/api_config.dart';
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/push_notification_service.dart';
-import '../services/infrastructure/token_manager.dart';
 
 class FCMTokenService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  // Update FCM token on backend
+  // Update FCM token on backend and Firestore
   static Future<bool> updateFCMToken(String token) async {
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/notifications/fcm-token');
-      
-      // Get authentication token
-      final authToken = await TokenManager().getIdToken();
-      
-      if (authToken == null) {
-        print('No auth token available, skipping FCM token update');
+      final user = _auth.currentUser;
+      if (user == null) {
+        print('No authenticated user, skipping FCM token update');
         return false;
       }
+
+      // 1. Professional way: Save token to Firestore for high availability and easy access by Functions
+      await _firestore.collection('users').doc(user.uid).set({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+        'platform': _getPlatformName(),
+      }, SetOptions(merge: true));
       
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: json.encode({
-          'fcmToken': token,
-        }),
-      );
-      
-      if (response.statusCode == 200) {
-        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
-          print('FCM: Server returned HTML instead of JSON');
-          return false;
-        }
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          print('FCM token updated successfully on backend');
-          return true;
-        }
-      }
-      
-      // Don't log 401 errors as failures since they're expected when not logged in
-      if (response.statusCode != 401) {
-        print('Failed to update FCM token: ${response.statusCode}');
-      }
-      return false;
+      print('FCM token updated successfully in Firestore');
+      return true;
     } catch (e) {
       print('Error updating FCM token: $e');
       return false;
+    }
+  }
+
+  static String _getPlatformName() {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android: return 'android';
+      case TargetPlatform.iOS: return 'ios';
+      case TargetPlatform.macOS: return 'macos';
+      case TargetPlatform.windows: return 'windows';
+      case TargetPlatform.linux: return 'linux';
+      default: return 'unknown';
     }
   }
   
   // Initialize and sync FCM token
   static Future<void> initializeAndSyncToken() async {
     try {
+      // Listen for token refreshes
+      PushNotificationService.onTokenRefresh((token) {
+        updateFCMToken(token);
+      });
+
       // Get current FCM token
       final token = await PushNotificationService.getFCMToken();
       
       if (token != null) {
         print('Current FCM Token: $token');
-        
-        // Update token on backend
         await updateFCMToken(token);
-        
-        // Subscribe to relevant topics
         await _subscribeToTopics();
-      } else {
-        print('Failed to get FCM token');
       }
     } catch (e) {
       print('Error initializing FCM token sync: $e');

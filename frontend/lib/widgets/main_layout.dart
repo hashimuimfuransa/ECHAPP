@@ -13,6 +13,8 @@ import 'package:excellencecoachinghub/presentation/providers/admin_course_provid
 import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 import 'package:excellencecoachinghub/models/user.dart' as app_models;
 
+import 'package:excellencecoachinghub/services/push_notification_service.dart';
+
 class MainLayout extends ConsumerWidget {
   final Widget child;
   final String? title;
@@ -25,6 +27,9 @@ class MainLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Set context for notifications navigation
+    PushNotificationService.setContext(context);
+    
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final app_models.User? user = ref.watch(authProvider).user;
     final String currentRoute = GoRouterState.of(context).uri.path;
