@@ -10,9 +10,13 @@ require('./src/config/firebase');
 
 // Initialize Course Expiration Service
 const CourseExpirationService = require('./src/services/course-expiration.service');
+const NotificationSchedulerService = require('./src/services/notification-scheduler.service');
 
 // Schedule course expiration checks (every 60 minutes)
 CourseExpirationService.scheduleExpirationChecks(60);
+
+// Schedule notification checks (every 24 hours)
+NotificationSchedulerService.schedule(24);
 
 // Load environment variables
 dotenv.config();

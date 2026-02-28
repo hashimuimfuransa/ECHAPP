@@ -233,9 +233,33 @@ class NotificationController {
     }
   }
 
-  // Send push notification via FCM
-  async sendPushNotification(userId, title, message, data = {}) {
+  // Check if user has exceeded daily notification limit (e.g. 2 per day)
+  async checkDailyLimit(userId) {
     try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const count = await Notification.countDocuments({
+        userId,
+        createdAt: { $gte: oneDayAgo }
+      });
+      return count < 2; // Limit to 2 per 24 hours
+    } catch (error) {
+      console.error('Error checking daily limit:', error);
+      return true; // Default to true on error to allow notification
+    }
+  }
+
+  // Send push notification via FCM
+  async sendPushNotification(userId, title, message, data = {}, bypassLimit = false) {
+    try {
+      // Check daily limit unless bypassed (important system notifications like payments bypass the limit)
+      if (!bypassLimit) {
+        const canSend = await this.checkDailyLimit(userId);
+        if (!canSend) {
+          console.log(`Daily notification limit reached for user ${userId}. Skipping.`);
+          return;
+        }
+      }
+
       // Professional way: Get user's FCM token from Firestore
       const db = admin.firestore();
       
@@ -337,7 +361,7 @@ NotificationController.createPaymentNotification = async (userId, amount, course
     });
     
     // Send push notification
-    await notificationController.sendPushNotification(userId, 'Payment Received', `RWF ${amount.toLocaleString()} has been successfully processed`, data);
+    await notificationController.sendPushNotification(userId, 'Payment Received', `RWF ${amount.toLocaleString()} has been successfully processed`, data, true);
     
     return notification;
   } catch (error) {
@@ -358,7 +382,7 @@ NotificationController.createCourseEnrollmentNotification = async (userId, cours
     });
     
     // Send push notification
-    await notificationController.sendPushNotification(userId, 'Course Enrollment', `You have been successfully enrolled in "${courseTitle}"`, data);
+    await notificationController.sendPushNotification(userId, 'Course Enrollment', `You have been successfully enrolled in "${courseTitle}"`, data, true);
     
     return notification;
   } catch (error) {
@@ -384,7 +408,7 @@ NotificationController.createExamResultNotification = async (userId, examTitle, 
     });
     
     // Send push notification
-    await notificationController.sendPushNotification(userId, 'Exam Result Available', message, data);
+    await notificationController.sendPushNotification(userId, 'Exam Result Available', message, data, true);
     
     return notification;
   } catch (error) {
@@ -405,12 +429,71 @@ NotificationController.createAchievementNotification = async (userId, achievemen
     });
     
     // Send push notification
-    await notificationController.sendPushNotification(userId, 'New Achievement Unlocked!', `Congratulations on achieving: ${achievementTitle}`, data);
+    await notificationController.sendPushNotification(userId, 'New Achievement Unlocked!', `Congratulations on achieving: ${achievementTitle}`, data, true);
     
     return notification;
   } catch (error) {
     console.error('Error creating achievement notification:', error);
     throw error;
+  }
+};
+
+// Reminder & Progress Notifications
+NotificationController.createInactivityReminder = async (userId, courseTitle, courseId) => {
+  try {
+    const data = { courseId, route: `/learning/${courseId}` };
+    const title = 'Continue Learning! 🧠';
+    const message = `We haven't seen you in a while. Pick up where you left off in "${courseTitle}"!`;
+    
+    const notification = await Notification.createNotification({
+      userId,
+      title,
+      message,
+      type: 'reminder',
+      data
+    });
+    
+    await notificationController.sendPushNotification(userId, title, message, data, false);
+    return notification;
+  } catch (error) {
+    console.error('Error creating inactivity reminder:', error);
+  }
+};
+
+NotificationController.createWeeklyProgressSummary = async (userId, lessonsCount) => {
+  try {
+    const title = 'Weekly Progress Summary 📈';
+    const message = `You completed ${lessonsCount} lessons this week. Great job! Keep it up!`;
+    
+    const notification = await Notification.createNotification({
+      userId,
+      title,
+      message,
+      type: 'info',
+      data: { lessonsCount }
+    });
+    
+    await notificationController.sendPushNotification(userId, title, message, {}, false);
+    return notification;
+  } catch (error) {
+    console.error('Error creating weekly summary:', error);
+  }
+};
+
+NotificationController.createPromotionNotification = async (userId, promoTitle, promoMessage, promoData = {}) => {
+  try {
+    const notification = await Notification.createNotification({
+      userId,
+      title: promoTitle,
+      message: promoMessage,
+      type: 'promotion',
+      data: promoData
+    });
+    
+    await notificationController.sendPushNotification(userId, promoTitle, promoMessage, promoData, false);
+    return notification;
+  } catch (error) {
+    console.error('Error creating promotion notification:', error);
   }
 };
 

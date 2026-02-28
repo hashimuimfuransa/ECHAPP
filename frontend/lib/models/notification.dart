@@ -2,7 +2,7 @@ class Notification {
   final String id;
   final String title;
   final String message;
-  final String type; // 'info', 'success', 'warning', 'error', 'achievement', 'payment', 'course', 'exam'
+  final String type; // 'info', 'success', 'warning', 'error', 'achievement', 'payment', 'course', 'exam', 'reminder', 'promotion'
   final DateTime timestamp;
   final bool isRead;
   final Map<String, dynamic>? data;

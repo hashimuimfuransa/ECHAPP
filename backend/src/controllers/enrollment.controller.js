@@ -168,12 +168,26 @@ const updateEnrollmentProgress = async (req, res) => {
       if (enrollment.progress === 100) {
         enrollment.completionStatus = 'completed';
         enrollment.certificateEligible = true;
+
+        // Send Achievement Notification
+        try {
+          const NotificationController = notificationController.constructor;
+          await NotificationController.createAchievementNotification(
+            userId, 
+            `Completed Course: ${enrollment.courseId.title}`
+          );
+        } catch (notificationError) {
+          console.error('Error sending achievement notification:', notificationError);
+        }
       } else if (enrollment.progress > 0) {
         enrollment.completionStatus = 'in-progress';
       }
     }
 
     await enrollment.save();
+
+    // Update last active status for user
+    await User.findByIdAndUpdate(userId, { lastActive: new Date() });
     
     sendSuccess(res, enrollment, 'Enrollment progress updated successfully');
   } catch (error) {

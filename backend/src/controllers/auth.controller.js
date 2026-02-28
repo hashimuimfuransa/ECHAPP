@@ -80,13 +80,15 @@ const login = async (req, res) => {
         if (!user.deviceId) {
           // First login - bind account to device
           user.deviceId = deviceId;
-          await user.save();
           console.log(`Device bound to user ${user.email}: ${deviceId}`);
         } else if (user.deviceId !== deviceId) {
           // Different device - reject login
           return sendError(res, 'This account is already registered on another device.', 401);
         }
       }
+
+      user.lastActive = new Date();
+      await user.save();
 
       const token = generateToken({ id: user._id });
       const refreshToken = generateRefreshToken({ id: user._id });
@@ -325,6 +327,10 @@ const firebaseLogin = async (req, res) => {
       } catch (firebaseError) {
         console.log('Could not update user display name from Firebase Auth');
       }
+
+      // Update last active status
+      user.lastActive = new Date();
+      await user.save();
     }
     
     // Generate our own JWT token for subsequent requests
