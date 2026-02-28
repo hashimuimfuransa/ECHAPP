@@ -133,7 +133,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                       gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
                       boxShadow: [BoxShadow(color: const Color(0xFF00C896).withOpacity(0.3), blurRadius: 30, spreadRadius: 5)],
                     ),
-                    child: const Icon(Icons.person_add_rounded, size: 50, color: Colors.white),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 50),
                   const Text('Join Us', style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: 0.5)),
@@ -197,7 +205,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                             if (value == null || value.isEmpty) return 'Confirm password';
                             if (value != _passwordController.text) return 'Passwords don\'t match';
                             return null;
-                          }),
+                          }, TextInputAction.done, _register),
                           const SizedBox(height: 28),
                           _buildSignUpButton(authState),
                           const SizedBox(height: 16),
@@ -233,7 +241,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                 children: [
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
                   const SizedBox(height: 20),
-                  Container(width: 70, height: 70, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)])), child: const Icon(Icons.person_add_rounded, size: 35, color: Colors.white)),
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 8),
@@ -252,7 +278,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                         const SizedBox(height: 14),
                         _buildPasswordField(_passwordController, 'Password', (value) { if (value == null || value.isEmpty) return 'Required'; if (value.length < 6) return 'Min 6 chars'; return null; }),
                         const SizedBox(height: 14),
-                        _buildPasswordField(_confirmController, 'Confirm', (value) { if (value == null || value.isEmpty) return 'Required'; if (value != _passwordController.text) return 'Mismatch'; return null; }),
+                        _buildPasswordField(_confirmController, 'Confirm', (value) { if (value == null || value.isEmpty) return 'Required'; if (value != _passwordController.text) return 'Mismatch'; return null; }, TextInputAction.done, _register),
                         const SizedBox(height: 20),
                         _buildSignUpButton(authState),
                         const SizedBox(height: 12),
@@ -271,11 +297,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, [TextInputType? keyboardType, bool required = true]) {
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, [TextInputType? keyboardType, bool required = true, TextInputAction textInputAction = TextInputAction.next]) {
     return TextFormField(
       controller: controller,
       style: const TextStyle(color: Colors.white, fontSize: 15),
       keyboardType: keyboardType,
+      textInputAction: textInputAction,
       decoration: InputDecoration(
         hintText: label,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
@@ -298,12 +325,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     );
   }
 
-  Widget _buildPasswordField(TextEditingController controller, String label, String? Function(String?) validator) {
+  Widget _buildPasswordField(TextEditingController controller, String label, String? Function(String?) validator, [TextInputAction textInputAction = TextInputAction.next, VoidCallback? onSubmitted]) {
     bool obscure = label.contains('Confirm') ? _obscureConfirm : _obscurePassword;
     return TextFormField(
       controller: controller,
       style: const TextStyle(color: Colors.white, fontSize: 15),
       obscureText: obscure,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted() : null,
       decoration: InputDecoration(
         hintText: label,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),

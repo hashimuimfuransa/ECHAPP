@@ -45,54 +45,55 @@ class AppRouter {
   GoRouter get router => GoRouter(
         initialLocation: '/',
         routes: [
-          // Splash Screen
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const SplashScreen(),
-          ),
-          
-          // Landing Page (Web Only)
-          GoRoute(
-            path: '/landing',
-            builder: (context, state) => const LandingScreen(),
-          ),
-          
           // Authentication Routes
-          GoRoute(
-            path: '/auth-selection',
-            builder: (context, state) => const AuthSelectionScreen(),
-          ),
-          GoRoute(
-            path: '/email-auth-option',
-            builder: (context, state) => const EmailAuthOptionScreen(),
-          ),
-          GoRoute(
-            path: '/login',
-            builder: (context, state) => const LoginScreen(),
-          ),
-          GoRoute(
-            path: '/register',
-            builder: (context, state) => const RegisterScreen(),
-          ),
-          GoRoute(
-            path: '/forgot-password',
-            builder: (context, state) => const ForgotPasswordScreen(),
-          ),
-          GoRoute(
-            path: '/enter-reset-code',
-            builder: (context, state) => const EnterResetCodeScreen(),
-          ),
-          // Reset Password Route
-          GoRoute(
-            path: '/reset-password',
-            builder: (context, state) {
-              final mode = state.uri.queryParameters['mode'];
-              final oobCode = state.uri.queryParameters['oobCode'];
-              
-              // Only return oobCode if mode is resetPassword
-              final resetCode = (mode == 'resetPassword' || mode == 'verifyEmail') ? oobCode : oobCode;
-              return ResetPasswordScreen(oobCode: resetCode);
-            },
+          ShellRoute(
+            builder: (context, state, child) => MainLayout(child: child),
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const SplashScreen(),
+              ),
+              GoRoute(
+                path: '/landing',
+                builder: (context, state) => const LandingScreen(),
+              ),
+              GoRoute(
+                path: '/auth-selection',
+                builder: (context, state) => const AuthSelectionScreen(),
+              ),
+              GoRoute(
+                path: '/email-auth-option',
+                builder: (context, state) => const EmailAuthOptionScreen(),
+              ),
+              GoRoute(
+                path: '/login',
+                builder: (context, state) => const LoginScreen(),
+              ),
+              GoRoute(
+                path: '/register',
+                builder: (context, state) => const RegisterScreen(),
+              ),
+              GoRoute(
+                path: '/forgot-password',
+                builder: (context, state) => const ForgotPasswordScreen(),
+              ),
+              GoRoute(
+                path: '/enter-reset-code',
+                builder: (context, state) => const EnterResetCodeScreen(),
+              ),
+              // Reset Password Route
+              GoRoute(
+                path: '/reset-password',
+                builder: (context, state) {
+                  final mode = state.uri.queryParameters['mode'];
+                  final oobCode = state.uri.queryParameters['oobCode'];
+                  
+                  // Only return oobCode if mode is resetPassword
+                  final resetCode = (mode == 'resetPassword' || mode == 'verifyEmail') ? oobCode : oobCode;
+                  return ResetPasswordScreen(oobCode: resetCode);
+                },
+              ),
+            ],
           ),
 
           // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication

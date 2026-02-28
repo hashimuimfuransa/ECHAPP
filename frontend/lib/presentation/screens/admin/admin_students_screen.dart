@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 
-class AdminStudentsScreen extends StatefulWidget {
+class AdminStudentsScreen extends ConsumerStatefulWidget {
   const AdminStudentsScreen({super.key});
 
   @override
-  State<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
+  ConsumerState<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
 }
 
-class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
+class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
   final AdminService _adminService = AdminService();
   bool _isLoading = false;
   List<User> _students = [];
@@ -30,6 +35,31 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     _loadStudents();
   }
 
+  void _handleGlobalRefresh() {
+    // Refresh all key providers
+    // NOTE: We DO NOT invalidate authProvider here because it causes the user to be logged out.
+    ref.invalidate(coursesProvider);
+    ref.invalidate(popularCoursesProvider);
+    ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(backendCategoriesProvider);
+    ref.invalidate(notificationCountProvider);
+    ref.invalidate(adminDashboardProvider);
+    
+    // Also refresh local data
+    _loadStudents();
+    
+    // Show a small feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Application refreshed'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 200,
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
   Future<void> _loadStudents({String? searchQuery, String? source}) async {
     setState(() {
       _isLoading = true;
@@ -43,12 +73,14 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         source: source ?? 'mongodb',
       );
       
+      if (!mounted) return;
       setState(() {
         _students = studentsData.students;
         _totalPages = studentsData.totalPages;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -64,6 +96,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
     try {
       final studentDetail = await _adminService.getStudentDetail(studentId);
+      if (!mounted) return;
       setState(() {
         _loadingStudentDetail = false;
       });
@@ -81,6 +114,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _loadingStudentDetail = false;
@@ -101,6 +135,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
     try {
       final studentDetail = await _adminService.getStudentDetail(studentId);
+      if (!mounted) return;
       setState(() {
         _loadingStudentDetail = false;
       });
@@ -117,6 +152,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _loadingStudentDetail = false;
@@ -137,6 +173,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
     try {
       final userDeviceInfo = await _adminService.getUserDeviceInfo(userId);
+      if (!mounted) return;
       setState(() {
         _loadingStudentDetail = false;
       });
@@ -165,6 +202,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _loadingStudentDetail = false;
@@ -309,7 +347,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
 
     try {
       final result = await _adminService.deleteStudent(student.id);
-      
+      if (!mounted) return;
       setState(() {
         _loadingStudentDetail = false;
         // Remove the deleted student from the list
@@ -328,6 +366,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         await _loadStudents(searchQuery: _searchController.text);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _loadingStudentDetail = false;
@@ -378,8 +417,14 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _handleGlobalRefresh,
+            tooltip: 'Refresh App',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _loadStudents(),
+            tooltip: 'Refresh Students',
           ),
           IconButton(
             icon: const Icon(Icons.analytics),

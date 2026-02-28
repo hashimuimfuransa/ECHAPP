@@ -73,7 +73,7 @@ class _LogoBadge extends StatelessWidget {
         ),
         child: ClipOval(
           child: Image.asset(
-            'assets/logo.webp',
+            'assets/logo.png',
             fit: BoxFit.cover,
             errorBuilder: (c, e, s) =>
                 Container(

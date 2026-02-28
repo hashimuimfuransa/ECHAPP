@@ -64,10 +64,16 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
                                 width: 1,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.code,
-                              size: 65,
-                              color: Colors.white,
+                            child: ClipOval(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Image.asset(
+                                  'assets/logo.png',
+                                  fit: BoxFit.contain,
+                                  width: 65,
+                                  height: 65,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 25),

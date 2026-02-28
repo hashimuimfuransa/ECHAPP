@@ -222,10 +222,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 50,
-                      color: Colors.white,
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 50),
@@ -458,10 +462,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         colors: [Color(0xFF00C896), Color(0xFF009E76)],
                       ),
                     ),
-                    child: const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 40,
-                      color: Colors.white,
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -586,6 +594,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+      textInputAction: TextInputAction.next,
       keyboardType: TextInputType.emailAddress,
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -635,6 +644,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+      textInputAction: TextInputAction.done,
+      onFieldSubmitted: (_) => _login(),
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'Please enter your password';

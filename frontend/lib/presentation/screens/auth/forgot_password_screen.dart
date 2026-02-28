@@ -108,7 +108,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                       gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
                       boxShadow: [BoxShadow(color: const Color(0xFF00C896).withOpacity(0.3), blurRadius: 30, spreadRadius: 5)],
                     ),
-                    child: const Icon(Icons.mail_outline_rounded, size: 50, color: Colors.white),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 50),
                   const Text('Password Help', style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: 0.5)),
@@ -183,6 +191,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF00C896), width: 2)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _sendReset(),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Email required';
                   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';
@@ -285,7 +295,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                 children: [
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
                   const SizedBox(height: 30),
-                  Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)])), child: const Icon(Icons.mail_outline_rounded, size: 40, color: Colors.white)),
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 30),
                   _emailSent ? _buildMobileSuccessMessage() : _buildMobileResetForm(authState),
                 ],
@@ -324,6 +352,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00C896), width: 2)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _sendReset(),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Email required';
                   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';

@@ -7,6 +7,9 @@ import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart'
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 import 'package:excellencecoachinghub/models/user.dart' as app_models;
 
@@ -31,6 +34,9 @@ class MainLayout extends ConsumerWidget {
                              currentRoute == '/auth-selection' ||
                              currentRoute == '/forgot-password' ||
                              currentRoute == '/email-auth-option' ||
+                             currentRoute == '/enter-reset-code' ||
+                             currentRoute == '/reset-password' ||
+                             currentRoute == '/landing' ||
                              currentRoute == '/';
     
     // Map routes to keys for ResponsiveNavigationDrawer
@@ -58,7 +64,7 @@ class MainLayout extends ConsumerWidget {
             Expanded(
               child: Row(
                 children: [
-                  ResponsiveNavigationDrawer(currentPage: currentPage),
+                  if (!isAuthRoute) ResponsiveNavigationDrawer(currentPage: currentPage),
                   Expanded(
                     child: Column(
                       children: [
@@ -94,6 +100,11 @@ class MainLayout extends ConsumerWidget {
               : null,
           title: Text(title ?? _getPageTitle(currentPage)),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => _handleGlobalRefresh(ref, context),
+              tooltip: 'Refresh App',
+            ),
             if (user != null) _buildNotificationBadge(ref),
             const SizedBox(width: 8),
           ],
@@ -106,6 +117,30 @@ class MainLayout extends ConsumerWidget {
         bottomNavigationBar: (isAuthRoute || user == null) ? null : _buildBottomNavBar(context, currentRoute),
       );
     }
+  }
+
+  void _handleGlobalRefresh(WidgetRef ref, BuildContext context) {
+    // Refresh all key providers
+    // NOTE: We DO NOT invalidate authProvider here because it causes the user to be logged out.
+    // Instead, we just refresh the data-related providers.
+    ref.invalidate(coursesProvider);
+    ref.invalidate(popularCoursesProvider);
+    ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(backendCategoriesProvider);
+    ref.invalidate(notificationCountProvider);
+    ref.invalidate(adminDashboardProvider);
+    ref.invalidate(adminCourseProvider);
+    
+    // Show a small feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Application refreshed'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 200,
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
   }
 
   String _getPageTitle(String page) {
@@ -179,6 +214,16 @@ class MainLayout extends ConsumerWidget {
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
             ),
+          ),
+          const SizedBox(width: 16),
+          // Refresh App Button
+          IconButton(
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: AppTheme.getTextColor(context).withOpacity(0.7),
+            ),
+            onPressed: () => _handleGlobalRefresh(ref, context),
+            tooltip: 'Refresh App',
           ),
           const Spacer(),
           _buildNotificationBadge(ref),

@@ -150,10 +150,14 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.mail_outline_rounded,
-                      size: 60,
-                      color: Colors.white,
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 50),
@@ -371,10 +375,14 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                         colors: [Color(0xFF00C896), Color(0xFF009E76)],
                       ),
                     ),
-                    child: const Icon(
-                      Icons.mail_outline_rounded,
-                      size: 40,
-                      color: Colors.white,
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(15),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),

@@ -275,10 +275,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                             width: 1,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.lock_reset,
-                          size: 65,
-                          color: Colors.white,
+                        child: ClipOval(
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Image.asset(
+                              'assets/logo.png',
+                              fit: BoxFit.contain,
+                              width: 65,
+                              height: 65,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 25),
@@ -316,6 +322,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
                               labelText: 'New Password',
                               prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
@@ -365,6 +372,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _resetPassword(),
                             decoration: InputDecoration(
                               labelText: 'Confirm New Password',
                               prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),

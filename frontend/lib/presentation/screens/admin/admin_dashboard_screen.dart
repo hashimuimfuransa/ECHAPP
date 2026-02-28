@@ -8,6 +8,8 @@ import 'package:excellencecoachinghub/presentation/providers/notification_provid
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -53,6 +55,36 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
   }
 
+  void _handleGlobalRefresh() {
+    // Refresh all key providers
+    // NOTE: We DO NOT invalidate authProvider here because it causes the user to be logged out.
+    ref.invalidate(coursesProvider);
+    ref.invalidate(popularCoursesProvider);
+    ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(backendCategoriesProvider);
+    ref.invalidate(notificationCountProvider);
+    ref.invalidate(adminDashboardProvider);
+    ref.invalidate(adminCourseProvider);
+    
+    // Explicitly load dashboard data after invalidation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(adminDashboardProvider.notifier).loadDashboardData();
+      }
+    });
+    
+    // Show a small feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Application refreshed'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 200,
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
   Future<void> _triggerManualSync() async {
     if (_isSyncing) return;
     
@@ -65,6 +97,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       final adminService = AdminService();
       final result = await adminService.manualSyncUsers();
       
+      if (!mounted) return;
       setState(() {
         _syncMessage = result['message'] ?? 'Sync completed successfully';
         _isSyncing = false;
@@ -85,6 +118,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _syncMessage = 'Sync failed: ${e.toString()}';
         _isSyncing = false;
@@ -173,8 +207,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             onPressed: _isSyncing ? null : _triggerManualSync,
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(adminDashboardProvider.notifier).loadDashboardData(),
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _handleGlobalRefresh,
+            tooltip: 'Refresh App',
           ),
           Consumer(
             builder: (context, ref, child) {
@@ -550,6 +585,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 : const Icon(Icons.sync_rounded, size: 20),
             onPressed: _isSyncing ? null : _triggerManualSync,
             tooltip: 'Sync Users',
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            onPressed: _handleGlobalRefresh,
+            tooltip: 'Refresh App',
           ),
           const SizedBox(width: 8),
           IconButton(

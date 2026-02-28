@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 
 class AdminCoursesScreen extends ConsumerStatefulWidget {
@@ -23,6 +27,36 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(adminCourseProvider.notifier).loadCourses();
     });
+  }
+
+  void _handleGlobalRefresh() {
+    // Refresh all key providers
+    // NOTE: We DO NOT invalidate authProvider here because it causes the user to be logged out.
+    ref.invalidate(coursesProvider);
+    ref.invalidate(popularCoursesProvider);
+    ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(backendCategoriesProvider);
+    ref.invalidate(notificationCountProvider);
+    ref.invalidate(adminCourseProvider);
+    ref.invalidate(adminDashboardProvider);
+    
+    // Explicitly reload courses after invalidation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(adminCourseProvider.notifier).loadCourses();
+      }
+    });
+    
+    // Show a small feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Application refreshed'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 200,
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
   }
 
   @override
@@ -52,10 +86,17 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push('/admin/courses/create'),
+            tooltip: 'Add Course',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _handleGlobalRefresh,
+            tooltip: 'Refresh App',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(adminCourseProvider.notifier).loadCourses(),
+            tooltip: 'Refresh Courses',
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/widgets/analytics_charts.dart';
 
-class AdminAnalyticsScreen extends StatefulWidget {
+class AdminAnalyticsScreen extends ConsumerStatefulWidget {
   const AdminAnalyticsScreen({super.key});
 
   @override
-  State<AdminAnalyticsScreen> createState() => _AdminAnalyticsScreenState();
+  ConsumerState<AdminAnalyticsScreen> createState() => _AdminAnalyticsScreenState();
 }
 
-class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
+class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
   final AdminService _adminService = AdminService();
   bool _isLoading = false;
   StudentAnalytics? _analytics;
@@ -24,6 +29,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   Future<void> _loadAnalytics() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -31,16 +37,43 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
     try {
       final analytics = await _adminService.getStudentAnalytics();
+      if (!mounted) return;
       setState(() {
         _analytics = analytics;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
       });
     }
+  }
+
+  void _handleGlobalRefresh() {
+    // Refresh all key providers
+    // NOTE: We DO NOT invalidate authProvider here because it causes the user to be logged out.
+    ref.invalidate(coursesProvider);
+    ref.invalidate(popularCoursesProvider);
+    ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(backendCategoriesProvider);
+    ref.invalidate(notificationCountProvider);
+    ref.invalidate(adminDashboardProvider);
+    
+    // Also refresh local data
+    _loadAnalytics();
+    
+    // Show a small feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Application refreshed'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 200,
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
   }
 
   @override
@@ -65,8 +98,14 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _handleGlobalRefresh,
+            tooltip: 'Refresh App',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadAnalytics,
+            tooltip: 'Refresh Analytics',
           ),
         ],
       ),
