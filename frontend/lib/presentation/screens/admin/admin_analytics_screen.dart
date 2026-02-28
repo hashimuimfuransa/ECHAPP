@@ -47,13 +47,22 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: (context.canPop() || GoRouterState.of(context).uri.path != '/admin') 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/admin');
+                }
+              },
+              tooltip: 'Back',
+            ) 
+          : null,
         title: const Text('Analytics Dashboard'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

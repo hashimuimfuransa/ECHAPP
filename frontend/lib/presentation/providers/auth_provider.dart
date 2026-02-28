@@ -205,6 +205,46 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> updatePassword(String currentPassword, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await FirebaseAuthService.updatePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      state = state.copyWith(isLoading: false, error: 'Password updated successfully!');
+    } catch (e) {
+      debugPrint('AuthProvider Update Password Error: $e');
+      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount(String currentPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final token = await _storageManager.getAccessToken();
+      if (token == null) throw Exception('No access token found');
+
+      // Step 1: Delete from backend
+      await _authRepository.deleteAccount(token);
+      debugPrint('AuthProvider: Backend account deletion successful');
+
+      // Step 2: Delete from Firebase
+      await FirebaseAuthService.deleteAccount(currentPassword: currentPassword);
+      debugPrint('AuthProvider: Firebase account deletion successful');
+
+      // Step 3: Clear local storage and state
+      await _storageManager.clearAll();
+      state = AuthState();
+      debugPrint('AuthProvider: Account deletion completed successfully');
+    } catch (e) {
+      debugPrint('AuthProvider Delete Account Error: $e');
+      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     debugPrint('AuthProvider: Starting logout process');
     state = state.copyWith(isLoading: true, error: null);

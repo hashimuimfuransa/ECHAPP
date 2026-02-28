@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, refreshToken, getProfile, logout, googleSignIn, firebaseLogin, forgotPassword, resetPassword, verifyResetToken, resetUserDevice } = require('../controllers/auth.controller');
+const { register, login, refreshToken, getProfile, logout, googleSignIn, firebaseLogin, forgotPassword, resetPassword, verifyResetToken, resetUserDevice, deleteAccount } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { adminOnly } = require('../middleware/admin.middleware');
 
@@ -19,6 +19,7 @@ router.post('/firebase-login', firebaseLogin);
 // Protected routes
 router.get('/profile', protect, getProfile);
 router.post('/logout', protect, logout);
+router.delete('/delete-account', protect, deleteAccount);
 
 // Admin routes for device management
 router.put('/admin/users/:userId/device-reset', protect, adminOnly, resetUserDevice);

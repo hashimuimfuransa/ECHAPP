@@ -104,7 +104,7 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 10),

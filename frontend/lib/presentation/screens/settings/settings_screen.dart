@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 // Providers for settings
@@ -63,216 +64,156 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = ref.watch(darkModeProvider);
     final notificationsEnabled = ref.watch(notificationsProvider);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final padding = ResponsiveBreakpoints.getPadding(context);
     // Watch theme mode to trigger rebuilds
     ref.watch(themeModeProvider);
 
     return Scaffold(
-      body: Container(
-        color: AppTheme.getBackgroundColor(context),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(context),
-              
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  physics: const BouncingScrollPhysics(), // Better scroll physics
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Device Security Policy
-                      const _SettingsDeviceBindingPolicy(),
-                      const SizedBox(height: 25),
-                      
-                      // Account Settings
-                      _buildSection(
+      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = isDesktop ? 800.0 : double.infinity;
+            final horizontalPadding = isDesktop ? (constraints.maxWidth - maxWidth) / 2 : 0.0;
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                padding.left + horizontalPadding, 
+                padding.top, 
+                padding.right + horizontalPadding, 
+                padding.bottom * 1.5
+              ),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Device Security Policy
+                  const _SettingsDeviceBindingPolicy(),
+                  const SizedBox(height: 25),
+                  
+                  // Account Settings
+                  _buildSection(
+                    context,
+                    'Account Settings',
+                    [
+                      _buildSettingTile(
                         context,
-                        'Account Settings',
-                        [
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.person_outline,
-                            title: 'Profile Information',
-                            subtitle: 'Update your personal details',
-                            onTap: () => context.push('/profile'),
-                          ),
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.lock_outline,
-                            title: 'Password & Security',
-                            subtitle: 'Change password and security settings',
-                            onTap: () => _showPasswordChangeDialog(context),
-                          ),
-                          _buildNotificationTile(
-                            context,
-                            icon: Icons.notifications_outlined,
-                            title: 'Push Notifications',
-                            subtitle: 'Receive important updates and reminders',
-                            value: notificationsEnabled,
-                            onChanged: (value) {
-                              ref.read(notificationsProvider.notifier).state = value;
-                              _showSnackbar(context, 
-                                value ? 'Notifications enabled' : 'Notifications disabled');
-                            },
-                          ),
-                        ],
+                        icon: Icons.person_outline,
+                        title: 'Profile Information',
+                        subtitle: 'Update your personal details',
+                        onTap: () => context.push('/profile'),
                       ),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // Preferences
-                      _buildSection(
+                      _buildSettingTile(
                         context,
-                        'Preferences',
-                        [
-                          _buildLanguageTile(context),
-                          _buildThemeTile(
-                            context,
-                            icon: Icons.dark_mode_outlined,
-                            title: 'Dark Mode',
-                            subtitle: isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
-                            value: isDarkMode,
-                            onChanged: (value) {
-                              ref.read(darkModeProvider.notifier).state = value;
-                              ref.read(themeModeProvider.notifier).state = 
-                                value ? ThemeMode.dark : ThemeMode.light;
-                              _showSnackbar(context, 
-                                value ? 'Dark mode enabled' : 'Light mode enabled');
-                            },
-                          ),
-                        ],
+                        icon: Icons.lock_outline,
+                        title: 'Password & Security',
+                        subtitle: 'Change password and security settings',
+                        onTap: () => _showPasswordChangeDialog(context),
                       ),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // Support
-                      _buildSection(
+                      _buildNotificationTile(
                         context,
-                        'Support',
-                        [
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.help_outline,
-                            title: 'Help Center',
-                            subtitle: 'Get help with using the app',
-                            onTap: () => context.push('/help'),
-                          ),
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.feedback_outlined,
-                            title: 'Send Feedback',
-                            subtitle: 'Share your thoughts with us',
-                            onTap: () => _showFeedbackDialog(context),
-                          ),
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.info_outline,
-                            title: 'About',
-                            subtitle: 'App version and information',
-                            onTap: () => _showAboutDialog(context),
-                          ),
-                        ],
+                        icon: Icons.notifications_outlined,
+                        title: 'Push Notifications',
+                        subtitle: 'Receive important updates and reminders',
+                        value: notificationsEnabled,
+                        onChanged: (value) {
+                          ref.read(notificationsProvider.notifier).state = value;
+                          _showSnackbar(context, 
+                            value ? 'Notifications enabled' : 'Notifications disabled');
+                        },
                       ),
-                      
-                      const SizedBox(height: 25),
-                      
-                      // Legal
-                      _buildSection(
-                        context,
-                        'Legal',
-                        [
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.privacy_tip_outlined,
-                            title: 'Privacy Policy',
-                            subtitle: 'Read our privacy policy',
-                            onTap: () => context.push('/privacy'),
-                          ),
-                          _buildSettingTile(
-                            context,
-                            icon: Icons.description_outlined,
-                            title: 'Terms of Service',
-                            subtitle: 'Read our terms and conditions',
-                            onTap: () => _showTermsDialog(context),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 30),
-                      
-                      // Danger Zone
-                      _buildDangerZone(context),
                     ],
                   ),
-                ),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Preferences
+                  _buildSection(
+                    context,
+                    'Preferences',
+                    [
+                      _buildThemeTile(
+                        context,
+                        icon: Icons.dark_mode_outlined,
+                        title: 'Dark Mode',
+                        subtitle: isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
+                        value: isDarkMode,
+                        onChanged: (value) {
+                          ref.read(darkModeProvider.notifier).state = value;
+                          ref.read(themeModeProvider.notifier).state = 
+                            value ? ThemeMode.dark : ThemeMode.light;
+                          _showSnackbar(context, 
+                            value ? 'Dark mode enabled' : 'Light mode enabled');
+                        },
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Support
+                  _buildSection(
+                    context,
+                    'Support',
+                    [
+                      _buildSettingTile(
+                        context,
+                        icon: Icons.help_outline,
+                        title: 'Help Center',
+                        subtitle: 'Get help with using the app',
+                        onTap: () => context.push('/help'),
+                      ),
+                      _buildSettingTile(
+                        context,
+                        icon: Icons.feedback_outlined,
+                        title: 'Send Feedback',
+                        subtitle: 'Share your thoughts with us',
+                        onTap: () => _showFeedbackDialog(context),
+                      ),
+                      _buildSettingTile(
+                        context,
+                        icon: Icons.info_outline,
+                        title: 'About',
+                        subtitle: 'App version and information',
+                        onTap: () => _showAboutDialog(context),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 25),
+                  
+                  // Legal
+                  _buildSection(
+                    context,
+                    'Legal',
+                    [
+                      _buildSettingTile(
+                        context,
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy Policy',
+                        subtitle: 'Read our privacy policy',
+                        onTap: () => context.push('/privacy'),
+                      ),
+                      _buildSettingTile(
+                        context,
+                        icon: Icons.description_outlined,
+                        title: 'Terms of Service',
+                        subtitle: 'Read our terms and conditions',
+                        onTap: () => context.push('/terms'),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Danger Zone
+                  _buildDangerZone(context),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: isDarkMode
-          ? LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF1E1E1E),
-                const Color(0xFF2A2A2A),
-              ],
-            )
-          : LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryGreen,
-                AppTheme.primaryGreen.withOpacity(0.85),
-              ],
-            ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/dashboard');
-              }
-            },
-            icon: Icon(Icons.arrow_back, 
-              color: isDarkMode ? Colors.white : Colors.white,
-              size: 26),
-            splashRadius: 24,
-          ),
-          Text(
-            'Settings',
-            style: TextStyle(
-              color: isDarkMode ? Colors.white : Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(width: 40),
-        ],
       ),
     );
   }
@@ -549,59 +490,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLanguageTile(BuildContext context) {
-    return InkWell(
-      onTap: () => _showLanguagePicker(context),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.greyColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.language_outlined, 
-                color: AppTheme.greyColor, 
-                size: 24),
-            ),
-            const SizedBox(width: 15),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Language',
-                    style: TextStyle(
-                      color: AppTheme.blackColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'English (US)',
-                    style: TextStyle(
-                      color: AppTheme.greyColor,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: AppTheme.greyColor,
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildDangerZone(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -711,195 +599,183 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmController = TextEditingController();
+    bool isUpdating = false;
+    String? localError;
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF1E1E1E) 
-            : AppTheme.whiteColor,
-          title: Text(
-            'Change Password',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor),
-          ),
-          content: SizedBox(
-            height: 300, // Fixed height to prevent overflow
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: oldPasswordController,
-                  obscureText: true,
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
-                      ? AppTheme.whiteColor 
-                      : AppTheme.blackColor),
-                  decoration: InputDecoration(
-                    labelText: 'Current Password',
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                          ? AppTheme.white60 
-                          : AppTheme.greyColor.withOpacity(0.5)),
-                    ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryGreen),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  controller: newPasswordController,
-                  obscureText: true,
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
-                      ? AppTheme.whiteColor 
-                      : AppTheme.blackColor),
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                          ? AppTheme.white60 
-                          : AppTheme.greyColor.withOpacity(0.5)),
-                    ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryGreen),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  controller: confirmController,
-                  obscureText: true,
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark 
-                      ? AppTheme.whiteColor 
-                      : AppTheme.blackColor),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    labelStyle: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                          ? AppTheme.white60 
-                          : AppTheme.greyColor.withOpacity(0.5)),
-                    ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryGreen),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-              },
-              child: Text('Cancel', 
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.white70 
-                    : AppTheme.greyColor)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (newPasswordController.text == confirmController.text && 
-                    newPasswordController.text.length >= 6) {
-                  if (context.canPop()) context.pop();
-                  _showSnackbar(context, 'Password changed successfully');
-                } else {
-                  _showSnackbar(context, 'Passwords do not match or too short');
-                }
-              },
-              child: const Text('Change', 
-                style: TextStyle(color: AppTheme.primaryGreen)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showLanguagePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark 
-        ? const Color(0xFF1E1E1E) 
-        : AppTheme.whiteColor,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select Language',
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                ? const Color(0xFF1E1E1E) 
+                : AppTheme.whiteColor,
+              title: Text(
+                'Change Password',
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
                     ? AppTheme.whiteColor 
-                    : AppTheme.blackColor,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                    : AppTheme.blackColor),
+              ),
+              content: SizedBox(
+                height: localError != null ? 340 : 300,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (localError != null)
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            localError!,
+                            style: const TextStyle(color: Colors.red, fontSize: 13),
+                          ),
+                        ),
+                      TextField(
+                        controller: oldPasswordController,
+                        obscureText: true,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.whiteColor 
+                            : AppTheme.blackColor),
+                        decoration: InputDecoration(
+                          labelText: 'Current Password',
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                              ? AppTheme.white70 
+                              : AppTheme.greyColor),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.white60 
+                                : AppTheme.greyColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: newPasswordController,
+                        obscureText: true,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.whiteColor 
+                            : AppTheme.blackColor),
+                        decoration: InputDecoration(
+                          labelText: 'New Password',
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                              ? AppTheme.white70 
+                              : AppTheme.greyColor),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.white60 
+                                : AppTheme.greyColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: confirmController,
+                        obscureText: true,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.whiteColor 
+                            : AppTheme.blackColor),
+                        decoration: InputDecoration(
+                          labelText: 'Confirm New Password',
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                              ? AppTheme.white70 
+                              : AppTheme.greyColor),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.white60 
+                                : AppTheme.greyColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Flexible( // Wrap the content in Flexible to prevent overflow
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    _buildLanguageOption(context, 'English (US)', true),
-                    _buildLanguageOption(context, 'Spanish', false),
-                    _buildLanguageOption(context, 'French', false),
-                    _buildLanguageOption(context, 'German', false),
-                  ],
+              actions: [
+                TextButton(
+                  onPressed: isUpdating ? null : () {
+                    if (context.canPop()) context.pop();
+                  },
+                  child: Text('Cancel', 
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.white70 
+                        : AppTheme.greyColor)),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+                TextButton(
+                  onPressed: isUpdating ? null : () async {
+                    final current = oldPasswordController.text.trim();
+                    final newPass = newPasswordController.text.trim();
+                    final confirm = confirmController.text.trim();
 
-  Widget _buildLanguageOption(BuildContext context, String language, bool isSelected) {
-    return ListTile(
-      title: Text(
-        language,
-        style: TextStyle(
-          color: isSelected 
-            ? AppTheme.primaryGreen 
-            : (Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      trailing: isSelected 
-          ? const Icon(Icons.check, color: AppTheme.primaryGreen)
-          : null,
-      onTap: () {
-        if (!isSelected) {
-          if (context.canPop()) context.pop();
-          _showSnackbar(context, 'Language changed to $language');
-        }
+                    if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                      setDialogState(() => localError = 'Please fill in all fields');
+                      return;
+                    }
+
+                    if (newPass.length < 6) {
+                      setDialogState(() => localError = 'New password must be at least 6 characters');
+                      return;
+                    }
+
+                    if (newPass != confirm) {
+                      setDialogState(() => localError = 'Passwords do not match');
+                      return;
+                    }
+
+                    setDialogState(() {
+                      isUpdating = true;
+                      localError = null;
+                    });
+
+                    try {
+                      await ref.read(authProvider.notifier).updatePassword(current, newPass);
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        _showSnackbar(context, 'Password changed successfully');
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        setDialogState(() {
+                          isUpdating = false;
+                          localError = e.toString().replaceFirst('Exception: ', '');
+                        });
+                      }
+                    }
+                  },
+                  child: isUpdating 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Change', style: TextStyle(color: AppTheme.primaryGreen)),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
@@ -1028,43 +904,126 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    bool isDeleting = false;
+    String? localError;
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF1E1E1E) 
-            : AppTheme.whiteColor,
-          title: const Text('Delete Account', 
-            style: TextStyle(color: Colors.red)),
-          content: Text(
-            'Are you sure you want to permanently delete your account? '
-            'This action cannot be undone and all your data will be lost.',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.white70 
-                : AppTheme.greyColor),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-              },
-              child: Text('Cancel', 
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.white70 
-                    : AppTheme.greyColor)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-                _showSnackbar(context, 'Account scheduled for deletion');
-              },
-              child: const Text('Delete', 
-                style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                ? const Color(0xFF1E1E1E) 
+                : AppTheme.whiteColor,
+              title: const Text('Delete Account', 
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you sure you want to permanently delete your account? '
+                    'This action cannot be undone and all your data will be lost.',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.white70 
+                        : AppTheme.greyColor),
+                  ),
+                  const SizedBox(height: 20),
+                  if (localError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        localError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ),
+                  Text(
+                    'Please enter your password to confirm:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.whiteColor 
+                        : AppTheme.blackColor),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.whiteColor 
+                        : AppTheme.blackColor),
+                    decoration: InputDecoration(
+                      hintText: 'Current Password',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                          ? AppTheme.white60 
+                          : AppTheme.greyColor),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.white60 
+                            : AppTheme.greyColor.withOpacity(0.5)),
+                      ),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.red),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () {
+                    if (context.canPop()) context.pop();
+                  },
+                  child: Text('Cancel', 
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.white70 
+                        : AppTheme.greyColor)),
+                ),
+                TextButton(
+                  onPressed: isDeleting ? null : () async {
+                    final password = passwordController.text.trim();
+                    if (password.isEmpty) {
+                      setDialogState(() => localError = 'Password is required');
+                      return;
+                    }
+
+                    setDialogState(() {
+                      isDeleting = true;
+                      localError = null;
+                    });
+
+                    try {
+                      await ref.read(authProvider.notifier).deleteAccount(password);
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        context.go('/splash');
+                        _showSnackbar(context, 'Account deleted successfully');
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        setDialogState(() {
+                          isDeleting = false;
+                          localError = e.toString().replaceFirst('Exception: ', '');
+                        });
+                      }
+                    }
+                  },
+                  child: isDeleting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+                    : const Text('Delete', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

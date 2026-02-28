@@ -317,6 +317,11 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Create Lesson'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,

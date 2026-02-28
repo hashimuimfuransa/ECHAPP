@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 
@@ -13,6 +14,11 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Question Details'),
         backgroundColor: AppTheme.getBackgroundColor(context),
         elevation: 0,

@@ -15,7 +15,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _emailNotifications = true;
   bool _pushNotifications = false;
   String _selectedTheme = 'Light';
-  String _selectedLanguage = 'English';
   bool _autoSyncEnabled = true;
   int _autoSyncInterval = 30; // minutes
 
@@ -23,13 +22,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Admin Settings'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -95,14 +95,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   value: _selectedTheme,
                   items: ['Light', 'Dark', 'System'],
                   onChanged: (value) => setState(() => _selectedTheme = value!),
-                ),
-                const SizedBox(height: 15),
-                _buildDropdownSetting(
-                  title: 'Language',
-                  subtitle: 'Select display language',
-                  value: _selectedLanguage,
-                  items: ['English', 'Kinyarwanda', 'French'],
-                  onChanged: (value) => setState(() => _selectedLanguage = value!),
                 ),
               ],
             ),
@@ -586,7 +578,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     //   },
     //   'appearance': {
     //     'theme': _selectedTheme,
-    //     'language': _selectedLanguage,
     //   },
     //   'dataManagement': {
     //     'autoSync': _autoSyncEnabled,
@@ -666,7 +657,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   _emailNotifications = true;
                   _pushNotifications = false;
                   _selectedTheme = 'Light';
-                  _selectedLanguage = 'English';
                   _autoSyncEnabled = true;
                   _autoSyncInterval = 30;
                 });

@@ -147,6 +147,36 @@ class FirebaseAuthService {
     }
   }
 
+  // Update Password
+  static Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('No user signed in.');
+      }
+
+      // Re-authenticate user before updating password
+      final credential = firebase_auth.EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+      debugPrint('FirebaseAuthService: Password updated successfully');
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Password Update Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Password Update Error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Failed to update password. Please try again.');
+    }
+  }
+
   // Sign Out
   static Future<void> signOut() async {
     try {
@@ -199,6 +229,35 @@ class FirebaseAuthService {
     } catch (e) {
       debugPrint('Error getting user role: $e');
       return 'student';
+    }
+  }
+
+  // Delete Account
+  static Future<void> deleteAccount({
+    required String currentPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('No user signed in.');
+      }
+
+      // Re-authenticate user before deleting account
+      final credential = firebase_auth.EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+      await user.delete();
+      debugPrint('FirebaseAuthService: Account deleted successfully from Firebase');
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Account Deletion Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Account Deletion Error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Failed to delete account. Please try again.');
     }
   }
 

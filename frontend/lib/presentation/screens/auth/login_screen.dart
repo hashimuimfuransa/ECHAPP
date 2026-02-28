@@ -443,7 +443,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     children: [
                       IconButton(
                         onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                       ),
                       const SizedBox(width: 8),
                     ],

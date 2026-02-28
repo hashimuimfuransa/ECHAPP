@@ -7,6 +7,8 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
+import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -119,26 +121,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
   
   Widget _buildDesktopLayout(BuildContext context, WidgetRef ref, AdminDashboardState dashboardState) {
+    final isCollapsed = ref.watch(sidebarProvider);
+    
     return Scaffold(
-      body: Row(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Column(
         children: [
-          _buildDesktopSidebar(context, ref),
+          DesktopTitleBar(),
           Expanded(
-            child: Column(
+            child: Row(
               children: [
-                _buildDesktopHeader(context, ref),
+                _buildDesktopSidebar(context, ref, isCollapsed),
                 Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: Theme.of(context).brightness == Brightness.dark
-                            ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                            : [const Color(0xFFF8FAFC), const Color(0xFFF0F9FF)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                  child: Column(
+                    children: [
+                      _buildDesktopHeader(context, ref, isCollapsed),
+                      Expanded(
+                        child: _buildDashboardContent(context, ref, dashboardState),
                       ),
-                    ),
-                    child: _buildDashboardContent(context, ref, dashboardState),
+                    ],
                   ),
                 ),
               ],
@@ -152,6 +153,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildMobileLayout(BuildContext context, WidgetRef ref, AdminDashboardState dashboardState) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Admin Dashboard'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
@@ -281,91 +287,99 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
   
-  Widget _buildDesktopSidebar(BuildContext context, WidgetRef ref) {
-    return Container(
-      width: 280,
+  Widget _buildDesktopSidebar(BuildContext context, WidgetRef ref, bool isCollapsed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: isCollapsed ? 80 : 280,
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
-            width: 1,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(5, 0),
           ),
-        ),
+        ],
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-            child: Column(
+          Container(
+            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 24, 40, isCollapsed ? 12 : 24, 32),
+            child: Row(
+              mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryGreen.withOpacity(0.2),
-                        AppTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.2),
-                      width: 1.5,
-                    ),
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Image.asset(
                     'assets/logo.png',
-                    width: 40,
-                    height: 40,
+                    width: 32,
+                    height: 32,
                     fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Admin Panel',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.getTextColor(context),
-                    letterSpacing: 0.3,
+                if (!isCollapsed) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Admin Panel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.getTextColor(context),
+                            letterSpacing: -0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'EXCELLENCE HUB',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.primaryGreen,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Manage platform',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.greyColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                ],
               ],
             ),
-          ),
-          Divider(
-            height: 1,
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildDesktopNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true),
-                _buildDesktopNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false),
-                _buildDesktopNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false),
-                _buildDesktopNavItem(context, 'Analytics', Icons.analytics_rounded, '/admin/analytics', false),
-                _buildDesktopNavItem(context, 'Payments', Icons.payments_rounded, '/admin/payments', false),
-                _buildDesktopNavItem(context, 'Settings', Icons.settings_rounded, '/admin/settings', false),
+                _buildDesktopNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true, isCollapsed),
+                _buildDesktopNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Analytics', Icons.analytics_rounded, '/admin/analytics', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Payments', Icons.payments_rounded, '/admin/payments', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Settings', Icons.settings_rounded, '/admin/settings', false, isCollapsed),
               ],
             ),
           ),
-          Padding(
+          Container(
             padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).dividerColor.withOpacity(0.05),
+                  width: 1,
+                ),
+              ),
+            ),
             child: SizedBox(
               width: double.infinity,
               child: Material(
@@ -374,23 +388,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   onTap: () => _showLogoutDialog(context),
                   borderRadius: BorderRadius.circular(10),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: EdgeInsets.symmetric(
+                      vertical: 12, 
+                      horizontal: isCollapsed ? 0 : 16
+                    ),
                     child: Row(
+                      mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.logout_rounded,
                           size: 18,
                           color: Colors.red.shade600,
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Logout',
-                          style: TextStyle(
-                            color: Colors.red.shade600,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                        if (!isCollapsed) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            'Logout',
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -402,126 +422,143 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
     );
   }
-  
-  Widget _buildDesktopNavItem(BuildContext context, String title, IconData icon, String route, bool isActive) {
+
+  Widget _buildDesktopNavItem(BuildContext context, String title, IconData icon, String route, bool isActive, bool isCollapsed) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isActive ? null : () => context.push(route),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: isCollapsed ? 0 : 16, 
+              vertical: 10
+            ),
+            alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
             decoration: isActive
                 ? BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryGreen.withOpacity(0.15),
-                        AppTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.2),
-                      width: 1.5,
-                    ),
+                    color: AppTheme.primaryGreen.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
                   )
                 : null,
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? AppTheme.primaryGreen.withOpacity(0.15)
-                        : AppTheme.greyColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
+            child: isCollapsed
+                ? Icon(
                     icon,
-                    color: isActive ? AppTheme.primaryGreen : AppTheme.greyColor,
-                    size: 18,
+                    color: isActive ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
+                    size: 22,
+                  )
+                : Row(
+                    children: [
+                      Icon(
+                        icon,
+                        color: isActive ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            color: isActive ? AppTheme.primaryGreen : AppTheme.getTextColor(context).withOpacity(0.8),
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isActive)
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: isActive ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-                if (isActive)
-                  Container(
-                    width: 4,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-              ],
-            ),
           ),
         ),
       ),
     );
   }
   
-  Widget _buildDesktopHeader(BuildContext context, WidgetRef ref) {
+  Widget _buildDesktopHeader(BuildContext context, WidgetRef ref, bool isCollapsed) {
+    final String currentRoute = GoRouterState.of(context).uri.path;
+    final bool isRootRoute = currentRoute == '/admin';
+    final bool showBackButton = context.canPop() || !isRootRoute;
+    
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back, Admin',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.getTextColor(context),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Manage your coaching platform efficiently',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.greyColor,
-                ),
-              ),
-            ],
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.05),
+            width: 1,
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: _isSyncing 
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync),
-                onPressed: _isSyncing ? null : _triggerManualSync,
-                tooltip: 'Sync Users',
+        ),
+      ),
+      child: Row(
+        children: [
+          if (showBackButton)
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_rounded,
+                size: 18,
+                color: AppTheme.getTextColor(context).withOpacity(0.7),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => ref.read(adminDashboardProvider.notifier).loadDashboardData(),
-                tooltip: 'Refresh Dashboard',
-              ),
-              Consumer(
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/admin');
+                }
+              },
+              tooltip: 'Go back',
+            ),
+          const SizedBox(width: 8),
+          // Sidebar Toggle Button
+          IconButton(
+            icon: Icon(
+              isCollapsed ? Icons.menu_open_rounded : Icons.menu_rounded,
+              color: AppTheme.getTextColor(context).withOpacity(0.7),
+            ),
+            onPressed: () => ref.read(sidebarProvider.notifier).toggleSidebar(),
+            tooltip: isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+          ),
+          const SizedBox(width: 16),
+          const Text(
+            'Admin Dashboard',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: _isSyncing 
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync_rounded, size: 20),
+            onPressed: _isSyncing ? null : _triggerManualSync,
+            tooltip: 'Sync Users',
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+            onPressed: () => ref.read(adminDashboardProvider.notifier).loadDashboardData(),
+            tooltip: 'Refresh Data',
+          ),
+          const SizedBox(width: 16),
+          Consumer(
                 builder: (context, ref, child) {
                   final notificationState = ref.watch(notificationProvider);
                   final unreadCount = notificationState.notifications.where((n) => !n.isRead).length;
@@ -624,8 +661,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   );
                 },
               ),
-            ],
-          ),
         ],
       ),
     );

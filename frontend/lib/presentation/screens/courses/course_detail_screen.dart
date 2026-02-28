@@ -235,7 +235,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
                       onPressed: () => context.pop(),
                     ),
                   ),

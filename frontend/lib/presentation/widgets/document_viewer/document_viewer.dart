@@ -226,7 +226,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
               ),
               Text(
@@ -253,7 +253,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                     onPressed: _previousPage,
                   ),
                   const SizedBox(width: 15),
@@ -267,7 +267,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
                   ),
                   const SizedBox(width: 15),
                   IconButton(
-                    icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white),
                     onPressed: _nextPage,
                   ),
                 ],

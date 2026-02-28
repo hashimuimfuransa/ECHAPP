@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    }
+  }
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,16 +247,9 @@ class TermsScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              const Text(
-                                '📧 info@excellencecoachinghub.com\n'
-                                '🌐 excellencecoachinghub.com\n'
-                                '📱 +250 788 535 156',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                  height: 1.6,
-                                ),
-                              ),
+                              _buildContactLink('📧 info@excellencecoachinghub.com', () => _launchEmail('info@excellencecoachinghub.com')),
+                              _buildContactLink('🌐 excellencecoachinghub.com', () => _launchUrl('excellencecoachinghub.com')),
+                              _buildContactLink('📱 +250 788 535 156', () => _launchPhone('250788535156')),
                             ],
                           ),
                         ),
@@ -252,6 +267,24 @@ class TermsScreen extends StatelessWidget {
     );
   }
   
+  Widget _buildContactLink(String text, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            height: 1.6,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+    );
+  }
+  
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -260,7 +293,7 @@ class TermsScreen extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 24),
           ),
           const Text(
             'Terms of Service',

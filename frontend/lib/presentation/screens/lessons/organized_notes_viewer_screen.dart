@@ -49,6 +49,11 @@ class _OrganizedNotesViewerScreenState extends State<OrganizedNotesViewerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: Text(widget.lesson.title),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,

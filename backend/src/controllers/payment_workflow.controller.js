@@ -60,7 +60,7 @@ const initiatePayment = async (req, res) => {
       currency: payment.currency,
       status: payment.status,
       contactInfo: payment.contactInfo,
-      adminContact: 'Contact admin at: admin@excellencecoachinghub.com or +250-XXX-XXX-XXX',
+      adminContact: 'Contact admin at: info@excellencecoachinghub.com or +250 788 535 156 / +250 793 828 834',
       instructions: 'Please contact the admin with your transaction ID to complete the payment process'
     }, 'Payment initiated successfully. Please contact admin to complete payment.', 201);
 

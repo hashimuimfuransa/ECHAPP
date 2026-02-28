@@ -11,15 +11,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Learning'),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _buildEnrolledCoursesContent(context),
-    );
+    return _buildEnrolledCoursesContent(context);
   }
 
   Widget _buildEnrolledCoursesContent(BuildContext context) {
@@ -330,7 +322,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
 
   void _continueLearning(BuildContext context, Course course) {
     // Navigate to the student learning screen for this course
-    context.pushReplacement('/learning/${course.id}', extra: {
+    context.push('/learning/${course.id}', extra: {
       'courseId': course.id,
       'course': course,
     });

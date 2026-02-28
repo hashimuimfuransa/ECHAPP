@@ -63,177 +63,62 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final isTablet = ResponsiveBreakpoints.isTablet(context);
     final padding = ResponsiveBreakpoints.getPadding(context);
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: Theme.of(context).brightness == Brightness.dark
-                ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                : [const Color(0xFFF8FAFC), const Color(0xFFF0F9FF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxWidth = isDesktop ? 1000.0 : double.infinity;
-              final horizontalPadding = isDesktop ? (constraints.maxWidth - maxWidth) / 2 : 0.0;
-              
-              return Column(
-                children: [
-                  _buildEnhancedHeader(context),
-                  
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        padding.left + horizontalPadding, 
-                        padding.top, 
-                        padding.right + horizontalPadding, 
-                        padding.bottom * 1.5
+      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = isDesktop ? 1000.0 : double.infinity;
+            final horizontalPadding = isDesktop ? (constraints.maxWidth - maxWidth) / 2 : 0.0;
+            
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      padding.left + horizontalPadding, 
+                      padding.top, 
+                      padding.right + horizontalPadding, 
+                      padding.bottom * 1.5
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 100,
+                        maxWidth: maxWidth,
                       ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 100,
-                          maxWidth: maxWidth,
-                        ),
-                        child: Column(
-                          children: [
-                            _buildEnhancedProfilePicture(user),
-                            
-                            SizedBox(height: isDesktop ? 40 : 30),
-                            
-                            _buildEnhancedProfileInfo(user),
-                            
-                            SizedBox(height: isDesktop ? 40 : 30),
-                            
-                            _buildStatsSection(),
-                            
-                            SizedBox(height: isDesktop ? 40 : 30),
-                            
-                            _buildEnhancedActionButtons(),
-                          ],
-                        ),
+                      child: Column(
+                        children: [
+                          _buildEnhancedProfilePicture(user),
+                          
+                          SizedBox(height: isDesktop ? 40 : 30),
+                          
+                          _buildEnhancedProfileInfo(user),
+                          
+                          SizedBox(height: isDesktop ? 40 : 30),
+                          
+                          _buildStatsSection(),
+                          
+                          SizedBox(height: isDesktop ? 40 : 30),
+                          
+                          _buildEnhancedActionButtons(),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEnhancedHeader(BuildContext context) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final padding = isDesktop ? 24.0 : 16.0;
-    final fontSize = isDesktop ? 26.0 : 22.0;
-    
-    return Container(
-      margin: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: AppTheme.getCardColor(context).withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(padding * 0.6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                onPressed: () {
-                  final user = ref.read(authProvider).user;
-                  if (user?.role == 'admin') {
-                    context.go('/admin');
-                  } else {
-                    context.go('/dashboard');
-                  }
-                },
-                icon: Icon(Icons.arrow_back_rounded, 
-                  color: AppTheme.primaryGreen, 
-                  size: 24),
-              ),
-            ),
-            Text(
-              'My Profile',
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: fontSize,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                onPressed: _toggleEdit,
-                icon: Icon(
-                  _isEditing ? Icons.close_rounded : Icons.edit_rounded,
-                  color: AppTheme.primaryGreen,
-                  size: 24,
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: Icon(Icons.arrow_back, 
-              color: Theme.of(context).iconTheme.color, 
-              size: 28),
-          ),
-          Text(
-            'My Profile',
-            style: TextStyle(
-              color: Theme.of(context).textTheme.headlineSmall?.color,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          IconButton(
-            onPressed: _toggleEdit,
-            icon: Icon(
-              _isEditing ? Icons.close : Icons.edit_outlined,
-              color: AppTheme.getTextColor(context),
-              size: 28,
-            ),
-          ),
-        ],
-      ),
+      floatingActionButton: _isEditing ? FloatingActionButton.extended(
+        onPressed: _saveProfile,
+        label: const Text('Save Changes'),
+        icon: const Icon(Icons.save_rounded),
+        backgroundColor: AppTheme.primaryGreen,
+      ) : null,
     );
   }
 

@@ -41,7 +41,7 @@ class CourseNavigationUtils {
         // If already enrolled, go directly to modern learning screen
         print('✅ User already enrolled in course ${course.id} - navigating to modern learning screen');
         if (context.mounted) {
-          context.pushReplacement('/learning/${course.id}');
+          context.push('/learning/${course.id}');
         }
         return;
       }

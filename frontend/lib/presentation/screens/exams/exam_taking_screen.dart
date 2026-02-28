@@ -448,38 +448,70 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     final selectedAnswer = selectedAnswerData is Map ? selectedAnswerData['answerText'] : selectedAnswerData;
     final progress = (_currentQuestionIndex + 1) / _questions.length;
     
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.getBackgroundColor(context),
-              AppTheme.primary.withOpacity(0.03),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        
+        final bool? shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Exit Exam?'),
+            content: const Text('Are you sure you want to exit the exam? Your progress will be lost and your attempt might be counted.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Exit Exam'),
+              ),
             ],
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Custom App Bar
-              _buildModernAppBar(context),
-              
-              // Progress Section
-              _buildProgressSection(progress),
-              
-              // Question Section
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildQuestionCard(currentQuestion, selectedAnswer),
+        );
+        
+        if ((shouldPop ?? false) && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppTheme.getBackgroundColor(context),
+                AppTheme.primary.withOpacity(0.03),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Custom App Bar
+                _buildModernAppBar(context),
+                
+                // Progress Section
+                _buildProgressSection(progress),
+                
+                // Question Section
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildQuestionCard(currentQuestion, selectedAnswer),
+                  ),
                 ),
-              ),
-              
-              // Navigation Section
-              _buildNavigationSection(),
-            ],
+                
+                // Navigation Section
+                _buildNavigationSection(),
+              ],
+            ),
           ),
         ),
       ),
@@ -504,8 +536,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
         children: [
           // Back button
           IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           ),
           
           // Exam title
@@ -1163,10 +1195,11 @@ class ExamResultsScreen extends StatelessWidget {
                 // Header with back button
                 Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.arrow_back, color: AppTheme.getIconColor(context)),
-                    ),
+                    if (context.canPop())
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: Icon(Icons.arrow_back_ios_rounded, color: AppTheme.getIconColor(context)),
+                      ),
                     const SizedBox(width: 8),
                     Text(
                       'Exam Results',

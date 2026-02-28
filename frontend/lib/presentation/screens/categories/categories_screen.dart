@@ -16,149 +16,95 @@ class CategoriesScreen extends ConsumerWidget {
     final backendCategories = ref.watch(backendCategoriesProvider);
     
     return Scaffold(
-      body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(context),
-              
-              // Content
-              Expanded(
-                child: backendCategories.when(
-                  data: (categories) {
-                    // Filter featured and popular categories from backend data
-                    final featuredCategories = categories.where((cat) => cat.isFeatured ?? false).toList();
-                    final popularCategories = categories.where((cat) => cat.isPopular ?? false).toList();
-                    
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Featured Categories
-                          if (featuredCategories.isNotEmpty) ...[
-                            _buildSectionTitle(context, 'Featured Categories'),
-                            const SizedBox(height: 15),
-                            ResponsiveBreakpoints.isDesktop(context) 
-                              ? _buildCategoryGrid(context, featuredCategories) 
-                              : _buildCategoryHorizontalList(context, featuredCategories),
-                            const SizedBox(height: 30),
-                          ],
-                          
-                          // Popular Categories
-                          if (popularCategories.isNotEmpty) ...[
-                            _buildSectionTitle(context, 'Popular Categories'),
-                            const SizedBox(height: 15),
-                            _buildCategoryList(context, popularCategories),
-                            const SizedBox(height: 30),
-                          ],
-                          
-                          // All Categories
-                          _buildSectionTitle(context, 'All Categories'),
+      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Content
+            Expanded(
+              child: backendCategories.when(
+                data: (categories) {
+                  // Filter featured and popular categories from backend data
+                  final featuredCategories = categories.where((cat) => cat.isFeatured ?? false).toList();
+                  final popularCategories = categories.where((cat) => cat.isPopular ?? false).toList();
+                  
+                  return SingleChildScrollView(
+                    padding: ResponsiveBreakpoints.getPadding(context),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Featured Categories
+                        if (featuredCategories.isNotEmpty) ...[
+                          _buildSectionTitle(context, 'Featured Categories'),
                           const SizedBox(height: 15),
-                          _buildCategoryGrid(context, categories),
+                          ResponsiveBreakpoints.isDesktop(context) 
+                            ? _buildCategoryGrid(context, featuredCategories) 
+                            : _buildCategoryHorizontalList(context, featuredCategories),
+                          const SizedBox(height: 30),
                         ],
-                      ),
-                    );
-                  },
-                  loading: () {
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                  error: (error, stack) {
-                    // Fallback to predefined categories if backend fails
-                    final categories = CategoriesService.getAllCategories();
-                    final featuredCategories = CategoriesService.getFeaturedCategories(categories);
-                    final popularCategories = CategoriesService.getPopularCategories(categories);
-                    
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Featured Categories
-                          if (featuredCategories.isNotEmpty) ...[
-                            _buildSectionTitle(context, 'Featured Categories'),
-                            const SizedBox(height: 15),
-                            ResponsiveBreakpoints.isDesktop(context) 
-                              ? _buildCategoryGrid(context, featuredCategories) 
-                              : _buildCategoryHorizontalList(context, featuredCategories),
-                            const SizedBox(height: 30),
-                          ],
-                          
-                          // Popular Categories
-                          if (popularCategories.isNotEmpty) ...[
-                            _buildSectionTitle(context, 'Popular Categories'),
-                            const SizedBox(height: 15),
-                            _buildCategoryList(context, popularCategories),
-                            const SizedBox(height: 30),
-                          ],
-                          
-                          // All Categories
-                          _buildSectionTitle(context, 'All Categories'),
+                        
+                        // Popular Categories
+                        if (popularCategories.isNotEmpty) ...[
+                          _buildSectionTitle(context, 'Popular Categories'),
                           const SizedBox(height: 15),
-                          _buildCategoryGrid(context, categories),
+                          _buildCategoryList(context, popularCategories),
+                          const SizedBox(height: 30),
                         ],
-                      ),
-                    );
-                  },
-                ),
+                        
+                        // All Categories
+                        _buildSectionTitle(context, 'All Categories'),
+                        const SizedBox(height: 15),
+                        _buildCategoryGrid(context, categories),
+                        
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  );
+                },
+                loading: () {
+                  return const Center(child: CircularProgressIndicator());
+                },
+                error: (error, stack) {
+                  // Fallback to predefined categories if backend fails
+                  final categories = CategoriesService.getAllCategories();
+                  final featuredCategories = CategoriesService.getFeaturedCategories(categories);
+                  final popularCategories = CategoriesService.getPopularCategories(categories);
+                  
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Featured Categories
+                        if (featuredCategories.isNotEmpty) ...[
+                          _buildSectionTitle(context, 'Featured Categories'),
+                          const SizedBox(height: 15),
+                          ResponsiveBreakpoints.isDesktop(context) 
+                            ? _buildCategoryGrid(context, featuredCategories) 
+                            : _buildCategoryHorizontalList(context, featuredCategories),
+                          const SizedBox(height: 30),
+                        ],
+                        
+                        // Popular Categories
+                        if (popularCategories.isNotEmpty) ...[
+                          _buildSectionTitle(context, 'Popular Categories'),
+                          const SizedBox(height: 15),
+                          _buildCategoryList(context, popularCategories),
+                          const SizedBox(height: 30),
+                        ],
+                        
+                        // All Categories
+                        _buildSectionTitle(context, 'All Categories'),
+                        const SizedBox(height: 15),
+                        _buildCategoryGrid(context, categories),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryGreen,
-            AppTheme.primaryGreen.withOpacity(0.8),
+            ),
           ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/dashboard');
-              }
-            },
-            icon: const Icon(Icons.arrow_back, 
-              color: Colors.white, 
-              size: 24),
-            splashRadius: 24,
-          ),
-          const Text(
-            'Categories',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(width: 40),
-        ],
       ),
     );
   }

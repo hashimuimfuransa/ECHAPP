@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
 
 class ResponsiveNavigationDrawer extends ConsumerWidget {
   final String currentPage;
@@ -15,7 +16,36 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final navItems = [
+    final isCollapsed = ref.watch(sidebarProvider);
+    final user = ref.watch(authProvider).user;
+    final bool isAuth = user == null || currentPage == 'auth';
+
+    final navItems = isAuth ? [
+      {
+        'title': 'Welcome',
+        'icon': Icons.handshake_outlined,
+        'route': '/auth-selection',
+        'key': 'auth'
+      },
+      {
+        'title': 'Sign In',
+        'icon': Icons.login_rounded,
+        'route': '/login',
+        'key': 'login'
+      },
+      {
+        'title': 'Register',
+        'icon': Icons.person_add_rounded,
+        'route': '/register',
+        'key': 'register'
+      },
+      {
+        'title': 'Help Center',
+        'icon': Icons.help_outline_rounded,
+        'route': '/help',
+        'key': 'help'
+      },
+    ] : [
       {
         'title': 'Dashboard',
         'icon': Icons.dashboard_outlined,
@@ -61,102 +91,138 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     ];
 
     if (ResponsiveBreakpoints.isDesktop(context)) {
-      return _buildDesktopDrawer(context, navItems, ref);
+      return _buildDesktopDrawer(context, navItems, ref, isCollapsed, isAuth);
     } else {
       return _buildMobileDrawer(context, navItems, ref);
     }
   }
 
-  Widget _buildDesktopDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref) {
-    return Container(
-      width: 280,
+  Widget _buildDesktopDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref, bool isCollapsed, bool isAuth) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: isCollapsed ? 80 : 280,
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
-            width: 1,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(5, 0),
           ),
-        ),
+        ],
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-            child: Column(
+            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 24, 40, isCollapsed ? 12 : 24, 32),
+            child: Row(
+              mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryGreen.withOpacity(0.2),
-                        AppTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.2),
-                      width: 1.5,
-                    ),
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Image.asset(
                     'assets/logo.png',
-                    width: 40,
-                    height: 40,
+                    width: 32,
+                    height: 32,
                     fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Excellence Hub',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.getTextColor(context),
-                    letterSpacing: 0.3,
+                if (!isCollapsed) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Excellence Hub',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.getTextColor(context),
+                            letterSpacing: -0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'PLATFORM',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.primaryGreen,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Your learning platform',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.greyColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                ],
               ],
             ),
           ),
           
-          Divider(
-            height: 1,
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
-          ),
-          
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: items.map((item) => _buildNavItem(
                 context,
                 item['title'] as String,
                 item['icon'] as IconData,
                 item['route'] as String,
                 item['key'] as String,
-                currentPage == item['key'],
+                currentPage == item['key'] || (item['key'] == 'auth' && currentPage == 'auth'),
+                isCollapsed,
               )).toList(),
             ),
           ),
           
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _buildLogoutButton(context, ref),
-          ),
+          if (!isAuth)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).dividerColor.withOpacity(0.05),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: _buildLogoutButton(context, ref, isCollapsed),
+            ),
+          if (isAuth && !isCollapsed)
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: AppTheme.primaryGreen, size: 24),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Unlock your potential with expert-led courses.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.getTextColor(context).withOpacity(0.7),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -227,13 +293,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                 item['route'] as String,
                 item['key'] as String,
                 currentPage == item['key'],
+                false, // Mobile is never collapsed
               )).toList(),
             ),
           ),
           
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildLogoutButton(context, ref),
+            child: _buildLogoutButton(context, ref, false), // Mobile is never collapsed
           ),
         ],
       ),
@@ -247,75 +314,67 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     String route,
     String key,
     bool isSelected,
+    bool isCollapsed,
   ) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     if (isDesktop) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: isSelected ? null : () => context.go(route),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCollapsed ? 0 : 16, 
+                vertical: 10
+              ),
+              alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
               decoration: isSelected
                   ? BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppTheme.primaryGreen.withOpacity(0.15),
-                          AppTheme.primaryGreen.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppTheme.primaryGreen.withOpacity(0.2),
-                        width: 1.5,
-                      ),
+                      color: AppTheme.primaryGreen.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
                     )
                   : null,
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppTheme.primaryGreen.withOpacity(0.15)
-                          : AppTheme.greyColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
+              child: isCollapsed
+                  ? Icon(
                       icon,
-                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor,
-                      size: 18,
+                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
+                      size: 22,
+                    )
+                  : Row(
+                      children: [
+                        Icon(
+                          icon,
+                          color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context).withOpacity(0.8),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isSelected)
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context),
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                  if (isSelected)
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                ],
-              ),
             ),
           ),
         ),
@@ -359,36 +418,42 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     }
   }
 
-  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref, bool isCollapsed) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     if (isDesktop) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 12),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => _showLogoutDialog(context, ref),
             borderRadius: BorderRadius.circular(10),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCollapsed ? 0 : 16, 
+                vertical: 12
+              ),
               child: Row(
+                mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.logout_rounded,
                     size: 18,
                     color: Colors.red.shade600,
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.red.shade600,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
+                  if (!isCollapsed) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Colors.red.shade600,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

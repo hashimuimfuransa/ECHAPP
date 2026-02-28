@@ -32,6 +32,19 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
     
     return Scaffold(
       appBar: AppBar(
+        leading: (context.canPop() || GoRouterState.of(context).uri.path != '/admin') 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/admin');
+                }
+              },
+              tooltip: 'Back',
+            ) 
+          : null,
         title: const Text('Course Management'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,

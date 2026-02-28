@@ -3,6 +3,7 @@ class User {
   final String id;
   final String fullName;
   final String email;
+  final String? profilePicture;
   final String? phone;
   final String role;
   final String? deviceId;
@@ -12,11 +13,15 @@ class User {
     required this.id,
     required this.fullName,
     required this.email,
+    this.profilePicture,
     this.phone,
     required this.role,
     this.deviceId,
     required this.createdAt,
   });
+
+  /// Alias for fullName to maintain compatibility with legacy code
+  String get name => fullName;
 
   static String? _getStringValue(dynamic value) {
     if (value == null) return null;
@@ -32,8 +37,9 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: _getStringValue(json['id']) ?? _getStringValue(json['_id']) ?? '',
-      fullName: _getStringValue(json['fullName']) ?? 'Unknown User',
+      fullName: _getStringValue(json['fullName']) ?? _getStringValue(json['name']) ?? 'Unknown User',
       email: _getStringValue(json['email']) ?? '',
+      profilePicture: _getStringValue(json['profilePicture']) ?? _getStringValue(json['avatar']),
       phone: _getStringValue(json['phone']),
       role: _getStringValue(json['role']) ?? 'user',
       deviceId: _getStringValue(json['deviceId']),
@@ -45,7 +51,9 @@ class User {
     return {
       'id': id,
       'fullName': fullName,
+      'name': fullName, // Support both fields
       'email': email,
+      'profilePicture': profilePicture,
       'phone': phone,
       'role': role,
       'deviceId': deviceId,

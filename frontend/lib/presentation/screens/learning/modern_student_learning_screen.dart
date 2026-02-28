@@ -176,7 +176,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         child: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () {
-            context.go('/dashboard');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
           },
         ),
       ),

@@ -1,10 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    }
+  }
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    }
+  }
+
+  Future<void> _launchWhatsApp(String phone) async {
+    final String url = "https://wa.me/$phone";
+    final Uri whatsappUri = Uri.parse(url);
+    if (await canLaunchUrl(whatsappUri)) {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +146,7 @@ class HelpScreen extends StatelessWidget {
                           },
                           {
                             'question': 'How do I delete my account?',
-                            'answer': 'Contact our support team at support@excellencecoachinghub.com to request account deletion.'
+                            'answer': 'Contact our support team at info@excellencecoachinghub.com to request account deletion.'
                           },
                         ],
                       ),
@@ -180,30 +203,24 @@ class HelpScreen extends StatelessWidget {
                                 context,
                                 icon: Icons.email_outlined,
                                 title: 'Email Support',
-                                subtitle: 'support@excellencecoachinghub.com',
-                                onTap: () {
-                                  // In a real app, this would open email client
-                                },
+                                subtitle: 'info@excellencecoachinghub.com',
+                                onTap: () => _launchEmail('info@excellencecoachinghub.com'),
                               ),
                               const SizedBox(height: 15),
                               _buildContactOption(
                                 context,
                                 icon: Icons.chat_outlined,
-                                title: 'Live Chat',
+                                title: 'WhatsApp Chat',
                                 subtitle: 'Chat with our support team now',
-                                onTap: () {
-                                  // In a real app, this would open chat
-                                },
+                                onTap: () => _launchWhatsApp('250788535156'),
                               ),
                               const SizedBox(height: 15),
                               _buildContactOption(
                                 context,
                                 icon: Icons.phone_outlined,
                                 title: 'Phone Support',
-                                subtitle: '+1 (555) 123-4567',
-                                onTap: () {
-                                  // In a real app, this would initiate call
-                                },
+                                subtitle: '+250 788 535 156',
+                                onTap: () => _launchPhone('250788535156'),
                               ),
                             ],
                           ),
@@ -220,7 +237,7 @@ class HelpScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Emergency Contact',
+                                'Alternative Contact',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -229,7 +246,7 @@ class HelpScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 15),
                               const Text(
-                                'For urgent matters outside business hours:',
+                                'You can also reach us through our secondary line:',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 15,
@@ -237,9 +254,9 @@ class HelpScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _buildContactInfo('24/7 Emergency Line:', '+1 (555) 999-0000'),
+                              _buildContactInfo('Secondary Line:', '+250 793 828 834'),
                               const SizedBox(height: 10),
-                              _buildContactInfo('Critical Issues:', 'emergency@excellencecoachinghub.com'),
+                              _buildContactInfo('Website:', 'excellencecoachinghub.com'),
                             ],
                           ),
                         ),
@@ -263,7 +280,7 @@ class HelpScreen extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 24),
           ),
           const Text(
             'Help & Support',

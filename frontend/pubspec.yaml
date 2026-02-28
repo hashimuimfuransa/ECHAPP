@@ -37,6 +37,7 @@ dependencies:
   audioplayers: ^6.0.0
   flutter_tts: ^4.0.0
   device_info_plus: ^10.0.0
+  bitsdojo_window: ^0.1.5
   uuid: ^4.5.1
   # record: ^5.1.2  # Temporarily removed due to Linux compatibility issues
 

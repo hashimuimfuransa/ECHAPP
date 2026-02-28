@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    }
+  }
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,11 +194,11 @@ class PrivacyScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _buildContactInfo('Email:', 'info@excellencecoachinghub.com'),
+                              _buildContactInfo('Email:', 'info@excellencecoachinghub.com', onTap: () => _launchEmail('info@excellencecoachinghub.com')),
                               const SizedBox(height: 10),
-                              _buildContactInfo('Phone:', '+250 788 535 156'),
+                              _buildContactInfo('Phone:', '+250 788 535 156', onTap: () => _launchPhone('250788535156')),
                               const SizedBox(height: 10),
-                              _buildContactInfo('Website:', 'excellencecoachinghub.com'),
+                              _buildContactInfo('Website:', 'excellencecoachinghub.com', onTap: () => _launchUrl('excellencecoachinghub.com')),
                             ],
                           ),
                         ),
@@ -200,7 +222,7 @@ class PrivacyScreen extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 24),
           ),
           const Text(
             'Privacy Policy',
@@ -249,31 +271,35 @@ class PrivacyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContactInfo(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 70,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+  Widget _buildContactInfo(String label, String value, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

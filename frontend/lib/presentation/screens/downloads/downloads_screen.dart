@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
@@ -134,6 +135,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('My Downloads'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
@@ -595,7 +601,7 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                   onPressed: () {
                     if (_isFullscreen) {
                       _toggleFullscreen();

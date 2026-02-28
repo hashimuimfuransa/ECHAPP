@@ -139,8 +139,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white70, size: 28)),
             const SizedBox(width: 40),
-            IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28)),
           ]),
           const SizedBox(height: 20),
           FadeTransition(
@@ -283,7 +283,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_rounded, color: Colors.white)), const SizedBox(width: 8)]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
                   const SizedBox(height: 30),
                   Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)])), child: const Icon(Icons.mail_outline_rounded, size: 40, color: Colors.white)),
                   const SizedBox(height: 30),

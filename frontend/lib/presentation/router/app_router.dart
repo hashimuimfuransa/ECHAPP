@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/login_screen.dart';
@@ -36,6 +36,7 @@ import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_scr
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/notifications/notifications_screen.dart';
+import 'package:excellencecoachinghub/widgets/main_layout.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
@@ -81,6 +82,7 @@ class AppRouter {
             path: '/enter-reset-code',
             builder: (context, state) => const EnterResetCodeScreen(),
           ),
+          // Reset Password Route
           GoRoute(
             path: '/reset-password',
             builder: (context, state) {
@@ -92,43 +94,22 @@ class AppRouter {
               return ResetPasswordScreen(oobCode: resetCode);
             },
           ),
-          
-          // Main App Routes
+
+          // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication
           GoRoute(
-            path: '/dashboard',
-            builder: (context, state) => const DashboardScreen(),
+            path: '/privacy',
+            builder: (context, state) => const PrivacyScreen(),
           ),
           GoRoute(
-            path: '/courses',
-            builder: (context, state) {
-              final extra = state.extra as Map<String, dynamic>?;
-              return CoursesScreen(
-                categoryId: extra?['categoryId'] as String?,
-                categoryName: extra?['categoryName'] as String?,
-              );
-            },
+            path: '/terms',
+            builder: (context, state) => const TermsScreen(),
           ),
           GoRoute(
-            path: '/course/:id',
-            builder: (context, state) {
-              final courseId = state.pathParameters['id'] ?? '';
-              return CourseDetailScreen(courseId: courseId);
-            },
+            path: '/help',
+            builder: (context, state) => const HelpScreen(),
           ),
-          
-          // Downloads Route
-          GoRoute(
-            path: '/downloads',
-            builder: (context, state) => const DownloadsScreen(),
-          ),
-          
-          // Notifications Route
-          GoRoute(
-            path: '/notifications',
-            builder: (context, state) => const NotificationsScreen(),
-          ),
-          
-          // Admin Routes
+
+          // Admin Routes - Outside MainLayout because they have their own sidebar/layout
           GoRoute(
             path: '/admin',
             builder: (context, state) => const AdminDashboardScreen(),
@@ -219,8 +200,8 @@ class AppRouter {
             path: '/admin/analytics',
             builder: (context, state) => const AdminAnalyticsScreen(),
           ),
-          
-          // Learning Routes
+
+          // Learning Routes - Outside MainLayout for full-screen focus
           GoRoute(
             path: '/learning/:courseId',
             builder: (context, state) {
@@ -231,7 +212,6 @@ class AppRouter {
           GoRoute(
             path: '/learning/:courseId/video',
             builder: (context, state) {
-              // Would implement video learning screen
               return Scaffold(
                 appBar: AppBar(title: const Text('Video Learning')),
                 body: const Center(child: Text('Video learning screen')),
@@ -241,7 +221,6 @@ class AppRouter {
           GoRoute(
             path: '/learning/:courseId/notes',
             builder: (context, state) {
-              // Would implement notes learning screen
               return Scaffold(
                 appBar: AppBar(title: const Text('Notes Learning')),
                 body: const Center(child: Text('Notes learning screen')),
@@ -253,13 +232,11 @@ class AppRouter {
             builder: (context, state) {
               final examId = state.pathParameters['examId'] ?? '';
               final courseId = state.pathParameters['courseId'] ?? '';
-              // Get exam data from state.extra if passed
               final exam = state.extra as exam_model.Exam?;
               
               if (exam != null) {
                 return ExamTakingScreen(exam: exam);
               } else {
-                // Fallback if exam data not passed
                 return Scaffold(
                   appBar: AppBar(title: const Text('Exam')),  
                   body: const Center(child: Text('Exam not found')),
@@ -270,90 +247,71 @@ class AppRouter {
           GoRoute(
             path: '/learning/:courseId/section/:sectionId',
             builder: (context, state) {
-              // Would implement section learning screen
               return Scaffold(
                 appBar: AppBar(title: const Text('Section Learning')),
                 body: const Center(child: Text('Section learning screen')),
               );
             },
           ),
-          
-          // Profile Routes
-          GoRoute(
-            path: '/profile',
-            builder: (context, state) => _buildProfileScreen(),
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => _buildSettingsScreen(),
-          ),
-          GoRoute(
-            path: '/categories',
-            builder: (context, state) => _buildCategoriesScreen(),
-          ),
-          GoRoute(
-            path: '/privacy',
-            builder: (context, state) => _buildPrivacyScreen(),
-          ),
-          GoRoute(
-            path: '/terms',
-            builder: (context, state) => _buildTermsScreen(),
-          ),
-          GoRoute(
-            path: '/help',
-            builder: (context, state) => _buildHelpScreen(),
-          ),
-          
-          // Additional Routes
-          GoRoute(
-            path: '/my-courses',
-            builder: (context, state) => _buildMyCoursesScreen(),
-          ),
-          GoRoute(
-            path: '/certificates',
-            builder: (context, state) => _buildCertificatesScreen(),
+
+          // Shell Route for Student Dashboard and Main App Pages
+          ShellRoute(
+            builder: (context, state, child) => MainLayout(child: child),
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const DashboardScreen(),
+              ),
+              GoRoute(
+                path: '/courses',
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  return CoursesScreen(
+                    categoryId: extra?['categoryId'] as String?,
+                    categoryName: extra?['categoryName'] as String?,
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/course/:id',
+                builder: (context, state) {
+                  final courseId = state.pathParameters['id'] ?? '';
+                  return CourseDetailScreen(courseId: courseId);
+                },
+              ),
+              GoRoute(
+                path: '/downloads',
+                builder: (context, state) => const DownloadsScreen(),
+              ),
+              GoRoute(
+                path: '/notifications',
+                builder: (context, state) => const NotificationsScreen(),
+              ),
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsScreen(),
+              ),
+              GoRoute(
+                path: '/categories',
+                builder: (context, state) => const CategoriesScreen(),
+              ),
+              GoRoute(
+                path: '/my-courses',
+                builder: (context, state) => const EnrolledCoursesScreen(),
+              ),
+              GoRoute(
+                path: '/certificates',
+                builder: (context, state) => const CertificatesScreen(),
+              ),
+            ],
           ),
         ],
         redirect: (context, state) {
-          // Handle authentication redirects
-          // We'll handle auth redirects in the widgets themselves rather than here
-          // because accessing Riverpod providers in the router redirect is complex
-          // Web-specific routing handled in SplashScreen
           return null;
         },
       );
-
-  // Placeholder screens - would be implemented in next phases
-
-  Widget _buildProfileScreen() {
-    return const ProfileScreen();
-  }
-
-  Widget _buildMyCoursesScreen() {
-    return const EnrolledCoursesScreen();
-  }
-  
-  Widget _buildCertificatesScreen() {
-    return const CertificatesScreen();
-  }
-
-  Widget _buildSettingsScreen() {
-    return const SettingsScreen();
-  }
-
-  Widget _buildPrivacyScreen() {
-    return const PrivacyScreen();
-  }
-
-  Widget _buildTermsScreen() {
-    return const TermsScreen();
-  }
-
-  Widget _buildCategoriesScreen() {
-    return const CategoriesScreen();
-  }
-
-  Widget _buildHelpScreen() {
-    return const HelpScreen();
-  }
 }

@@ -86,3 +86,15 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
   return NotificationNotifier();
 });
+
+final notificationCountProvider = Provider<AsyncValue<int>>((ref) {
+  final state = ref.watch(notificationProvider);
+  if (state.isLoading) {
+    return const AsyncValue.loading();
+  }
+  if (state.error != null) {
+    return AsyncValue.error(state.error!, StackTrace.current);
+  }
+  final unreadCount = state.notifications.where((n) => !n.isRead).length;
+  return AsyncValue.data(unreadCount);
+});

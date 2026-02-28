@@ -178,13 +178,14 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Course Materials'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

@@ -124,255 +124,91 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (ResponsiveBreakpoints.isDesktop(context)) {
-      return Scaffold(
-        body: Row(
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      body: SafeArea(
+        child: Column(
           children: [
-            // Desktop Navigation Drawer
-            ResponsiveNavigationDrawer(currentPage: 'courses'),
+            // Search Bar for all platforms (since it's not in MainLayout top bar)
+            _buildResponsiveSearchBar(context),
             
-            // Main Content Area
+            // Content
             Expanded(
-              child: Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      // Header for desktop
-                      _buildDesktopHeader(context),
-                      
-                      // Content
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: ResponsiveBreakpoints.getPadding(context),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 25),
-                              
-                              // Categories Section
-                              _buildCategoriesSection(context),
-                              
-                              const SizedBox(height: 25),
-                              
-                              // All Courses with responsive grid
-                              _buildResponsiveAllCourses(context, _filteredCourses),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              child: SingleChildScrollView(
+                padding: ResponsiveBreakpoints.getPadding(context),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Categories Section
+                    _buildCategoriesSection(context),
+                    
+                    const SizedBox(height: 25),
+                    
+                    // All Courses with responsive grid
+                    _buildResponsiveAllCourses(context, _filteredCourses),
+                    
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
             ),
           ],
         ),
-      );
-    } else {
-      // Mobile layout (existing code)
-      return Scaffold(
-        body: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: SafeArea(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(context),
-                
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 25),
-                        
-                        // Categories Section
-                        _buildCategoriesSection(context),
-                        
-                        const SizedBox(height: 25),
-                        
-                        // All Courses
-                        _buildAllCourses(context, _filteredCourses),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+      ),
+    );
+  }
+
+  Widget _buildResponsiveSearchBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (_) => _filterCourses(),
+          style: TextStyle(color: AppTheme.getTextColor(context)),
+          decoration: InputDecoration(
+            hintText: 'Search for courses, mentors, or topics...',
+            hintStyle: TextStyle(color: AppTheme.greyColor),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppTheme.primaryGreen,
+            ),
+            suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, color: AppTheme.greyColor),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterCourses();
+                  },
+                )
+              : null,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 15,
             ),
           ),
         ),
-        drawer: ResponsiveNavigationDrawer(currentPage: 'courses'),
-      );
-    }
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: Icon(Icons.arrow_back, 
-                  color: Theme.of(context).iconTheme.color, 
-                  size: 28),
-              ),
-              Text(
-                widget.categoryName != null ? widget.categoryName! : 'All Courses',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.greyColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.filter_list,
-                  color: AppTheme.greyColor,
-                  size: 24,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          // Search Bar for mobile
-          Container(
-            decoration: BoxDecoration(
-              color: AppTheme.greyColor.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(
-                color: AppTheme.greyColor.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => _filterCourses(),
-              style: TextStyle(color: AppTheme.getTextColor(context)),
-              decoration: InputDecoration(
-                hintText: 'Search courses...',
-                hintStyle: TextStyle(color: AppTheme.greyColor),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppTheme.greyColor,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: AppTheme.greyColor),
-                      onPressed: () {
-                        _searchController.clear();
-                        _filterCourses();
-                      },
-                    )
-                  : null,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
-
-  Widget _buildDesktopHeader(BuildContext context) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: ResponsiveBreakpoints.getPadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                widget.categoryName != null ? widget.categoryName! : 'All Courses',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 45,
-                    height: 45,
-                    decoration: BoxDecoration(
-                      color: AppTheme.greyColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.filter_list,
-                      color: AppTheme.greyColor,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Search Bar for desktop
-          Container(
-            decoration: BoxDecoration(
-              color: AppTheme.greyColor.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(
-                color: AppTheme.greyColor.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => _filterCourses(),
-              style: TextStyle(color: AppTheme.getTextColor(context)),
-              decoration: InputDecoration(
-                hintText: 'Search courses...',
-                hintStyle: TextStyle(color: AppTheme.greyColor),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppTheme.greyColor,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: AppTheme.greyColor),
-                      onPressed: () {
-                        _searchController.clear();
-                        _filterCourses();
-                      },
-                    )
-                  : null,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
 
   Widget _buildCategoriesSection(BuildContext context) {
     // Get backend categories

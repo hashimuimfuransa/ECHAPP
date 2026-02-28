@@ -1106,42 +1106,55 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          SizedBox(
-            width: screenWidth,
-            height: screenHeight * 0.35,
-            child: const SafeArea(
-              bottom: false,
-              child: _BrandPanel(compact: true),
-            ),
-          ),
-          Container(
-            width: screenWidth,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(32)),
-              boxShadow: [
-                BoxShadow(
-                    color: Color(0x12000000),
-                    blurRadius: 28,
-                    offset: Offset(0, -8)),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              child: _AuthCard(
-                isLoading: authState.isLoading,
-                error: authState.error,
-                onEmail: () => context.push('/email-auth-option'),
-                onGoogle: _handleGoogleSignIn,
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          child: Column(
+            children: [
+              SizedBox(
+                width: screenWidth,
+                height: screenHeight * 0.35,
+                child: const SafeArea(
+                  bottom: false,
+                  child: _BrandPanel(compact: true),
+                ),
               ),
+              Container(
+                width: screenWidth,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x12000000),
+                        blurRadius: 28,
+                        offset: Offset(0, -8)),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: _AuthCard(
+                    isLoading: authState.isLoading,
+                    error: authState.error,
+                    onEmail: () => context.push('/email-auth-option'),
+                    onGoogle: _handleGoogleSignIn,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (context.canPop())
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 10,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

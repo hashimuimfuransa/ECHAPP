@@ -531,6 +531,46 @@ const verifyResetToken = async (req, res) => {
   }
 };
 
+// Delete user account
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    // Delete from Firebase if applicable
+    if (user.firebaseUid) {
+      try {
+        await admin.auth().deleteUser(user.firebaseUid);
+        console.log(`Firebase user ${user.firebaseUid} deleted`);
+      } catch (firebaseError) {
+        console.error('Firebase user deletion error:', firebaseError.message);
+        // Continue even if Firebase deletion fails (user might already be gone)
+      }
+    }
+
+    // Delete related data
+    const Enrollment = require('../models/Enrollment');
+    const Payment = require('../models/Payment');
+    const Result = require('../models/Result');
+
+    await Enrollment.deleteMany({ userId: user._id });
+    await Payment.deleteMany({ userId: user._id });
+    await Result.deleteMany({ userId: user._id });
+
+    // Delete user from MongoDB
+    await User.findByIdAndDelete(userId);
+
+    sendSuccess(res, null, 'Account deleted successfully');
+  } catch (error) {
+    console.error('Delete account error:', error);
+    sendError(res, 'Failed to delete account', 500, error.message);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -542,5 +582,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyResetToken,
-  resetUserDevice
+  resetUserDevice,
+  deleteAccount
 };

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../presentation/providers/payment_riverpod_provider.dart';
@@ -39,6 +40,11 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
 
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Payment Management'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,

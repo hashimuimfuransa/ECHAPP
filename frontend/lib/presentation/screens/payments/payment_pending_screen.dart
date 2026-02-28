@@ -238,14 +238,14 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         ),
                         const SizedBox(height: 8),
                         _buildContactInstruction(
-                          '1. contact for payment via:',
+                          '1. Contact for payment via:',
                           'MTN: 0793828834',
                           Icons.phone,
                         ),
                         const SizedBox(height: 8),
                         _buildContactInstruction(
                           '2. Also available via:',
-                          ' 0788535156',
+                          'MTN: 0788535156',
                           Icons.phone,
                         ),
                         const SizedBox(height: 8),
@@ -257,7 +257,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         const SizedBox(height: 8),
                         _buildContactInstruction(
                           '4. Or contact us on WhatsApp:',
-                          '0793828834',
+                          '0793828834 / 0788535156',
                           Icons.chat,
                         ),
                         const SizedBox(height: 12),

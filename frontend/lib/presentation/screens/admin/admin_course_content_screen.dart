@@ -150,6 +150,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
 
     return Scaffold(
       appBar: AppBar(
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => context.pop(),
+          tooltip: 'Back',
+        ) : null,
         title: const Text('Course Content'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,

@@ -290,6 +290,25 @@ class AuthRepository {
       throw Exception('Failed to fetch profile: ${e.toString()}');
     }
   }
+
+  Future<void> deleteAccount(String token) async {
+    try {
+      final response = await _client.delete(
+        Uri.parse('${ApiConfig.baseUrl}/auth/delete-account'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to delete account');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
 }
 
 // Provider for AuthRepository

@@ -16,7 +16,6 @@ import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
-import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 
@@ -190,169 +189,72 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
     final popularCoursesAsync = ref.watch(popularCoursesProvider);
 
-    if (ResponsiveBreakpoints.isDesktop(context)) {
-      return Scaffold(
-        body: Row(
-          children: [
-            ResponsiveNavigationDrawer(currentPage: 'dashboard'),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: Theme.of(context).brightness == Brightness.dark
-                        ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                        : [const Color(0xFFF0F9FF), const Color(0xFFE0F2FE)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      _buildDesktopHeader(context, user),
-                      Expanded(
-                        child: RefreshIndicator(
-                          onRefresh: _refreshDashboard,
-                          child: SingleChildScrollView(
-                            padding: ResponsiveBreakpoints.getPadding(context),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildWelcomeCard(context, user),
-                                const SizedBox(height: 20),
-                                const _DashboardDeviceBindingPolicy(),
-                                const SizedBox(height: 25),
-                                if (ref
-                                    .watch(authProvider.notifier)
-                                    .isAdmin) ...[
-                                  _buildAdminAccessButton(context),
-                                  const SizedBox(height: 25),
-                                ],
-                                enrolledCoursesAsync.when(
-                                  data: (enrolledCourses) =>
-                                      _buildContinueLearning(
-                                          context, enrolledCourses),
-                                  loading: () => _buildLoadingCard(
-                                      context, 'Continue Learning'),
-                                  error: (error, stack) => _buildErrorCard(
-                                      context,
-                                      'Continue Learning',
-                                      error.toString()),
-                                ),
-                                const SizedBox(height: 25),
-                                const DownloadsSection(),
-                                const SizedBox(height: 25),
-                                popularCoursesAsync.when(
-                                  data: (popularCourses) {
-                                    debugPrint(
-                                        'Dashboard: Received ${popularCourses.length} popular courses'); // FIX #9: print -> debugPrint
-                                    if (popularCourses.isNotEmpty) {
-                                      debugPrint(
-                                          'Dashboard: First popular course thumbnail: ${popularCourses[0].thumbnail ?? "null"}'); // FIX #9
-                                    }
-                                    return _buildResponsivePopularCourses(
-                                        context, popularCourses);
-                                  },
-                                  loading: () => _buildLoadingCard(
-                                      context, 'Popular Courses'),
-                                  error: (error, stack) => _buildErrorCard(
-                                      context,
-                                      'Popular Courses',
-                                      error.toString()),
-                                ),
-                                const SizedBox(height: 25),
-                                _buildWishlistSection(context),
-                                const SizedBox(height: 40),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final padding = isDesktop 
+        ? const EdgeInsets.fromLTRB(40, 24, 40, 40)
+        : ResponsiveBreakpoints.getPadding(context);
+
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Let MainLayout background show through
+      body: RefreshIndicator(
+        onRefresh: _refreshDashboard,
+        child: SingleChildScrollView(
+          padding: padding,
+          child: Center(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 1200 : double.infinity,
               ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Scaffold(
-        body: SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: Theme.of(context).brightness == Brightness.dark
-                    ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                    : [const Color(0xFFF0F9FF), const Color(0xFFE0F2FE)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-            child: Column(
-              children: [
-                _buildHeader(context, user),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _refreshDashboard,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildWelcomeCard(context, user),
-                          const SizedBox(height: 20),
-                          const _DashboardDeviceBindingPolicy(),
-                          const SizedBox(height: 25),
-                          if (ref.watch(authProvider.notifier).isAdmin) ...[
-                            _buildAdminAccessButton(context),
-                            const SizedBox(height: 25),
-                          ],
-                          enrolledCoursesAsync.when(
-                            data: (enrolledCourses) => _buildContinueLearning(
-                                context, enrolledCourses),
-                            loading: () =>
-                                _buildLoadingCard(context, 'Continue Learning'),
-                            error: (error, stack) => _buildErrorCard(
-                                context, 'Continue Learning', error.toString()),
-                          ),
-                          const SizedBox(height: 25),
-                          const DownloadsSection(),
-                          const SizedBox(height: 25),
-                          popularCoursesAsync.when(
-                            data: (popularCourses) =>
-                                _buildPopularCourses(context, popularCourses),
-                            loading: () =>
-                                _buildLoadingCard(context, 'Popular Courses'),
-                            error: (error, stack) => _buildErrorCard(
-                                context, 'Popular Courses', error.toString()),
-                          ),
-                          const SizedBox(height: 25),
-                          _buildWishlistSection(context),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCategoryFilters(context),
+                  const SizedBox(height: 10),
+                  _buildWelcomeCard(context, user),
+                  const SizedBox(height: 20),
+                  const _DashboardDeviceBindingPolicy(),
+                  const SizedBox(height: 25),
+                  if (ref.watch(authProvider.notifier).isAdmin) ...[
+                    _buildAdminAccessButton(context),
+                    const SizedBox(height: 25),
+                  ],
+                  enrolledCoursesAsync.when(
+                    data: (enrolledCourses) =>
+                        _buildContinueLearning(context, enrolledCourses),
+                    loading: () => _buildLoadingCard(context, 'Continue Learning'),
+                    error: (error, stack) => _buildErrorCard(
+                        context, 'Continue Learning', error.toString()),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 25),
+                  const DownloadsSection(),
+                  const SizedBox(height: 25),
+                  popularCoursesAsync.when(
+                    data: (popularCourses) =>
+                        _buildResponsivePopularCourses(context, popularCourses),
+                    loading: () => _buildLoadingCard(context, 'Popular Courses'),
+                    error: (error, stack) => _buildErrorCard(
+                        context, 'Popular Courses', error.toString()),
+                  ),
+                  const SizedBox(height: 25),
+                  _buildWishlistSection(context),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
-        bottomNavigationBar: _buildBottomNavBar(context),
-        drawer: ResponsiveNavigationDrawer(currentPage: 'dashboard'),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showContactInfoDialog(context),
-          backgroundColor: AppTheme.primaryGreen,
-          foregroundColor: Colors.white,
-          elevation: 8,
-          icon: const Icon(Icons.contact_support, size: 24),
-          label: const Text('Contact Us',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      );
-    }
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showContactInfoDialog(context),
+        backgroundColor: AppTheme.primaryGreen,
+        foregroundColor: Colors.white,
+        elevation: 8,
+        icon: const Icon(Icons.contact_support, size: 24),
+        label: const Text('Contact Us',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
   }
 
   // FIX #6: Extracted refresh logic into a dedicated method to cleanly
@@ -414,25 +316,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, user) {
-    Widget header;
-    if (ResponsiveBreakpoints.isSmallMobile(context)) {
-      header = _buildSmallMobileHeader(context, user);
-    } else if (ResponsiveBreakpoints.isStandardMobile(context)) {
-      header = _buildStandardMobileHeader(context, user);
-    } else {
-      header = _buildDesktopHeader(context, user);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        header,
-        _buildCategoryFilters(context),
-      ],
     );
   }
 
@@ -532,190 +415,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       default:
         return AppTheme.primaryGreen;
     }
-  }
-
-  Widget _buildDesktopHeader(BuildContext context, user) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: ResponsiveBreakpoints.getPadding(context),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Welcome section with enhanced styling
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF047857)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.waving_hand,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Welcome back,',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      user?.fullName ?? 'Student',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.contact_support,
-                    color: AppTheme.primaryGreen, size: 24),
-                onPressed: () => _showContactInfoDialog(context),
-                tooltip: 'Contact Us',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon:
-                    Icon(Icons.refresh, color: AppTheme.primaryGreen, size: 24),
-                onPressed: () async {
-                  await _refreshDashboard(); // FIX #6
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Dashboard refreshed'),
-                        backgroundColor: AppTheme.primaryGreen,
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
-                tooltip: 'Refresh Dashboard',
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.notifications_outlined, size: 24),
-                    // Notification badge
-                    if (ref
-                        .watch(notificationProvider)
-                        .notifications
-                        .any((n) => !n.isRead))
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.primaryGreen,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                onPressed: () => context.push('/notifications'),
-                tooltip: 'Notifications',
-              ),
-              const SizedBox(width: 16),
-              PopupMenuButton(
-                icon: CircleAvatar(
-                  radius: 22,
-                  backgroundColor:
-                      AppTheme.primaryGreen.withValues(alpha: 0.1), // FIX #8
-                  child: Text(
-                    user?.fullName.substring(0, 1).toUpperCase() ?? 'U',
-                    style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                color: Theme.of(context).cardColor,
-                onSelected: (value) {
-                  if (value == 'logout') {
-                    _showLogoutDialog(context);
-                  }
-                },
-                itemBuilder: (context) => <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    value: 'profile',
-                    onTap: () => context.push('/profile'),
-                    child: Row(children: [
-                      Icon(Icons.person_outline,
-                          color: AppTheme.getIconColor(context), size: 18),
-                      const SizedBox(width: 10),
-                      Text('Profile',
-                          style:
-                              TextStyle(color: AppTheme.getTextColor(context))),
-                    ]),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'settings',
-                    onTap: () => context.push('/settings'),
-                    child: Row(children: [
-                      Icon(Icons.settings_outlined,
-                          color: AppTheme.getIconColor(context), size: 18),
-                      const SizedBox(width: 10),
-                      Text('Settings',
-                          style:
-                              TextStyle(color: AppTheme.getTextColor(context))),
-                    ]),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem<String>(
-                    value: 'logout',
-                    child: Row(children: [
-                      Icon(Icons.logout,
-                          color: AppTheme.getErrorColor(context), size: 18),
-                      const SizedBox(width: 10),
-                      Text('Logout',
-                          style: TextStyle(
-                              color: AppTheme.getErrorColor(context))),
-                    ]),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildWelcomeCard(BuildContext context, user) {
@@ -2152,6 +1851,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     title: 'WhatsApp',
                     subtitle: '+250 793 828 834',
                     onTap: () => _launchWhatsApp('250793828834')),
+                const SizedBox(height: 8),
+                _buildContactMethod(context,
+                    icon: Icons.message,
+                    title: 'WhatsApp',
+                    subtitle: '+250 788 535 156',
+                    onTap: () => _launchWhatsApp('250788535156')),
                 const SizedBox(height: 16),
                 _buildContactMethod(context,
                     icon: Icons.phone,

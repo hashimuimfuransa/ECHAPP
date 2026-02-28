@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/category.dart';
@@ -378,6 +379,19 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: (context.canPop() || GoRouterState.of(context).uri.path != '/admin') 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/admin/courses');
+                }
+              },
+              tooltip: 'Back',
+            ) 
+          : null,
         title: Text(_isEditing ? 'Edit Course' : 'Create New Course'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
