@@ -56,6 +56,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         return Icons.school;
       case 'exam':
         return Icons.quiz;
+      case 'reminder':
+        return Icons.alarm;
+      case 'promotion':
+        return Icons.local_offer;
       default:
         return Icons.notifications;
     }
@@ -79,6 +83,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         return AppTheme.primaryGreen;
       case 'exam':
         return Colors.blue;
+      case 'reminder':
+        return Colors.amber;
+      case 'promotion':
+        return Colors.purple;
       default:
         return AppTheme.greyColor;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/models/notification.dart';
 import 'package:excellencecoachinghub/services/notification_service.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 class NotificationState {
   final bool isLoading;
@@ -27,7 +28,28 @@ class NotificationState {
 }
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
-  NotificationNotifier() : super(NotificationState());
+  final Ref ref;
+  NotificationNotifier(this.ref) : super(NotificationState()) {
+    // Automatically load notifications when initialized if user is logged in
+    _init();
+  }
+
+  void _init() {
+    // Wait for next frame to avoid state modification during build
+    Future.microtask(() {
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        loadNotifications();
+      }
+    });
+    
+    // Also listen for auth changes
+    ref.listen(authProvider, (previous, next) {
+      if (next.user != null && previous?.user == null) {
+        loadNotifications();
+      }
+    });
+  }
 
   Future<void> loadNotifications() async {
     state = state.copyWith(isLoading: true, error: null);
@@ -84,7 +106,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 }
 
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
-  return NotificationNotifier();
+  return NotificationNotifier(ref);
 });
 
 final notificationCountProvider = Provider<AsyncValue<int>>((ref) {

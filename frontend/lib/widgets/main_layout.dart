@@ -110,7 +110,7 @@ class MainLayout extends ConsumerWidget {
               onPressed: () => _handleGlobalRefresh(ref, context),
               tooltip: 'Refresh App',
             ),
-            if (user != null) _buildNotificationBadge(ref),
+            if (user != null) _buildNotificationBadge(context, ref),
             const SizedBox(width: 8),
           ],
         ),
@@ -231,7 +231,7 @@ class MainLayout extends ConsumerWidget {
             tooltip: 'Refresh App',
           ),
           const Spacer(),
-          _buildNotificationBadge(ref),
+          _buildNotificationBadge(context, ref),
           const SizedBox(width: 16),
           _buildUserAvatar(context, user),
         ],
@@ -239,7 +239,7 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationBadge(WidgetRef ref) {
+  Widget _buildNotificationBadge(BuildContext context, WidgetRef ref) {
     final notificationCount = ref.watch(notificationCountProvider).when(
           data: (count) => count,
           loading: () => 0,
@@ -250,30 +250,33 @@ class MainLayout extends ConsumerWidget {
       children: [
         IconButton(
           icon: const Icon(Icons.notifications_none_rounded),
-          onPressed: () {}, // Handled by router or local logic
+          onPressed: () => context.push('/notifications'),
         ),
         if (notificationCount > 0)
           Positioned(
             right: 8,
             top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                notificationCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+            child: GestureDetector(
+              onTap: () => context.push('/notifications'),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
                 ),
-                textAlign: TextAlign.center,
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Text(
+                  notificationCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
