@@ -1205,17 +1205,28 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           orElse: () => certificates.first,
         );
         
-        final downloadUrl = await certificateRepo.downloadCertificate(certificate.id);
-        final uri = Uri.parse(downloadUrl);
+        final savePath = await certificateRepo.downloadAndSaveCertificate(
+          certificate.id,
+          fileName: 'certificate_${certificate.id}.pdf',
+        );
         
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not open download URL: $downloadUrl')),
-            );
-          }
+        if (mounted && savePath != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Certificate saved to: $savePath'),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: 'Open',
+                textColor: Colors.white,
+                onPressed: () async {
+                  final Uri uri = Uri.file(savePath);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
+              ),
+            ),
+          );
         }
       } else {
         if (mounted) {

@@ -1998,18 +1998,60 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Future<void> _downloadCertificate(String certificateId) async {
     try {
       final certificateRepo = CertificateRepository();
-      final downloadUrl = await certificateRepo.downloadCertificate(certificateId);
       
-      // Launch the download URL
-      final Uri url = Uri.parse(downloadUrl);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch $downloadUrl';
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+                SizedBox(width: 12),
+                Text('Preparing certificate download...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      final savePath = await certificateRepo.downloadAndSaveCertificate(
+        certificateId,
+        fileName: 'certificate_$certificateId.pdf',
+      );
+      
+      if (mounted) {
+        if (savePath != null) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Certificate saved to: $savePath'),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: 'Open',
+                textColor: Colors.white,
+                onPressed: () async {
+                  final Uri uri = Uri.file(savePath);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
+              ),
+            ),
+          );
+        } else {
+          // Download was cancelled by user (e.g., closed file picker)
+          ScaffoldMessenger.of(context).clearSnackBars();
+        }
       }
     } catch (e) {
       print('Error downloading certificate: $e');
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error downloading certificate: $e'),

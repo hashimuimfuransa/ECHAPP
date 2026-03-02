@@ -17,6 +17,11 @@ class CertificateRepository {
     return await _certificateService.downloadCertificate(certificateId);
   }
 
+  /// Download and save a certificate file
+  Future<String?> downloadAndSaveCertificate(String certificateId, {String? fileName}) async {
+    return await _certificateService.downloadAndSaveCertificate(certificateId, fileName: fileName);
+  }
+
   /// Get certificates by course ID
   Future<List<Certificate>> getCertificatesByCourse(String courseId) async {
     return await _certificateService.getCertificatesByCourse(courseId);

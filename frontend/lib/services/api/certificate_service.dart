@@ -1,4 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
 import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../infrastructure/api_client.dart';
@@ -37,7 +42,68 @@ class CertificateService {
     }
   }
 
-  /// Download a specific certificate
+  /// Download a specific certificate and save it to disk
+  /// Returns the saved file path if successful
+  Future<String?> downloadAndSaveCertificate(String certificateId, {String? fileName}) async {
+    try {
+      // Construct the direct download URL
+      final downloadUrl = '${ApiConfig.baseUrl}/enrollments/certificates/$certificateId/download-file';
+      
+      // Get the certificate data as bytes
+      final response = await _apiClient.getBytes(downloadUrl);
+      response.validateStatus();
+      
+      final bytes = response.bodyBytes;
+      final defaultFileName = fileName ?? 'certificate_$certificateId.pdf';
+      
+      if (kIsWeb) {
+        // Handle web download if needed, but for now we focus on Windows
+        return null;
+      }
+      
+      String? savePath;
+      
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        // Desktop platforms: use file picker for a robust "Save As" experience
+        savePath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save Certificate',
+          fileName: defaultFileName,
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+        );
+      } else {
+        // Mobile platforms: save to downloads or documents
+        Directory? directory;
+        if (Platform.isAndroid) {
+          directory = Directory('/storage/emulated/0/Download');
+          if (!await directory.exists()) {
+            directory = await getExternalStorageDirectory();
+          }
+        } else {
+          directory = await getApplicationDocumentsDirectory();
+        }
+        
+        if (directory != null) {
+          savePath = p.join(directory.path, defaultFileName);
+        }
+      }
+      
+      if (savePath != null) {
+        final file = File(savePath);
+        await file.writeAsBytes(bytes);
+        print('Certificate saved to: $savePath');
+        return savePath;
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error in downloadAndSaveCertificate: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to download and save certificate: $e');
+    }
+  }
+
+  /// Download a specific certificate (returns URL)
   Future<String> downloadCertificate(String certificateId) async {
     try {
       // Construct the direct download URL

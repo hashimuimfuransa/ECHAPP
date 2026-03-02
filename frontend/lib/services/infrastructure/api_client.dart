@@ -71,6 +71,23 @@ class ApiClient {
     return _makeRequest(() => _httpClient.get(uri, headers: mergedHeaders));
   }
 
+  /// Make HTTP GET request and return bytes
+  Future<http.Response> getBytes(
+    String url, {
+    Map<String, String>? headers,
+    Map<String, dynamic>? queryParams,
+  }) async {
+    final stringQueryParams = queryParams?.map(
+      (key, value) => MapEntry(key, value.toString()),
+    ) ?? {};
+    
+    final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
+    final authHeaders = await _getAuthHeaders();
+    final mergedHeaders = {...authHeaders, ...?headers};
+    
+    return _makeRequest(() => _httpClient.get(uri, headers: mergedHeaders));
+  }
+
   /// Make HTTP POST request
   Future<http.Response> post(
     String url, {

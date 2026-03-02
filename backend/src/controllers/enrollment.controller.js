@@ -341,7 +341,7 @@ const downloadCertificateFile = async (req, res) => {
       _id: certificateId,
       userId,
       isValid: true
-    }).populate('courseId', 'title');
+    }).populate('courseId', 'title description');
     
     if (!certificate) {
       return sendNotFound(res, 'Certificate not found or not authorized');
@@ -350,9 +350,50 @@ const downloadCertificateFile = async (req, res) => {
     // Check if the file exists
     const fs = require('fs');
     const path = require('path');
+    const Result = require('../models/Result');
+    const CertificatePDFService = require('../services/certificate_pdf_service');
     
     if (!fs.existsSync(certificate.certificatePdfPath)) {
-      return sendNotFound(res, 'Certificate file not found');
+      console.log(`Certificate file missing locally: ${certificate.certificatePdfPath}. Attempting to re-generate...`);
+      
+      try {
+        // Find the result to get totalPoints
+        const result = await Result.findOne({ userId, examId: certificate.examId });
+        
+        if (!result) {
+          console.error(`Original exam result not found for certificate ${certificateId}, user ${userId}`);
+          return sendNotFound(res, 'Certificate file not found and cannot be re-generated (result missing)');
+        }
+        
+        const user = await User.findById(userId).select('fullName email');
+        if (!user) {
+          return sendNotFound(res, 'User not found, cannot re-generate certificate');
+        }
+        
+        // Re-generate PDF certificate
+        const newPdfPath = await CertificatePDFService.generateCertificatePDF({
+          studentName: user.fullName,
+          userFullName: user.fullName,
+          courseTitle: certificate.courseId.title,
+          courseDescription: certificate.courseId.description,
+          score: certificate.score,
+          totalPoints: result.totalPoints,
+          percentage: certificate.percentage,
+          issuedDate: certificate.issuedDate,
+          serialNumber: certificate.serialNumber,
+          userId,
+          examId: certificate.examId
+        });
+        
+        // Update certificate record with the new path
+        certificate.certificatePdfPath = newPdfPath;
+        await certificate.save();
+        
+        console.log(`Certificate re-generated and updated: ${newPdfPath}`);
+      } catch (genError) {
+        console.error('Error re-generating certificate:', genError);
+        return sendError(res, 'Certificate file not found and re-generation failed', 500, genError.message);
+      }
     }
     
     // Set headers for PDF download
