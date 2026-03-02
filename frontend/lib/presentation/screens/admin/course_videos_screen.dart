@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk;
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/video_service.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
@@ -1040,8 +1040,8 @@ class _VideoPlayerWidget extends StatefulWidget {
 }
 
 class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
-  late VideoPlayerController _controller;
-  ChewieController? _chewieController;
+  late Player _player;
+  late mk.VideoController _videoController;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -1058,63 +1058,13 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
         _errorMessage = null;
       });
 
+      _player = Player();
+      _videoController = mk.VideoController(_player);
+
       // Get the signed streaming URL from the video API service
       final streamingUrl = await widget.videoApiService.getVideoStreamUrl(widget.lessonId);
       
-      _controller = VideoPlayerController.network(streamingUrl);
-      
-      await _controller.initialize();
-      
-      // Check if the video format might be problematic
-      final formatWarning = _checkVideoFormatCompatibility(streamingUrl);
-      
-      _chewieController = ChewieController(
-        videoPlayerController: _controller,
-        autoPlay: false,
-        looping: false,
-        aspectRatio: 16 / 9,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Video failed to load',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  formatWarning ?? 'This may be due to video codec compatibility issues.\nTry re-encoding the video with H.264 codec.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: $errorMessage',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.red[200],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
+      await _player.open(Media(streamingUrl));
       
       if (mounted) {
         setState(() {
@@ -1131,33 +1081,40 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
     }
   }
   
-  String? _checkVideoFormatCompatibility(String url) {
-    // This is a basic check - in reality, you'd need to inspect the actual video file
-    // For now, we'll provide general guidance based on common issues
-    if (url.toLowerCase().contains('.mov') || url.toLowerCase().contains('.hevc') || url.toLowerCase().contains('.h265')) {
-      return 'This video appears to use HEVC/H.265 codec which may not be supported on all devices.\nConsider re-encoding to H.264 for better compatibility.';
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_chewieController != null) {
-      return Chewie(controller: _chewieController!);
-    } else {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: CircularProgressIndicator(),
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Video failed to load',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
         ),
       );
     }
+
+    return mk.Video(controller: _videoController);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _chewieController?.dispose();
+    _player.dispose();
     super.dispose();
   }
 }

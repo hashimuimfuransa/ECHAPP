@@ -36,6 +36,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Map<String, dynamic>? _courseAccessData;
   final Map<String, bool> _sectionCompletionStatus = {};
   final Map<String, bool> _lessonCompletionStatus = {};
+  final Map<String, List<Lesson>> _sectionLessons = {};
   bool _isLoading = true;
   bool _isCompletingSection = false;
   int _currentSectionIndex = 0;
@@ -43,6 +44,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   bool _isLoadingCertificates = false;
   double _userRating = 0.0;
   final TextEditingController _feedbackController = TextEditingController();
+  
+  // Progress statistics
+  int _totalLessons = 0;
+  int _completedLessonsCount = 0;
+  int _totalDurationMinutes = 0;
+  int _completedDurationMinutes = 0;
 
   @override
   void initState() {
@@ -63,13 +70,37 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       _course = await courseRepo.getCourseById(widget.courseId);
       print('Course loaded: ${_course?.title}');
 
-      // Load sections
+      // Load course content (sections and lessons) in one call
       final sectionRepo = section_repo.SectionRepository();
-      _sections = await sectionRepo.getSectionsByCourse(widget.courseId);
-      print('Sections loaded: ${_sections?.length}');
+      final courseContent = await sectionRepo.getCourseContent(widget.courseId);
       
-      // Sort sections by order
-      _sections?.sort((a, b) => a.order.compareTo(b.order));
+      if (courseContent['sections'] != null) {
+        final sectionsData = courseContent['sections'] as List;
+        _sections = sectionsData.map((s) => Section.fromJson(s as Map<String, dynamic>)).toList();
+        
+        // Sort sections by order
+        _sections?.sort((a, b) => a.order.compareTo(b.order));
+        print('Sections loaded: ${_sections?.length}');
+        
+        // Calculate total lessons and duration from the content
+        _totalLessons = 0;
+        _totalDurationMinutes = 0;
+        _sectionLessons.clear();
+        
+        for (var sectionData in sectionsData) {
+          final sData = sectionData as Map<String, dynamic>;
+          final sectionId = (sData['_id'] ?? sData['id']).toString();
+          final lessonsData = sData['lessons'] as List?;
+          if (lessonsData != null) {
+            final lessons = lessonsData.map((l) => Lesson.fromJson(l as Map<String, dynamic>)).toList();
+            _sectionLessons[sectionId] = lessons;
+            _totalLessons += lessons.length;
+            for (var lesson in lessons) {
+              _totalDurationMinutes += lesson.duration;
+            }
+          }
+        }
+      }
 
       // Initialize section completion status
       _initializeSectionCompletionStatus();
@@ -82,10 +113,62 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         // Initialize lesson completion status from backend data
         if (_courseAccessData != null && _courseAccessData!['completedLessons'] != null) {
           final completedList = _courseAccessData!['completedLessons'] as List;
+          _completedLessonsCount = completedList.length;
+          _completedDurationMinutes = 0;
+          
+          final completedSet = completedList.map((e) => e.toString()).toSet();
+          
           for (var lessonId in completedList) {
             _lessonCompletionStatus[lessonId.toString()] = true;
           }
           print('Loaded ${_lessonCompletionStatus.length} completed lessons from backend');
+          
+          // Calculate completed duration from actual lesson data
+          if (courseContent['sections'] != null) {
+            final sectionsData = courseContent['sections'] as List;
+            for (var sectionData in sectionsData) {
+              final lessonsData = (sectionData as Map<String, dynamic>)['lessons'] as List?;
+              if (lessonsData != null) {
+                for (var lessonData in lessonsData) {
+                  if (completedSet.contains(lessonData['_id'].toString())) {
+                    _completedDurationMinutes += (lessonData['duration'] as num?)?.toInt() ?? 0;
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Initialize section completion status from backend data
+        if (_courseAccessData != null && _courseAccessData!['completedSections'] != null) {
+          final completedSectionsList = _courseAccessData!['completedSections'] as List;
+          final completedSet = completedSectionsList.map((e) => e.toString()).toSet();
+          
+          for (var sectionId in completedSectionsList) {
+            _sectionCompletionStatus[sectionId.toString()] = true;
+          }
+          print('Loaded ${completedSectionsList.length} completed sections from backend');
+          
+          // If a section is completed, the NEXT one should be unlocked
+          if (_sections != null) {
+            for (int i = 0; i < _sections!.length; i++) {
+              if (completedSet.contains(_sections![i].id)) {
+                if (i + 1 < _sections!.length) {
+                  _sectionCompletionStatus[_sections![i+1].id] = true;
+                }
+              }
+            }
+            
+            // Set current section index based on the first incomplete section
+            for (int i = 0; i < _sections!.length; i++) {
+              if (!completedSet.contains(_sections![i].id)) {
+                _currentSectionIndex = i;
+                break;
+              }
+              // If all sections are completed, set to the last one
+              _currentSectionIndex = _sections!.length - 1;
+            }
+          }
         }
       } catch (e) {
         print('Error loading course access data: $e');
@@ -318,7 +401,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Widget _buildProgressHeader() {
     final completedSections = _sectionCompletionStatus.values.where((status) => status).length;
     final totalSections = _sections?.length ?? 0;
-    final progress = totalSections > 0 ? completedSections / totalSections : 0.0;
+    
+    // Calculate progress based on lessons for more granularity
+    final progress = _totalLessons > 0 ? _completedLessonsCount / _totalLessons : 0.0;
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Container(
@@ -401,8 +486,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildProgressStat('Sections', '$completedSections/$totalSections', Icons.library_books),
-              _buildProgressStat('Lessons', '24/36', Icons.play_circle),
-              _buildProgressStat('Hours', '12/18', Icons.access_time),
+              _buildProgressStat('Lessons', '$_completedLessonsCount/$_totalLessons', Icons.play_circle),
+              _buildProgressStat('Hours', '${(_completedDurationMinutes / 60).toStringAsFixed(1)}/${(_totalDurationMinutes / 60).toStringAsFixed(1)}', Icons.access_time),
             ],
           ),
         ],
@@ -710,32 +795,26 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 : const Color(0xFF6B7280),
             ),
           ),
-          subtitle: FutureBuilder<List<Lesson>>(
-            future: _fetchLessonsCount(section.id),
-            builder: (context, snapshot) {
-              final lessonCount = snapshot.data?.length ?? 0;
-              return Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.school,
-                      size: 14,
-                      color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '$lessonCount lessons',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 13 : 15,
-                        color: isUnlocked ? AppTheme.greyColor : Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.school,
+                  size: 14,
+                  color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
                 ),
-              );
-            },
+                const SizedBox(width: 6),
+                Text(
+                  '${_sectionLessons[section.id]?.length ?? 0} lessons',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 13 : 15,
+                    color: isUnlocked ? AppTheme.greyColor : Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -844,37 +923,51 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildLessonsList(String sectionId) {
-    return FutureBuilder<List<Lesson>>(
-      future: _fetchLessonsBySection(sectionId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final lessons = _sectionLessons[sectionId] ?? [];
+    
+    if (lessons.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'No lessons in this section',
+            style: TextStyle(
+              color: AppTheme.greyColor,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
 
-        if (snapshot.hasError || snapshot.data == null) {
-          return const Center(child: Text('Unable to load lessons'));
-        }
-
-        final lessons = snapshot.data!;
-        if (lessons.isEmpty) {
-          return const Center(child: Text('No lessons in this section'));
-        }
-
-        return Column(
-          children: [
-            ...lessons.asMap().entries.map((entry) {
-              final index = entry.key;
-              final lesson = entry.value;
-              return _buildLessonItem(lesson, index == 0); // First lesson marked as next
-            }),
-            // Add exam button after lessons
-            _buildExamButton(sectionId),
-            // Add certificate display if available
-            if (_courseCertificates != null && _courseCertificates!.isNotEmpty)
-              _buildCertificateSection(),
-          ],
-        );
-      },
+    return Column(
+      children: [
+        ...lessons.asMap().entries.map((entry) {
+          final index = entry.key;
+          final lesson = entry.value;
+          
+          // Determine if this is the next lesson to take
+          bool isNext = false;
+          if (_lessonCompletionStatus[lesson.id] != true) {
+            // Check if all previous lessons in this section are completed
+            bool previousCompleted = true;
+            for (int i = 0; i < index; i++) {
+              if (_lessonCompletionStatus[lessons[i].id] != true) {
+                previousCompleted = false;
+                break;
+              }
+            }
+            if (previousCompleted) isNext = true;
+          }
+          
+          return _buildLessonItem(lesson, isNext);
+        }),
+        // Add exam button after lessons
+        _buildExamButton(sectionId),
+        // Add certificate display if available
+        if (_courseCertificates != null && _courseCertificates!.isNotEmpty)
+          _buildCertificateSection(),
+      ],
     );
   }
 
@@ -1558,6 +1651,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       // Mark lesson as completed locally first for better UX
       setState(() {
         _lessonCompletionStatus[lesson.id] = true;
+        _completedLessonsCount++;
+        _completedDurationMinutes += lesson.duration;
       });
       
       // Call backend to update progress if enrollment is found
@@ -1567,6 +1662,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           print('Updating enrollment $enrollmentId progress for lesson: ${lesson.title}');
           final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
           await enrollmentRepo.updateEnrollmentProgress(enrollmentId, lesson.id, true);
+          print('Progress updated successfully in backend');
         } catch (e) {
           print('Error updating enrollment progress in backend: $e');
         }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 
@@ -34,10 +35,18 @@ class VideoApiService {
   /// Get lesson content (video URL and notes)
   Future<LessonContent> getLessonContent(String lessonId) async {
     try {
-      // First get the lesson details
-      final lessonResponse = await _apiClient.get(
-        '${ApiConfig.baseUrl}/lessons/$lessonId',
-      );
+      // Parallelize lesson details and video URL fetch to reduce wait time
+      // The video URL fetch is started immediately but only used if lessonData['videoId'] is present
+      final results = await Future.wait([
+        _apiClient.get('${ApiConfig.baseUrl}/lessons/$lessonId'),
+        _apiClient.get('${ApiConfig.baseUrl}/videos/$lessonId/stream-url').catchError((e) {
+          // If video URL fetch fails, return a mock error response
+          return http.Response(jsonEncode({'success': false, 'message': 'Video fetch failed'}), 404);
+        }),
+      ]);
+
+      final lessonResponse = results[0];
+      final videoResponse = results[1];
 
       lessonResponse.validateStatus();
       final lessonJson = jsonDecode(lessonResponse.body) as Map<String, dynamic>;
@@ -48,24 +57,18 @@ class VideoApiService {
       
       final lessonData = lessonJson['data'] as Map<String, dynamic>;
       
-      // If lesson has video content, get the streaming URL
+      // If lesson has video content, extract the streaming URL from the parallelized request
       String? videoUrl;
-      if (lessonData['videoId'] != null) {
+      if (lessonData['videoId'] != null && videoResponse.statusCode == 200) {
         try {
-          final videoResponse = await _apiClient.get(
-            '${ApiConfig.baseUrl}/videos/$lessonId/stream-url',
-          );
-          
-          videoResponse.validateStatus();
           final videoJson = jsonDecode(videoResponse.body) as Map<String, dynamic>;
-          
           if (videoJson['success'] == true) {
             final videoData = videoJson['data'] as Map<String, dynamic>;
             videoUrl = videoData['streamingUrl'] as String?;
           }
         } catch (e) {
-          // If video URL fails, continue with just notes
-          print('Warning: Failed to get video URL: $e');
+          // If video URL parsing fails, continue with just notes
+          print('Warning: Failed to parse video URL response: $e');
         }
       }
       

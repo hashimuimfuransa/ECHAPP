@@ -84,6 +84,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   @override
+  void didUpdateWidget(LessonViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the lesson has changed, reload the content
+    if (widget.lesson.id != oldWidget.lesson.id) {
+      print('Lesson ID changed from ${oldWidget.lesson.id} to ${widget.lesson.id}, reloading content');
+      _loadLessonContent();
+      _loadCourseContent();
+    }
+  }
+
+  @override
   void dispose() {
     _player?.dispose();
     _scrollController.dispose();
@@ -255,6 +266,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
     try {
+      // Dispose old player if it exists before initializing a new one
+      if (_player != null) {
+        print('Disposing existing video player before re-initialization');
+        try {
+          await _player!.dispose();
+        } catch (e) {
+          print('Warning during player disposal: $e');
+        }
+        _player = null;
+      }
+      
       final optimizedUrl = _getWindowsOptimizedUrl(videoUrl);
       print('Initializing video player with URL: $optimizedUrl');
       

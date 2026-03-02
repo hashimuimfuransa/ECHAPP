@@ -42,9 +42,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   List<StreamSubscription> _subscriptions = [];
 
-  String _getWindowsOptimizedUrl(String url) {
-    if (Platform.isWindows && !url.contains('type=.mp4')) {
-      return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+  String _getOptimizedUrl(String url) {
+    if (url.startsWith('http')) {
+      if (Platform.isWindows && !url.contains('type=.mp4')) {
+        return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+      }
+      return url;
+    }
+    // Handle local files
+    if (Platform.isWindows) {
+      return url.replaceAll('/', '\\');
     }
     return url;
   }
@@ -61,11 +68,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _isInitialized = true;
     } else {
       _player = Player();
-      final optimizedUrl = _getWindowsOptimizedUrl(widget.videoUrl!);
+      final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
       _player.open(Media(optimizedUrl)).then((_) {
-        setState(() {
-          _isInitialized = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+        }
       });
     }
 
@@ -126,19 +135,35 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   @override
   void didUpdateWidget(CustomVideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.externalPlayer != oldWidget.externalPlayer) {
-      _initPlayer();
+    if (widget.externalPlayer != oldWidget.externalPlayer || 
+        widget.videoUrl != oldWidget.videoUrl) {
+      if (oldWidget.externalPlayer == null && widget.externalPlayer == null) {
+        // Both use internal player, re-open media if URL changed
+        if (widget.videoUrl != oldWidget.videoUrl) {
+          final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
+          _player.open(Media(optimizedUrl));
+        }
+      } else {
+        // Switching between internal/external or external changed, full re-init
+        _disposeInternalPlayer();
+        _initPlayer();
+      }
+    }
+  }
+
+  void _disposeInternalPlayer() {
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
+    _subscriptions = [];
+    if (widget.externalPlayer == null) {
+      _player.dispose();
     }
   }
 
   @override
   void dispose() {
-    for (final s in _subscriptions) {
-      s.cancel();
-    }
-    if (widget.externalPlayer == null) {
-      _player.dispose();
-    }
+    _disposeInternalPlayer();
     super.dispose();
   }
 
