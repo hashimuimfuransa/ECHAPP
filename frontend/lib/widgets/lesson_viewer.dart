@@ -17,6 +17,8 @@ import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'dart:io';
 
+import 'package:excellencecoachinghub/models/certificate.dart';
+
 // Model for notes sections
 class NotesSection {
   final String id;
@@ -36,11 +38,13 @@ class NotesSection {
 class LessonViewer extends ConsumerStatefulWidget {
   final Lesson lesson;
   final String courseId;
+  final List<Certificate>? certificates;
   
   const LessonViewer({
     super.key,
     required this.lesson,
     required this.courseId,
+    this.certificates,
   });
 
   @override

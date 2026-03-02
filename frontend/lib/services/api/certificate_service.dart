@@ -25,7 +25,11 @@ class CertificateService {
             .map((json) => Certificate.fromJson(json as Map<String, dynamic>))
             .toList();
       } else {
-        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch certificates');
+        final message = jsonBody['message'];
+        final errorMessage = (message is String) 
+            ? message 
+            : (message is Map ? (message['message'] ?? message.toString()) : 'Failed to fetch certificates');
+        throw ApiException(errorMessage.toString());
       }
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -66,7 +70,11 @@ class CertificateService {
             
         return filteredCertificates;
       } else {
-        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch certificates');
+        final message = jsonBody['message'];
+        final errorMessage = (message is String) 
+            ? message 
+            : (message is Map ? (message['message'] ?? message.toString()) : 'Failed to fetch certificates');
+        throw ApiException(errorMessage.toString());
       }
     } catch (e) {
       if (e is ApiException) rethrow;

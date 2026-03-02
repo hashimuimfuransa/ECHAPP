@@ -200,21 +200,21 @@ const getCertificates = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const enrollments = await Enrollment.find({ 
-      userId, 
-      certificateEligible: true 
+    const certificates = await Certificate.find({ 
+      userId,
+      isValid: true 
     })
       .populate({
         path: 'courseId',
-        select: 'title description duration level thumbnail isPublished createdBy',
-        populate: {
-          path: 'createdBy',
-          select: 'fullName'
-        }
+        select: 'title description duration level thumbnail createdBy'
       })
-      .sort({ updatedAt: -1 });
+      .populate({
+        path: 'examId',
+        select: 'title type'
+      })
+      .sort({ issuedDate: -1 });
 
-    sendSuccess(res, enrollments, 'Certificates retrieved successfully');
+    sendSuccess(res, certificates, 'Certificates retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve certificates', 500, error.message);
   }

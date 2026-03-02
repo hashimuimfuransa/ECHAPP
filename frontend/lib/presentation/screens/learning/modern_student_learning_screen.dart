@@ -964,9 +964,6 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         }),
         // Add exam button after lessons
         _buildExamButton(sectionId),
-        // Add certificate display if available
-        if (_courseCertificates != null && _courseCertificates!.isNotEmpty)
-          _buildCertificateSection(),
       ],
     );
   }
@@ -1109,6 +1106,22 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                               ),
                             ),
                           ),
+                        
+                        // Check if any exam in this section has a certificate
+                        if (_courseCertificates != null && _courseCertificates!.any((cert) => 
+                          exams.any((exam) => exam.id == cert.examId)
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Tooltip(
+                              message: 'Certificate available in this section',
+                              child: Icon(
+                                Icons.workspace_premium,
+                                color: Colors.amber,
+                                size: isSmallScreen ? 16 : 18,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   );
@@ -1121,6 +1134,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               Color examColor;
               IconData examIcon;
               String examTypeLabel;
+              
+              // Check if this specific exam has a certificate
+              final examCertificate = _courseCertificates?.where((c) => c.examId == exam.id).firstOrNull;
               
               switch (exam.type.toLowerCase() ?? '') {
                 case 'quiz':
@@ -1240,8 +1256,24 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                        if (examCertificate != null)
+                          Padding(
+                            padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
+                            child: OutlinedButton.icon(
+                              onPressed: () => _viewCertificate(examCertificate),
+                              icon: const Icon(Icons.workspace_premium, size: 14),
+                              label: const Text('View Certificate'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.amber.shade800,
+                                side: BorderSide(color: Colors.amber.shade400),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                minimumSize: const Size(0, 28),
+                                textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   trailing: Icon(
                     Icons.arrow_forward_ios,
                     color: examColor,
@@ -1357,6 +1389,30 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           ],
         );
       },
+    );
+  }
+
+  void _viewCertificate(Certificate certificate) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Certificate Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Score: ${certificate.score.toStringAsFixed(1)}/${certificate.percentage.toStringAsFixed(1)}%'),
+            Text('Date: ${certificate.issuedDate.day}/${certificate.issuedDate.month}/${certificate.issuedDate.year}'),
+            Text('Serial: ${certificate.serialNumber}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
   
@@ -1676,6 +1732,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           builder: (context) => LessonViewer(
             lesson: lesson,
             courseId: widget.courseId,
+            certificates: _courseCertificates,
           ),
         ),
       );
@@ -1836,12 +1893,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     );
   }
 
-  Widget _buildCertificateSection() {
-    if (_courseCertificates == null || _courseCertificates!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final certificate = _courseCertificates!.first; // Take the first certificate
+  Widget _buildCertificateSection(Certificate certificate) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Container(

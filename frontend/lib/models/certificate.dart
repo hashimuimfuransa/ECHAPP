@@ -24,16 +24,26 @@ class Certificate {
   });
 
   factory Certificate.fromJson(Map<String, dynamic> json) {
+    // Handle potentially populated fields
+    String parseId(dynamic value) {
+      if (value is String) {
+        return value;
+      } else if (value is Map<String, dynamic>) {
+        return (value['_id'] ?? value['id'] ?? '').toString();
+      }
+      return value?.toString() ?? '';
+    }
+
     return Certificate(
-      id: json['_id'] ?? json['id'],
-      userId: json['userId'],
-      courseId: json['courseId'],
-      examId: json['examId'],
-      score: (json['score'] is int) ? json['score'].toDouble() : json['score'],
-      percentage: (json['percentage'] is int) ? json['percentage'].toDouble() : json['percentage'],
-      issuedDate: DateTime.parse(json['issuedDate']),
-      certificatePdfPath: json['certificatePdfPath'],
-      serialNumber: json['serialNumber'],
+      id: parseId(json['_id'] ?? json['id']),
+      userId: parseId(json['userId']),
+      courseId: parseId(json['courseId']),
+      examId: parseId(json['examId']),
+      score: (json['score'] is num) ? json['score'].toDouble() : 0.0,
+      percentage: (json['percentage'] is num) ? json['percentage'].toDouble() : 0.0,
+      issuedDate: DateTime.parse(json['issuedDate'] ?? json['createdAt'] ?? DateTime.now().toIso8601String()),
+      certificatePdfPath: json['certificatePdfPath'] ?? '',
+      serialNumber: json['serialNumber'] ?? '',
       isValid: json['isValid'] ?? true,
     );
   }

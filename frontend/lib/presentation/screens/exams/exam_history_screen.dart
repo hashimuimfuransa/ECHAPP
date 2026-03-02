@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
+import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'exam_question_details_screen.dart';
 
 /// Screen to display user's exam history with detailed results
@@ -16,6 +19,7 @@ class ExamHistoryScreen extends ConsumerStatefulWidget {
 
 class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
   List<ExamResult> _examHistory = [];
+  List<Certificate> _certificates = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -33,9 +37,14 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
 
     try {
       final examService = ExamService();
+      final certificateRepo = CertificateRepository();
+      
       final history = await examService.getUserExamHistory();
+      final certificates = await certificateRepo.getCertificates();
+      
       setState(() {
         _examHistory = history;
+        _certificates = certificates;
         _isLoading = false;
       });
     } catch (e) {
@@ -243,6 +252,16 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
     final isPassed = result.passed;
     final percentage = (result.percentage ?? 0.0).toStringAsFixed(1);
     
+    // Check if there's a certificate for this exam
+    final certificate = _certificates.firstWhere(
+      (c) => c.examId == result.examId || (result.examDetails != null && c.examId == result.examDetails!.id),
+      orElse: () => Certificate(
+        id: '', userId: '', courseId: '', examId: '', score: 0, percentage: 0, 
+        issuedDate: DateTime.now(), certificatePdfPath: '', serialNumber: '', isValid: false
+      ),
+    );
+    final hasCertificate = certificate.id.isNotEmpty && isPassed;
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
@@ -280,10 +299,23 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
                         _showExamDetails(result);
                       } else if (choice == 'review') {
                         _showQuestionDetails(result);
+                      } else if (choice == 'certificate') {
+                        _downloadCertificate(certificate.id);
                       }
                     },
                     itemBuilder: (BuildContext context) {
                       return <PopupMenuEntry<String>>[
+                        if (hasCertificate)
+                          const PopupMenuItem<String>(
+                            value: 'certificate',
+                            child: Row(
+                              children: [
+                                Icon(Icons.verified_user, size: 16, color: Colors.amber),
+                                SizedBox(width: 8),
+                                Text('View Certificate'),
+                              ],
+                            ),
+                          ),
                         const PopupMenuItem<String>(
                           value: 'details',
                           child: Row(
@@ -487,6 +519,21 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
               // Action buttons
               Row(
                 children: [
+                  if (hasCertificate) ...[
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _downloadCertificate(certificate.id),
+                        icon: const Icon(Icons.verified_user, size: 18),
+                        label: const Text('Certificate'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => _showExamDetails(result),
@@ -498,7 +545,7 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('View Details'),
+                      child: const Text('Details'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -513,7 +560,7 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Question Review'),
+                      child: const Text('Review'),
                     ),
                   ),
                 ],
@@ -605,6 +652,29 @@ class _ExamHistoryScreenState extends ConsumerState<ExamHistoryScreen> {
         builder: (context) => ExamQuestionDetailsScreen(examResult: result),
       ),
     );
+  }
+
+  Future<void> _downloadCertificate(String certificateId) async {
+    try {
+      final certificateRepo = CertificateRepository();
+      final downloadUrl = await certificateRepo.downloadCertificate(certificateId);
+      
+      final Uri url = Uri.parse(downloadUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch $downloadUrl';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading certificate: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime? date) {
