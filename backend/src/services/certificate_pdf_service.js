@@ -133,10 +133,10 @@ class CertificatePDFService {
     try {
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, (pageWidth - 80) / 2, 50, { width: 80 });
-        doc.moveDown(4.5);
+        doc.moveDown(6.5); // Increased space from 4.5 for better visual layout
       } else {
         console.warn('Logo not found at:', logoPath);
-        doc.moveDown(1);
+        doc.moveDown(2); // Increased from 1
       }
     } catch (err) {
       console.error('Error adding logo to PDF:', err);
@@ -181,13 +181,16 @@ class CertificatePDFService {
   }
 
   static addRecipientInfo(doc, data) {
-    doc.fontSize(32)
+    const displayName = (data.studentName || data.userFullName || 'Valued Student').toUpperCase();
+    
+    doc.fontSize(34) // Slightly larger
        .font('Helvetica-Bold')
        .fillColor('#d4af37') // Gold for the name
-       .text(data.studentName || data.userFullName || 'Valued Student', {
-         align: 'center'
+       .text(displayName, {
+         align: 'center',
+         characterSpacing: 0.5
        })
-       .moveDown(0.3);
+       .moveDown(0.4);
 
     // Subtle underline for the name
     const pageWidth = doc.page.width;
