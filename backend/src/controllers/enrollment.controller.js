@@ -410,6 +410,55 @@ const downloadCertificateFile = async (req, res) => {
   }
 };
 
+// Verify certificate by serial number (Public endpoint)
+const verifyCertificate = async (req, res) => {
+  try {
+    const { serialNumber } = req.params;
+    
+    if (!serialNumber) {
+      return sendError(res, 'Serial number is required', 400);
+    }
+    
+    // Find the certificate and populate relevant data
+    const certificate = await Certificate.findOne({ 
+      serialNumber,
+      isValid: true
+    })
+    .populate({
+      path: 'userId',
+      select: 'fullName email profileImage'
+    })
+    .populate({
+      path: 'courseId',
+      select: 'title description thumbnail duration level'
+    });
+    
+    if (!certificate) {
+      return sendNotFound(res, 'Certificate not found or invalid');
+    }
+    
+    // Structure the verification data
+    const verificationData = {
+      serialNumber: certificate.serialNumber,
+      studentName: certificate.userId ? certificate.userId.fullName : 'Valued Student',
+      studentProfileImage: certificate.userId ? certificate.userId.profileImage : null,
+      courseTitle: certificate.courseId ? certificate.courseId.title : 'Course',
+      courseDescription: certificate.courseId ? certificate.courseId.description : '',
+      courseThumbnail: certificate.courseId ? certificate.courseId.thumbnail : null,
+      issuedDate: certificate.issuedDate,
+      percentage: certificate.percentage,
+      isValid: certificate.isValid,
+      verificationStatus: 'VERIFIED',
+      institution: 'Excellence Coaching Hub'
+    };
+    
+    sendSuccess(res, verificationData, 'Certificate verified successfully');
+  } catch (error) {
+    console.error('Error verifying certificate:', error);
+    sendError(res, 'Failed to verify certificate', 500, error.message);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
@@ -419,5 +468,6 @@ module.exports = {
   checkCertificateEligibility,
   downloadCertificate,
   checkCourseAccess,
-  downloadCertificateFile
+  downloadCertificateFile,
+  verifyCertificate
 };

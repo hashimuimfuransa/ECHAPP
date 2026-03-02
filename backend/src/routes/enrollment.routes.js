@@ -9,9 +9,13 @@ const {
   checkCertificateEligibility,
   downloadCertificate,
   checkCourseAccess,
-  downloadCertificateFile
+  downloadCertificateFile,
+  verifyCertificate
 } = require('../controllers/enrollment.controller');
 const { protect } = require('../middleware/auth.middleware');
+
+// Public routes
+router.get('/verify/:serialNumber', verifyCertificate);
 
 // Protected routes
 router.post('/', protect, enrollInCourse);

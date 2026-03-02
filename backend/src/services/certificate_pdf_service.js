@@ -32,18 +32,19 @@ class CertificatePDFService {
         const filename = `certificate_${certificateData.userId}_${certificateData.examId}_${Date.now()}.pdf`;
         const filepath = path.join(certsDir, filename);
 
-        // Create PDF document
+        // Create PDF document in landscape for a more professional feel
         const doc = new PDFDocument({
           size: 'A4',
-          margin: 50
+          layout: 'landscape',
+          margin: 0 // We'll manage margins manually for the border
         });
 
         // Pipe to a writable stream
         const stream = fs.createWriteStream(filepath);
         doc.pipe(stream);
 
-        // Add background design
-        this.addBackground(doc);
+        // Add background design and borders
+        this.addBackgroundAndBorders(doc);
 
         // Add header with logo
         await this.addHeaderWithLogo(doc);
@@ -63,9 +64,6 @@ class CertificatePDFService {
         // Add verification section with QR code
         await this.addVerificationSection(doc, certificateData);
 
-        // Add footer
-        this.addFooter(doc, certificateData);
-
         // Finalize PDF
         doc.end();
 
@@ -82,146 +80,161 @@ class CertificatePDFService {
     });
   }
 
-  static addBackground(doc) {
-    // Clean minimal background
+  static addBackgroundAndBorders(doc) {
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+
+    // 1. Solid Background
     doc.fillColor('#ffffff')
-       .rect(0, 0, doc.page.width, doc.page.height)
+       .rect(0, 0, pageWidth, pageHeight)
        .fill();
+
+    // 2. Add decorative corner patterns (subtle)
+    doc.save();
+    doc.fillColor('#f0f4f8');
+    
+    // Top-left accent
+    doc.circle(0, 0, 150).fill();
+    // Bottom-right accent
+    doc.circle(pageWidth, pageHeight, 150).fill();
+    doc.restore();
+
+    // 3. Double Border Design
+    // Outer border (Deep Forest Green)
+    doc.rect(20, 20, pageWidth - 40, pageHeight - 40)
+       .lineWidth(3)
+       .strokeColor('#1a3a3a')
+       .stroke();
+
+    // Inner decorative border (Gold-ish)
+    doc.rect(30, 30, pageWidth - 60, pageHeight - 60)
+       .lineWidth(1)
+       .strokeColor('#d4af37')
+       .stroke();
+       
+    // Corner ornaments (small gold squares)
+    const corners = [
+      [30, 30], [pageWidth - 30, 30],
+      [30, pageHeight - 30], [pageWidth - 30, pageHeight - 30]
+    ];
+    
+    doc.fillColor('#d4af37');
+    corners.forEach(([x, y]) => {
+      doc.rect(x - 5, y - 5, 10, 10).fill();
+    });
   }
 
   static async addHeaderWithLogo(doc) {
-    // Add Excellence Coaching Hub branding
-    doc.fontSize(20)
-       .fillColor('#27ae60')
+    const pageWidth = doc.page.width;
+    const logoPath = path.join(__dirname, '..', '..', '..', 'frontend', 'assets', 'logo.png');
+    
+    doc.y = 50;
+
+    try {
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, (pageWidth - 80) / 2, 50, { width: 80 });
+        doc.moveDown(4.5);
+      } else {
+        console.warn('Logo not found at:', logoPath);
+        doc.moveDown(1);
+      }
+    } catch (err) {
+      console.error('Error adding logo to PDF:', err);
+      doc.moveDown(1);
+    }
+
+    doc.fontSize(22)
+       .fillColor('#1a3a3a')
        .font('Helvetica-Bold')
        .text('EXCELLENCE COACHING HUB', {
          align: 'center'
        });
 
-    doc.moveDown(0.5);
-    
-    doc.fontSize(12)
+    doc.fontSize(10)
        .font('Helvetica')
        .fillColor('#7f8c8d')
-       .text('Professional Learning & Certification', {
+       .text('Professional Learning & Certification Excellence', {
          align: 'center'
        });
 
-    // Add a subtle line separator
-    doc.moveDown(1);
-    const yPosition = doc.y;
-    doc.strokeColor('#ecf0f1')
-       .lineWidth(1)
-       .moveTo(50, yPosition)
-       .lineTo(doc.page.width - 50, yPosition)
-       .stroke();
-       
     doc.moveDown(1);
   }
 
   static addTitle(doc) {
-    doc.moveDown(2)
-       .fontSize(28)
+    doc.moveDown(0.5)
+       .fontSize(36)
        .font('Helvetica-Bold')
        .fillColor('#2c3e50')
        .text('CERTIFICATE OF COMPLETION', {
-         align: 'center'
-       })
-       .moveDown(1);
+         align: 'center',
+         characterSpacing: 1
+       });
 
-    doc.fontSize(14)
-       .font('Helvetica')
+    doc.moveDown(0.3)
+       .fontSize(14)
+       .font('Helvetica-Oblique')
        .fillColor('#7f8c8d')
-       .text('This certificate acknowledges the successful completion of', {
+       .text('This is to certify that', {
          align: 'center'
        })
-       .moveDown(1);
+       .moveDown(0.8);
   }
 
   static addRecipientInfo(doc, data) {
-    doc.fontSize(24)
+    doc.fontSize(32)
        .font('Helvetica-Bold')
-       .fillColor('#27ae60')
-       .text(data.studentName || data.userFullName, {
+       .fillColor('#d4af37') // Gold for the name
+       .text(data.studentName || data.userFullName || 'Valued Student', {
          align: 'center'
        })
-       .moveDown(1);
+       .moveDown(0.3);
 
-    doc.fontSize(16)
+    // Subtle underline for the name
+    const pageWidth = doc.page.width;
+    doc.strokeColor('#bdc3c7')
+       .lineWidth(0.5)
+       .moveTo(pageWidth/2 - 150, doc.y)
+       .lineTo(pageWidth/2 + 150, doc.y)
+       .stroke();
+
+    doc.moveDown(0.5)
+       .fontSize(16)
        .font('Helvetica')
        .fillColor('#34495e')
-       .text('has demonstrated proficiency in', {
+       .text('has successfully completed the professional course', {
          align: 'center'
        })
-       .moveDown(2);
+       .moveDown(0.8);
   }
 
   static addCourseInfo(doc, data) {
-    doc.fontSize(18)
+    doc.fontSize(24)
        .font('Helvetica-Bold')
-       .fillColor('#2980b9')
+       .fillColor('#1a3a3a')
        .text(data.courseTitle, {
          align: 'center'
        })
-       .moveDown(1);
-
-    if (data.courseDescription) {
-      doc.fontSize(12)
-         .font('Helvetica')
-         .fillColor('#7f8c8d')
-         .text(data.courseDescription.substring(0, 100) + '...', {
-           align: 'center',
-           width: 400
-         })
-         .moveDown(2);
-    }
+       .moveDown(0.5);
   }
 
   static addExamScoreInfo(doc, data) {
-    doc.moveDown(1);
-    
-    // Create a box for the score information
-    const boxX = (doc.page.width - 250) / 2;
-    const boxY = doc.y;
-    const boxWidth = 250;
-    const boxHeight = 60;
-    
-    doc.rect(boxX, boxY, boxWidth, boxHeight)
-       .lineWidth(1)
-       .strokeColor('#bdc3c7')
-       .stroke();
-       
-    doc.fillColor('#f8f9fa')
-       .rect(boxX, boxY, boxWidth, boxHeight)
-       .fill();
-       
-    // Score details inside the box
-    doc.x = boxX + 10;
-    doc.y = boxY + 10;
-    
     doc.fontSize(12)
-       .font('Helvetica-Bold')
-       .fillColor('#2c3e50')
-       .text('Achievement Details:', {
-         continued: true
-       })
+       .font('Helvetica')
        .fillColor('#7f8c8d')
-       .text(` Score: ${data.score}/${data.totalPoints} (${data.percentage.toFixed(2)}%)`, {
-         continued: true
-       })
-       .fillColor('#27ae60')
-       .text(` Grade: ${this.getGradeFromPercentage(data.percentage)}`);
+       .text(`Achieved a score of ${data.percentage.toFixed(1)}% with Grade ${this.getGradeFromPercentage(data.percentage)}`, {
+         align: 'center'
+       });
 
-    doc.x = boxX + 10;
-    doc.fontSize(10)
-       .fillColor('#7f8c8d')
-       .text(`Date: ${new Date(data.issuedDate).toLocaleDateString('en-US', {
+    doc.moveDown(0.5)
+       .fontSize(11)
+       .fillColor('#95a5a6')
+       .text(`Issued on ${new Date(data.issuedDate).toLocaleDateString('en-US', {
          year: 'numeric',
-         month: 'short',
+         month: 'long',
          day: 'numeric'
-       })}`);
-
-    doc.y = boxY + boxHeight + 20; // Move below the box
+       })}`, {
+         align: 'center'
+       });
   }
 
   static getGradeFromPercentage(percentage) {
@@ -234,96 +247,27 @@ class CertificatePDFService {
   }
 
   static async addVerificationSection(doc, data) {
-    doc.moveDown(2);
-    
-    // Verification section
-    doc.fontSize(10)
-       .fillColor('#7f8c8d')
-       .text('Certificate Verification:', {
-         align: 'center'
-       });
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const qrSize = 60;
+    const qrX = (pageWidth - qrSize) / 2;
+    const qrY = pageHeight - 110;
 
-    doc.moveDown(0.5);
+    // Generate verification URL - updated to the Flutter app domain
+    const verificationUrl = `https://app.excellencecoachinghub.com/verify-certificate/${data.serialNumber}`;
     
-    // Generate verification URL
-    const verificationUrl = `${process.env.BASE_URL || 'https://excellencecoachinghub.com'}/verify-certificate/${data.serialNumber}`;
-    
-    // Add QR code if QRCode library is available
     if (QRCode) {
       try {
-        // Generate QR code as data URL
-        const qrBuffer = await QRCode.toBuffer(verificationUrl, { width: 150, margin: 1 });
-        
-        // Add QR code to the PDF
-        const qrSize = 80;
-        const qrX = (doc.page.width - qrSize) / 2;
-        const qrY = doc.y + 10;
-        
-        // Draw the QR code image
+        const qrBuffer = await QRCode.toBuffer(verificationUrl, { width: 120, margin: 1 });
         doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
-        
-        doc.y = qrY + qrSize + 15;
-        
-        doc.fontSize(8)
-           .fillColor('#95a5a6')
-           .text('Scan QR code to verify authenticity', {
-             align: 'center'
-           });
       } catch (qrError) {
-        console.log('Error generating QR code:', qrError);
-        // If QR code generation fails, just show the URL
-        doc.fontSize(8)
-           .fillColor('#95a5a6')
-           .text(`Verify at: ${verificationUrl}`, {
-             align: 'center'
-           });
-           
-        // Add a placeholder for the QR code
-        const qrSize = 80;
-        const qrX = (doc.page.width - qrSize) / 2;
-        const qrY = doc.y + 10;
-        
-        doc.rect(qrX, qrY, qrSize, qrSize)
-           .lineWidth(0.5)
-           .strokeColor('#bdc3c7')
-           .stroke();
-           
-        doc.fontSize(6)
-           .fillColor('#95a5a6')
-           .text('SCAN TO VERIFY', qrX + 10, qrY + 35, {
-             width: qrSize - 20,
-             align: 'center'
-           });
-           
-        doc.y = qrY + qrSize + 10;
+        console.error('QR Error:', qrError);
       }
-    } else {
-      // If QRCode library is not available, just show the URL
-      doc.fontSize(8)
-         .fillColor('#95a5a6')
-         .text(`Verify at: ${verificationUrl}`, {
-           align: 'center'
-         });
-         
-      // Add a placeholder for the QR code
-      const qrSize = 80;
-      const qrX = (doc.page.width - qrSize) / 2;
-      const qrY = doc.y + 10;
-      
-      doc.rect(qrX, qrY, qrSize, qrSize)
-         .lineWidth(0.5)
-         .strokeColor('#bdc3c7')
-         .stroke();
-         
-      doc.fontSize(6)
-         .fillColor('#95a5a6')
-         .text('SCAN TO VERIFY', qrX + 10, qrY + 35, {
-           width: qrSize - 20,
-           align: 'center'
-         });
-         
-      doc.y = qrY + qrSize + 10;
     }
+    
+    doc.fontSize(7)
+       .fillColor('#95a5a6')
+       .text(`Verify authenticity at: ${verificationUrl}`, 0, pageHeight - 45, { align: 'center' });
   }
 
   static drawSimpleQRCodePattern(doc, x, y, size) {

@@ -42,6 +42,28 @@ class CertificateService {
     }
   }
 
+  /// Verify a certificate by serial number (Public)
+  Future<Map<String, dynamic>> verifyCertificate(String serialNumber) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.enrollments}/verify/$serialNumber',
+        authenticate: false,
+      );
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true && jsonBody['data'] != null) {
+        return jsonBody['data'] as Map<String, dynamic>;
+      } else {
+        throw ApiException(jsonBody['message'] ?? 'Failed to verify certificate');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to verify certificate: $e');
+    }
+  }
+
   /// Download a specific certificate and save it to disk
   /// Returns the saved file path if successful
   Future<String?> downloadAndSaveCertificate(String certificateId, {String? fileName}) async {

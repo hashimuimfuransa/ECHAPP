@@ -54,6 +54,7 @@ class ApiClient {
     String url, {
     Map<String, String>? headers,
     Map<String, dynamic>? queryParams,
+    bool authenticate = true,
   }) async {
     // Convert all query parameters to strings to avoid Uri parsing errors
     final stringQueryParams = queryParams?.map(
@@ -63,7 +64,7 @@ class ApiClient {
     print('ApiClient: Query parameters converted to strings: $stringQueryParams');
     
     final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     print('ApiClient: Auth headers received: $authHeaders');
     final mergedHeaders = {...authHeaders, ...?headers};
     print('ApiClient: Final headers being sent: $mergedHeaders');
@@ -76,13 +77,14 @@ class ApiClient {
     String url, {
     Map<String, String>? headers,
     Map<String, dynamic>? queryParams,
+    bool authenticate = true,
   }) async {
     final stringQueryParams = queryParams?.map(
       (key, value) => MapEntry(key, value.toString()),
     ) ?? {};
     
     final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
     
     return _makeRequest(() => _httpClient.get(uri, headers: mergedHeaders));
@@ -93,8 +95,9 @@ class ApiClient {
     String url, {
     Object? body,
     Map<String, String>? headers,
+    bool authenticate = true,
   }) async {
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
     final encodedBody = body is Map ? jsonEncode(body) : body?.toString();
     
@@ -110,8 +113,9 @@ class ApiClient {
     String url, {
     Object? body,
     Map<String, String>? headers,
+    bool authenticate = true,
   }) async {
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
     final encodedBody = body is Map ? jsonEncode(body) : body?.toString();
     
@@ -126,8 +130,9 @@ class ApiClient {
   Future<http.Response> delete(
     String url, {
     Map<String, String>? headers,
+    bool authenticate = true,
   }) async {
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
     
     return _makeRequest(() => _httpClient.delete(
@@ -143,8 +148,9 @@ class ApiClient {
     required String fieldName,
     Map<String, String>? additionalFields,
     Map<String, String>? headers,
+    bool authenticate = true,
   }) async {
-    final authHeaders = await _getAuthHeaders();
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
 
     // Remove Content-Type header as it will be set automatically for multipart

@@ -14,6 +14,7 @@ import 'package:excellencecoachinghub/presentation/screens/courses/course_detail
 import 'package:excellencecoachinghub/presentation/screens/profile/profile_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/certificates/certificate_verification_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/privacy/privacy_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/terms/terms_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/categories/categories_screen.dart';
@@ -125,6 +126,13 @@ class AppRouter {
           GoRoute(
             path: '/help',
             builder: (context, state) => const HelpScreen(),
+          ),
+          GoRoute(
+            path: '/verify-certificate/:serial',
+            builder: (context, state) {
+              final serial = state.pathParameters['serial'] ?? '';
+              return CertificateVerificationScreen(serialNumber: serial);
+            },
           ),
 
           // Admin Routes - Outside MainLayout because they have their own sidebar/layout

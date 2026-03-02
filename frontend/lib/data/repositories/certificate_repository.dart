@@ -27,6 +27,11 @@ class CertificateRepository {
     return await _certificateService.getCertificatesByCourse(courseId);
   }
 
+  /// Verify a certificate by serial number (Public)
+  Future<Map<String, dynamic>> verifyCertificate(String serialNumber) async {
+    return await _certificateService.verifyCertificate(serialNumber);
+  }
+
   /// Check if user is eligible for a certificate for a specific course
   Future<bool> isCertificateEligible(String courseId) async {
     return await _certificateService.isCertificateEligible(courseId);
