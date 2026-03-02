@@ -11,11 +11,13 @@ import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
+import 'package:media_kit/media_kit.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  MediaKit.ensureInitialized();
+  
   // bitsdojo_window initialization early in main
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS)) {
     doWhenWindowReady(() {

@@ -1,118 +1,198 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'dart:io';
+import 'dart:async';
 
 class CustomVideoPlayer extends StatefulWidget {
-  final String videoUrl;
+  final String? videoUrl;
+  final Player? externalPlayer;
   final String title;
   final String description;
+  final bool showAppBar;
+  final VoidCallback? onFullScreen;
 
   const CustomVideoPlayer({
     super.key,
-    required this.videoUrl,
+    this.videoUrl,
+    this.externalPlayer,
     required this.title,
     required this.description,
-  });
+    this.showAppBar = false,
+    this.onFullScreen,
+  }) : assert(videoUrl != null || externalPlayer != null);
 
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
 
 class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
-  late VideoPlayerController _controller;
-  late Future<void> _initializeVideoPlayerFuture;
+  late Player _player;
+  late VideoController _videoController;
   bool _isPlaying = false;
   bool _showControls = true;
   double _volume = 1.0;
   double _playbackSpeed = 1.0;
+  bool _isInitialized = false;
+  
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  Duration _buffer = Duration.zero;
+
+  List<StreamSubscription> _subscriptions = [];
+
+  String _getWindowsOptimizedUrl(String url) {
+    if (Platform.isWindows && !url.contains('type=.mp4')) {
+      return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+    }
+    return url;
+  }
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
-    _initializeVideoPlayerFuture = _controller.initialize().then((_) {
-      setState(() {});
-      _controller.setVolume(_volume);
-      _controller.setPlaybackSpeed(_playbackSpeed);
-    });
-    
-    _controller.addListener(() {
-      setState(() {
-        _isPlaying = _controller.value.isPlaying;
+    _initPlayer();
+  }
+
+  void _initPlayer() {
+    if (widget.externalPlayer != null) {
+      _player = widget.externalPlayer!;
+      _isInitialized = true;
+    } else {
+      _player = Player();
+      final optimizedUrl = _getWindowsOptimizedUrl(widget.videoUrl!);
+      _player.open(Media(optimizedUrl)).then((_) {
+        setState(() {
+          _isInitialized = true;
+        });
       });
-    });
+    }
+
+    _videoController = VideoController(_player);
+    _setupSubscriptions();
+  }
+
+  void _setupSubscriptions() {
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
+    _subscriptions = [
+      _player.stream.playing.listen((playing) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = playing;
+          });
+        }
+      }),
+      _player.stream.position.listen((position) {
+        if (mounted) {
+          setState(() {
+            _position = position;
+          });
+        }
+      }),
+      _player.stream.duration.listen((duration) {
+        if (mounted) {
+          setState(() {
+            _duration = duration;
+          });
+        }
+      }),
+      _player.stream.buffer.listen((buffer) {
+        if (mounted) {
+          setState(() {
+            _buffer = buffer;
+          });
+        }
+      }),
+      _player.stream.volume.listen((volume) {
+        if (mounted) {
+          setState(() {
+            _volume = volume / 100.0;
+          });
+        }
+      }),
+      _player.stream.rate.listen((rate) {
+        if (mounted) {
+          setState(() {
+            _playbackSpeed = rate;
+          });
+        }
+      }),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(CustomVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.externalPlayer != oldWidget.externalPlayer) {
+      _initPlayer();
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
+    if (widget.externalPlayer == null) {
+      _player.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.speed),
-            onPressed: _showPlaybackSpeedDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.fullscreen),
-            onPressed: _toggleFullscreen,
-          ),
-        ],
-      ),
-      body: _buildVideoPlayer(),
-    );
+    if (widget.showAppBar) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: AppTheme.primaryGreen,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.speed),
+              onPressed: _showPlaybackSpeedDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.fullscreen),
+              onPressed: widget.onFullScreen ?? _toggleFullscreen,
+            ),
+          ],
+        ),
+        body: _buildVideoPlayer(),
+      );
+    }
+    return _buildVideoPlayer();
   }
 
   Widget _buildVideoPlayer() {
-    return FutureBuilder(
-      future: _initializeVideoPlayerFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _showControls = !_showControls;
-              });
-            },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  child: VideoPlayer(_controller),
-                ),
-                if (!_isPlaying && !_showControls)
-                  Container(
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black26,
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow,
-                      color: Colors.white,
-                      size: 60,
-                    ),
-                  ),
-                if (_showControls) _buildVideoControls(),
-              ],
-            ),
-          );
-        } else {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-            ),
-          );
-        }
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showControls = !_showControls;
+        });
       },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Video(controller: _videoController),
+          if (!_isPlaying && !_showControls)
+            Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black26,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 60,
+              ),
+            ),
+          if (_showControls) _buildVideoControls(),
+        ],
+      ),
     );
   }
 
@@ -136,24 +216,33 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           Row(
             children: [
               Text(
-                _formatDuration(_controller.value.position),
+                _formatDuration(_position),
                 style: const TextStyle(color: Colors.white),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: VideoProgressIndicator(
-                  _controller,
-                  allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: AppTheme.primaryGreen,
-                    bufferedColor: Colors.white30,
-                    backgroundColor: Colors.white24,
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 4,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                    activeTrackColor: AppTheme.primaryGreen,
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: AppTheme.primaryGreen,
+                  ),
+                  child: Slider(
+                    value: _position.inMilliseconds.toDouble().clamp(0, _duration.inMilliseconds.toDouble()),
+                    min: 0,
+                    max: _duration.inMilliseconds.toDouble(),
+                    onChanged: (value) {
+                      _player.seek(Duration(milliseconds: value.toInt()));
+                    },
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
-                _formatDuration(_controller.value.duration),
+                _formatDuration(_duration),
                 style: const TextStyle(color: Colors.white),
               ),
             ],
@@ -223,36 +312,26 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _togglePlayPause() {
-    setState(() {
-      if (_controller.value.isPlaying) {
-        _controller.pause();
-      } else {
-        _controller.play();
-      }
-    });
+    _player.playOrPause();
   }
 
   void _toggleMute() {
     setState(() {
       _volume = _volume == 0 ? 1.0 : 0.0;
-      _controller.setVolume(_volume);
+      _player.setVolume(_volume * 100);
     });
   }
 
   void _toggleFullscreen() {
-    setState(() {
-      // Handle fullscreen toggle
-    });
+    // media_kit handles fullscreen via VideoController
   }
 
   void _seekForward(int seconds) {
-    final newPosition = _controller.value.position + Duration(seconds: seconds);
-    _controller.seekTo(newPosition);
+    _player.seek(_position + Duration(seconds: seconds));
   }
 
   void _seekBackward(int seconds) {
-    final newPosition = _controller.value.position - Duration(seconds: seconds);
-    _controller.seekTo(newPosition);
+    _player.seek(_position - Duration(seconds: seconds));
   }
 
   void _showPlaybackSpeedDialog() {
@@ -279,7 +358,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               onTap: () {
                 setState(() {
                   _playbackSpeed = speed;
-                  _controller.setPlaybackSpeed(speed);
+                  _player.setRate(speed);
                 });
                 Navigator.pop(context);
               },

@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/section.dart';
@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
+import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'dart:io';
 
 // Model for notes sections
@@ -47,8 +48,8 @@ class LessonViewer extends ConsumerStatefulWidget {
 }
 
 class _LessonViewerState extends ConsumerState<LessonViewer> {
-  VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
+  Player? _player;
+  VideoController? _videoController;
   LessonContent? _lessonContent;
   bool _isLoading = true;
   bool _hasError = false;
@@ -84,8 +85,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
   @override
   void dispose() {
-    _videoController?.dispose();
-    _chewieController?.dispose();
+    _player?.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -246,9 +246,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     }
   }
 
+  String _getWindowsOptimizedUrl(String url) {
+    if (Platform.isWindows && !url.contains('type=.mp4')) {
+      return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+    }
+    return url;
+  }
+
   Future<void> _initializeVideoPlayer(String videoUrl) async {
     try {
-      print('Initializing video player with URL: $videoUrl');
+      final optimizedUrl = _getWindowsOptimizedUrl(videoUrl);
+      print('Initializing video player with URL: $optimizedUrl');
       
       // Sanitize lesson title for filename
       String sanitizedTitle = _sanitizeFilename(widget.lesson.title);
@@ -268,86 +276,26 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         print('Local path with old naming: $localPath');
       }
       
+      // Initialize Player
+      _player = Player();
+      _videoController = VideoController(_player!);
+      
       if (localPath != null) {
         // Use local file if available
         print('Using local file: $localPath');
-        _videoController = VideoPlayerController.file(File(localPath));
+        // Ensure path uses system-appropriate separators for Windows
+        final path = Platform.isWindows ? localPath.replaceAll('/', '\\') : localPath;
+        await _player!.open(Media(path));
       } else {
         // Use network URL if not downloaded
-        print('Using network URL: $videoUrl');
-        _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+        print('Using network URL: $optimizedUrl');
+        await _player!.open(Media(optimizedUrl));
       }
       
-      print('Initializing video controller...');
-      await _videoController!.initialize();
-      print('Video controller initialized successfully');
-      
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: false,
-        looping: false,
-        aspectRatio: 16 / 9,
-        allowFullScreen: true,
-        materialProgressColors: ChewieProgressColors(
-          playedColor: AppTheme.primaryGreen,
-          handleColor: AppTheme.primaryGreen,
-          backgroundColor: AppTheme.borderGrey,
-          bufferedColor: AppTheme.greyColor.withOpacity(0.3),
-        ),
-        placeholder: Container(
-          color: Theme.of(context).brightness == Brightness.dark 
-            ? Colors.grey.shade900 
-            : Colors.black,
-          child: const Center(
-            child: CircularProgressIndicator(
-              color: AppTheme.primaryGreen,
-            ),
-          ),
-        ),
-        errorBuilder: (context, errorMessage) {
-          print('Video player error: $errorMessage');
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading video',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage,
-                  style: const TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _initializeVideoPlayer(videoUrl),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-      print('Chewie controller created successfully');
+      print('Video player initialized successfully');
+      setState(() {});
     } catch (e) {
       print('Error initializing video player: $e');
-      // Don't set error state here as we can still show notes
-      // But show a retry option
       setState(() {
         _hasError = true;
       });
@@ -767,7 +715,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         LayoutBuilder(
           builder: (context, constraints) {
             double height = constraints.maxWidth * 9 / 16; // Maintain 16:9 aspect ratio
-            if (height > 300) height = 300; // Max height
+            double maxHeight = constraints.maxWidth > 900 ? 550 : 320; // Increased for better viewing on desktop
+            if (height > maxHeight) height = maxHeight; // Max height
             return Container(
               height: height,
               decoration: BoxDecoration(
@@ -782,10 +731,14 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   ),
                 ],
               ),
-              child: _chewieController != null
+              child: _player != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Chewie(controller: _chewieController!),
+                      child: CustomVideoPlayer(
+                        externalPlayer: _player,
+                        title: widget.lesson.title,
+                        description: widget.lesson.description ?? '',
+                      ),
                     )
                   : Container(
                       color: Colors.black,
@@ -856,7 +809,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                               bool isDownloaded = await _isVideoDownloaded();
                               if (isDownloaded) { 
                                 print('View in Downloads button pressed');
-                                GoRouter.of(context).push('/downloads');
+                                // Using context.go ensures we switch correctly to the downloads section
+                                // and avoids duplicate key errors with ShellRoutes
+                                context.go('/downloads');
                               } else { 
                                 print('Download Video button pressed');
                                 _downloadVideo();
@@ -893,7 +848,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                       onPressed: () {
                         // Navigate to downloads screen
                         print('Downloads button pressed - navigating to /downloads');
-                        GoRouter.of(context).push('/downloads');
+                        context.go('/downloads');
                       },
                       icon: const Icon(Icons.download_done),
                       tooltip: 'View Downloads',
@@ -1657,8 +1612,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     bool isDownloaded = await _isVideoDownloaded();
     if (isDownloaded) {
       print('Video already downloaded, navigating to downloads');
-      // Navigate to downloads screen
-      GoRouter.of(context).push('/downloads');
+      // Navigate to downloads screen using context.go
+      context.go('/downloads');
       return;
     }
 

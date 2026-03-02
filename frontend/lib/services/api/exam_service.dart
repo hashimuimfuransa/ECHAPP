@@ -138,7 +138,6 @@ class ExamService {
   /// Get exams by section
   Future<List<exam_model.Exam>> getExamsBySection(String sectionId) async {
     try {
-      print('ExamService: Fetching exams for section: $sectionId');
       final response = await _apiClient.get(
         '${ApiConfig.exams}/section/$sectionId',
       );
@@ -148,35 +147,29 @@ class ExamService {
       
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
-        print('ExamService: Successfully fetched ${data.length} exams for section: $sectionId');
-        
+        // Successfully fetched data
         final validExams = <exam_model.Exam>[];
         for (final item in data) {
           if (item != null && item is Map<String, dynamic>) {
             try {
               validExams.add(exam_model.Exam.fromJson(item));
             } catch (e) {
-              print('ExamService: Error parsing exam data: $e');
               continue;
             }
           }
         }
-        print('ExamService: Converted ${validExams.length} valid exams from ${data.length} total items');
         return validExams;
       } else {
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch exams for section');
       }
     } catch (e) {
-      print('ExamService: Error fetching exams for section $sectionId: $e');
       if (e is ApiException) {
         // Handle specific error cases
         if (e.statusCode == 403) {
-          print('ExamService: User not enrolled in course (403)');
           // Return empty list instead of throwing for 403 - this is expected behavior
           return [];
         }
         if (e.statusCode == 404) {
-          print('ExamService: Section not found (404)');
           return [];
         }
         rethrow;
@@ -187,28 +180,16 @@ class ExamService {
 
   /// Get all exams for a section (admin only - includes unpublished exams)
   Future<List<exam_model.Exam>> getSectionExamsAdmin(String sectionId) async {
-    print('ExamService: getSectionExamsAdmin called for section: $sectionId');
     try {
       final url = '${ApiConfig.exams}/section/$sectionId/admin';
-      print('ExamService: Making request to: $url');
       
       final response = await _apiClient.get(url);
-      print('ExamService: Response status: ${response.statusCode}');
-      print('ExamService: Response headers: ${response.headers}');
-      print('ExamService: Response body length: ${response.body.length}');
       
-      // Log first 200 characters of response for debugging
-      if (response.body.isNotEmpty) {
-        final preview = response.body.substring(0, response.body.length > 200 ? 200 : response.body.length);
-        print('ExamService: Response preview: $preview');
-      }
-
       response.validateStatus();
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
-        print('ExamService: Successfully parsed ${data.length} exams');
         
         final validExams = <exam_model.Exam>[];
         for (final item in data) {
@@ -216,21 +197,16 @@ class ExamService {
             try {
               validExams.add(exam_model.Exam.fromJson(item));
             } catch (e) {
-              print('ExamService (admin): Error parsing exam data: $e');
               continue;
             }
           }
         }
-        print('ExamService: Converted ${validExams.length} valid exams from ${data.length} total items (admin)');
         return validExams;
       } else {
-        print('ExamService: API returned error: ${jsonBody['message']}');
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch section exams');
       }
     } catch (e) {
-      print('ExamService: Error in getSectionExamsAdmin: $e');
       if (e is ApiException) {
-        print('ExamService: ApiException details - Status: ${e.statusCode}, Message: ${e.message}');
         rethrow;
       }
       throw ApiException('Failed to fetch section exams: $e');
@@ -282,14 +258,10 @@ class ExamService {
       final response = await _apiClient.get('${ApiConfig.exams}/student/history');
       response.validateStatus();
       
-      print('ExamService: Raw response status: ${response.statusCode}');
-      print('ExamService: Raw response body: ${response.body}');
-      
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'] as List<dynamic>;
-        print('ExamService: Successfully parsed ${data.length} exam results');
         
         final validResults = <ExamResult>[];
         for (final item in data) {
@@ -297,18 +269,15 @@ class ExamService {
             try {
               validResults.add(ExamResult.fromJson(item));
             } catch (e) {
-              print('ExamService: Error parsing exam result: $e');
               continue;
             }
           }
         }
-        print('ExamService: Converted ${validResults.length} valid results from ${data.length} total items');
         return validResults;
       } else {
         throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch exam history');
       }
     } catch (e) {
-      print('ExamService: Error fetching exam history: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch exam history: $e');
     }

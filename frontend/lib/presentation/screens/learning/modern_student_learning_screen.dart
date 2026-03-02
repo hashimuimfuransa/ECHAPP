@@ -78,6 +78,15 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       try {
         final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
         _courseAccessData = await enrollmentRepo.checkCourseAccess(widget.courseId);
+        
+        // Initialize lesson completion status from backend data
+        if (_courseAccessData != null && _courseAccessData!['completedLessons'] != null) {
+          final completedList = _courseAccessData!['completedLessons'] as List;
+          for (var lessonId in completedList) {
+            _lessonCompletionStatus[lessonId.toString()] = true;
+          }
+          print('Loaded ${_lessonCompletionStatus.length} completed lessons from backend');
+        }
       } catch (e) {
         print('Error loading course access data: $e');
         _courseAccessData = null;
@@ -1543,21 +1552,38 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     );
   }
 
-  void _viewLesson(Lesson lesson) {
-    // Mark lesson as completed
-    setState(() {
-      _lessonCompletionStatus[lesson.id] = true;
-    });
+  void _viewLesson(Lesson lesson) async {
+    // Only update if not already completed
+    if (_lessonCompletionStatus[lesson.id] != true) {
+      // Mark lesson as completed locally first for better UX
+      setState(() {
+        _lessonCompletionStatus[lesson.id] = true;
+      });
+      
+      // Call backend to update progress if enrollment is found
+      if (_courseAccessData != null && _courseAccessData!['enrollmentId'] != null) {
+        final enrollmentId = _courseAccessData!['enrollmentId'].toString();
+        try {
+          print('Updating enrollment $enrollmentId progress for lesson: ${lesson.title}');
+          final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
+          await enrollmentRepo.updateEnrollmentProgress(enrollmentId, lesson.id, true);
+        } catch (e) {
+          print('Error updating enrollment progress in backend: $e');
+        }
+      }
+    }
     
     // Navigate to the lesson viewer
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => LessonViewer(
-          lesson: lesson,
-          courseId: widget.courseId,
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => LessonViewer(
+            lesson: lesson,
+            courseId: widget.courseId,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildCompleteSectionButton(Section section, int index) {

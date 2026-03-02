@@ -77,6 +77,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'certificates'
       },
       {
+        'title': 'Downloads',
+        'icon': Icons.download_for_offline_outlined,
+        'route': '/downloads',
+        'key': 'downloads'
+      },
+      {
         'title': 'Profile',
         'icon': Icons.person_outline,
         'route': '/profile',

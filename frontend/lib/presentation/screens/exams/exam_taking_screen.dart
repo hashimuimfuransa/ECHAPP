@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
+import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'exam_history_screen.dart';
 
 class ExamTakingScreen extends StatefulWidget {
@@ -521,7 +524,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
   // Helper methods for building UI components
   Widget _buildModernAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.primary,
         boxShadow: [
@@ -606,7 +609,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   Widget _buildProgressSection(double progress) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
           // Progress bar with percentage
@@ -615,7 +618,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               Text(
                 'Progress',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.getTextColor(context)
                 ),
@@ -624,29 +627,29 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               Text(
                 '${(_currentQuestionIndex + 1)}/${_questions.length}',
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Stack(
             children: [
               LinearProgressIndicator(
                 value: progress,
-                minHeight: 12,
+                minHeight: 8,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(4),
               ),
               Positioned.fill(
                 child: Center(
                   child: Text(
                     '${(progress * 100).toInt()}%',
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 8,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -657,9 +660,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           ),
           
           // Question navigation dots
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           SizedBox(
-            height: 40,
+            height: 32,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _questions.length,
@@ -669,7 +672,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                 final isVisited = index <= _currentQuestionIndex;
                 
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 6),
                   child: GestureDetector(
                     onTap: () {
                       if (isVisited) {
@@ -679,8 +682,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                       }
                     },
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
                         color: isCurrent 
                           ? AppTheme.primary 
@@ -689,10 +692,10 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                             : isVisited 
                               ? Colors.grey.shade300 
                               : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isCurrent ? AppTheme.primary : Colors.transparent,
-                          width: 2,
+                          width: 1.5,
                         ),
                       ),
                       child: Center(
@@ -703,7 +706,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                               ? Colors.white 
                               : AppTheme.blackColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 10,
                           ),
                         ),
                       ),
@@ -720,70 +723,70 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   Widget _buildQuestionCard(Question question, dynamic selectedAnswer) {
     return Card(
-      elevation: 6,
+      elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Question header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppTheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.question_mark,
-                    size: 20,
+                    size: 16,
                     color: AppTheme.primary,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Text(
                     'Question ${_currentQuestionIndex + 1}',
                     style: TextStyle(
                       color: AppTheme.primary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                   if (question.section != null) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         question.section!,
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          fontSize: 10,
                         ),
                       ),
                     ),
                   ],
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${question.points} pts',
                       style: TextStyle(
                         color: Colors.orange.shade700,
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ),
@@ -791,31 +794,43 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             
-            // Question text with special handling for fill_blank
-            if (question.type == 'fill_blank')
-              _buildFillBlankQuestion(question.question, selectedAnswer)
-            else
-              Text(
-                question.question,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                  color: AppTheme.getTextColor(context)
+            // Question text - make it flexible so it doesn't push options out
+            Flexible(
+              flex: 1,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (question.type == 'fill_blank')
+                      _buildFillBlankQuestion(question.question, selectedAnswer)
+                    else
+                      Text(
+                        question.question,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          color: AppTheme.getTextColor(context)
+                        ),
+                      ),
+                  ],
                 ),
               ),
+            ),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
             
-            // Different UI for different question types
+            // Different UI for different question types - give more flex to options
             if (question.type == 'mcq' || question.type == 'true_false')
               // MCQ and True/False Options
               Expanded(
+                flex: 2,
                 child: ListView.separated(
+                  padding: EdgeInsets.zero,
                   itemCount: question.options.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final option = question.options[index];
                     final isSelected = selectedAnswer == option;
@@ -823,7 +838,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected 
                             ? AppTheme.primary 
@@ -831,67 +846,57 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                           width: isSelected ? 2 : 1,
                         ),
                         color: isSelected 
-                          ? AppTheme.primary.withOpacity(0.1) 
+                          ? AppTheme.primary.withOpacity(0.08) 
                           : Colors.white,
-                        boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : null,
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => _selectAnswer(option),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             child: Row(
                               children: [
                                 // Option indicator
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 28,
-                                  height: 28,
+                                Container(
+                                  width: 22,
+                                  height: 22,
                                   decoration: BoxDecoration(
                                     color: isSelected 
                                       ? AppTheme.primary 
-                                      : Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(14),
+                                      : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(11),
                                     border: Border.all(
                                       color: isSelected 
                                         ? AppTheme.primary 
-                                        : Colors.grey.shade400,
-                                      width: 2,
+                                        : Colors.grey.shade300,
+                                      width: 1.5,
                                     ),
                                   ),
                                   child: isSelected
                                     ? const Icon(
                                         Icons.check,
-                                        size: 18,
+                                        size: 14,
                                         color: Colors.white,
                                       )
                                     : null,
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 
                                 // Option text
                                 Expanded(
                                   child: Text(
                                     option,
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: isSelected 
                                         ? FontWeight.w600 
                                         : FontWeight.normal,
                                       color: isSelected 
                                         ? AppTheme.primary 
                                         : AppTheme.blackColor,
-                                      height: 1.4,
+                                      height: 1.3,
                                     ),
                                   ),
                                 ),
@@ -907,6 +912,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             else if (question.type == 'fill_blank')
               // Fill-in-the-blank Text Field
               Expanded(
+                flex: 2,
                 child: TextField(
                   keyboardType: TextInputType.text,
                   maxLines: 1,
@@ -914,6 +920,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                   onChanged: (value) => _selectAnswer(value),
                   decoration: InputDecoration(
                     hintText: 'Fill in the blank...',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     hintStyle: TextStyle(
                       color: Colors.grey.shade500,
                       fontStyle: FontStyle.italic,
@@ -929,15 +936,16 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                       borderSide: BorderSide(color: AppTheme.primary, width: 2),
                     ),
                   ),
-                  style: TextStyle(
-                    fontSize: 16,
-                    height: 1.5,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
                   ),
                 ),
               )
             else
               // Open Question Text Field
               Expanded(
+                flex: 2,
                 child: TextField(
                   keyboardType: TextInputType.multiline,
                   maxLines: null,
@@ -946,6 +954,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                   onChanged: (value) => _selectAnswer(value),
                   decoration: InputDecoration(
                     hintText: 'Type your answer here...',
+                    contentPadding: const EdgeInsets.all(16),
                     hintStyle: TextStyle(
                       color: Colors.grey.shade500,
                       fontStyle: FontStyle.italic,
@@ -961,9 +970,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                       borderSide: BorderSide(color: AppTheme.primary, width: 2),
                     ),
                   ),
-                  style: TextStyle(
-                    fontSize: 16,
-                    height: 1.5,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
                   ),
                 ),
               ),
@@ -988,9 +997,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     return RichText(
       text: TextSpan(
         style: TextStyle(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          height: 1.4,
+          height: 1.3,
           color: AppTheme.getTextColor(context),
         ),
         children: [
@@ -999,8 +1008,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             if (i < parts.length - 1)
               WidgetSpan(
                 child: Container(
-                  width: 120,
-                  height: 30,
+                  width: 100,
+                  height: 24,
                   decoration: BoxDecoration(
                     border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
                   ),
@@ -1009,6 +1018,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                     style: TextStyle(
                       color: AppTheme.primary,
                       fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -1022,7 +1032,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
   Widget _buildNavigationSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -1038,7 +1048,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           // Previous button
           Expanded(
             child: SizedBox(
-              height: 50,
+              height: 45,
               child: OutlinedButton(
                 onPressed: _currentQuestionIndex > 0 ? _previousQuestion : null,
                 style: OutlinedButton.styleFrom(
@@ -1054,7 +1064,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                 child: const Text(
                   'Previous',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1062,13 +1072,13 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
             ),
           ),
           
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           
           // Next/Submit button
           Expanded(
             flex: 2,
             child: SizedBox(
-              height: 50,
+              height: 45,
               child: ElevatedButton(
                 onPressed: _isSubmitting
                   ? null
@@ -1103,15 +1113,15 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                           _currentQuestionIndex < _questions.length - 1 
                             ? Icons.arrow_forward 
                             : Icons.check_circle,
-                          size: 20,
+                          size: 18,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           _currentQuestionIndex < _questions.length - 1
                             ? 'Next Question'
                             : 'Submit Exam',
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1158,7 +1168,7 @@ class Question {
 
 
 
-class ExamResultsScreen extends StatelessWidget {
+class ExamResultsScreen extends StatefulWidget {
   final exam_model.Exam exam;
   final ExamResult result;
 
@@ -1169,9 +1179,73 @@ class ExamResultsScreen extends StatelessWidget {
   });
 
   @override
+  State<ExamResultsScreen> createState() => _ExamResultsScreenState();
+}
+
+class _ExamResultsScreenState extends State<ExamResultsScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadCertificate() async {
+    if (_isDownloading) return;
+
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      final certificateRepo = CertificateRepository();
+      
+      // Fetch certificates for this course to find the one just earned
+      final certificates = await certificateRepo.getCertificatesByCourse(widget.exam.courseId);
+      
+      if (certificates.isNotEmpty) {
+        // Try to find certificate for this specific exam, or just take the latest one
+        final certificate = certificates.firstWhere(
+          (c) => c.examId == widget.exam.id,
+          orElse: () => certificates.first,
+        );
+        
+        final downloadUrl = await certificateRepo.downloadCertificate(certificate.id);
+        final uri = Uri.parse(downloadUrl);
+        
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open download URL: $downloadUrl')),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Certificate not yet available. It might take a few minutes to generate.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error downloading certificate: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isPassed = result.passed;
-    final percentage = (result.percentage ?? 0.0);
+    final isPassed = widget.result.passed;
+    final percentage = (widget.result.percentage ?? 0.0);
     
     return Scaffold(
       body: Container(
@@ -1241,7 +1315,7 @@ class ExamResultsScreen extends StatelessWidget {
                           
                           // Result message
                           Text(
-                            result.message,
+                            widget.result.message,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
@@ -1342,7 +1416,7 @@ class ExamResultsScreen extends StatelessWidget {
             
             // Large score display
             Text(
-              '${result.score}/${result.totalPoints}',
+              '${widget.result.score}/${widget.result.totalPoints}',
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -1410,7 +1484,7 @@ class ExamResultsScreen extends StatelessWidget {
             Text(
               isPassed 
                 ? 'You passed the exam! Great job!' 
-                : 'You need ${((exam.passingScore - percentage).clamp(0, 100)).toStringAsFixed(1)}% more to pass',
+                : 'You need ${((widget.exam.passingScore - percentage).clamp(0, 100)).toStringAsFixed(1)}% more to pass',
               style: TextStyle(
                 fontSize: 16,
                 color: isPassed ? AppTheme.primary : Colors.red.shade600,
@@ -1445,9 +1519,9 @@ class ExamResultsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            _buildStatRow('Total Points', '${result.totalPoints}', Icons.star),
+            _buildStatRow('Total Points', '${widget.result.totalPoints}', Icons.star),
             const SizedBox(height: 12),
-            _buildStatRow('Your Score', '${result.score}', Icons.emoji_events, isGood: isPassed),
+            _buildStatRow('Your Score', '${widget.result.score}', Icons.emoji_events, isGood: isPassed),
             const SizedBox(height: 12),
             _buildStatRow('Percentage', '${percentage.toStringAsFixed(1)}%', Icons.percent, isGood: isPassed),
             const SizedBox(height: 12),
@@ -1499,8 +1573,54 @@ class ExamResultsScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final percentage = widget.result.percentage ?? 0.0;
+    // Show download button only for final exams with score >= 50%
+    final isFinalExam = widget.exam.type.toLowerCase() == 'final';
+    final isEligible = isFinalExam && percentage >= 50.0;
+
     return Column(
       children: [
+        if (isEligible) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: _isDownloading ? null : _downloadCertificate,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B), // Amber color for certificates
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+              ),
+              child: _isDownloading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.verified, size: 24),
+                      SizedBox(width: 12),
+                      Text(
+                        'Download Certificate',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         SizedBox(
           width: double.infinity,
           height: 55,

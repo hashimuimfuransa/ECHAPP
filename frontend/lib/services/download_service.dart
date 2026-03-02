@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'dart:convert';
+import 'package:path/path.dart' as p;
 
 class DownloadService {
   static final DownloadService _instance = DownloadService._internal();
@@ -36,7 +37,7 @@ class DownloadService {
         
         for (final file in files) {
           if (file is File && file.path.endsWith('.mp4')) {
-            final fileName = file.path.split('/').last.replaceAll('.mp4', '');
+            final fileName = p.basenameWithoutExtension(file.path);
             print('Processing file: $fileName');
             final lessonId = _extractLessonIdFromFilename(fileName);
             print('Extracted lesson ID: $lessonId');
@@ -165,7 +166,7 @@ class DownloadService {
     try {
       final directory = await _getAppDirectory();
       print('Download directory: $directory');
-      final filePath = "$directory/$fileName.mp4";
+      final filePath = p.join(directory, "$fileName.mp4");
       print('File path: $filePath');
   
       // Check if file already exists
@@ -274,7 +275,7 @@ class DownloadService {
   Future<bool> isVideoDownloaded(String fileName) async {
     try {
       final directory = await _getAppDirectory();
-      final filePath = "$directory/$fileName.mp4";
+      final filePath = p.join(directory, "$fileName.mp4");
       final file = File(filePath);
       return await file.exists();
     } catch (e) {
@@ -286,7 +287,7 @@ class DownloadService {
   Future<String?> getLocalVideoPath(String fileName) async {
     try {
       final directory = await _getAppDirectory();
-      final filePath = "$directory/$fileName.mp4";
+      final filePath = p.join(directory, "$fileName.mp4");
       final file = File(filePath);
       if (await file.exists()) {
         return filePath;

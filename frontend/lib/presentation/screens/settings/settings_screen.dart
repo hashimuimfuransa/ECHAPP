@@ -601,6 +601,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirmController = TextEditingController();
     bool isUpdating = false;
     String? localError;
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
 
     showDialog(
       context: context,
@@ -620,7 +623,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     : AppTheme.blackColor),
               ),
               content: SizedBox(
-                height: localError != null ? 340 : 300,
+                height: localError != null ? 360 : 320,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -640,7 +643,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       TextField(
                         controller: oldPasswordController,
-                        obscureText: true,
+                        obscureText: obscureOld,
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark 
                             ? AppTheme.whiteColor 
@@ -651,6 +654,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: Theme.of(context).brightness == Brightness.dark 
                               ? AppTheme.white70 
                               : AppTheme.greyColor),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureOld ? Icons.visibility_off : Icons.visibility,
+                              color: AppTheme.primaryGreen,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(() => obscureOld = !obscureOld),
+                          ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
                               color: Theme.of(context).brightness == Brightness.dark 
@@ -665,7 +676,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 15),
                       TextField(
                         controller: newPasswordController,
-                        obscureText: true,
+                        obscureText: obscureNew,
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark 
                             ? AppTheme.whiteColor 
@@ -676,6 +687,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: Theme.of(context).brightness == Brightness.dark 
                               ? AppTheme.white70 
                               : AppTheme.greyColor),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureNew ? Icons.visibility_off : Icons.visibility,
+                              color: AppTheme.primaryGreen,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                          ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
                               color: Theme.of(context).brightness == Brightness.dark 
@@ -690,7 +709,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 15),
                       TextField(
                         controller: confirmController,
-                        obscureText: true,
+                        obscureText: obscureConfirm,
                         style: TextStyle(
                           color: Theme.of(context).brightness == Brightness.dark 
                             ? AppTheme.whiteColor 
@@ -701,6 +720,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: Theme.of(context).brightness == Brightness.dark 
                               ? AppTheme.white70 
                               : AppTheme.greyColor),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                              color: AppTheme.primaryGreen,
+                              size: 20,
+                            ),
+                            onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                          ),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(
                               color: Theme.of(context).brightness == Brightness.dark 

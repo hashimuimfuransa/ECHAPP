@@ -42,12 +42,29 @@ import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_s
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 
 class AppRouter {
-  GoRouter get router => GoRouter(
+  // Static instance for singleton
+  static final AppRouter _instance = AppRouter._internal();
+  
+  // Factory constructor
+  factory AppRouter() => _instance;
+  
+  // Private internal constructor
+  AppRouter._internal();
+
+  // Lazy-loaded GoRouter
+  late final GoRouter _router = _buildRouter();
+
+  GoRouter get router => _router;
+
+  GoRouter _buildRouter() => GoRouter(
         initialLocation: '/',
         routes: [
           // Authentication Routes
           ShellRoute(
-            builder: (context, state, child) => MainLayout(child: child),
+            builder: (context, state, child) => MainLayout(
+              key: const ValueKey('auth_shell'),
+              child: child,
+            ),
             routes: [
               GoRoute(
                 path: '/',
@@ -257,7 +274,10 @@ class AppRouter {
 
           // Shell Route for Student Dashboard and Main App Pages
           ShellRoute(
-            builder: (context, state, child) => MainLayout(child: child),
+            builder: (context, state, child) => MainLayout(
+              key: const ValueKey('main_shell'),
+              child: child,
+            ),
             routes: [
               GoRoute(
                 path: '/dashboard',

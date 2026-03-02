@@ -294,6 +294,36 @@ class AuthRepository {
     }
   }
 
+  Future<AuthResponse> refreshToken(String refreshToken) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/refresh-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final tokenData = data['data'] is Map<String, dynamic>
+            ? data['data'] as Map<String, dynamic>
+            : jsonDecode(data['data'].toString()) as Map<String, dynamic>;
+        
+        // Use a dummy user or handle the fact that refresh-token might not return user data
+        // Based on backend code, it returns { token, refreshToken }
+        return AuthResponse(
+          token: tokenData['token'],
+          refreshToken: tokenData['refreshToken'],
+          user: User(id: '', fullName: '', email: '', role: '', createdAt: DateTime.now()), // Dummy user
+        );
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to refresh token');
+      }
+    } catch (e) {
+      throw Exception('Refresh token error: ${e.toString()}');
+    }
+  }
+
   Future<User> updateProfile(String token, {String? fullName, String? phone, String? avatar}) async {
     try {
       final response = await _client.put(

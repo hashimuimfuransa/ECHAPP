@@ -127,4 +127,53 @@ class EnrollmentService {
       return null;
     }
   }
+
+  /// Update enrollment progress
+  Future<Map<String, dynamic>> updateEnrollmentProgress(String enrollmentId, String lessonId, bool completed) async {
+    try {
+      final requestBody = {
+        'lessonId': lessonId,
+        'completed': completed,
+      };
+
+      final response = await _apiClient.put(
+        '${ApiConfig.enrollments}/$enrollmentId/progress',
+        body: requestBody,
+      );
+
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        return jsonBody['data'] as Map<String, dynamic>;
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to update enrollment progress');
+      }
+    } catch (e) {
+      print('Error in updateEnrollmentProgress: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update enrollment progress: $e');
+    }
+  }
+
+  /// Get enrollment progress
+  Future<Map<String, dynamic>?> getEnrollmentProgress(String enrollmentId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.enrollments}/$enrollmentId/progress');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        return jsonBody['data'] as Map<String, dynamic>?;
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch enrollment progress');
+      }
+    } catch (e) {
+      print('Error in getEnrollmentProgress: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch enrollment progress: $e');
+    }
+  }
 }

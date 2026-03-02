@@ -50,6 +50,7 @@ class MainLayout extends ConsumerWidget {
     if (currentRoute.contains('/my-courses')) currentPage = 'my-courses';
     if (currentRoute.contains('/categories')) currentPage = 'categories';
     if (currentRoute.contains('/certificates')) currentPage = 'certificates';
+    if (currentRoute.contains('/downloads')) currentPage = 'downloads';
     if (currentRoute.contains('/profile')) currentPage = 'profile';
     if (currentRoute.contains('/settings')) currentPage = 'settings';
     if (isAuthRoute) currentPage = 'auth';
@@ -155,6 +156,7 @@ class MainLayout extends ConsumerWidget {
       case 'my-courses': return 'My Learning';
       case 'categories': return 'Categories';
       case 'certificates': return 'Certificates';
+      case 'downloads': return 'Downloads';
       case 'profile': return 'Profile';
       case 'settings': return 'Settings';
       default: return 'Excellence Hub';

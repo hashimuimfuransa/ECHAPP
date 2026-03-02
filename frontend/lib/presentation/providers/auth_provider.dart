@@ -206,25 +206,85 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<String> _refreshBackendToken() async {
+    debugPrint('AuthProvider: Refreshing backend token');
+    final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) throw Exception('No authenticated user found. Please login again.');
+    
+    final idToken = await firebaseUser.getIdToken(true);
+    if (idToken == null) throw Exception('Failed to get fresh Firebase ID token');
+    
+    String? deviceId;
+    try {
+      deviceId = await DeviceIdUtils.getAppDeviceId();
+    } catch (e) {
+      debugPrint('AuthProvider: Error getting device ID for refresh: $e');
+    }
+    
+    final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
+    
+    await _storageManager.saveAccessToken(authResponse.token);
+    await _storageManager.saveRefreshToken(authResponse.refreshToken);
+    
+    return authResponse.token;
+  }
+
+  Future<String> _getOrRefreshAccessToken() async {
+    String? token = await _storageManager.getAccessToken();
+    if (token == null) {
+      return await _refreshBackendToken();
+    }
+    return token;
+  }
+
   Future<void> updateProfile({String? fullName, String? phone, File? imageFile}) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final token = await _storageManager.getAccessToken();
-      if (token == null) throw Exception('No access token found');
+      String token = await _getOrRefreshAccessToken();
 
       String? avatarUrl;
       if (imageFile != null) {
-        avatarUrl = await _authRepository.uploadImage(token, imageFile);
+        try {
+          avatarUrl = await _authRepository.uploadImage(token, imageFile);
+        } catch (uploadError) {
+          // If upload fails with auth or connection error, try to refresh token once
+          if (uploadError.toString().contains('Not authorized') || 
+              uploadError.toString().contains('invalid token') ||
+              uploadError.toString().contains('SocketException')) {
+            debugPrint('AuthProvider: Upload failed, attempting token refresh and retry');
+            token = await _refreshBackendToken();
+            avatarUrl = await _authRepository.uploadImage(token, imageFile);
+          } else {
+            rethrow;
+          }
+        }
       }
 
-      final updatedUser = await _authRepository.updateProfile(
-        token,
-        fullName: fullName,
-        phone: phone,
-        avatar: avatarUrl,
-      );
-
-      state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+      try {
+        final updatedUser = await _authRepository.updateProfile(
+          token,
+          fullName: fullName,
+          phone: phone,
+          avatar: avatarUrl,
+        );
+        state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+      } catch (updateError) {
+        // If profile update fails with auth error, try to refresh token once
+        if (updateError.toString().contains('Not authorized') || 
+            updateError.toString().contains('invalid token')) {
+          debugPrint('AuthProvider: Profile update failed, attempting token refresh and retry');
+          token = await _refreshBackendToken();
+          final updatedUser = await _authRepository.updateProfile(
+            token,
+            fullName: fullName,
+            phone: phone,
+            avatar: avatarUrl,
+          );
+          state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+        } else {
+          rethrow;
+        }
+      }
     } catch (e) {
       debugPrint('AuthProvider Update Profile Error: $e');
       state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
@@ -250,11 +310,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> deleteAccount(String currentPassword) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final token = await _storageManager.getAccessToken();
-      if (token == null) throw Exception('No access token found');
+      final token = await _getOrRefreshAccessToken();
 
       // Step 1: Delete from backend
-      await _authRepository.deleteAccount(token);
+      try {
+        await _authRepository.deleteAccount(token);
+      } catch (e) {
+        if (e.toString().contains('Not authorized') || e.toString().contains('invalid token')) {
+          final newToken = await _refreshBackendToken();
+          await _authRepository.deleteAccount(newToken);
+        } else {
+          rethrow;
+        }
+      }
       debugPrint('AuthProvider: Backend account deletion successful');
 
       // Step 2: Delete from Firebase

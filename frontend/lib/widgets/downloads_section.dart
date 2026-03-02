@@ -234,7 +234,9 @@ class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(File(widget.filePath));
+    // Ensure path uses system-appropriate separators for Windows
+    final file = File(Platform.isWindows ? widget.filePath.replaceAll('/', '\\') : widget.filePath);
+    _controller = VideoPlayerController.file(file);
     _initializeVideoPlayerFuture = _controller.initialize().then((_) {
       setState(() {});
       _controller.addListener(() {

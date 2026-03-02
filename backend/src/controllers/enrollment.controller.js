@@ -306,6 +306,9 @@ const checkCourseAccess = async (req, res) => {
       accessExpirationDate: enrollment.accessExpirationDate,
       courseTitle: enrollment.courseId.title,
       accessDurationDays: enrollment.courseId.accessDurationDays,
+      completedLessons: enrollment.completedLessons,
+      progress: enrollment.progress,
+      completionStatus: enrollment.completionStatus,
     };
     
     if (isExpired) {

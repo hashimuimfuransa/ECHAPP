@@ -26,4 +26,14 @@ class EnrollmentRepository {
   Future<Map<String, dynamic>?> checkCourseAccess(String courseId) async {
     return await _enrollmentService.checkCourseAccess(courseId);
   }
+
+  /// Update enrollment progress
+  Future<Map<String, dynamic>> updateEnrollmentProgress(String enrollmentId, String lessonId, bool completed) async {
+    return await _enrollmentService.updateEnrollmentProgress(enrollmentId, lessonId, completed);
+  }
+
+  /// Get enrollment progress
+  Future<Map<String, dynamic>?> getEnrollmentProgress(String enrollmentId) async {
+    return await _enrollmentService.getEnrollmentProgress(enrollmentId);
+  }
 }
