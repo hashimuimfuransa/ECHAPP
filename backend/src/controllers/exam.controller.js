@@ -756,6 +756,89 @@ const deleteAllExamResults = async (req, res) => {
   }
 };
 
+// Get all exam results for admin
+const getAdminExamResults = async (req, res) => {
+  try {
+    const { type, courseId } = req.query;
+    
+    let filter = {};
+    if (courseId) {
+      filter.courseId = courseId;
+    }
+    
+    const results = await Result.find(filter)
+      .populate('userId', 'fullName email')
+      .populate({
+        path: 'examId',
+        select: 'title type courseId',
+        populate: {
+          path: 'courseId',
+          select: 'title'
+        }
+      })
+      .sort({ submittedAt: -1 });
+      
+    // Filter by exam type after population if type is specified
+    let filteredResults = results;
+    if (type && type !== 'all') {
+      filteredResults = results.filter(r => r.examId && r.examId.type === type);
+    }
+    
+    const formattedResults = filteredResults.map(r => ({
+      id: r._id,
+      userId: r.userId?._id,
+      studentName: r.userId?.fullName,
+      studentEmail: r.userId?.email,
+      examId: r.examId?._id,
+      examDetails: r.examId,
+      score: r.score,
+      totalPoints: r.totalPoints,
+      percentage: r.percentage,
+      passed: r.passed,
+      submittedAt: r.submittedAt,
+      studentClaim: r.studentClaim,
+      adminResponse: r.adminResponse,
+      regraded: r.regraded
+    }));
+    
+    sendSuccess(res, formattedResults, 'Admin exam results retrieved successfully');
+  } catch (error) {
+    console.error('Error in getAdminExamResults:', error);
+    sendError(res, 'Failed to retrieve admin exam results', 500, error.message);
+  }
+};
+
+// Regrade an exam result
+const regradeExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { score, adminResponse } = req.body;
+    
+    const result = await Result.findById(id).populate('examId');
+    if (!result) {
+      return sendNotFound(res, 'Exam result not found');
+    }
+    
+    // Update score and calculate new percentage/pass status
+    result.score = score;
+    result.percentage = (score / result.totalPoints) * 100;
+    
+    if (result.examId) {
+      result.passed = result.percentage >= result.examId.passingScore;
+    }
+    
+    result.adminResponse = adminResponse;
+    result.regraded = true;
+    
+    await result.save();
+    
+    sendSuccess(res, result, 'Exam result regraded successfully');
+  } catch (error) {
+    console.error('Error in regradeExam:', error);
+    sendError(res, 'Failed to regrade exam result', 500, error.message);
+  }
+};
+
 // Remove the manual grading functions and implement proper automatic grading for open questions
 
 module.exports = {
@@ -772,5 +855,7 @@ module.exports = {
   getUserExamHistory,
   createExam,
   deleteExamResult,
-  deleteAllExamResults
+  deleteAllExamResults,
+  getAdminExamResults,
+  regradeExam
 };

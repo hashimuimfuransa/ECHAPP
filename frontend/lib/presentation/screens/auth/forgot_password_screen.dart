@@ -101,8 +101,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
               child: Column(
                 children: [
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
@@ -296,8 +296,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
                   const SizedBox(height: 30),
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(

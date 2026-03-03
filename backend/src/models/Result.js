@@ -53,6 +53,18 @@ const resultSchema = new mongoose.Schema({
   submittedAt: {
     type: Date,
     default: Date.now
+  },
+  studentClaim: {
+    type: String,
+    required: false
+  },
+  adminResponse: {
+    type: String,
+    required: false
+  },
+  regraded: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

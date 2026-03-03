@@ -39,7 +39,7 @@ class _GlowCircle extends StatelessWidget {
 
 class _LogoBadge extends StatelessWidget {
   final double size;
-  const _LogoBadge({this.size = 52});
+  const _LogoBadge({this.size = 70});
   @override
   Widget build(BuildContext context) {
     final isLarge = size > 70;
@@ -351,8 +351,8 @@ class _BrandPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: isMobile ? 76 : 90,
-          height: isMobile ? 76 : 90,
+          width: isMobile ? 100 : 130,
+          height: isMobile ? 100 : 130,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
@@ -363,7 +363,7 @@ class _BrandPanel extends StatelessWidget {
               ),
             ],
           ),
-          child: _LogoBadge(size: isMobile ? 76 : 90),
+          child: _LogoBadge(size: isMobile ? 100 : 130),
         ),
         SizedBox(height: isMobile ? 16 : 24),
         Column(

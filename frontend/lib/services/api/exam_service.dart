@@ -382,6 +382,66 @@ class ExamService {
     }
   }
 
+  /// Get all exam results for all students (admin only)
+  Future<List<ExamResult>> getAllExamResults({
+    String? examType,
+    String? courseId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (examType != null && examType != 'all') queryParams['type'] = examType;
+      if (courseId != null) queryParams['courseId'] = courseId;
+
+      final response = await _apiClient.get(
+        '${ApiConfig.exams}/admin/results',
+        queryParams: queryParams,
+      );
+
+      response.validateStatus();
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as List<dynamic>;
+        return data.map((item) => ExamResult.fromJson(item as Map<String, dynamic>)).toList();
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch all exam results');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch all exam results: $e');
+    }
+  }
+
+  /// Regrade an exam result (admin only)
+  Future<ExamResult> regradeExamResult({
+    required String resultId,
+    required int newScore,
+    String? adminComment,
+  }) async {
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.exams}/admin/results/$resultId/regrade',
+        body: {
+          'newScore': newScore,
+          if (adminComment != null) 'adminComment': adminComment,
+        },
+      );
+
+      response.validateStatus();
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as Map<String, dynamic>;
+        return ExamResult.fromJson(data);
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to regrade exam');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to regrade exam: $e');
+    }
+  }
+
   /// Dispose of resources
   void dispose() {
     _apiClient.dispose();
@@ -418,11 +478,16 @@ class ExamListResponse {
 class ExamResult {
   final String resultId;
   final String? examId;
+  final String? userId;
+  final String? studentName;
+  final String? studentEmail;
   final int score;
   final int totalPoints;
   final double? percentage;
   final bool passed;
   final String message;
+  final String? adminComment;
+  final String? studentClaim;
   final DateTime? submittedAt;
   final exam_model.Exam? examDetails;
   final List<QuestionResult> questions;
@@ -431,11 +496,16 @@ class ExamResult {
   ExamResult({
     required this.resultId,
     this.examId,
+    this.userId,
+    this.studentName,
+    this.studentEmail,
     required this.score,
     required this.totalPoints,
     this.percentage,
     required this.passed,
     required this.message,
+    this.adminComment,
+    this.studentClaim,
     this.submittedAt,
     this.examDetails,
     required this.questions,
@@ -458,6 +528,22 @@ class ExamResult {
         } catch (e) {
           print('ExamResult: Error parsing exam details: $e');
         }
+      }
+    }
+    
+    // Handle student/user info
+    String? userId;
+    String? studentName;
+    String? studentEmail;
+    
+    if (json['userId'] != null) {
+      if (json['userId'] is String) {
+        userId = json['userId'] as String;
+      } else if (json['userId'] is Map<String, dynamic>) {
+        final userData = json['userId'] as Map<String, dynamic>;
+        userId = userData['_id'] as String? ?? userData['id'] as String?;
+        studentName = userData['fullName'] as String? ?? userData['name'] as String?;
+        studentEmail = userData['email'] as String?;
       }
     }
     
@@ -495,11 +581,16 @@ class ExamResult {
     return ExamResult(
       resultId: json['_id'] ?? json['resultId'] ?? '',
       examId: examId,
+      userId: userId,
+      studentName: studentName,
+      studentEmail: studentEmail,
       score: parseScore(json['score']),
       totalPoints: parseScore(json['totalPoints']),
       percentage: (json['percentage'] is num) ? json['percentage'].toDouble() : json['percentage']?.toDouble(),
       passed: json['passed'] ?? false,
       message: json['message'] ?? 'Exam completed',
+      adminComment: json['adminComment'] as String?,
+      studentClaim: json['studentClaim'] as String? ?? json['claim'] as String?,
       submittedAt: json['submittedAt'] != null 
           ? DateTime.parse(json['submittedAt'] as String)
           : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null),

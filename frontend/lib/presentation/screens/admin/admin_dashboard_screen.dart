@@ -399,6 +399,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 _buildDesktopNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true, isCollapsed),
                 _buildDesktopNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Exams', Icons.quiz_rounded, '/admin/exams-review', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Analytics', Icons.analytics_rounded, '/admin/analytics', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Payments', Icons.payments_rounded, '/admin/payments', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Settings', Icons.settings_rounded, '/admin/settings', false, isCollapsed),
@@ -995,6 +996,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   _buildMobileNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true),
                   _buildMobileNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false),
                   _buildMobileNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false),
+                  _buildMobileNavItem(context, 'Exams', Icons.quiz_rounded, '/admin/exams-review', false),
                   _buildMobileNavItem(context, 'Analytics', Icons.analytics_rounded, '/admin/analytics', false),
                   _buildMobileNavItem(context, 'Payments', Icons.payments_rounded, '/admin/payments', false),
                   _buildMobileNavItem(context, 'Settings', Icons.settings_rounded, '/admin/settings', false),
@@ -1308,35 +1310,50 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isDesktop) ...[
-            Text(
-              'Welcome back, Admin!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dashboard Overview',
+                    style: TextStyle(
+                      fontSize: isDesktop ? 28 : 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.getTextColor(context),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage your coaching platform efficiently',
+                    style: TextStyle(
+                      fontSize: isDesktop ? 16 : 14,
+                      color: AppTheme.greyColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'Manage your coaching platform efficiently',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.greyColor,
-              ),
-            ),
-            const SizedBox(height: 30),
-          ],
-          
-          _buildDataSourceInfo(stats),
-          
-          SizedBox(height: isDesktop ? 28 : 20),
-          
-          _buildStatsSection(stats, context),
+              if (isDesktop)
+                ElevatedButton.icon(
+                  onPressed: () => ref.read(adminDashboardProvider.notifier).loadDashboardData(),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Refresh Data'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+            ],
+          ),
           
           SizedBox(height: isDesktop ? 40 : 30),
           
-          _buildQuickActionsSection(context),
+          _buildStatsSection(stats, context),
           
           SizedBox(height: isDesktop ? 40 : 30),
           
@@ -1348,352 +1365,241 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildDataSourceInfo(AdminDashboardStats stats) {
-    // For now, we'll use default values since AdminDashboardStats doesn't have source info
-    final sourceText = 'MongoDB Primary';
-    
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.orange,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.warning,
-            color: Colors.orange,
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Data Source: $sourceText',
-              style: TextStyle(
-                color: Colors.orange[800],
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
   Widget _buildStatsSection(AdminDashboardStats stats, BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     
-    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
-    final spacing = isDesktop ? 20.0 : 15.0;
+    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
+    final spacing = isDesktop ? 24.0 : 20.0;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: spacing,
+      mainAxisSpacing: spacing,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: isDesktop ? 1.5 : (isTablet ? 1.8 : 2.5),
       children: [
-        Text(
-          'Statistics Overview',
-          style: TextStyle(
-            fontSize: isDesktop ? 22 : 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
-        ),
-        SizedBox(height: isDesktop ? 24 : 20),
-        GridView.count(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: spacing,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildStatCard('Total Courses', stats.totalCourses.toString(), Icons.school, AppTheme.primaryGreen, context),
-            _buildStatCard('Active Students', stats.activeStudents.toString(), Icons.people, AppTheme.accent, context),
-            _buildStatCard('Total Revenue', 'RWF ${stats.totalRevenue.toStringAsFixed(0)}', Icons.attach_money, AppTheme.primaryGreen, context),
-            _buildStatCard('Pending Exams', stats.pendingExams.toString(), Icons.quiz, AppTheme.accent, context),
-          ],
-        ),
+        _buildStatCard('Total Courses', stats.totalCourses.toString(), Icons.school_rounded, const Color(0xFF6366F1), context),
+        _buildStatCard('Active Students', stats.activeStudents.toString(), Icons.people_alt_rounded, const Color(0xFF10B981), context),
+        _buildStatCard('Total Revenue', 'RWF ${stats.totalRevenue.toStringAsFixed(0)}', Icons.account_balance_wallet_rounded, const Color(0xFFF59E0B), context),
+        _buildStatCard('Total Final Exams', stats.totalFinalExams.toString(), Icons.assignment_turned_in_rounded, const Color(0xFFEF4444), context),
       ],
     );
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color, BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final padding = isDesktop ? 24.0 : 20.0;
-    final iconSize = isDesktop ? 28.0 : 24.0;
-    final valueFontSize = isDesktop ? 28.0 : 24.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+          width: 1,
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Container(
-            padding: EdgeInsets.all(isDesktop ? 12 : 10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          Positioned(
+            right: -20,
+            bottom: -20,
             child: Icon(
               icon,
-              color: color,
-              size: iconSize,
+              size: 100,
+              color: color.withOpacity(0.05),
             ),
           ),
-          SizedBox(height: isDesktop ? 20 : 15),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: valueFontSize,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
+          Padding(
+            padding: EdgeInsets.all(isDesktop ? 24.0 : 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: color,
+                        size: 24,
+                      ),
+                    ),
+                    Icon(
+                      Icons.more_horiz_rounded,
+                      color: AppTheme.greyColor.withOpacity(0.4),
+                      size: 20,
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 32 : 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.getTextColor(context),
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.greyColor.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: isDesktop ? 8 : 5),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isDesktop ? 14 : 13,
-              color: AppTheme.greyColor,
-              height: 1.3,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsSection(BuildContext context) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final isTablet = ResponsiveBreakpoints.isTablet(context);
-    
-    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
-    final spacing = isDesktop ? 20.0 : 15.0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: isDesktop ? 22 : 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
-        ),
-        SizedBox(height: isDesktop ? 24 : 20),
-        GridView.count(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: spacing,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildActionCard(
-              context,
-              'Create Course',
-              'Add new courses to platform',
-              Icons.add,
-              AppTheme.primaryGreen,
-              '/admin/courses/create',
-            ),
-            _buildActionCard(
-              context,
-              'Upload Video',
-              'Add educational videos',
-              Icons.video_call,
-              AppTheme.accent,
-              '/admin/videos/upload',
-            ),
-            _buildActionCard(
-              context,
-              'Create Exam',
-              'Generate new assessments',
-              Icons.quiz,
-              AppTheme.primaryGreen,
-              '/admin/exams/create',
-            ),
-            _buildActionCard(
-              context,
-              'View Reports',
-              'Check platform analytics',
-              Icons.bar_chart,
-              AppTheme.accent,
-              '/admin/analytics',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    String route,
-  ) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final padding = isDesktop ? 24.0 : 20.0;
-    final iconSize = isDesktop ? 36.0 : 30.0;
-    final titleFontSize = isDesktop ? 16.0 : 15.0;
-    final subtitleFontSize = isDesktop ? 13.0 : 12.0;
-    
-    return GestureDetector(
-      onTap: () => context.push(route),
-      child: Container(
-        padding: EdgeInsets.all(padding),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
-              spreadRadius: 1,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(isDesktop ? 18 : 15),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: iconSize,
-              ),
-            ),
-            SizedBox(height: isDesktop ? 18 : 15),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: titleFontSize,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: isDesktop ? 6 : 5),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: subtitleFontSize,
-                color: AppTheme.greyColor,
-                height: 1.3,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildRecentActivitySection(AdminDashboardStats stats, BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent Activity',
-          style: TextStyle(
-            fontSize: isDesktop ? 22 : 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Activity',
+              style: TextStyle(
+                fontSize: isDesktop ? 22 : 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.getTextColor(context),
+                letterSpacing: -0.5,
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: const Text('View All'),
+            ),
+          ],
         ),
-        SizedBox(height: isDesktop ? 24 : 20),
+        const SizedBox(height: 20),
         Container(
           padding: EdgeInsets.all(isDesktop ? 24.0 : 20.0),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.08),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
               ),
             ],
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+              width: 1,
+            ),
           ),
           child: Column(
-            children: stats.recentActivity.map((activity) => Column(
-              children: [
-                _ActivityItem(
-                  icon: _getIconFromString(activity.icon),
-                  title: activity.title,
-                  subtitle: activity.subtitle,
-                  time: activity.time,
-                ),
-                if (stats.recentActivity.indexOf(activity) < stats.recentActivity.length - 1)
+            children: stats.recentActivity.isEmpty 
+              ? [
                   Padding(
-                    padding: EdgeInsets.symmetric(vertical: isDesktop ? 16 : 15),
-                    child: Divider(
-                      height: 1,
-                      color: Colors.grey.withOpacity(0.1),
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.history_rounded, size: 48, color: AppTheme.greyColor.withOpacity(0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No recent activity',
+                            style: TextStyle(color: AppTheme.greyColor.withOpacity(0.6)),
+                          ),
+                        ],
+                      ),
                     ),
+                  )
+                ]
+              : stats.recentActivity.map((activity) => Column(
+                children: [
+                  _ActivityItem(
+                    icon: _getIconFromString(activity.icon),
+                    title: activity.title,
+                    subtitle: activity.subtitle,
+                    time: activity.time,
+                    iconColor: _getIconColorFromString(activity.icon),
                   ),
-              ],
-            )).toList(),
+                  if (stats.recentActivity.indexOf(activity) < stats.recentActivity.length - 1)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48),
+                      child: Divider(
+                        height: 32,
+                        color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                      ),
+                    ),
+                ],
+              )).toList(),
           ),
         ),
       ],
     );
   }
+
+  static Color _getIconColorFromString(String? iconString) {
+    switch (iconString) {
+      case 'school':
+        return const Color(0xFF6366F1);
+      case 'people':
+        return const Color(0xFF10B981);
+      case 'payment':
+        return const Color(0xFFF59E0B);
+      case 'video_call':
+        return const Color(0xFF8B5CF6);
+      case 'quiz':
+        return const Color(0xFFEF4444);
+      default:
+        return AppTheme.primaryGreen;
+    }
+  }
+
   static IconData _getIconFromString(String? iconString) {
     switch (iconString) {
       case 'school':
-        return Icons.school;
+        return Icons.school_rounded;
       case 'people':
-        return Icons.people;
+        return Icons.people_alt_rounded;
       case 'payment':
-        return Icons.payment;
+        return Icons.account_balance_wallet_rounded;
       case 'video_call':
-        return Icons.video_call;
+        return Icons.video_call_rounded;
       case 'quiz':
-        return Icons.quiz;
+        return Icons.assignment_rounded;
       case 'add':
-        return Icons.add;
+        return Icons.add_rounded;
       case 'person_add':
-        return Icons.person_add;
+        return Icons.person_add_rounded;
       default:
-        return Icons.info;
+        return Icons.info_rounded;
     }
   }
 }
@@ -1703,31 +1609,34 @@ class _ActivityItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final String time;
+  final Color iconColor;
 
   const _ActivityItem({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.time,
+    required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: AppTheme.primaryGreen,
-            shape: BoxShape.circle,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: Colors.white,
-            size: 16,
+            color: iconColor,
+            size: 20,
           ),
         ),
-        const SizedBox(width: 15),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1736,14 +1645,17 @@ class _ActivityItem extends StatelessWidget {
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 15,
                   color: AppTheme.getTextColor(context),
+                  letterSpacing: -0.2,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: 12,
+                style: TextStyle(
+                  color: AppTheme.greyColor.withOpacity(0.8),
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -1751,9 +1663,10 @@ class _ActivityItem extends StatelessWidget {
         ),
         Text(
           time,
-          style: const TextStyle(
-            color: AppTheme.greyColor,
+          style: TextStyle(
+            color: AppTheme.greyColor.withOpacity(0.5),
             fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

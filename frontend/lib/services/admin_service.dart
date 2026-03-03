@@ -12,6 +12,22 @@ class AdminService {
 
   AdminService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
+  static int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
   /// Get dashboard statistics
   Future<AdminDashboardStats> getDashboardStats() async {
     try {
@@ -20,6 +36,7 @@ class AdminService {
         _getCourseStats(),
         _getPaymentStats(),
         _getUserStats(),
+        _getExamStats(),
       ];
       
       final results = await Future.wait(futures);
@@ -27,17 +44,34 @@ class AdminService {
       final courseStats = results[0] as CourseStats;
       final paymentStats = results[1] as PaymentStats;
       final userStats = results[2] as UserStats;
+      final examStats = results[3] as Map<String, dynamic>;
       
       return AdminDashboardStats(
         totalCourses: courseStats.totalCourses,
         activeStudents: userStats.totalStudents,
         totalRevenue: paymentStats.totalRevenue,
-        pendingExams: 0, // Will implement when exam stats are available
-        recentActivity: _generateRecentActivity(courseStats, paymentStats),
+        totalFinalExams: _toInt(examStats['totalFinalExamsDone']),
+        recentActivity: _generateRecentActivity(courseStats, paymentStats, examStats),
       );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch dashboard statistics: $e');
+    }
+  }
+
+  /// Get exam statistics
+  Future<Map<String, dynamic>> _getExamStats() async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/exam-stats');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return data;
+    } catch (e) {
+      // If endpoint doesn't exist, return default
+      return {'totalFinalExamsDone': 0};
     }
   }
 
@@ -87,8 +121,8 @@ class AdminService {
       final data = jsonBody['data'] as Map<String, dynamic>;
       
       return PaymentStats(
-        totalRevenue: (data['totalRevenue'] as num?)?.toDouble() ?? 0.0,
-        totalPayments: data['totalPayments'] as int? ?? 0,
+        totalRevenue: _toDouble(data['totalRevenue']),
+        totalPayments: _toInt(data['totalPayments']),
         recentPayments: data['recentPayments'] is List ? data['recentPayments'] as List : [],
       );
     } catch (e) {
@@ -109,7 +143,7 @@ class AdminService {
       final data = jsonBody['data'] as Map<String, dynamic>;
       
       return UserStats(
-        totalStudents: data['total'] as int? ?? 0,
+        totalStudents: _toInt(data['total']),
         source: data['source'] as String? ?? 'unknown',
       );
     } catch (e) {
@@ -141,9 +175,9 @@ class AdminService {
       
       return StudentListResponse(
         students: students,
-        totalPages: data['totalPages'] as int? ?? 1,
-        currentPage: data['currentPage'] as int? ?? 1,
-        total: data['total'] as int? ?? 0,
+        totalPages: _toInt(data['totalPages']) > 0 ? _toInt(data['totalPages']) : 1,
+        currentPage: _toInt(data['currentPage']) > 0 ? _toInt(data['currentPage']) : 1,
+        total: _toInt(data['total']),
         source: data['source'] as String? ?? 'unknown',
       );
     } catch (e) {
@@ -280,30 +314,66 @@ class AdminService {
   }
 
   /// Generate recent activity based on fetched data
-  List<ActivityItem> _generateRecentActivity(CourseStats courseStats, PaymentStats paymentStats) {
+  List<ActivityItem> _generateRecentActivity(CourseStats courseStats, PaymentStats paymentStats, Map<String, dynamic> examStats) {
     final List<ActivityItem> activity = [];
     
     // Add recent course activities
-    for (var i = 0; i < courseStats.courses.length && i < 3; i++) {
+    for (var i = 0; i < courseStats.courses.length && i < 5; i++) {
       final course = courseStats.courses[i];
+      final title = course['title'] ?? 'New Course';
+      final isPublished = course['isPublished'] ?? false;
+      final createdAt = _parseDateTime(course['createdAt']);
+      
       activity.add(ActivityItem(
         icon: 'school',
-        title: 'Course Published',
-        subtitle: 'Course is now live',
-        time: 'Recently',
+        title: isPublished ? 'Course Published' : 'Course Created',
+        subtitle: title,
+        time: _formatDate(course['createdAt']),
+        timestamp: createdAt,
       ));
     }
     
     // Add recent payment activities
-    for (var i = 0; i < paymentStats.recentPayments.length && i < 2; i++) {
-      final payment = paymentStats.recentPayments[i];
+    final recentPayments = paymentStats.recentPayments;
+    for (var i = 0; i < recentPayments.length && i < 5; i++) {
+      final payment = recentPayments[i];
+      final amount = payment['amount'] ?? 0;
+      final studentName = (payment['userId'] is Map) ? payment['userId']['fullName'] : 'A student';
+      final courseName = (payment['courseId'] is Map) ? payment['courseId']['title'] : 'a course';
+      final paymentDate = _parseDateTime(payment['paymentDate'] ?? payment['createdAt']);
+      
       activity.add(ActivityItem(
         icon: 'payment',
-        title: 'Payment Received',
-        subtitle: 'Payment processed successfully',
-        time: 'Recently',
+        title: 'Enrollment: RWF $amount',
+        subtitle: '$studentName enrolled in $courseName',
+        time: _formatDate(payment['paymentDate'] ?? payment['createdAt']),
+        timestamp: paymentDate,
       ));
     }
+
+    // Add recent exam activities
+    final recentResults = examStats['recentResults'] as List?;
+    if (recentResults != null) {
+      for (var i = 0; i < recentResults.length && i < 5; i++) {
+        final result = recentResults[i];
+        final studentName = (result['userId'] is Map) ? result['userId']['fullName'] : 'A student';
+        final examTitle = (result['examId'] is Map) ? result['examId']['title'] : 'an exam';
+        final score = result['score'] ?? 0;
+        final totalPoints = result['totalPoints'] ?? 0;
+        final submittedAt = _parseDateTime(result['submittedAt']);
+
+        activity.add(ActivityItem(
+          icon: 'quiz',
+          title: 'Exam Completed',
+          subtitle: '$studentName scored $score/$totalPoints in $examTitle',
+          time: _formatDate(result['submittedAt']),
+          timestamp: submittedAt,
+        ));
+      }
+    }
+    
+    // Sort activity by timestamp (newest first)
+    activity.sort((a, b) => (b.timestamp ?? DateTime(2000)).compareTo(a.timestamp ?? DateTime(2000)));
     
     // Add default activities if no real data
     if (activity.isEmpty) {
@@ -313,17 +383,40 @@ class AdminService {
           title: 'Platform Ready',
           subtitle: 'Your coaching platform is set up',
           time: 'Just now',
+          timestamp: DateTime.now(),
         ),
         ActivityItem(
           icon: 'people',
           title: 'Welcome Admin',
           subtitle: 'Start managing your platform',
           time: 'Just now',
+          timestamp: DateTime.now(),
         ),
       ]);
     }
     
-    return activity.take(5).toList();
+    // Return most recent items first
+    return activity.take(8).toList();
+  }
+
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return 'Recently';
+    
+    final date = _parseDateTime(dateValue);
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays > 0) {
+      if (difference.inDays == 1) return 'Yesterday';
+      if (difference.inDays < 7) return '${difference.inDays} days ago';
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minutes ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   /// Get user device information and enrolled courses
@@ -395,16 +488,26 @@ class AdminDashboardStats {
   final int totalCourses;
   final int activeStudents;
   final double totalRevenue;
-  final int pendingExams;
+  final int totalFinalExams;
   final List<ActivityItem> recentActivity;
 
   AdminDashboardStats({
     required this.totalCourses,
     required this.activeStudents,
     required this.totalRevenue,
-    required this.pendingExams,
+    required this.totalFinalExams,
     required this.recentActivity,
   });
+
+  factory AdminDashboardStats.empty() {
+    return AdminDashboardStats(
+      totalCourses: 0,
+      activeStudents: 0,
+      totalRevenue: 0.0,
+      totalFinalExams: 0,
+      recentActivity: [],
+    );
+  }
 }
 
 class CourseStats {
@@ -446,12 +549,14 @@ class ActivityItem {
   final String title;
   final String subtitle;
   final String time;
+  final DateTime? timestamp;
 
   ActivityItem({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.time,
+    this.timestamp,
   });
 }
 

@@ -126,8 +126,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
               child: Column(
                 children: [
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
@@ -242,8 +242,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
                   const SizedBox(height: 20),
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(

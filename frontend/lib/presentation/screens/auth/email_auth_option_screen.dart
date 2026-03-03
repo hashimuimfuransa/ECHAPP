@@ -133,8 +133,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
               child: Column(
                 children: [
                   Container(
-                    width: 120,
-                    height: 120,
+                    width: 160,
+                    height: 160,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
@@ -367,8 +367,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                   ),
                   const SizedBox(height: 30),
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(

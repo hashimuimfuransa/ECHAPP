@@ -205,8 +205,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               child: Column(
                 children: [
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
@@ -454,8 +454,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                   ),
                   const SizedBox(height: 30),
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(

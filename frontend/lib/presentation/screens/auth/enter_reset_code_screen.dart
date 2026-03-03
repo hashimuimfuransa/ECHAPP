@@ -70,8 +70,8 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
                                 child: Image.asset(
                                   'assets/logo.png',
                                   fit: BoxFit.contain,
-                                  width: 65,
-                                  height: 65,
+                                  width: 90,
+                                  height: 90,
                                 ),
                               ),
                             ),

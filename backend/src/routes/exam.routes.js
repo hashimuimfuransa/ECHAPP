@@ -14,13 +14,17 @@ const {
   getUserExamHistory, // Added new function
   createExam,
   deleteExamResult,
-  deleteAllExamResults
+  deleteAllExamResults,
+  getAdminExamResults,
+  regradeExam
 } = require('../controllers/exam.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { authorize: roleAuthorize } = require('../middleware/role.middleware');
 
 // Admin routes
 router.get('/', protect, roleAuthorize('admin'), getAllExams);
+router.get('/admin/results', protect, roleAuthorize('admin'), getAdminExamResults);
+router.put('/admin/results/:id/regrade', protect, roleAuthorize('admin'), regradeExam);
 router.get('/section/:sectionId/admin', protect, roleAuthorize('admin'), getSectionExamsAdmin);
 router.get('/:id', protect, roleAuthorize('admin'), getExamById);
 router.put('/:id', protect, roleAuthorize('admin'), updateExam);

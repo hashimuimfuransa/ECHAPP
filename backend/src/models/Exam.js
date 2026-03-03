@@ -20,7 +20,7 @@ const examSchema = new mongoose.Schema({
   type: {
     type: String,
     required: [true, 'Exam type is required'],
-    enum: ['quiz', 'pastpaper', 'final']
+    enum: ['quiz', 'midterm', 'final', 'pastpaper']
   },
   passingScore: {
     type: Number,

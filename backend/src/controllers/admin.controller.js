@@ -277,6 +277,23 @@ const getExamStats = async (req, res) => {
     const passedResults = await Result.countDocuments({ passed: true });
     const passRate = totalResults > 0 ? (passedResults / totalResults) * 100 : 0;
     
+    // Get total final exams count (distinct exams that have results)
+    const finalExamsResults = await Result.aggregate([
+      {
+        $lookup: {
+          from: 'exams',
+          localField: 'examId',
+          foreignField: '_id',
+          as: 'exam'
+        }
+      },
+      { $unwind: '$exam' },
+      { $match: { 'exam.type': 'final' } },
+      { $group: { _id: '$examId' } }
+    ]);
+    
+    const totalFinalExamsDone = finalExamsResults.length;
+    
     const recentResults = await Result.find()
       .populate('userId', 'fullName')
       .populate('examId', 'title')
@@ -287,6 +304,7 @@ const getExamStats = async (req, res) => {
       totalResults,
       passedResults,
       passRate,
+      totalFinalExamsDone,
       recentResults
     }, 'Exam statistics retrieved successfully');
   } catch (error) {

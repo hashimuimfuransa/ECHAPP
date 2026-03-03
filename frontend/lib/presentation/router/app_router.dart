@@ -33,6 +33,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_settings_
 import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_exams_review_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
@@ -226,6 +227,10 @@ class AppRouter {
             path: '/admin/analytics',
             builder: (context, state) => const AdminAnalyticsScreen(),
           ),
+          GoRoute(
+            path: '/admin/exams-review',
+            builder: (context, state) => const AdminExamsReviewScreen(),
+          ),
 
           // Learning Routes - Outside MainLayout for full-screen focus
           GoRoute(
@@ -340,6 +345,10 @@ class AppRouter {
           ),
         ],
         redirect: (context, state) {
+          // If the location is /admin/exams-review, ensure we don't redirect away
+          if (state.uri.path == '/admin/exams-review') {
+            return null;
+          }
           return null;
         },
       );

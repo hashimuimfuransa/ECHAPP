@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
@@ -21,7 +24,7 @@ class ExamTakingScreen extends StatefulWidget {
   State<ExamTakingScreen> createState() => _ExamTakingScreenState();
 }
 
-class _ExamTakingScreenState extends State<ExamTakingScreen> {
+class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBindingObserver {
   List<Question> _questions = [];
   final Map<int, dynamic> _answers = {}; // Stores selectedOption (Number/String) and answerText (String) for each question
   final Map<int, TextEditingController> _textControllers = {}; // Controllers for text input fields
@@ -31,20 +34,126 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
+  // Security & Anti-cheating
+  int _warningCount = 0;
+  final int _maxWarnings = 3;
+  bool _isWarningDialogVisible = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _enableSecureMode();
     _loadExamData();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _disableSecureMode();
     _timer?.cancel();
     // Dispose all text controllers
     for (var controller in _textControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _enableSecureMode() async {
+    // Enable Fullscreen
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
+    // Disable Screen Capture/Recording (Android/iOS only)
+    // Note: requires flutter_windowmanager for Android, but not in pubspec.
+    // We'll stick to basic Flutter lifecycle for now.
+  }
+
+  void _disableSecureMode() async {
+    // Restore System UI
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Detect if user leaves the app or changes tab (Web)
+    if (state == AppLifecycleState.inactive || 
+        state == AppLifecycleState.paused || 
+        state == AppLifecycleState.hidden) {
+      _handleSecurityViolation("App backgrounded or tab switched");
+    }
+  }
+
+  void _handleSecurityViolation(String reason) {
+    if (_isSubmitting || _isLoading || _isWarningDialogVisible) return;
+    
+    setState(() {
+      _warningCount++;
+    });
+
+    if (_warningCount >= _maxWarnings) {
+      _autoSubmitDueToViolation();
+    } else {
+      _showWarningDialog(reason);
+    }
+  }
+
+  void _autoSubmitDueToViolation() {
+    _timer?.cancel();
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Security Violation', style: TextStyle(color: Colors.red)),
+          content: Text('You have exceeded the maximum number of warnings ($_maxWarnings). Your exam will be submitted automatically.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _submitExam();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Submit Now', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showWarningDialog(String reason) {
+    _isWarningDialogVisible = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Warning: Security Violation', style: TextStyle(color: Colors.orange)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('You are not allowed to switch tabs or leave the exam screen.'),
+            const SizedBox(height: 12),
+            Text('Warning $_warningCount of $_maxWarnings', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Further violations will result in automatic submission.', style: TextStyle(color: Colors.red, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              _isWarningDialogVisible = false;
+              Navigator.of(context).pop();
+              // Re-enable fullscreen in case it was lost
+              SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+            },
+            child: const Text('I Understand'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> _loadExamData() async {
@@ -278,6 +387,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
         answers: answers,
       );
 
+      _disableSecureMode();
+
       if (mounted) {
         // Navigate to results screen
         Navigator.pushReplacement(
@@ -479,10 +590,51 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
         );
         
         if ((shouldPop ?? false) && context.mounted) {
+          _disableSecureMode();
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
+      child: KeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKeyEvent: (event) {
+          // Block common cheating shortcuts
+          if (event is KeyDownEvent) {
+            final isControlPressed = event.logicalKey == LogicalKeyboardKey.controlLeft || 
+                                     event.logicalKey == LogicalKeyboardKey.controlRight ||
+                                     HardwareKeyboard.instance.isControlPressed;
+            final isAltPressed = event.logicalKey == LogicalKeyboardKey.altLeft || 
+                                 event.logicalKey == LogicalKeyboardKey.altRight ||
+                                 HardwareKeyboard.instance.isAltPressed;
+            
+            // Block Ctrl+C, Ctrl+V, Ctrl+U (view source), F12, Ctrl+Shift+I, Alt+Tab
+            if (isControlPressed && (
+                event.logicalKey == LogicalKeyboardKey.keyC || 
+                event.logicalKey == LogicalKeyboardKey.keyV ||
+                event.logicalKey == LogicalKeyboardKey.keyU ||
+                event.logicalKey == LogicalKeyboardKey.keyI ||
+                event.logicalKey == LogicalKeyboardKey.keyJ)) {
+              _handleSecurityViolation("Prohibited keyboard shortcut used");
+            }
+            
+            if (event.logicalKey == LogicalKeyboardKey.f12 || 
+                event.logicalKey == LogicalKeyboardKey.f11) {
+              _handleSecurityViolation("Prohibited function key used");
+            }
+            
+            if (isAltPressed && event.logicalKey == LogicalKeyboardKey.tab) {
+               _handleSecurityViolation("Alt+Tab detected");
+            }
+          }
+        },
+        child: Listener(
+          onPointerDown: (event) {
+            // Block right click (secondary button)
+            if (event.buttons == 2) { // 2 is for secondary mouse button (right-click)
+              _handleSecurityViolation("Right-click is prohibited");
+            }
+          },
+          child: Scaffold(
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -518,8 +670,10 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   // Helper methods for building UI components
   Widget _buildModernAppBar(BuildContext context) {
