@@ -238,6 +238,8 @@ class AdminService {
       return StudentDetail(
         user: user,
         enrollments: enrollments,
+        examResults: data['examResults'] as List? ?? [],
+        payments: data['payments'] as List? ?? [],
         totalEnrollments: data['totalEnrollments'] as int? ?? 0,
         completedCourses: data['completedCourses'] as int? ?? 0,
         inProgressCourses: data['inProgressCourses'] as int? ?? 0,
@@ -581,6 +583,8 @@ class ActivityItem {
 class StudentDetail {
   final User user;
   final List<Enrollment> enrollments;
+  final List<dynamic> examResults;
+  final List<dynamic> payments;
   final int totalEnrollments;
   final int completedCourses;
   final int inProgressCourses;
@@ -590,6 +594,8 @@ class StudentDetail {
   StudentDetail({
     required this.user,
     required this.enrollments,
+    this.examResults = const [],
+    this.payments = const [],
     required this.totalEnrollments,
     required this.completedCourses,
     required this.inProgressCourses,

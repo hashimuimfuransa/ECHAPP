@@ -182,6 +182,8 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
       final studentDetail = StudentDetail(
         user: userDeviceInfo.user,
         enrollments: userDeviceInfo.enrolledCourses,
+        examResults: [],
+        payments: [],
         totalEnrollments: userDeviceInfo.totalEnrollments,
         completedCourses: userDeviceInfo.enrolledCourses.where((e) => e.completionStatus == 'completed').length,
         inProgressCourses: userDeviceInfo.enrolledCourses.where((e) => e.completionStatus == 'in-progress').length,
@@ -1550,6 +1552,57 @@ class StudentDetailModal extends StatelessWidget {
   }
 
   Widget _buildActivityTimeline(BuildContext context) {
+    final List<Map<String, dynamic>> activities = [];
+    
+    // Add enrollments to activities
+    for (var enrollment in studentDetail.enrollments) {
+      activities.add({
+        'type': 'enrollment',
+        'title': 'Enrolled in Course',
+        'subtitle': enrollment.course?.title ?? 'Unknown Course',
+        'date': enrollment.enrollmentDate,
+        'icon': Icons.school,
+        'color': AppTheme.primaryGreen,
+      });
+    }
+    
+    // Add payments to activities
+    for (var payment in studentDetail.payments) {
+      final date = payment['paymentDate'] != null 
+          ? DateTime.parse(payment['paymentDate'].toString())
+          : (payment['createdAt'] != null ? DateTime.parse(payment['createdAt'].toString()) : DateTime.now());
+      
+      activities.add({
+        'type': 'payment',
+        'title': 'Payment Completed',
+        'subtitle': 'RWF ${payment['amount']} for ${payment['courseId']?['title'] ?? 'a course'}',
+        'date': date,
+        'icon': Icons.payment,
+        'color': Colors.blue,
+      });
+    }
+    
+    // Add exam results to activities
+    for (var result in studentDetail.examResults) {
+      final date = result['submittedAt'] != null 
+          ? DateTime.parse(result['submittedAt'].toString())
+          : DateTime.now();
+      
+      final bool passed = result['passed'] == true;
+      
+      activities.add({
+        'type': 'exam',
+        'title': passed ? 'Exam Passed' : 'Exam Failed',
+        'subtitle': '${result['examId']?['title'] ?? 'Unknown Exam'} - Score: ${result['score']}/${result['totalPoints']}',
+        'date': date,
+        'icon': passed ? Icons.check_circle : Icons.cancel,
+        'color': passed ? Colors.green : Colors.red,
+      });
+    }
+    
+    // Sort by date newest first
+    activities.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1562,17 +1615,92 @@ class StudentDetailModal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 15),
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: AppTheme.greyColor.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
+        if (activities.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: AppTheme.greyColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'No recent activity recorded',
+              style: TextStyle(color: AppTheme.greyColor),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: activities.length > 5 ? 5 : activities.length,
+            itemBuilder: (context, index) {
+              final activity = activities[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 15),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (activity['color'] as Color).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            activity['icon'] as IconData,
+                            color: activity['color'] as Color,
+                            size: 16,
+                          ),
+                        ),
+                        if (index < (activities.length > 5 ? 4 : activities.length - 1))
+                          Container(
+                            width: 2,
+                            height: 30,
+                            color: AppTheme.greyColor.withOpacity(0.2),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                activity['title'] as String,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                _formatDateSimple(activity['date'] as DateTime),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.greyColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            activity['subtitle'] as String,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-          child: const Text(
-            'Activity timeline will be implemented in future updates',
-            style: TextStyle(color: AppTheme.greyColor),
-          ),
-        ),
       ],
     );
   }

@@ -169,10 +169,20 @@ const getStudents = async (req, res) => {
           .skip((page - 1) * limit)
           .sort({ createdAt: -1 });
         
+        // Map isActive (MongoDB) to disabled (Firebase)
+        const mappedStudents = students.map(user => {
+          const userObj = user.toObject();
+          return {
+            ...userObj,
+            id: userObj._id,
+            disabled: userObj.isActive === false
+          };
+        });
+        
         const total = await User.countDocuments(filter);
         
         sendSuccess(res, {
-          students,
+          students: mappedStudents,
           totalPages: Math.ceil(total / limit),
           currentPage: Number(page),
           total,
@@ -196,10 +206,20 @@ const getStudents = async (req, res) => {
         .skip((page - 1) * limit)
         .sort({ createdAt: -1 });
       
+      // Map isActive (MongoDB) to disabled (Firebase)
+      const mappedStudents = students.map(user => {
+        const userObj = user.toObject();
+        return {
+          ...userObj,
+          id: userObj._id,
+          disabled: userObj.isActive === false
+        };
+      });
+      
       const total = await User.countDocuments(filter);
       
       sendSuccess(res, {
-        students,
+        students: mappedStudents,
         totalPages: Math.ceil(total / limit),
         currentPage: Number(page),
         total,
@@ -493,6 +513,7 @@ const getStudentDetail = async (req, res) => {
         phone: mongoUser.phone,
         role: mongoUser.role,
         provider: mongoUser.provider,
+        disabled: mongoUser.isActive === false,
         createdAt: mongoUser.createdAt,
         lastLogin: mongoUser.lastLogin,
         deviceId: mongoUser.deviceId
@@ -532,13 +553,23 @@ const getStudentDetail = async (req, res) => {
       return sum + (payment.courseId?.price || 0);
     }, 0);
     
-    // Get last active date (latest enrollment or login)
+    // Get student's exam results
+    const examResults = mongoUserId
+      ? await Result.find({ userId: mongoUserId })
+          .populate('examId', 'title type')
+          .sort({ submittedAt: -1 })
+      : [];
+    
+    // Get last active date (latest enrollment or login or exam submission)
     const lastActive = user.lastLogin || 
-      (enrollments.length > 0 ? enrollments[0].enrollmentDate : user.createdAt);
+      (enrollments.length > 0 ? enrollments[0].enrollmentDate : 
+        (examResults.length > 0 ? examResults[0].submittedAt : user.createdAt));
     
     sendSuccess(res, {
       user,
       enrollments,
+      examResults,
+      payments,
       totalEnrollments,
       completedCourses,
       inProgressCourses,
@@ -940,11 +971,13 @@ const toggleStudentStatus = async (req, res) => {
       }
       
       if (mongoUser) {
-        // We don't have a 'disabled' field in our User model, but we could add it or use it for sync
-        // If we want to keep track in MongoDB, we should ensure the model has it
-        // For now, let's just log it and assume Firebase is the source of truth for status
+        // Update the isActive field in MongoDB to match Firebase's disabled status
+        // Firebase disabled: true means MongoDB isActive: false
+        mongoUser.isActive = !disabled;
+        await mongoUser.save();
+        
         mongoUpdated = true;
-        console.log(`MongoDB user ${mongoUser._id} associated with status update`);
+        console.log(`MongoDB user ${mongoUser._id} isActive status updated to ${!disabled}`);
       }
     } catch (mongoError) {
       console.log(`MongoDB user ${id} not found or update failed:`, mongoError.message);
