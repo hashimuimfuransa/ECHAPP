@@ -22,7 +22,12 @@ const authorize = (...roles) => {
     }
 
     console.log('Role authorization successful');
-    next();
+    if (typeof next === 'function') {
+      next();
+    } else {
+      console.error('CRITICAL: next is not a function in authorize middleware');
+      return sendForbidden(res, 'Internal Server Error: Middleware chain broken');
+    }
   };
 };
 

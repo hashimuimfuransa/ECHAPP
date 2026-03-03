@@ -84,6 +84,11 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.category_rounded),
+            onPressed: () => _showCategoryManagementModal(context),
+            tooltip: 'Manage Categories',
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push('/admin/courses/create'),
             tooltip: 'Add Course',
@@ -121,6 +126,15 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
         ],
       ),
       body: _buildCoursesContent(context, ref, courseState),
+    );
+  }
+
+  void _showCategoryManagementModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const CategoryManagementModal(),
     );
   }
 
@@ -802,6 +816,198 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class CategoryManagementModal extends ConsumerStatefulWidget {
+  const CategoryManagementModal({super.key});
+
+  @override
+  ConsumerState<CategoryManagementModal> createState() => _CategoryManagementModalState();
+}
+
+class _CategoryManagementModalState extends ConsumerState<CategoryManagementModal> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isSubmitting = false;
+
+  Future<void> _createCategory() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final repository = ref.read(categoryRepositoryProvider);
+      await repository.createCategory(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        icon: 'school', // Default icon
+        subcategories: [], // Empty subcategories array
+        level: 1, // Default level
+      );
+      
+      if (mounted) {
+        _nameController.clear();
+        _descriptionController.clear();
+        ref.invalidate(backendCategoriesProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category created successfully'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _deleteCategory(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: const Text('Are you sure? This will affect courses in this category.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final repository = ref.read(categoryRepositoryProvider);
+      await repository.deleteCategory(id);
+      ref.invalidate(backendCategoriesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Manage Categories',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            
+            // Create New Category Form
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Category Name',
+                      hintText: 'e.g. Mathematics, Science...',
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _createCategory,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: _isSubmitting 
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Add Category'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 25),
+            const Text(
+              'Existing Categories',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            
+            Expanded(
+              child: categoriesAsync.when(
+                data: (categories) => categories.isEmpty
+                  ? const Center(child: Text('No categories found'))
+                  : ListView.builder(
+                      controller: scrollController,
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
+                        return ListTile(
+                          title: Text(category.name),
+                          subtitle: Text(category.description ?? 'No description'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            onPressed: () => _deleteCategory(category.id),
+                          ),
+                        );
+                      },
+                    ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('Error: $error')),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

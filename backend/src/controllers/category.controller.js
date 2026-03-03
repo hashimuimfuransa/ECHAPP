@@ -82,7 +82,14 @@ exports.createCategory = async (req, res) => {
     await category.save();
     return sendSuccess(res, category, 'Category created successfully', 201);
   } catch (error) {
-    return sendError(res, error.message, 500);
+    if (error.name === 'ValidationError') {
+      return sendError(res, error.message, 400);
+    }
+    if (error.code === 11000) {
+      return sendError(res, 'Category with this name already exists', 400);
+    }
+    console.error('Create Category Error:', error);
+    return sendError(res, error.message + (error.stack ? ' ' + error.stack : ''), 500);
   }
 };
 

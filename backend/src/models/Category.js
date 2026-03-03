@@ -9,17 +9,19 @@ const categorySchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true,
-    trim: true
+    required: false,
+    trim: true,
+    default: ''
   },
   icon: {
     type: String,
-    required: true
+    required: false,
+    default: 'school'
   },
-  subcategories: [{
-    type: String,
-    required: true
-  }],
+  subcategories: {
+    type: [String],
+    default: []
+  },
   isPopular: {
     type: Boolean,
     default: false
@@ -51,9 +53,8 @@ const categorySchema = new mongoose.Schema({
 categorySchema.index({ name: 'text', description: 'text' });
 
 // Update the updatedAt field before saving
-categorySchema.pre('save', function(next) {
+categorySchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('Category', categorySchema);

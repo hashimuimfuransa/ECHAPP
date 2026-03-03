@@ -12,7 +12,12 @@ const adminOnly = (req, res, next) => {
   }
 
   // User is authenticated and has admin role
-  next();
+  if (typeof next === 'function') {
+    next();
+  } else {
+    console.error('CRITICAL: next is not a function in adminOnly middleware');
+    return sendError(res, 'Internal Server Error: Middleware chain broken', 500);
+  }
 };
 
 module.exports = { adminOnly };

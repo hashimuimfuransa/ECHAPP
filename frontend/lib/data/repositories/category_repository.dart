@@ -30,4 +30,50 @@ class CategoryRepository {
   Future<List<Category>> searchCategories(String query) async {
     return await _categoryService.searchCategories(query);
   }
+
+  Future<Category> createCategory({
+    required String name,
+    String? description,
+    String? icon,
+    List<String>? subcategories,
+    bool? isPopular,
+    bool? isFeatured,
+    int? level,
+  }) async {
+    return await _categoryService.createCategory(
+      name: name,
+      description: description,
+      icon: icon,
+      subcategories: subcategories,
+      isPopular: isPopular,
+      isFeatured: isFeatured,
+      level: level,
+    );
+  }
+
+  Future<Category> updateCategory({
+    required String id,
+    String? name,
+    String? description,
+    String? icon,
+    List<String>? subcategories,
+    bool? isPopular,
+    bool? isFeatured,
+    int? level,
+  }) async {
+    return await _categoryService.updateCategory(
+      id: id,
+      name: name,
+      description: description,
+      icon: icon,
+      subcategories: subcategories,
+      isPopular: isPopular,
+      isFeatured: isFeatured,
+      level: level,
+    );
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _categoryService.deleteCategory(id);
+  }
 }

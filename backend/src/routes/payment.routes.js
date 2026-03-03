@@ -21,8 +21,8 @@ const {
   getPaymentStats
 } = require('../controllers/payment_workflow.controller');
 const { getAdminPaymentsSimple } = require('../controllers/admin_payment_debug.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
-const { authorize: roleAuthorize } = require('../middleware/role.middleware');
+const { protect } = require('../middleware/auth.middleware');
+const { authorize } = require('../middleware/role.middleware');
 
 // Student routes
 router.post('/initiate', protect, initiatePayment);
@@ -30,14 +30,14 @@ router.get('/my-payments', protect, getMyPayments);
 router.get('/my', protect, getMyPayments);
 
 // Admin routes
-router.get('/', protect, roleAuthorize('admin'), getAllPayments);
-router.get('/stats', protect, roleAuthorize('admin'), getPaymentStats);
-router.get('/admin-simple', protect, roleAuthorize('admin'), getAdminPaymentsSimple);
+router.get('/', protect, authorize('admin'), getAllPayments);
+router.get('/stats', protect, authorize('admin'), getPaymentStats);
+router.get('/admin-simple', protect, authorize('admin'), getAdminPaymentsSimple);
 router.delete('/cancel/:paymentId', protect, cancelPayment);
 
 // Specific payment routes (must come BEFORE parameterized routes to avoid conflicts)
 router.post('/verify', protect, verifyPayment);
-router.put('/verify', protect, roleAuthorize('admin'), verifyPayment);
+router.put('/verify', protect, authorize('admin'), verifyPayment);
 router.get('/:id', protect, getPaymentById);
 
 module.exports = router;
