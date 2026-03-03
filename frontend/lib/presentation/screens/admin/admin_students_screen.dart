@@ -290,7 +290,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
   }
 
   void _showDeactivateDialog(User student) {
-    final bool isDeactivating = !student.disabled;
+    final bool isDeactivating = student.disabled != true;
     
     showDialog(
       context: context,
@@ -656,7 +656,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                         ),
                       ),
                     ),
-                    if (student.disabled) ...[
+                    if (student.disabled == true) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -693,14 +693,14 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                     ),
                     if (student.deviceId != null && student.deviceId!.isNotEmpty) ...[
                       const SizedBox(width: 10),
-                      Icon(
+                      const Icon(
                         Icons.devices,
                         size: 16,
                         color: Colors.green,
                       ),
                     ] else ...[
                       const SizedBox(width: 10),
-                      Icon(
+                      const Icon(
                         Icons.phonelink_off,
                         size: 16,
                         color: Colors.grey,
@@ -774,11 +774,11 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            student.disabled ? Icons.check_circle : Icons.block, 
-                            color: student.disabled ? Colors.green : Colors.orange
+                            (student.disabled == true) ? Icons.check_circle : Icons.block, 
+                            color: (student.disabled == true) ? Colors.green : Colors.orange
                           ),
                           const SizedBox(width: 10),
-                          Text(student.disabled ? 'Activate Account' : 'Deactivate Account'),
+                          Text((student.disabled == true) ? 'Activate Account' : 'Deactivate Account'),
                         ],
                       ),
                     ),
