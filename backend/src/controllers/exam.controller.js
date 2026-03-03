@@ -759,14 +759,15 @@ const deleteAllExamResults = async (req, res) => {
 // Get all exam results for admin
 const getAdminExamResults = async (req, res) => {
   try {
-    const { type, courseId } = req.query;
+    const { type, courseId, search } = req.query;
     
     let filter = {};
     if (courseId) {
       filter.courseId = courseId;
     }
     
-    const results = await Result.find(filter)
+    // Initial fetch of results
+    let results = await Result.find(filter)
       .populate('userId', 'fullName email')
       .populate({
         path: 'examId',
@@ -779,26 +780,96 @@ const getAdminExamResults = async (req, res) => {
       .sort({ submittedAt: -1 });
       
     // Filter by exam type after population if type is specified
-    let filteredResults = results;
     if (type && type !== 'all') {
-      filteredResults = results.filter(r => r.examId && r.examId.type === type);
+      results = results.filter(r => r.examId && r.examId.type === type);
+    }
+
+    // Filter by student name if search is provided
+    if (search && search.trim().length > 0) {
+      const searchLower = search.toLowerCase();
+      results = results.filter(r => 
+        (r.userId && r.userId.fullName && r.userId.fullName.toLowerCase().includes(searchLower)) ||
+        (r.userId && r.userId.email && r.userId.email.toLowerCase().includes(searchLower))
+      );
     }
     
-    const formattedResults = filteredResults.map(r => ({
-      id: r._id,
-      userId: r.userId?._id,
-      studentName: r.userId?.fullName,
-      studentEmail: r.userId?.email,
-      examId: r.examId?._id,
-      examDetails: r.examId,
-      score: r.score,
-      totalPoints: r.totalPoints,
-      percentage: r.percentage,
-      passed: r.passed,
-      submittedAt: r.submittedAt,
-      studentClaim: r.studentClaim,
-      adminResponse: r.adminResponse,
-      regraded: r.regraded
+    // Transform the results to include detailed question information (similar to getUserExamHistory)
+    const formattedResults = await Promise.all(results.map(async (result) => {
+      let questionResults = [];
+      
+      if (result.examId && result.answers && result.answers.length > 0) {
+        // Get questions for this exam
+        const questions = await Question.find({ examId: result.examId._id })
+          .select('question options correctAnswer points type');
+        
+        // Process each answer to determine if it was correct
+        questionResults = result.answers.map(userAnswer => {
+          const question = questions.find(q => q._id.toString() === userAnswer.questionId.toString());
+          if (!question) return null;
+          
+          let isCorrect = false;
+          if (question.type === 'mcq' || question.type === 'true_false') {
+            if (question.correctAnswer === userAnswer.selectedOption) {
+              isCorrect = true;
+            }
+          } else {
+            isCorrect = question.correctAnswer === userAnswer.selectedOption;
+          }
+          
+          let earnedPoints = userAnswer.earnedPoints !== undefined ? userAnswer.earnedPoints : (isCorrect ? question.points : 0);
+          
+          return {
+            questionId: userAnswer.questionId,
+            questionText: question.question,
+            options: question.options,
+            type: question.type,
+            selectedOption: userAnswer.selectedOption,
+            selectedOptionText: (question.type === 'fill_blank' || question.type === 'open') && userAnswer.answerText
+              ? userAnswer.answerText
+              : (userAnswer.selectedOption !== undefined && question.options.length > 0 && userAnswer.selectedOption < question.options.length
+                  ? question.options[userAnswer.selectedOption]
+                  : 'No answer provided'),
+            correctAnswer: question.correctAnswer,
+            correctAnswerText: typeof question.correctAnswer === 'number'
+              ? (question.correctAnswer < question.options.length
+                  ? question.options[question.correctAnswer]
+                  : question.correctAnswer.toString())
+              : question.correctAnswer.toString(),
+            isCorrect: isCorrect,
+            points: question.points,
+            earnedPoints: earnedPoints
+          };
+        }).filter(q => q !== null);
+      }
+
+      // Calculate statistics
+      const totalQuestions = questionResults.length;
+      const correctAnswers = questionResults.filter(q => q.isCorrect).length;
+      
+      return {
+        id: result._id,
+        resultId: result._id,
+        userId: result.userId?._id,
+        studentName: result.userId?.fullName,
+        studentEmail: result.userId?.email,
+        examId: result.examId, // Change: return populated object for examId
+        examDetails: result.examId,
+        score: result.score,
+        totalPoints: result.totalPoints,
+        percentage: result.percentage,
+        passed: result.passed,
+        submittedAt: result.submittedAt,
+        studentClaim: result.studentClaim,
+        adminResponse: result.adminResponse,
+        regraded: result.regraded,
+        questions: questionResults,
+        statistics: {
+          totalQuestions: totalQuestions,
+          correctAnswers: correctAnswers,
+          incorrectAnswers: totalQuestions - correctAnswers,
+          accuracy: totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0
+        }
+      };
     }));
     
     sendSuccess(res, formattedResults, 'Admin exam results retrieved successfully');

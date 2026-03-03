@@ -386,11 +386,13 @@ class ExamService {
   Future<List<ExamResult>> getAllExamResults({
     String? examType,
     String? courseId,
+    String? search,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (examType != null && examType != 'all') queryParams['type'] = examType;
       if (courseId != null) queryParams['courseId'] = courseId;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final response = await _apiClient.get(
         '${ApiConfig.exams}/admin/results',
@@ -526,15 +528,25 @@ class ExamResult {
         try {
           examDetails = exam_model.Exam.fromJson(examData);
         } catch (e) {
-          print('ExamResult: Error parsing exam details: $e');
+          print('ExamResult: Error parsing exam details from examId: $e');
         }
+      }
+    }
+    
+    // Also check if examDetails is provided as a separate field (used in some admin routes)
+    if (json['examDetails'] != null && json['examDetails'] is Map<String, dynamic>) {
+      try {
+        examDetails = exam_model.Exam.fromJson(json['examDetails'] as Map<String, dynamic>);
+        examId ??= examDetails.id;
+      } catch (e) {
+        print('ExamResult: Error parsing exam details from examDetails: $e');
       }
     }
     
     // Handle student/user info
     String? userId;
-    String? studentName;
-    String? studentEmail;
+    String? studentName = json['studentName'] as String?;
+    String? studentEmail = json['studentEmail'] as String?;
     
     if (json['userId'] != null) {
       if (json['userId'] is String) {
@@ -542,8 +554,8 @@ class ExamResult {
       } else if (json['userId'] is Map<String, dynamic>) {
         final userData = json['userId'] as Map<String, dynamic>;
         userId = userData['_id'] as String? ?? userData['id'] as String?;
-        studentName = userData['fullName'] as String? ?? userData['name'] as String?;
-        studentEmail = userData['email'] as String?;
+        studentName ??= userData['fullName'] as String? ?? userData['name'] as String?;
+        studentEmail ??= userData['email'] as String?;
       }
     }
     

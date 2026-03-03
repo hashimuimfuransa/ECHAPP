@@ -4,10 +4,58 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 
 /// Screen to display detailed question results for a specific exam
-class ExamQuestionDetailsScreen extends StatelessWidget {
+class ExamQuestionDetailsScreen extends StatefulWidget {
   final ExamResult examResult;
 
   const ExamQuestionDetailsScreen({super.key, required this.examResult});
+
+  @override
+  State<ExamQuestionDetailsScreen> createState() => _ExamQuestionDetailsScreenState();
+}
+
+class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
+  late ExamResult _currentResult;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentResult = widget.examResult;
+    
+    // If questions are missing, fetch the full result
+    if (_currentResult.questions.isEmpty) {
+      _fetchFullResult();
+    }
+  }
+
+  Future<void> _fetchFullResult() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final examService = ExamService();
+      final history = await examService.getUserExamHistory();
+      
+      // Find the specific result in history by ID
+      final fullResult = history.firstWhere(
+        (r) => r.resultId == _currentResult.resultId,
+        orElse: () => throw Exception('Result not found in history'),
+      );
+
+      setState(() {
+        _currentResult = fullResult;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to fetch detailed results: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,37 +70,102 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
         title: const Text('Question Details'),
         backgroundColor: AppTheme.getBackgroundColor(context),
         elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with exam info
-            _buildExamHeader(),
-            const SizedBox(height: 24),
-            
-            // Statistics summary
-            _buildStatisticsCard(),
-            const SizedBox(height: 24),
-            
-            // Question list
-            const Text(
-              'Question Review',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+        actions: [
+          if (!_isLoading && _currentResult.questions.isEmpty)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchFullResult,
             ),
+        ],
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _fetchFullResult,
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_currentResult.questions.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.quiz_outlined, size: 48, color: AppTheme.greyColor),
             const SizedBox(height: 16),
-            
-            ...examResult.questions.asMap().entries.map((entry) {
-              final index = entry.key;
-              final question = entry.value;
-              return _buildQuestionCard(index + 1, question);
-            }),
+            const Text(
+              'No question analysis available for this exam.',
+              style: TextStyle(fontSize: 16, color: AppTheme.greyColor),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _fetchFullResult,
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+              child: const Text('Try Fetching Again'),
+            ),
           ],
         ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with exam info
+          _buildExamHeader(),
+          const SizedBox(height: 24),
+          
+          // Statistics summary
+          _buildStatisticsCard(),
+          const SizedBox(height: 24),
+          
+          // Question list
+          const Text(
+            'Question Review',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          ..._currentResult.questions.asMap().entries.map((entry) {
+            final index = entry.key;
+            final question = entry.value;
+            return _buildQuestionCard(index + 1, question);
+          }),
+        ],
       ),
     );
   }
@@ -76,7 +189,7 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            examResult.examDetails?.title ?? 'Unknown Exam',
+            _currentResult.examDetails?.title ?? 'Unknown Exam',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -89,17 +202,17 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              color: examResult.passed 
+              color: _currentResult.passed 
                   ? AppTheme.successColor.withOpacity(0.1)
                   : AppTheme.errorColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              examResult.passed ? 'PASSED' : 'FAILED',
+              _currentResult.passed ? 'PASSED' : 'FAILED',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: examResult.passed 
+                color: _currentResult.passed 
                     ? AppTheme.successColor 
                     : AppTheme.errorColor,
               ),
@@ -138,24 +251,24 @@ class ExamQuestionDetailsScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildStatRow(
             'Total Questions', 
-            '${examResult.statistics.totalQuestions}', 
+            '${_currentResult.statistics.totalQuestions}', 
             Icons.question_mark
           ),
           _buildStatRow(
             'Correct Answers', 
-            '${examResult.statistics.correctAnswers}', 
+            '${_currentResult.statistics.correctAnswers}', 
             Icons.check_circle,
             AppTheme.successColor
           ),
           _buildStatRow(
             'Incorrect Answers', 
-            '${examResult.statistics.incorrectAnswers}', 
+            '${_currentResult.statistics.incorrectAnswers}', 
             Icons.cancel,
             AppTheme.errorColor
           ),
           _buildStatRow(
             'Accuracy', 
-            '${examResult.statistics.accuracy.toStringAsFixed(1)}%', 
+            '${_currentResult.statistics.accuracy.toStringAsFixed(1)}%', 
             Icons.assessment
           ),
         ],

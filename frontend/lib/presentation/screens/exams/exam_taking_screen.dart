@@ -11,6 +11,7 @@ import 'package:excellencecoachinghub/data/repositories/certificate_repository.d
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'exam_history_screen.dart';
+import 'exam_question_details_screen.dart';
 
 class ExamTakingScreen extends StatefulWidget {
   final exam_model.Exam exam;
@@ -1823,11 +1824,13 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           height: 50,
           child: OutlinedButton(
             onPressed: () {
-              // Navigate to exam history screen to review answers
-              Navigator.pushReplacement(
+              // Navigate to question details screen to review answers
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ExamHistoryScreen(),
+                  builder: (context) => ExamQuestionDetailsScreen(
+                    examResult: widget.result,
+                  ),
                 ),
               );
             },
