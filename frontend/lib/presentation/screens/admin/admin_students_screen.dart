@@ -240,39 +240,63 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     }
   }
 
-  void _showResetPasswordDialog(User student) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Password'),
-        content: Text('Are you sure you want to reset the password for ${student.fullName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+  Future<void> _toggleStudentStatus(User student, bool disabled) async {
+    setState(() {
+      _loadingStudentDetail = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _adminService.toggleStudentStatus(student.id, disabled);
+      if (!mounted) return;
+      
+      setState(() {
+        _loadingStudentDetail = false;
+        // Update the student in the list if found
+        final index = _students.indexWhere((s) => s.id == student.id);
+        if (index != -1) {
+          // We might need to update the User model to include the 'disabled' field
+          // For now, we'll just refresh the list
+        }
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${student.fullName} ${disabled ? 'deactivated' : 'activated'} successfully'),
+            backgroundColor: Colors.green,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement password reset functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password reset functionality coming soon')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Reset Password'),
+        );
+        
+        // Refresh the student list to get updated statuses
+        await _loadStudents(searchQuery: _searchController.text);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _loadingStudentDetail = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error toggling student status: $e'),
+            backgroundColor: Colors.red,
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   void _showDeactivateDialog(User student) {
+    final bool isDeactivating = !student.disabled;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Deactivate Account'),
-        content: Text('Are you sure you want to deactivate ${student.fullName}\'s account? This action can be reversed.'),
+        title: Text(isDeactivating ? 'Deactivate Account' : 'Activate Account'),
+        content: Text('Are you sure you want to ${isDeactivating ? 'deactivate' : 'activate'} ${student.fullName}\'s account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -281,13 +305,12 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement deactivation functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deactivation functionality coming soon')),
-              );
+              _toggleStudentStatus(student, isDeactivating);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Deactivate'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDeactivating ? Colors.red : AppTheme.primaryGreen
+            ),
+            child: Text(isDeactivating ? 'Deactivate' : 'Activate'),
           ),
         ],
       ),
@@ -633,6 +656,24 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                         ),
                       ),
                     ),
+                    if (student.disabled) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'DISABLED',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 10),
                     Icon(
                       Icons.calendar_today,
@@ -689,10 +730,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       case 'device_info':
                         _loadUserDeviceInfo(student.id); // student.id is the MongoDB _id
                         break;
-                      case 'reset_password':
-                        _showResetPasswordDialog(student);
-                        break;
-                      case 'deactivate':
+                      case 'toggle_status':
                         _showDeactivateDialog(student);
                         break;
                       case 'delete':
@@ -731,23 +769,16 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
-                      value: 'reset_password',
+                    PopupMenuItem(
+                      value: 'toggle_status',
                       child: Row(
                         children: [
-                          Icon(Icons.lock_reset, color: Colors.orange),
-                          SizedBox(width: 10),
-                          Text('Reset Password'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'deactivate',
-                      child: Row(
-                        children: [
-                          Icon(Icons.block, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text('Deactivate Account'),
+                          Icon(
+                            student.disabled ? Icons.check_circle : Icons.block, 
+                            color: student.disabled ? Colors.green : Colors.orange
+                          ),
+                          const SizedBox(width: 10),
+                          Text(student.disabled ? 'Activate Account' : 'Deactivate Account'),
                         ],
                       ),
                     ),

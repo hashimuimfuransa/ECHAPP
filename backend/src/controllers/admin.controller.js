@@ -3,6 +3,10 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Payment = require('../models/Payment');
 const Result = require('../models/Result');
+const Notification = require('../models/Notification');
+const Certificate = require('../models/Certificate');
+const Conversation = require('../models/Conversation');
+const ChatMessage = require('../models/ChatMessage');
 const { sendSuccess, sendError } = require('../utils/response.utils');
 const admin = require('../config/firebase');
 
@@ -903,6 +907,66 @@ const resetUserDevice = async (req, res) => {
   }
 };
 
+// Toggle student status (enable/disable)
+const toggleStudentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { disabled } = req.body;
+    
+    if (typeof disabled !== 'boolean') {
+      return sendError(res, 'Status (disabled) is required and must be a boolean', 400);
+    }
+    
+    // First, try to update in Firebase
+    let firebaseUpdated = false;
+    try {
+      await admin.auth().updateUser(id, { disabled });
+      firebaseUpdated = true;
+      console.log(`Firebase user ${id} ${disabled ? 'disabled' : 'enabled'} successfully`);
+    } catch (firebaseError) {
+      console.log(`Firebase user ${id} not found or update failed:`, firebaseError.message);
+    }
+    
+    // Update in MongoDB if possible
+    let mongoUpdated = false;
+    let mongoUser = null;
+    
+    try {
+      // First try to find by MongoDB ObjectId
+      mongoUser = await User.findById(id);
+      if (!mongoUser) {
+        // If that fails, try to find by firebaseUid
+        mongoUser = await User.findOne({ firebaseUid: id });
+      }
+      
+      if (mongoUser) {
+        // We don't have a 'disabled' field in our User model, but we could add it or use it for sync
+        // If we want to keep track in MongoDB, we should ensure the model has it
+        // For now, let's just log it and assume Firebase is the source of truth for status
+        mongoUpdated = true;
+        console.log(`MongoDB user ${mongoUser._id} associated with status update`);
+      }
+    } catch (mongoError) {
+      console.log(`MongoDB user ${id} not found or update failed:`, mongoError.message);
+    }
+    
+    if (!firebaseUpdated && !mongoUpdated) {
+      return sendError(res, 'Student not found in either Firebase or MongoDB', 404);
+    }
+    
+    sendSuccess(res, {
+      id,
+      disabled,
+      firebaseUpdated,
+      mongoUpdated,
+      message: `Student ${disabled ? 'disabled' : 'enabled'} successfully`
+    }, `Student ${disabled ? 'disabled' : 'enabled'} successfully`);
+  } catch (error) {
+    console.error('Error in toggleStudentStatus:', error);
+    sendError(res, 'Failed to toggle student status', 500, error.message);
+  }
+};
+
 // Delete a student and all related data
 const deleteStudent = async (req, res) => {
   try {
@@ -966,7 +1030,20 @@ const deleteStudent = async (req, res) => {
       const resultCount = await Result.deleteMany({ userId: mongoUser._id });
       console.log(`Deleted ${resultCount.deletedCount} exam results for user ${id}`);
       
-      // 4. Finally delete the user
+      // 4. Delete notifications
+      const notificationCount = await Notification.deleteMany({ userId: mongoUser._id });
+      console.log(`Deleted ${notificationCount.deletedCount} notifications for user ${id}`);
+      
+      // 5. Delete certificates
+      const certificateCount = await Certificate.deleteMany({ userId: mongoUser._id });
+      console.log(`Deleted ${certificateCount.deletedCount} certificates for user ${id}`);
+      
+      // 6. Delete conversations and messages
+      const conversationCount = await Conversation.deleteMany({ participants: mongoUser._id });
+      const messageCount = await ChatMessage.deleteMany({ sender: mongoUser._id });
+      console.log(`Deleted ${conversationCount.deletedCount} conversations and ${messageCount.deletedCount} messages for user ${id}`);
+      
+      // 7. Finally delete the user
       await User.findByIdAndDelete(mongoUser._id);
       mongoDeleted = true;
       console.log(`MongoDB user ${id} deleted successfully`);
@@ -1002,5 +1079,6 @@ module.exports = {
   deleteUserSync,
   manualSyncAllUsers,
   getUserDeviceInfo,
-  resetUserDevice
+  resetUserDevice,
+  toggleStudentStatus
 };

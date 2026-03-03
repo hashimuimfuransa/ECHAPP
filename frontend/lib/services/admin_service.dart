@@ -460,6 +460,23 @@ class AdminService {
       throw ApiException('Failed to reset user device: $e');
     }
   }
+
+  /// Toggle student account status (enable/disable)
+  Future<Map<String, dynamic>> toggleStudentStatus(String userId, bool disabled) async {
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/students/$userId/toggle-status',
+        body: {'disabled': disabled},
+      );
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonBody['data'] as Map<String, dynamic>;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to toggle student status: $e');
+    }
+  }
   
   /// Dispose of resources
   void dispose() {

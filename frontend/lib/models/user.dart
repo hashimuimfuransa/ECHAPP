@@ -7,6 +7,7 @@ class User {
   final String? phone;
   final String role;
   final String? deviceId;
+  final bool disabled;
   final DateTime createdAt;
   final DateTime? lastActive;
 
@@ -18,6 +19,7 @@ class User {
     this.phone,
     required this.role,
     this.deviceId,
+    this.disabled = false,
     required this.createdAt,
     this.lastActive,
   });
@@ -45,6 +47,7 @@ class User {
       phone: _getStringValue(json['phone']),
       role: _getStringValue(json['role']) ?? 'user',
       deviceId: _getStringValue(json['deviceId']),
+      disabled: json['disabled'] == true,
       createdAt: _parseDateTime(json['createdAt']),
       lastActive: json['lastActive'] != null ? _parseDateTime(json['lastActive']) : null,
     );
@@ -60,6 +63,7 @@ class User {
       'phone': phone,
       'role': role,
       'deviceId': deviceId,
+      'disabled': disabled,
       'createdAt': createdAt.toIso8601String(),
       'lastActive': lastActive?.toIso8601String(),
     };

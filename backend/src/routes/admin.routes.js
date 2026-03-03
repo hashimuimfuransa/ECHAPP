@@ -13,7 +13,8 @@ const {
   deleteUserSync,
   manualSyncAllUsers,
   getUserDeviceInfo,
-  resetUserDevice
+  resetUserDevice,
+  toggleStudentStatus
 } = require('../controllers/admin.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
@@ -38,5 +39,6 @@ router.get('/analytics/students', protect, authorize('admin'), getStudentAnalyti
 // Device management routes
 router.get('/students/:id/device-info', protect, authorize('admin'), getUserDeviceInfo);
 router.put('/students/:id/device-reset', protect, authorize('admin'), resetUserDevice);
+router.put('/students/:id/toggle-status', protect, authorize('admin'), toggleStudentStatus);
 
 module.exports = router;
