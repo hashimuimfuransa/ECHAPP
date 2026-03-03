@@ -7,12 +7,12 @@ const {
   updateCourse, 
   deleteCourse 
 } = require('../controllers/course.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, optionalProtect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 
 // Public routes
-router.get('/', getCourses);
-router.get('/:id', getCourseById); // Make basic course info public
+router.get('/', optionalProtect, getCourses);
+router.get('/:id', optionalProtect, getCourseById); // Make basic course info public
 
 // Admin routes
 router.post('/', protect, authorize('admin'), createCourse);

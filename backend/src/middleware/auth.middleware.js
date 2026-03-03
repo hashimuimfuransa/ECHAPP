@@ -84,4 +84,35 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const optionalProtect = async (req, res, next) => {
+  console.log('=== OPTIONAL AUTH MIDDLEWARE CALLED ===');
+  
+  let token;
+
+  // Check for token in header
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      
+      // Try to verify as Firebase ID token
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
+      } catch (firebaseError) {
+        // If Firebase verification fails, try JWT verification
+        try {
+          const decoded = verifyToken(token);
+          req.user = await User.findById(decoded.id).select('-password');
+        } catch (jwtError) {
+          console.log('Optional Auth: Invalid token');
+        }
+      }
+    } catch (error) {
+      console.log('Optional Auth error:', error.message);
+    }
+  }
+  
+  next();
+};
+
+module.exports = { protect, optionalProtect };
