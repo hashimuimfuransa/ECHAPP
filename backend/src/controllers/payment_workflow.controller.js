@@ -53,6 +53,17 @@ const initiatePayment = async (req, res) => {
       status: 'pending'
     });
 
+    // Notify admins about the new payment request
+    try {
+      const user = await User.findById(userId);
+      const admins = await User.find({ role: 'admin' }, 'email');
+      const adminEmails = admins.map(admin => admin.email);
+      
+      await emailService.sendAdminPaymentNotification(adminEmails, user, payment, course);
+    } catch (notificationError) {
+      console.error('Error in admin payment notification:', notificationError);
+    }
+
     sendSuccess(res, {
       paymentId: payment._id,
       transactionId: payment.transactionId,

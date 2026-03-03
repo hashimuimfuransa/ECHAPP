@@ -134,13 +134,6 @@ class EmailService {
                 border-top: 1px solid #eee;
                 margin-top: 20px;
             }
-            .warning { 
-                background: #fff3cd; 
-                border: 1px solid #ffeaa7; 
-                padding: 15px; 
-                border-radius: 5px; 
-                margin: 20px 0;
-            }
         </style>
     </head>
     <body>
@@ -150,34 +143,19 @@ class EmailService {
             </div>
             <div class="content">
                 <h2>Hello ${fullName},</h2>
-                <p>We received a request to reset your password for your Excellence Coaching Hub account.</p>
+                <p>To reset your password, please click the button below:</p>
                 
-                <p>To reset your password, please follow these steps:</p>
-                
-                <ol>
-                  <li>Open the Excellence Coaching Hub app on your device</li>
-                  <li>Navigate to the "Forgot Password" section</li>
-                  ${resetToken ? `<li>Enter the following reset code: <strong>${resetToken}</strong></li>` : ''}
-                  <li>Create your new password</li>
-                </ol>
-                
-                <div class="warning">
-                    <strong>⚠️ Important Security Notice:</strong>
-                    <ul>
-                        <li>This reset code will expire in 1 hour</li>
-                        <li>If you didn't request this, please ignore this email</li>
-                        <li>Your password won't change until you create a new one</li>
-                    </ul>
+                <div style="text-align: center;">
+                    <a href="${resetUrl}" class="button">Reset Password</a>
                 </div>
                 
-                <p>Alternatively, you can copy and paste this link into your browser:</p>
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
                 <p style="word-break: break-all; color: #00b09b;">${resetUrl}</p>
                 
-                <p>For security reasons, this link can only be used once and will expire after 1 hour.</p>
+                <p>If you didn't request this, please ignore this email.</p>
             </div>
             <div class="footer">
                 <p>© ${new Date().getFullYear()} Excellence Coaching Hub. All rights reserved.</p>
-                <p>If you have any questions, please contact our support team.</p>
             </div>
         </div>
     </body>
@@ -389,6 +367,98 @@ class EmailService {
       console.error(`Error sending payment ${status} email:`, error);
       throw new Error(`Failed to send payment ${status} email`);
     }
+  }
+
+  /**
+   * Send notification to admin when a user requests payment
+   */
+  async sendAdminPaymentNotification(adminEmails, user, payment, course) {
+    try {
+      const subject = `📢 New Payment Request - ${user.fullName} - Excellence Coaching Hub`;
+      const html = this.getAdminPaymentNotificationTemplate(user, payment, course);
+
+      // Ensure adminEmails is an array and include the default info email
+      const recipients = Array.isArray(adminEmails) ? [...adminEmails] : [adminEmails];
+      if (!recipients.includes('info@excellencecoachinghub.com')) {
+        recipients.push('info@excellencecoachinghub.com');
+      }
+
+      // Filter out any invalid emails
+      const validRecipients = [...new Set(recipients.filter(email => email && email.includes('@')))];
+
+      const msg = {
+        to: validRecipients,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName
+        },
+        subject: subject,
+        html: html
+      };
+
+      const response = await this.sgMail.sendMultiple(msg);
+      console.log('Admin payment notification emails sent:', validRecipients);
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending admin payment notification:', error);
+      // We don't throw here to avoid breaking the student's payment initiation flow
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Admin payment notification template
+   */
+  getAdminPaymentNotificationTemplate(user, payment, course) {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Payment Request</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #00b09b; padding: 20px; text-align: center; color: white; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 10px 10px; }
+            .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #00b09b; }
+            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>📢 New Payment Request</h2>
+            </div>
+            <div class="content">
+                <p>A user has initiated a payment request that requires your review.</p>
+                
+                <div class="details">
+                    <h3>User Details:</h3>
+                    <p><strong>Name:</strong> ${user.fullName}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                </div>
+                
+                <div class="details">
+                    <h3>Payment Details:</h3>
+                    <p><strong>Course:</strong> ${course.title}</p>
+                    <p><strong>Amount:</strong> ${payment.currency} ${payment.amount.toLocaleString()}</p>
+                    <p><strong>Method:</strong> ${payment.paymentMethod}</p>
+                    <p><strong>Transaction ID:</strong> ${payment.transactionId}</p>
+                    <p><strong>Contact Info:</strong> ${payment.contactInfo}</p>
+                </div>
+                
+                <p>Please log in to the admin dashboard to verify and approve this payment.</p>
+            </div>
+            <div class="footer">
+                <p>© ${new Date().getFullYear()} Excellence Coaching Hub Admin System</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
   }
 
   /**
