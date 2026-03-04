@@ -182,6 +182,7 @@ class CourseService {
         if (durationUnit != null) 'durationUnit': durationUnit,
         if (level != null) 'level': level,
         if (thumbnail != null) 'thumbnail': thumbnail,
+        if (instructorName != null) 'instructorName': instructorName,
         if (categoryId != null) 'categoryId': categoryId,
         if (isPublished != null) 'isPublished': isPublished,
         if (learningObjectives != null) 'learningObjectives': learningObjectives,

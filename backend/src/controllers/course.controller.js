@@ -158,7 +158,7 @@ const createCourse = async (req, res) => {
   try {
     const { 
       title, description, price, duration, durationUnit, 
-      level, thumbnail, categoryId, 
+      level, thumbnail, instructorName, categoryId, 
       accessDuration, accessDurationUnit, accessDurationDays 
     } = req.body;
     
@@ -191,6 +191,7 @@ const createCourse = async (req, res) => {
       durationUnit: durationUnit || 'minutes',
       level,
       thumbnail: thumbnail || null, // Ensure thumbnail is null if not provided
+      instructorName: instructorName || null,
       createdBy: req.user.id,
       accessDuration: accessDuration || null,
       accessDurationUnit: accessDurationUnit || 'days'

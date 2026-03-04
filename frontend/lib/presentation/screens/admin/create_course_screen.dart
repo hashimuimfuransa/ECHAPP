@@ -24,6 +24,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _instructorController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
   final _requirementsController = TextEditingController();
@@ -66,6 +67,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _instructorController.dispose();
     _priceController.dispose();
     _durationController.dispose();
     _requirementsController.dispose();
@@ -91,6 +93,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       // Populate form with course data
       _titleController.text = course.title ?? '';
       _descriptionController.text = course.description;
+      _instructorController.text = course.instructorName ?? '';
       _priceController.text = course.price.toString();
       _durationController.text = course.duration.toString();
       _selectedDurationUnit = course.durationUnit;
@@ -302,6 +305,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
 
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
+      final instructorName = _instructorController.text.trim();
       final duration = int.tryParse(_durationController.text.trim()) ?? 1; // Default to 1 if parsing fails
       final price = _isFree ? 0.0 : (double.tryParse(_priceController.text.trim()) ?? 0.0);
 
@@ -319,6 +323,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           duration: duration,
           durationUnit: _selectedDurationUnit,
           level: _selectedLevel,
+          instructorName: instructorName.isEmpty ? null : instructorName,
           categoryId: _selectedCategoryId,
           thumbnail: _thumbnailUrl,
           learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
@@ -349,6 +354,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           duration: duration,
           durationUnit: _selectedDurationUnit,
           level: _selectedLevel,
+          instructorName: instructorName.isEmpty ? null : instructorName,
           categoryId: _selectedCategoryId,
           thumbnail: _thumbnailUrl,
           isPublished: _isPublished, // Add publish status
@@ -679,6 +685,16 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _instructorController,
+              decoration: const InputDecoration(
+                labelText: 'Instructor Name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+                hintText: 'Enter the name of the instructor...',
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(
