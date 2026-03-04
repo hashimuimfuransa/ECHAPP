@@ -507,10 +507,10 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                                 AppTheme.accent,
                                 isSmall: isSmallScreen,
                               ),
-                              if (course.category != null)
+                              if (course.category != null || course.categoryId != null)
                                 _buildInfoChip(
                                   Icons.category,
-                                  course.category!['name'] as String? ?? 'Uncategorized',
+                                  _getCategoryName(ref, course),
                                   AppTheme.primaryGreen,
                                   isSmall: isSmallScreen,
                                 ),
@@ -649,6 +649,32 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           ],
         );
       },
+    );
+  }
+
+  String _getCategoryName(WidgetRef ref, Course course) {
+    // If name is already in the category map, use it
+    if (course.category != null && course.category!['name'] != null) {
+      return course.category!['name'].toString();
+    }
+    
+    // Otherwise, try to find it in the backend categories list using the ID
+    final catId = course.categoryId ?? (course.category != null ? (course.category!['id'] ?? course.category!['_id'])?.toString() : null);
+    
+    if (catId == null) return 'Uncategorized';
+    
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+    return categoriesAsync.when(
+      data: (categories) {
+        for (var c in categories) {
+          if (c.id == catId || c.id.toString() == catId) {
+            return c.name;
+          }
+        }
+        return 'Uncategorized';
+      },
+      loading: () => '...',
+      error: (_, __) => 'Uncategorized',
     );
   }
 

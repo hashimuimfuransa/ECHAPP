@@ -1175,6 +1175,7 @@ module.exports = {
   getPaymentStats,
   getExamStats,
   getStudentAnalytics,
+  getCourseAnalytics,
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,

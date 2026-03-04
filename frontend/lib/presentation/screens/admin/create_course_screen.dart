@@ -98,7 +98,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       _selectedLevel = course.level.toLowerCase();
       _thumbnailUrl = course.thumbnail;
       _isPublished = course.isPublished; // Set publish status
-      _selectedCategoryId = course.category?['id'];
+      _selectedCategoryId = course.categoryId ?? course.category?['id'] ?? course.category?['_id'];
       _thumbnailKey = UniqueKey(); // Refresh key when loading course details
       
       // Load access duration if available
@@ -1056,19 +1056,6 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                         }
                       });
                     },
-                  ),
-                ),
-                Expanded(
-                  child: SwitchListTile(
-                    title: const Text('Publish Course', style: TextStyle(fontSize: 14)),
-                    value: _isPublished,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setState(() {
-                        _isPublished = value;
-                      });
-                    },
-                    activeThumbColor: AppTheme.primaryGreen,
                   ),
                 ),
               ],

@@ -32,6 +32,29 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return await repository.getCourseById(courseId);
   });
 
+  String _getCategoryName(WidgetRef ref, Course course) {
+    if (course.category != null && course.category!['name'] != null) {
+      return course.category!['name'].toString();
+    }
+    
+    final catId = course.categoryId ?? (course.category != null ? (course.category!['id'] ?? course.category!['_id'])?.toString() : null);
+    if (catId == null) return 'Uncategorized';
+    
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+    return categoriesAsync.when(
+      data: (categories) {
+        for (var c in categories) {
+          if (c.id == catId || c.id.toString() == catId) {
+            return c.name;
+          }
+        }
+        return 'Uncategorized';
+      },
+      loading: () => '...',
+      error: (_, __) => 'Uncategorized',
+    );
+  }
+
   // Method to handle enrollment
   void _handleEnrollment(WidgetRef ref, String courseId) async {
     final enrollmentNotifier = ref.read(enrollmentNotifierProvider.notifier);
@@ -1064,11 +1087,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               },
             ];
 
-            // Only add category if it's provided in the course data
-            if (course.category != null && course.category!['name'] != null) {
+            // Add category if it's available
+            final categoryName = _getCategoryName(ref, course);
+            if (categoryName != 'Uncategorized') {
               stats.add({
                 'icon': Icons.category_outlined,
-                'value': course.category!['name'],
+                'value': categoryName,
                 'label': 'Category',
                 'color': const Color(0xFFf5576c)
               });
