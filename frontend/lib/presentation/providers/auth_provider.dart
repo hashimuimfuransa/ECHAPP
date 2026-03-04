@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
 import 'package:excellencecoachinghub/data/repositories/auth_repository.dart';
 import 'package:excellencecoachinghub/utils/device_id_utils.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager());
@@ -60,19 +61,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       
       // Step 1: Login with Firebase Auth
+      debugPrint('AuthProvider: Step 1: Logging in with Firebase Auth...');
+      final firebaseStartTime = DateTime.now();
       final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final firebaseEndTime = DateTime.now();
+      debugPrint('AuthProvider: Firebase login took ${firebaseEndTime.difference(firebaseStartTime).inSeconds}s');
       
       if (userCredential?.user != null) {
         final firebaseUser = userCredential!.user!;
         debugPrint('AuthProvider: Firebase login successful for ${firebaseUser.email}');
         
         // Step 2: Get Firebase ID token
-        debugPrint('AuthProvider: Getting Firebase ID token');
+        debugPrint('AuthProvider: Step 2: Getting Firebase ID token...');
+        final tokenStartTime = DateTime.now();
         final idToken = await firebaseUser.getIdToken();
-        debugPrint('AuthProvider: Got Firebase ID token');
+        final tokenEndTime = DateTime.now();
+        debugPrint('AuthProvider: Getting ID token took ${tokenEndTime.difference(tokenStartTime).inSeconds}s');
         
         if (idToken == null) {
           debugPrint('AuthProvider: ERROR - idToken is null after login');
@@ -80,9 +87,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
         
         // Step 3: Send token to backend for authentication
-        debugPrint('AuthProvider: Sending token to backend for authentication');
+        debugPrint('AuthProvider: Step 3: Sending token to backend for authentication...');
+        debugPrint('AuthProvider: Target backend: ${ApiConfig.baseUrl}/auth/firebase-login');
+        final backendStartTime = DateTime.now();
         final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
-        debugPrint('AuthProvider: Backend authentication successful');
+        final backendEndTime = DateTime.now();
+        debugPrint('AuthProvider: Backend authentication successful, took ${backendEndTime.difference(backendStartTime).inSeconds}s');
         
         // Step 4: Save tokens and user data
         await _storageManager.saveAccessToken(authResponse.token);

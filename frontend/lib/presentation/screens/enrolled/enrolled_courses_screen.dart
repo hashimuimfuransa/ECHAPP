@@ -162,52 +162,72 @@ class EnrolledCoursesScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Course thumbnail
-              Container(
-                height: isGrid ? 120 : 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryGreen.withOpacity(0.2),
-                    width: 1,
+              Stack(
+                children: [
+                  Container(
+                    height: isGrid ? 120 : 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.primaryGreen.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: Image.network(
+                              course.thumbnail!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.play_lesson,
+                                    color: AppTheme.primaryGreen,
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            child: Icon(
+                              Icons.play_lesson,
+                              color: AppTheme.primaryGreen,
+                              size: 40,
+                            ),
+                          ),
                   ),
-                ),
-                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: Image.network(
-                          course.thumbnail!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.primaryGreen.withOpacity(0.1),
-                              child: Icon(
-                                Icons.play_lesson,
-                                color: AppTheme.primaryGreen,
-                                size: 40,
-                              ),
-                            );
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              child: const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            );
-                          },
+                  if ((course.price ?? 0) > 0)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      )
-                    : Container(
-                        color: AppTheme.primaryGreen.withOpacity(0.1),
-                        child: Icon(
-                          Icons.play_lesson,
-                          color: AppTheme.primaryGreen,
-                          size: 40,
+                        child: const Text(
+                          '20% OFF',
+                          style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
                         ),
                       ),
+                    ),
+                ],
               ),
               const SizedBox(height: 12),
               // Course title
@@ -249,12 +269,21 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${course.duration}h • ${course.price == 0 ? 'Free' : 'Paid'}',
+                          '${course.formattedDuration} • ${course.price == 0 ? 'Free' : 'RWF ${course.price}'}',
                           style: TextStyle(
                             fontSize: 10,
                             color: AppTheme.greyColor,
                           ),
                         ),
+                        if ((course.price ?? 0) > 0)
+                          Text(
+                            'Original: RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: AppTheme.greyColor.withOpacity(0.6),
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
                       ],
                     ),
                   ),

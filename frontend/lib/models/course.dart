@@ -45,6 +45,15 @@ class Course {
     this.averageRating,
   });
 
+  String get formattedDuration {
+    String unit = durationUnit;
+    if (unit.toLowerCase() == 'minutes') unit = 'mins';
+    if (unit.toLowerCase() == 'hours') unit = 'hrs';
+    if (unit.toLowerCase() == 'days') unit = 'days';
+    if (unit.toLowerCase() == 'months') unit = 'mo';
+    return '$duration $unit';
+  }
+
   static String? _getStringValue(dynamic value) {
     if (value == null) return null;
     if (value is String) return value;

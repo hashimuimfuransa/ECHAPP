@@ -1340,6 +1340,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                   ),
+                  if ((course.price ?? 0) > 0)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '20% OFF',
+                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
                 ],
               ),
               Expanded(
@@ -1374,6 +1390,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          if ((course.price ?? 0) > 0)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFF9CA3AF),
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                                Text(
+                                  'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF0F766E),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            const Text(
+                              'FREE',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -1384,7 +1431,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               children: [
                                 Icon(
                                   (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
-                                  size: 12,
+                                  size: 10,
                                   color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                 ),
                                 const SizedBox(width: 4),
@@ -1399,11 +1446,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               ],
                             ),
                           ),
-                          if ((course.price ?? 0) > 0)
-                            Text(
-                              'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
-                            ),
                         ],
                       ),
                     ],
@@ -1486,13 +1528,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                child: Container(
-                  height: 110,
-                  width: double.infinity,
-                  color: AppTheme.primary.withOpacity(0.1),
-                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                      ? Image.network(course.thumbnail!, fit: BoxFit.cover)
-                      : const Icon(Icons.image_outlined, color: AppTheme.primary, size: 40),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 110,
+                      width: double.infinity,
+                      color: AppTheme.primary.withOpacity(0.1),
+                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                          ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                          : const Icon(Icons.image_outlined, color: AppTheme.primary, size: 40),
+                    ),
+                    if ((course.price ?? 0) > 0)
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '20% OFF',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Padding(
@@ -1517,10 +1579,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          (course.price ?? 0) == 0 ? 'FREE' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primary),
-                        ),
+                        if ((course.price ?? 0) > 0)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: AppTheme.greyColor.withOpacity(0.6),
+                                ),
+                              ),
+                              Text(
+                                'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primary),
+                              ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            'FREE',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.green),
+                          ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(

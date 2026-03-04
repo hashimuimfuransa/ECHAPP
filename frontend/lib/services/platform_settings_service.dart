@@ -31,6 +31,11 @@ class PlatformSettingsService {
           contactSupport: ContactSupport(phone: '', email: '', whatsapp: ''),
         ),
         platformInfo: PlatformInfo(name: 'Excellence Coaching Hub', description: '', contactEmail: '', contactPhone: ''),
+        userManagement: UserManagementSettings(allowRegistration: true, requireEmailVerification: true, defaultUserRole: 'Student'),
+        contentModeration: ContentModerationSettings(requireManualCourseApproval: true, autoFilterSpam: true, allowCommentsOnCourses: true),
+        notifications: NotificationSettings(enabled: true, email: true, push: false),
+        appearance: AppearanceSettings(theme: 'Light'),
+        dataManagement: DataManagementSettings(autoSync: true, syncInterval: 30),
       );
     }
   }

@@ -264,6 +264,26 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
                           ),
                         ),
                       ),
+                    if (!course['isFree'])
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            '20% OFF',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -316,14 +336,37 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    course['price'] == 0 ? 'Free' : 'RWF ${course['price']}',
-                    style: TextStyle(
-                      color: course['price'] == 0 ? Colors.green : Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  if (course['price'] == 0)
+                    const Text(
+                      'Free',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'RWF ${(course['price'] / 0.8).toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 10,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        Text(
+                          'RWF ${course['price']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(

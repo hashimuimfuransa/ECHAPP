@@ -32,6 +32,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return await repository.getCourseById(courseId);
   });
 
+  String _formatDuration(Course course) {
+    return course.formattedDuration;
+  }
+
   String _getCategoryName(WidgetRef ref, Course course) {
     if (course.category != null && course.category!['name'] != null) {
       return course.category!['name'].toString();
@@ -167,7 +171,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         'Instructor: ${course.createdBy.fullName}\n'
         'Price: ${(course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
-        'Duration: ${course.duration} minutes\n\n'
+        'Duration: ${_formatDuration(course)}\n\n'
         'Learn more at Excellence Coaching Hub!';
     
     await Share.share(shareText, subject: 'Course Recommendation: ${course.title}');
@@ -817,14 +821,19 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 );
               }
               
-              // Show regular payment button
+              // Show regular enrollment or payment button
+              final isFree = (course.price ?? 0) == 0;
               return ElevatedButton(
                 onPressed: () {
-                  print('💳 Initiating payment for course: ${course.id}');
-                  _handlePayment(ref, course);
+                  if (isFree) {
+                    _handleEnrollment(ref, course.id);
+                  } else {
+                    print('💳 Initiating payment for course: ${course.id}');
+                    _handlePayment(ref, course);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
+                  backgroundColor: isFree ? Colors.green : AppTheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -832,7 +841,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                  isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -858,14 +867,19 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             ),
             error: (error, stack) {
               print('⚠️ Pending payment check error: $error');
-              // Show regular payment button as fallback
+              // Show regular enrollment or payment button as fallback
+              final isFree = (course.price ?? 0) == 0;
               return ElevatedButton(
                 onPressed: () {
-                  print('💳 Initiating payment for course: ${course.id}');
-                  _handlePayment(ref, course);
+                  if (isFree) {
+                    _handleEnrollment(ref, course.id);
+                  } else {
+                    print('💳 Initiating payment for course: ${course.id}');
+                    _handlePayment(ref, course);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
+                  backgroundColor: isFree ? Colors.green : AppTheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -873,7 +887,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                  isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -905,10 +919,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         ),
         child: TextButton(
           onPressed: () {
-            // Handle free enrollment
+            _handleEnrollment(ref, course.id);
           },
           child: const Text(
-            'Enroll For Free',
+            'Enroll Now',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -1069,7 +1083,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             final stats = [
               {
                 'icon': Icons.access_time_outlined,
-                'value': '${course.duration} mins',
+                'value': _formatDuration(course),
                 'label': 'Duration',
                 'color': const Color(0xFF667eea)
               },
@@ -1123,7 +1137,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             final stats = [
               {
                 'icon': Icons.access_time_outlined,
-                'value': '${course.duration} mins',
+                'value': _formatDuration(course),
                 'label': 'Duration',
                 'color': const Color(0xFF667eea)
               },
@@ -1175,7 +1189,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             final stats = [
               {
                 'icon': Icons.access_time_outlined,
-                'value': '${course.duration} mins',
+                'value': _formatDuration(course),
                 'label': 'Duration',
                 'color': const Color(0xFF667eea)
               },
@@ -1281,7 +1295,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     final stats = [
       {
         'icon': Icons.access_time_outlined,
-        'value': '${course.duration} mins',
+        'value': _formatDuration(course),
         'label': 'Duration'
       },
       {
@@ -1993,7 +2007,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   Widget _buildEnrollButton(BuildContext context, Course course, WidgetRef ref) {
     if (course.price == 0) {
       return AnimatedButton(
-        text: 'Enroll for Free',
+        text: 'Enroll Now',
         onPressed: () async {
           _handleEnrollment(ref, widget.courseId);
         },
@@ -2001,7 +2015,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       );
     } else {
       return AnimatedButton(
-        text: 'Buy Course - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+        text: 'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
         onPressed: () {
           _handlePayment(ref, course);
         },

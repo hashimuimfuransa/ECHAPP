@@ -497,7 +497,7 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                             children: [
                               _buildInfoChip(
                                 Icons.access_time,
-                                '${course.duration} mins',
+                                course.formattedDuration,
                                 AppTheme.primaryGreen,
                                 isSmall: isSmallScreen,
                               ),

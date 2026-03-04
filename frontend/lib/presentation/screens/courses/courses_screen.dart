@@ -642,7 +642,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${course.duration} hours',
+                                    course.formattedDuration,
                                     style: const TextStyle(
                                       color: AppTheme.greyColor,
                                       fontSize: 12,
@@ -932,46 +932,66 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               // Course Image
               ClipRRect(
                 borderRadius: BorderRadius.circular(isDesktop ? 12.0 : 10.0),
-                child: Container(
-                  height: isDesktop ? 130.0 : 90.0,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppTheme.greyColor.withOpacity(0.1),
-                  ),
-                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                      ? Image.network(
-                          course.thumbnail!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
+                child: Stack(
+                  children: [
+                    Container(
+                      height: isDesktop ? 130.0 : 90.0,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                      ),
+                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                          ? Image.network(
+                              course.thumbnail!,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: AppTheme.greyColor,
+                                    size: isDesktop ? 36.0 : 30.0,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: AppTheme.greyColor,
+                                    size: isDesktop ? 36.0 : 30.0,
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
                               color: AppTheme.greyColor.withOpacity(0.1),
                               child: Icon(
                                 Icons.play_circle_outline,
                                 color: AppTheme.greyColor,
                                 size: isDesktop ? 36.0 : 30.0,
                               ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              child: Icon(
-                                Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor,
-                                size: isDesktop ? 36.0 : 30.0,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: AppTheme.greyColor.withOpacity(0.1),
-                          child: Icon(
-                            Icons.play_circle_outline,
-                            color: AppTheme.greyColor,
-                            size: isDesktop ? 36.0 : 30.0,
+                            ),
+                    ),
+                    if ((course.price ?? 0) > 0)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '20% OFF',
+                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
                           ),
                         ),
+                      ),
+                  ],
                 ),
               ),
               SizedBox(height: isDesktop ? 14 : 10),
@@ -1009,7 +1029,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   ),
                   SizedBox(width: 4),
                   Text(
-                    '${course.duration}h',
+                    course.formattedDuration,
                     style: TextStyle(
                       color: AppTheme.greyColor,
                       fontSize: isDesktop ? 12 : 11,
@@ -1081,14 +1101,37 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                    style: TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: isDesktop ? 18 : 16,
-                      fontWeight: FontWeight.w600,
+                  if ((course.price ?? 0) > 0)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 12 : 11,
+                            decoration: TextDecoration.lineThrough,
+                            color: AppTheme.greyColor.withOpacity(0.6),
+                          ),
+                        ),
+                        Text(
+                          'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: AppTheme.primaryGreen,
+                            fontSize: isDesktop ? 18 : 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      'FREE',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: isDesktop ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: isDesktop ? 16 : 12,
@@ -1145,46 +1188,66 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               // Course Image
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppTheme.greyColor.withOpacity(0.1),
-                  ),
-                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                      ? Image.network(
-                          course.thumbnail!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                      ),
+                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                          ? Image.network(
+                              course.thumbnail!,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: const Icon(
+                                    Icons.play_circle_outline,
+                                    color: AppTheme.greyColor,
+                                    size: 35,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: const Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: AppTheme.greyColor,
+                                    size: 35,
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
                               color: AppTheme.greyColor.withOpacity(0.1),
                               child: const Icon(
                                 Icons.play_circle_outline,
                                 color: AppTheme.greyColor,
                                 size: 35,
                               ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              child: const Icon(
-                                Icons.image_not_supported_outlined,
-                                color: AppTheme.greyColor,
-                                size: 35,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: AppTheme.greyColor.withOpacity(0.1),
-                          child: const Icon(
-                            Icons.play_circle_outline,
-                            color: AppTheme.greyColor,
-                            size: 35,
+                            ),
+                    ),
+                    if ((course.price ?? 0) > 0)
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '20% OFF',
+                            style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
                           ),
                         ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 15),
@@ -1222,7 +1285,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${course.duration} hours',
+                          course.formattedDuration,
                           style: const TextStyle(
                             color: AppTheme.greyColor,
                             fontSize: 12,
@@ -1290,14 +1353,37 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'RWF ${course.price}',
-                    style: const TextStyle(
-                      color: AppTheme.primaryGreen,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  if ((course.price ?? 0) > 0)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: AppTheme.greyColor.withOpacity(0.6),
+                            fontSize: 11,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        Text(
+                          'RWF ${course.price}',
+                          style: const TextStyle(
+                            color: AppTheme.primaryGreen,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    const Text(
+                      'FREE',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(

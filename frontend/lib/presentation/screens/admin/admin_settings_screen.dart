@@ -228,9 +228,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
               ),
             ),
             
-            const SizedBox(height: 20),
-          ],
-        ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }

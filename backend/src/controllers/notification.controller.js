@@ -568,6 +568,32 @@ NotificationController.createExamResultNotification = async (userId, examTitle, 
   }
 };
 
+NotificationController.createCourseExpirationNotification = async (userId, courseTitle, courseId) => {
+  try {
+    const data = { courseId, type: 'course_expired' };
+    const notification = await Notification.createNotification({
+      userId,
+      title: 'Course Access Expired ⏳',
+      message: `Your access to "${courseTitle}" has expired. You have been un-enrolled.`,
+      type: 'course',
+      data
+    });
+    
+    // Send push notification
+    await notificationController.sendPushNotification(
+      userId, 
+      'Course Access Expired', 
+      `Your access to "${courseTitle}" has expired.`, 
+      data, 
+      true
+    );
+    
+    return notification;
+  } catch (error) {
+    console.error('Error creating expiration notification:', error);
+  }
+};
+
 NotificationController.createAchievementNotification = async (userId, achievementTitle) => {
   try {
     const data = { achievementTitle };

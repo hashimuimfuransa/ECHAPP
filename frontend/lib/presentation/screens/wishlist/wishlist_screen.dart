@@ -211,26 +211,46 @@ class WishlistScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   // Course thumbnail
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(course.thumbnail!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: course.thumbnail == null || course.thumbnail!.isEmpty
-                        ? Icon(
-                            Icons.play_circle_outline,
-                            color: Colors.grey[400],
-                            size: 30,
-                          )
-                        : null,
+                  Stack(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                          image: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(course.thumbnail!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: course.thumbnail == null || course.thumbnail!.isEmpty
+                            ? Icon(
+                                Icons.play_circle_outline,
+                                color: Colors.grey[400],
+                                size: 30,
+                              )
+                            : null,
+                      ),
+                      if ((course.price ?? 0) > 0)
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              '20% OFF',
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(width: 16),
                   // Course info
@@ -267,7 +287,7 @@ class WishlistScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${course.duration} mins',
+                              course.formattedDuration,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -297,14 +317,37 @@ class WishlistScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Price
-                      Text(
-                        course.price == 0 ? 'FREE' : 'RWF ${course.price.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: course.price == 0 ? Colors.green : Colors.black87,
+                      if ((course.price ?? 0) > 0)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[400],
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                            Text(
+                              'RWF ${course.price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        const Text(
+                          'FREE',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 8),
                       // Remove button
                       IconButton(

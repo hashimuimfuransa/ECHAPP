@@ -57,7 +57,7 @@ class AuthRepository {
         Uri.parse('${ApiConfig.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
@@ -93,7 +93,7 @@ class AuthRepository {
           'password': password,
           'phone': phone,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 201) {
         if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
@@ -162,7 +162,7 @@ class AuthRepository {
         Uri.parse('${ApiConfig.baseUrl}/auth/firebase-login'),
         headers: {'Content-Type': 'application/json'},
         body: encodedBody,
-      );
+      ).timeout(const Duration(seconds: 60));
 
       print('Firebase login response status: ${response.statusCode}');
       print('Firebase login response body: ${response.body}');

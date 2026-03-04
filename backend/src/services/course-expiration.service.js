@@ -12,16 +12,22 @@ class CourseExpirationService {
       
       const now = new Date();
       
-      // Find all enrollments where access has expired and hasn't been processed yet
+      // Find all enrollments where access has expired
       const expiredEnrollments = await Enrollment.find({
-        accessExpirationDate: { $lt: now },
-        accessExpirationDate: { $ne: null } // Make sure expiration date is set
+        accessExpirationDate: { $ne: null, $lt: now }
       });
       
       console.log(`Found ${expiredEnrollments.length} expired enrollments`);
       
       for (const enrollment of expiredEnrollments) {
-        await this.processExpiredEnrollment(enrollment);
+        // Only un-enroll (delete) if the course is not completed
+        // If it's completed, they should keep the enrollment record for their certificates/history
+        // but they will still be blocked from accessing content by the isEnrollmentExpired checks
+        if (enrollment.completionStatus !== 'completed') {
+          await this.processExpiredEnrollment(enrollment);
+        } else {
+          console.log(`Skipping deletion of completed enrollment for user ${enrollment.userId} in course ${enrollment.courseId}`);
+        }
       }
       
       return {
@@ -49,13 +55,23 @@ class CourseExpirationService {
       
       console.log(`Removed expired enrollment for user ${user?.email} from course ${course?.title}`);
       
-      // In a real implementation, you might want to:
-      // 1. Notify the user that their access has expired
-      // 2. Remove downloaded content from their device (would need additional logic)
-      // 3. Log the expiration event
-      
+      // Notify the user that their access has expired
       if (user && course) {
-        console.log(`Sent expiration notification to user ${user.email} for course ${course.title}`);
+        try {
+          // Import the controller class from the exported instance's constructor
+          const NotificationController = require('../controllers/notification.controller').constructor;
+          
+          if (typeof NotificationController.createCourseExpirationNotification === 'function') {
+            await NotificationController.createCourseExpirationNotification(
+              enrollment.userId, 
+              course.title, 
+              enrollment.courseId
+            );
+            console.log(`Sent expiration notification to user ${user.email} for course ${course.title}`);
+          }
+        } catch (notificationError) {
+          console.error('Error sending expiration notification:', notificationError);
+        }
       }
       
     } catch (error) {

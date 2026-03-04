@@ -130,8 +130,14 @@ const getMyCourses = async (req, res) => {
       })
       .sort({ enrollmentDate: -1 });
 
-    // Filter out expired enrollments
-    const activeEnrollments = enrollments.filter(enrollment => !isEnrollmentExpired(enrollment));
+    // Filter out expired enrollments, but keep completed courses even if access has expired
+    const activeEnrollments = enrollments.filter(enrollment => {
+      // If it's not expired, it's active
+      if (!isEnrollmentExpired(enrollment)) return true;
+      
+      // If it IS expired, only keep it if it was completed
+      return enrollment.completionStatus === 'completed';
+    });
 
     sendSuccess(res, activeEnrollments, 'Enrolled courses retrieved successfully');
   } catch (error) {
