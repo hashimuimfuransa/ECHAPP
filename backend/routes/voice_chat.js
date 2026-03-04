@@ -122,7 +122,7 @@ router.post('/voice/send', upload.single('audio'), async (req, res) => {
       stream: false
     });
     
-    const aiResponse = chatCompletion.choices[0]?.message?.content || "I'm having trouble responding right now. Could you try asking again?";
+    const aiResponse = chatCompletion.choices[0]?.message?.content || "I'm listening carefully, but I had a small hiccup processing that. Could you please say it again? I really want to help you with your learning!";
     
     // Generate speech for the AI response
     const speechResult = await generateSpeech(aiResponse, `response-${Date.now()}.mp3`);
@@ -153,7 +153,7 @@ router.post('/voice/send', upload.single('audio'), async (req, res) => {
     console.error('Error processing voice message:', error);
     res.status(500).json({ 
       error: 'Failed to process voice message', 
-      message: 'I\'m having trouble processing your voice message. Could you try again?'
+      message: 'I\'m sorry, I hit a snag while trying to process your voice message. Let\'s try one more time so I can help you with your studies!'
     });
   }
 });

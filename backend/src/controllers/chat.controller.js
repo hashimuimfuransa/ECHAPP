@@ -1,5 +1,8 @@
 const ChatMessage = require('../models/ChatMessage');
 const Conversation = require('../models/Conversation');
+const Enrollment = require('../models/Enrollment');
+const Result = require('../models/Result');
+const User = require('../models/User');
 const GrokService = require('../services/grok_service');
 const { v4: uuidv4 } = require('uuid');
 
@@ -153,6 +156,28 @@ class ChatController {
         });
       }
 
+      // Get student performance data for richer context
+      const enrollments = await Enrollment.find({ userId }).populate('courseId');
+      const results = await Result.find({ userId }).populate('examId');
+      const user = await User.findById(userId);
+
+      const performanceContext = {
+        studentName: user?.fullName || 'Student',
+        studentLevel: user?.role || 'student',
+        courses: enrollments.map(e => ({
+          title: e.courseId?.title,
+          progress: e.progress,
+          status: e.completionStatus
+        })),
+        examResults: results.map(r => ({
+          examTitle: r.examId?.title,
+          score: r.score,
+          totalPoints: r.totalPoints,
+          percentage: r.percentage,
+          passed: r.passed
+        }))
+      };
+
       // Get or create conversation
       let conversation;
       if (conversationId) {
@@ -196,7 +221,10 @@ class ChatController {
       const messagesForAI = [
         {
           role: 'system',
-          content: ChatController.createContextAwareSystemPrompt(conversation.getContext())
+          content: ChatController.createContextAwareSystemPrompt({
+            ...conversation.getContext(),
+            ...performanceContext
+          })
         },
         ...recentMessages.map(msg => ({
           role: msg.sender === 'user' ? 'user' : 'assistant',
@@ -204,7 +232,7 @@ class ChatController {
         }))
       ];
 
-      // Generate AI response (this would integrate with your AI service)
+      // Generate AI response
       const aiResponse = await ChatController.generateAIResponse(messagesForAI, context);
 
       // Save AI response
@@ -289,25 +317,37 @@ class ChatController {
 
   // Helper method to create context-aware system prompt
   static createContextAwareSystemPrompt(context) {
-    let prompt = "You are an AI learning assistant for Excellence Coaching Hub. ";
+    let prompt = "You are an expert AI Learning Assistant for Excellence Coaching Hub. Your mission is to help students succeed by providing accurate, supportive, and personalized educational guidance. ";
     
-    if (context?.courseId) {
-      prompt += `You are helping with course content. `;
+    // Inject Student Profile and Performance
+    if (context.studentName) {
+      prompt += `You are talking to ${context.studentName}. `;
     }
     
-    if (context?.lessonId) {
-      prompt += `You are providing assistance with a specific lesson. `;
+    if (context.courses && context.courses.length > 0) {
+      prompt += "Student's Current Courses: " + context.courses.map(c => `[${c.title}: ${c.progress}% done, Status: ${c.status}]`).join(", ") + ". ";
     }
     
-    if (context?.sectionTitle) {
-      prompt += `The current section is: ${context.sectionTitle}. `;
+    if (context.examResults && context.examResults.length > 0) {
+      prompt += "Student's Performance History: " + context.examResults.map(r => `[Exam: ${r.examTitle}, Score: ${r.score}/${r.totalPoints} (${r.percentage}%), Passed: ${r.passed}]`).join(", ") + ". ";
     }
     
-    if (context?.studentLevel) {
-      prompt += `The student's level is ${context.studentLevel}. `;
+    prompt += "\n\nCRITICAL INSTRUCTIONS:\n";
+    prompt += "1. NEVER say 'I am not sure of responding' or similar phrases. Always find a helpful way to respond or ask for clarification if truly needed.\n";
+    prompt += "2. BEHAVIOR RECOMMENDATIONS: Based on the student's grades and progress, offer specific advice on how they should behave or study. For example, if a student has low grades in a specific exam, suggest they revisit that lesson or practice more. If they are progressing well, encourage them to take more advanced topics.\n";
+    prompt += "3. EDUCATIONAL FOCUS: Always relate your answers to education and the student's learning journey. Use the provided context to make your advice highly relevant.\n";
+    prompt += "4. NO HALLUCINATIONS: Only speak about facts related to the courses and the student's data. If you don't know something about the student's data, don't invent it.\n";
+    prompt += "5. TONE: Be very professional, attractive, user-friendly, and feel like a real human coach, not a robotic script.\n";
+    
+    if (context.courseId) {
+      prompt += `The current focus is on a specific course material. `;
     }
     
-    prompt += "Provide helpful, accurate, and encouraging responses. Keep explanations clear and appropriate for educational purposes.";
+    if (context.lessonId) {
+      prompt += `The student is currently looking at a specific lesson. `;
+    }
+    
+    prompt += "\nFeel free to discuss anything the student wants, but always steer the conversation towards their educational goals and personal growth.";
     
     return prompt;
   }
@@ -319,9 +359,12 @@ class ChatController {
       return await GrokService.generateChatResponse(messages, context);
     } catch (error) {
       console.error("Error in generateAIResponse:", error);
-      return "I'm having trouble thinking right now. Could you please repeat that?";
+      return "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";
     }
   }
+}
+
+module.exports = ChatController;
 }
 
 module.exports = ChatController;

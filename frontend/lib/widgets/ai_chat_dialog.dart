@@ -69,9 +69,9 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
 
     _flutterTts = FlutterTts();
     _flutterTts.setLanguage("en-US");
-    _flutterTts.setSpeechRate(0.5);
+    _flutterTts.setSpeechRate(0.45); // Slightly slower for better clarity and natural feel
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.0);
+    _flutterTts.setPitch(1.1); // Slightly higher pitch for a more friendly, attractive voice
     
     _animationController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 150), () {

@@ -52,9 +52,9 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
 
     _flutterTts = FlutterTts();
     _flutterTts.setLanguage("en-US");
-    _flutterTts.setSpeechRate(0.5);
+    _flutterTts.setSpeechRate(0.45); // Slower for more natural feel
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.0);
+    _flutterTts.setPitch(1.1); // Slightly higher for more friendly tone
 
     // Staggered animation for better visual flow
     Future.delayed(Duration(milliseconds: widget.isCurrentUser ? 100 : 0), () {
