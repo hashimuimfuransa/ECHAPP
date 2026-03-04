@@ -1068,6 +1068,61 @@ const toggleStudentStatus = async (req, res) => {
   }
 };
 
+// Unenroll a student from a course
+const unenrollStudent = async (req, res) => {
+  try {
+    const { courseId, studentId } = req.params;
+    
+    // Find the MongoDB user ID (studentId could be firebaseUid or mongoId)
+    let mongoUserId;
+    
+    // First try to find by MongoDB ObjectId
+    try {
+      const user = await User.findById(studentId);
+      if (user) {
+        mongoUserId = user._id;
+      }
+    } catch (idError) {
+      // If it's not a valid ObjectId, ignore this error and try firebaseUid
+    }
+    
+    // If not found by ObjectId, try finding by firebaseUid
+    if (!mongoUserId) {
+      const firebaseUser = await User.findOne({ firebaseUid: studentId });
+      if (firebaseUser) {
+        mongoUserId = firebaseUser._id;
+      }
+    }
+    
+    if (!mongoUserId) {
+      return sendError(res, 'Student not found', 404);
+    }
+    
+    // Delete the enrollment
+    const enrollment = await Enrollment.findOneAndDelete({ userId: mongoUserId, courseId });
+    
+    if (!enrollment) {
+      return sendError(res, 'Enrollment not found for this student and course', 404);
+    }
+    
+    // Delete associated certificates for this course/user
+    await Certificate.deleteMany({ userId: mongoUserId, courseId });
+    
+    // Find and delete the payment associated with this enrollment if it exists
+    if (enrollment.paymentId) {
+      await Payment.findByIdAndDelete(enrollment.paymentId);
+    } else {
+      // Also check if there's any payment for this course/user just in case it wasn't linked
+      await Payment.deleteMany({ userId: mongoUserId, courseId });
+    }
+    
+    sendSuccess(res, null, 'Student unenrolled from course successfully');
+  } catch (error) {
+    console.error('Error in unenrollStudent:', error);
+    sendError(res, 'Failed to unenroll student', 500, error.message);
+  }
+};
+
 // Delete a student and all related data
 const deleteStudent = async (req, res) => {
   try {
@@ -1182,5 +1237,6 @@ module.exports = {
   manualSyncAllUsers,
   getUserDeviceInfo,
   resetUserDevice,
-  toggleStudentStatus
+  toggleStudentStatus,
+  unenrollStudent
 };

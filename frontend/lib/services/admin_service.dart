@@ -372,6 +372,22 @@ class AdminService {
     }
   }
 
+  /// Unenroll a student from a specific course
+  Future<void> unenrollStudent(String courseId, String studentId) async {
+    try {
+      final response = await _apiClient.delete('${ApiConfig.admin}/courses/$courseId/enrollments/$studentId');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to unenroll student');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to unenroll student: $e');
+    }
+  }
+
   /// Generate recent activity based on fetched data
   List<ActivityItem> _generateRecentActivity(CourseStats courseStats, PaymentStats paymentStats, Map<String, dynamic> examStats) {
     final List<ActivityItem> activity = [];

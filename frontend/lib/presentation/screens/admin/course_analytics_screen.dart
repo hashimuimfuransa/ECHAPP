@@ -49,6 +49,56 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
     }
   }
 
+  Future<void> _unenrollStudent(CourseStudentPerformance student) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Unenrollment'),
+        content: Text('Are you sure you want to unenroll ${student.name} from this course? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Unenroll'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _adminService.unenrollStudent(widget.courseId, student.id);
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully unenrolled ${student.name}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Refresh analytics to update the list
+      _loadAnalytics();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error unenrolling student: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -408,6 +458,7 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                         Expanded(child: _headerText('STATUS', textAlign: TextAlign.center)),
                       if (isLargeScreen)
                         Expanded(child: _headerText('ENROLLED', textAlign: TextAlign.center)),
+                      Expanded(child: _headerText('ACTIONS', textAlign: TextAlign.center)),
                     ],
                   ),
                 ),
@@ -488,6 +539,15 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                                   style: const TextStyle(fontSize: 13, color: AppTheme.greyColor),
                                 ),
                               ),
+                            Expanded(
+                              child: Center(
+                                child: IconButton(
+                                  icon: const Icon(Icons.person_remove_outlined, color: Colors.red, size: 20),
+                                  onPressed: () => _unenrollStudent(student),
+                                  tooltip: 'Unenroll Student',
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
