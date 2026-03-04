@@ -1140,7 +1140,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
-                childAspectRatio: isDesktop ? 1.05 : 0.82, // Adjusted for extra countdown text
+                childAspectRatio: isDesktop ? 1.0 : (isTablet ? 0.85 : 0.75), // Increased height for all versions
               ),
               itemCount: enrollments.take(isDesktop ? 2 : crossAxisCount).length,
               itemBuilder: (context, index) {
@@ -1149,7 +1149,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             )
           else
             SizedBox(
-              height: 270, // Increased height for countdown
+              height: 280, // Slightly increased height for mobile scrolling list
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: enrollments.length,
@@ -1218,7 +1218,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         : const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
                   ),
                 ),
-                SizedBox(height: isMobile ? 10 : 14),
+                SizedBox(height: isMobile ? 8 : 12),
                 Text(
                   course.title,
                   style: TextStyle(
@@ -1235,19 +1235,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   'By ${course.createdBy.fullName}',
                   style: TextStyle(
                     color: AppTheme.greyColor, 
-                    fontSize: isMobile ? 11 : 12,
+                    fontSize: isMobile ? 10 : 11,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const Spacer(),
+                const SizedBox(height: 8),
                 if (enrollment.accessExpirationDate != null) ...[
-                  CountdownTimer(
-                    expirationDate: enrollment.accessExpirationDate,
-                    showSeconds: true,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: CountdownTimer(
+                      expirationDate: enrollment.accessExpirationDate,
+                      showSeconds: true,
+                    ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                 ],
+                const Spacer(),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1257,7 +1262,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         Text(
                           'Progress',
                           style: TextStyle(
-                            fontSize: isMobile ? 10 : 11,
+                            fontSize: isMobile ? 9 : 10,
                             color: AppTheme.greyColor,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1265,21 +1270,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         Text(
                           '${enrollment.progress.toInt()}%',
                           style: TextStyle(
-                            fontSize: isMobile ? 10 : 11,
+                            fontSize: isMobile ? 9 : 10,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.primary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         value: enrollment.progress / 100,
                         backgroundColor: AppTheme.primary.withOpacity(0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                        minHeight: isMobile ? 4 : 6,
+                        minHeight: isMobile ? 3 : 5,
                       ),
                     ),
                   ],
@@ -1327,7 +1332,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 0.85),
+            childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
           ),
           itemCount: courses.take(isDesktop ? 3 : 2).length,
           itemBuilder: (context, index) {
@@ -1438,31 +1443,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   ],
                 ],
               ),
-              Expanded(
+              Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         course.title,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1F2937), height: 1.2),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1F2937), height: 1.2),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            (course.averageRating ?? 0) > 0 ? (course.averageRating ?? 4.5).toStringAsFixed(1) : '4.5', // Default 4.5 if no rating
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                            (course.averageRating ?? 0) > 0 ? (course.averageRating ?? 4.5).toStringAsFixed(1) : '4.5',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            '(${(course.enrollmentCount ?? 0) > 0 ? (course.enrollmentCount ?? 0) : "125"}+ students)',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          Flexible(
+                            child: Text(
+                              '(${(course.enrollmentCount ?? 0) > 0 ? (course.enrollmentCount ?? 0) : "125"}+)',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -1479,15 +1487,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Continue Learning',
+                                'Continue',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               SizedBox(width: 6),
-                              Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
+                              Icon(Icons.play_circle_fill, color: Colors.white, size: 14),
                             ],
                           ),
                         )
@@ -1502,7 +1510,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                   Text(
                                     'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
                                     style: const TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9,
                                       color: Color(0xFF9CA3AF),
                                       decoration: TextDecoration.lineThrough,
                                     ),
@@ -1510,7 +1518,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                   Text(
                                     'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
                                     style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w900,
                                       color: Color(0xFF0F766E),
                                     ),
@@ -1521,13 +1529,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                               const Text(
                                 'FREE',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w900,
                                   color: Color(0xFF10B981),
                                 ),
                               ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                               decoration: BoxDecoration(
                                 color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -1536,14 +1544,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                 children: [
                                   Icon(
                                     (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
-                                    size: 10,
+                                    size: 9,
                                     color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9,
                                       fontWeight: FontWeight.w800,
                                       color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                     ),
@@ -1597,7 +1605,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: isDesktop ? 1.05 : (isTablet ? 0.95 : 0.8),
+            childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
           ),
           itemCount: popularCourses.take(crossAxisCount * 2).length,
           itemBuilder: (context, index) {

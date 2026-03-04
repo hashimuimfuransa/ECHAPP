@@ -1045,163 +1045,172 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               ),
               SizedBox(height: isDesktop ? 14 : 10),
               
-              // Course Title
-              Text(
-                course.title ?? 'Untitled Course',
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: isDesktop ? 17 : 15,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: isDesktop ? 6 : 4),
-              
-              // Instructor
-              Text(
-                'by ${course.createdBy.fullName}',
-                style: TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: isDesktop ? 13 : 12,
-                ),
-              ),
-              SizedBox(height: isDesktop ? 10 : 6),
-              
-              // Duration and Students
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    color: AppTheme.greyColor,
-                    size: isDesktop ? 15 : 13,
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    course.formattedDuration,
-                    style: TextStyle(
-                      color: AppTheme.greyColor,
-                      fontSize: isDesktop ? 12 : 11,
-                    ),
-                  ),
-                  SizedBox(width: isDesktop ? 14 : 10),
-                  Icon(
-                    Icons.people_outline,
-                    color: AppTheme.greyColor,
-                    size: isDesktop ? 15 : 13,
-                  ),
-                  SizedBox(width: 4),
-                  const Text(
-                    '0',
-                    style: TextStyle(
-                      color: AppTheme.greyColor,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: isDesktop ? 10 : 6),
-              
-              // Rating and Level
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 15,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Course Title
+                    Text(
+                      course.title ?? 'Untitled Course',
+                      style: TextStyle(
+                        color: AppTheme.getTextColor(context),
+                        fontSize: isDesktop ? 16 : 14,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '4.5',
-                        style: TextStyle(
-                          color: AppTheme.getTextColor(context),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 10 : 8,
-                      vertical: isDesktop ? 4 : 2,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.greyColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      course.level,
+                    SizedBox(height: isDesktop ? 4 : 2),
+                    
+                    // Instructor
+                    Text(
+                      'by ${course.createdBy.fullName}',
                       style: TextStyle(
                         color: AppTheme.greyColor,
-                        fontSize: isDesktop ? 11 : 10,
-                        fontWeight: FontWeight.w500,
+                        fontSize: isDesktop ? 12 : 11,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              
-              // Price and Enroll Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if ((course.price ?? 0) > 0)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    SizedBox(height: isDesktop ? 8 : 4),
+                    
+                    // Duration and Students
+                    Row(
                       children: [
+                        Icon(
+                          Icons.access_time,
+                          color: AppTheme.greyColor,
+                          size: isDesktop ? 14 : 12,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
-                          'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                          course.formattedDuration,
                           style: TextStyle(
-                            fontSize: isDesktop ? 12 : 11,
-                            decoration: TextDecoration.lineThrough,
-                            color: AppTheme.greyColor.withOpacity(0.6),
+                            color: AppTheme.greyColor,
+                            fontSize: isDesktop ? 11 : 10,
                           ),
                         ),
-                        Text(
-                          'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                        const SizedBox(width: 10),
+                        Icon(
+                          Icons.people_outline,
+                          color: AppTheme.greyColor,
+                          size: isDesktop ? 14 : 12,
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          '0',
                           style: TextStyle(
-                            color: AppTheme.primaryGreen,
-                            fontSize: isDesktop ? 18 : 16,
-                            fontWeight: FontWeight.w600,
+                            color: AppTheme.greyColor,
+                            fontSize: 10,
                           ),
                         ),
                       ],
-                    )
-                  else
-                    Text(
-                      'FREE',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: isDesktop ? 18 : 16,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 16 : 12,
-                      vertical: isDesktop ? 8 : 6,
+                    SizedBox(height: isDesktop ? 8 : 4),
+                    
+                    // Rating and Level
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '4.5',
+                              style: TextStyle(
+                                color: AppTheme.getTextColor(context),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 8 : 6,
+                            vertical: isDesktop ? 2 : 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.greyColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            course.level,
+                            style: TextStyle(
+                              color: AppTheme.greyColor,
+                              fontSize: isDesktop ? 10 : 9,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                    const Spacer(),
+                    
+                    // Price and Enroll Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if ((course.price ?? 0) > 0)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: isDesktop ? 10 : 9,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: AppTheme.greyColor.withOpacity(0.6),
+                                ),
+                              ),
+                              Text(
+                                'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  color: AppTheme.primaryGreen,
+                                  fontSize: isDesktop ? 15 : 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Text(
+                            'FREE',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: isDesktop ? 15 : 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 12 : 8,
+                            vertical: isDesktop ? 6 : 4,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isEnrolled ? 'Open' : 'Enroll', // Shortened text for mobile
+                            style: TextStyle(
+                              color: AppTheme.whiteColor,
+                              fontSize: isDesktop ? 11 : 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      isEnrolled ? 'Continue' : 'Enroll',
-                      style: TextStyle(
-                        color: AppTheme.whiteColor,
-                        fontSize: isDesktop ? 13 : 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

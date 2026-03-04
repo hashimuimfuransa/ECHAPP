@@ -9,6 +9,7 @@ class Course {
   final String durationUnit;
   final String level;
   final String? thumbnail;
+  final String? instructorName;
   final bool isPublished;
   final User createdBy;
   final String? categoryId;
@@ -31,6 +32,7 @@ class Course {
     this.durationUnit = 'minutes',
     required this.level,
     this.thumbnail,
+    this.instructorName,
     required this.isPublished,
     required this.createdBy,
     this.categoryId,
@@ -75,6 +77,7 @@ class Course {
       durationUnit: _getStringValue(json['durationUnit']) ?? 'minutes',
       level: _getStringValue(json['level']) ?? 'Beginner',
       thumbnail: _getStringValue(json['thumbnail']),
+      instructorName: _getStringValue(json['instructorName']),
       isPublished: json['isPublished'] as bool? ?? false,
       createdBy: json['createdBy'] is Map<String, dynamic>
           ? User.fromJson(json['createdBy'] as Map<String, dynamic>)
@@ -110,6 +113,7 @@ class Course {
       'durationUnit': durationUnit,
       'level': level,
       'thumbnail': thumbnail,
+      'instructorName': instructorName,
       'isPublished': isPublished,
       'createdBy': createdBy.toJson(),
       'categoryId': categoryId,

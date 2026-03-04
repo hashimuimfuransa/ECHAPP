@@ -128,13 +128,13 @@ class ResponsiveGridCount {
   
   double get childAspectRatio {
     if (ResponsiveBreakpoints.isSmallMobile(context)) {
-      return 0.7; // More compact for small screens
+      return 0.65; // Increased height
     } else if (ResponsiveBreakpoints.isStandardMobile(context)) {
-      return 0.75;
+      return 0.7;
     } else if (ResponsiveBreakpoints.isTablet(context)) {
-      return 0.8;
+      return 0.75;
     } else {
-      return 0.85;
+      return 0.78; // Increased height for desktop
     }
   }
 }

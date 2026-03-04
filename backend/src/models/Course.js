@@ -36,6 +36,11 @@ const courseSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  instructorName: {
+    type: String,
+    trim: true,
+    default: null
+  },
   isPublished: {
     type: Boolean,
     default: false
