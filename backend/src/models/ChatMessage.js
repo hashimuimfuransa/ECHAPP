@@ -79,11 +79,13 @@ chatMessageSchema.methods.getPreview = function(length = 50) {
 
 // Static method to get conversation history
 chatMessageSchema.statics.getConversationHistory = async function(conversationId, limit = 50) {
-  return this.find({ conversationId })
-    .sort({ timestamp: 1 })
+  const messages = await this.find({ conversationId })
+    .sort({ timestamp: -1 })
     .limit(limit)
     .populate('context.courseId', 'title')
     .populate('context.lessonId', 'title');
+    
+  return messages.sort((a, b) => a.timestamp - b.timestamp);
 };
 
 // Static method to get user chat history
