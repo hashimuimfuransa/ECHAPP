@@ -8,6 +8,7 @@ const {
   getPaymentStats,
   getExamStats,
   getStudentAnalytics,
+  getCourseAnalytics,
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,
@@ -35,6 +36,7 @@ router.get('/course-stats', protect, authorize('admin'), getCourseStats);
 router.get('/payment-stats', protect, authorize('admin'), getPaymentStats);
 router.get('/exam-stats', protect, authorize('admin'), getExamStats);
 router.get('/analytics/students', protect, authorize('admin'), getStudentAnalytics);
+router.get('/analytics/course/:courseId', protect, authorize('admin'), getCourseAnalytics);
 
 // Device management routes
 router.get('/students/:id/device-info', protect, authorize('admin'), getUserDeviceInfo);

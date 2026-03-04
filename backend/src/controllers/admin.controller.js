@@ -789,6 +789,74 @@ const getStudentAnalytics = async (req, res) => {
   }
 };
 
+// Get analytics for a specific course
+const getCourseAnalytics = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    // Get course details
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return sendError(res, 'Course not found', 404);
+    }
+    
+    // Get all enrollments for this course
+    const enrollments = await Enrollment.find({ courseId })
+      .populate('userId', 'fullName email phone lastLogin createdAt')
+      .sort({ enrollmentDate: -1 });
+    
+    const totalStudents = enrollments.length;
+    
+    // Calculate completions
+    const completedCount = enrollments.filter(e => e.completionStatus === 'completed').length;
+    const completionRate = totalStudents > 0 ? (completedCount / totalStudents) * 100 : 0;
+    
+    // Calculate average progress
+    const totalProgress = enrollments.reduce((sum, e) => sum + (e.progress || 0), 0);
+    const averageProgress = totalStudents > 0 ? totalProgress / totalStudents : 0;
+    
+    // Get students with their performance
+    const studentsPerformance = enrollments.map(e => ({
+      id: e.userId?._id || 'unknown',
+      name: e.userId?.fullName || 'Unknown Student',
+      email: e.userId?.email || 'N/A',
+      enrollmentDate: e.enrollmentDate,
+      progress: e.progress,
+      completionStatus: e.completionStatus,
+      lastAccessed: e.lastAccessed,
+      examScores: [] // We could populate this if needed
+    }));
+    
+    // Get new enrollments this month
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const newStudentsThisMonth = enrollments.filter(e => e.enrollmentDate >= startOfMonth).length;
+    
+    // Get active students (accessed in last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const activeStudents = enrollments.filter(e => e.lastAccessed >= thirtyDaysAgo).length;
+    
+    sendSuccess(res, {
+      course: {
+        id: course._id,
+        title: course.title,
+        thumbnail: course.thumbnail
+      },
+      stats: {
+        totalStudents,
+        activeStudents,
+        completedCount,
+        completionRate,
+        averageProgress,
+        newStudentsThisMonth
+      },
+      students: studentsPerformance
+    }, 'Course analytics retrieved successfully');
+  } catch (error) {
+    console.error('Error in getCourseAnalytics:', error);
+    sendError(res, 'Failed to retrieve course analytics', 500, error.message);
+  }
+};
+
 // Get user device information and enrolled courses
 const getUserDeviceInfo = async (req, res) => {
   try {

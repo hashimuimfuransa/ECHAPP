@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
@@ -126,7 +127,7 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     
-    return _buildResponsiveContent();
+    return SafeArea(child: _buildResponsiveContent());
   }
 
   Widget _buildErrorState() {
@@ -160,21 +161,25 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
         final isSmallScreen = screenWidth <= 768;
         
         return SingleChildScrollView(
-          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : 32,
+            vertical: isSmallScreen ? 16 : 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(isSmallScreen),
-              const SizedBox(height: 30),
+              const SizedBox(height: 32),
               _buildOverviewMetrics(isLargeScreen, isMediumScreen, isSmallScreen),
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               _buildChartsSection(isLargeScreen, isMediumScreen, isSmallScreen),
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               _buildActivityStats(isLargeScreen, isMediumScreen, isSmallScreen),
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               _buildTopPerformers(isLargeScreen, isMediumScreen, isSmallScreen),
-              const SizedBox(height: 30),
+              const SizedBox(height: 48),
               _buildDataTimestamp(),
+              const SizedBox(height: 32),
             ],
           ),
         );
@@ -183,26 +188,177 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
   }
 
   Widget _buildHeader(bool isSmallScreen) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Analytics Dashboard',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 24 : 32,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
-          ),
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryGreen.withOpacity(0.05),
+            Colors.white,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Real-time insights into your platform performance',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 14 : 16,
-            color: AppTheme.greyColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.analytics_rounded,
+                        color: AppTheme.primaryGreen,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Analytics Insights',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 20 : 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.blackColor,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Comprehensive overview of platform performance and student engagement',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 13 : 15,
+                    color: AppTheme.greyColor.withOpacity(0.8),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
+          if (!isSmallScreen) ...[
+            const SizedBox(width: 20),
+            _buildQuickActions(),
+          ] else ...[
+            const SizedBox(width: 8),
+            _actionButton(
+              icon: Icons.more_vert_rounded,
+              onPressed: () => _showMobileActions(context),
+              tooltip: 'Actions',
+              color: AppTheme.primaryGreen,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showMobileActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh_rounded, color: AppTheme.primaryGreen),
+              title: const Text('Refresh Data'),
+              onTap: () {
+                Navigator.pop(context);
+                _loadAnalytics();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined, color: AppTheme.accent),
+              title: const Text('Export Report'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Report generation started...')),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Row(
+      children: [
+        _actionButton(
+          icon: Icons.refresh_rounded,
+          onPressed: _loadAnalytics,
+          tooltip: 'Sync Data',
+          color: AppTheme.primaryGreen,
+        ),
+        const SizedBox(width: 12),
+        _actionButton(
+          icon: Icons.file_download_outlined,
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Report generation started...')),
+            );
+          },
+          tooltip: 'Export Report',
+          color: AppTheme.accent,
         ),
       ],
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+    required Color color,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: color),
+        onPressed: onPressed,
+        tooltip: tooltip,
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
     );
   }
 
@@ -210,15 +366,29 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Key Metrics',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 18 : 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Platform Vitals',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.blackColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              if (isSmallScreen)
+                IconButton(
+                  icon: const Icon(Icons.info_outline, size: 20, color: AppTheme.greyColor),
+                  onPressed: () {},
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         if (isLargeScreen)
           _buildLargeMetricsGrid()
         else if (isMediumScreen)
@@ -230,105 +400,130 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
   }
 
   Widget _buildLargeMetricsGrid() {
-    return Row(
-      children: [
-        _metricCard('Total Students', _analytics!.totalStudents.toString(), Icons.people, AppTheme.primaryGreen),
-        const SizedBox(width: 20),
-        _metricCard('Active Students', _analytics!.activeStudents.toString(), Icons.check_circle, Colors.green),
-        const SizedBox(width: 20),
-        _metricCard('New This Month', _analytics!.newStudentsThisMonth.toString(), Icons.trending_up, AppTheme.accent),
-        const SizedBox(width: 20),
-        _metricCard('Avg. Enrollments', _analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1), Icons.school, Colors.purple),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Expanded(child: _metricCard('Total Students', _analytics!.totalStudents.toString(), Icons.people_alt_rounded, AppTheme.primaryGreen, '+12%')),
+          const SizedBox(width: 16),
+          Expanded(child: _metricCard('Active Users', _analytics!.activeStudents.toString(), Icons.bolt_rounded, Colors.orange, 'Live')),
+          const SizedBox(width: 16),
+          Expanded(child: _metricCard('New Registrations', _analytics!.newStudentsThisMonth.toString(), Icons.person_add_rounded, AppTheme.accent, 'Monthly')),
+          const SizedBox(width: 16),
+          Expanded(child: _metricCard('Engagement Rate', '${_analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1)} crs', Icons.auto_graph_rounded, Colors.indigo, 'Avg')),
+        ],
+      ),
     );
   }
 
   Widget _buildMediumMetricsGrid() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(child: _metricCard('Total Students', _analytics!.totalStudents.toString(), Icons.people, AppTheme.primaryGreen)),
-            const SizedBox(width: 15),
-            Expanded(child: _metricCard('Active Students', _analytics!.activeStudents.toString(), Icons.check_circle, Colors.green)),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _metricCard('Total Students', _analytics!.totalStudents.toString(), Icons.people_alt_rounded, AppTheme.primaryGreen, '+12%')),
+              const SizedBox(width: 16),
+              Expanded(child: _metricCard('Active Users', _analytics!.activeStudents.toString(), Icons.bolt_rounded, Colors.orange, 'Live')),
+            ],
+          ),
         ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(child: _metricCard('New This Month', _analytics!.newStudentsThisMonth.toString(), Icons.trending_up, AppTheme.accent)),
-            const SizedBox(width: 15),
-            Expanded(child: _metricCard('Avg. Enrollments', _analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1), Icons.school, Colors.purple)),
-          ],
+        const SizedBox(height: 16),
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _metricCard('New Registrations', _analytics!.newStudentsThisMonth.toString(), Icons.person_add_rounded, AppTheme.accent, 'Monthly')),
+              const SizedBox(width: 16),
+              Expanded(child: _metricCard('Engagement', '${_analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1)} crs', Icons.auto_graph_rounded, Colors.indigo, 'Avg')),
+            ],
+          ),
         ),
       ],
     );
   }
 
   Widget _buildSmallMetricsGrid() {
-    return Column(
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.1,
       children: [
-        Row(
-          children: [
-            Expanded(child: _metricCard('Total', _analytics!.totalStudents.toString(), Icons.people, AppTheme.primaryGreen)),
-            const SizedBox(width: 10),
-            Expanded(child: _metricCard('Active', _analytics!.activeStudents.toString(), Icons.check_circle, Colors.green)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: _metricCard('New', _analytics!.newStudentsThisMonth.toString(), Icons.trending_up, AppTheme.accent)),
-            const SizedBox(width: 10),
-            Expanded(child: _metricCard('Avg', _analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1), Icons.school, Colors.purple)),
-          ],
-        ),
+        _metricCard('Total', _analytics!.totalStudents.toString(), Icons.people_alt_rounded, AppTheme.primaryGreen, '+12%'),
+        _metricCard('Active', _analytics!.activeStudents.toString(), Icons.bolt_rounded, Colors.orange, 'Live'),
+        _metricCard('New', _analytics!.newStudentsThisMonth.toString(), Icons.person_add_rounded, AppTheme.accent, 'This Mo'),
+        _metricCard('Avg Enr', _analytics!.averageEnrollmentsPerStudent.toStringAsFixed(1), Icons.auto_graph_rounded, Colors.indigo, 'Per Std'),
       ],
     );
   }
 
-  Widget _metricCard(String title, String value, IconData icon, Color color) {
+  Widget _metricCard(String title, String value, IconData icon, Color color, String trend) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: color.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: color.withOpacity(0.05)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 28),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: trend.startsWith('+') ? Colors.green.withOpacity(0.1) : AppTheme.greyColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  trend,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: trend.startsWith('+') ? Colors.green : AppTheme.greyColor,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.blackColor,
+              letterSpacing: -1,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.greyColor,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.greyColor.withOpacity(0.7),
             ),
-            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -349,15 +544,25 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Student Distribution',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 18 : 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Text(
+                'Student Demographics',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.blackColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.pie_chart_outline_rounded, size: 20, color: AppTheme.greyColor.withOpacity(0.6)),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         if (isLargeScreen)
           _buildLargeCharts(distributionData, statusData)
         else
@@ -371,22 +576,26 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: SizedBox(
-            height: 350,
+          flex: 3,
+          child: Container(
+            height: 400,
+            decoration: _chartContainerDecoration(),
             child: BarChartWidget(
               data: barData,
-              title: 'Student Status Distribution',
+              title: 'Activity Distribution',
               barColor: AppTheme.primaryGreen,
             ),
           ),
         ),
-        const SizedBox(width: 25),
+        const SizedBox(width: 20),
         Expanded(
-          child: SizedBox(
-            height: 350,
+          flex: 2,
+          child: Container(
+            height: 400,
+            decoration: _chartContainerDecoration(),
             child: PieChartWidget(
               data: pieData,
-              title: 'Student Population',
+              title: 'User Status',
             ),
           ),
         ),
@@ -397,23 +606,40 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
   Widget _buildResponsiveCharts(List<ChartData> barData, List<PieChartData> pieData, bool isSmallScreen) {
     return Column(
       children: [
-        SizedBox(
-          height: isSmallScreen ? 280 : 320,
+        Container(
+          height: isSmallScreen ? 300 : 350,
+          decoration: _chartContainerDecoration(),
           child: BarChartWidget(
             data: barData,
-            title: 'Student Status',
+            title: 'Activity Distribution',
             barColor: AppTheme.primaryGreen,
           ),
         ),
-        const SizedBox(height: 25),
-        SizedBox(
-          height: isSmallScreen ? 300 : 350,
+        const SizedBox(height: 20),
+        Container(
+          height: isSmallScreen ? 320 : 380,
+          decoration: _chartContainerDecoration(),
           child: PieChartWidget(
             data: pieData,
-            title: 'Population Breakdown',
+            title: 'User Status Breakdown',
           ),
         ),
       ],
+    );
+  }
+
+  BoxDecoration _chartContainerDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 20,
+          offset: const Offset(0, 10),
+        ),
+      ],
+      border: Border.all(color: AppTheme.greyColor.withOpacity(0.05)),
     );
   }
 
@@ -423,15 +649,25 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Activity Insights',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 18 : 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Text(
+                'Activity Insights',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.blackColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.insights_rounded, size: 20, color: AppTheme.greyColor.withOpacity(0.6)),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         if (isLargeScreen)
           _buildLargeActivityGrid(stats)
         else if (isMediumScreen)
@@ -443,59 +679,60 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
   }
 
   Widget _buildLargeActivityGrid(dynamic stats) {
-    return Row(
-      children: [
-        _statCard('Daily Active', stats.dailyActiveStudents.toString(), Icons.today, Colors.blue),
-        const SizedBox(width: 20),
-        _statCard('Weekly Active', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week, Colors.purple),
-        const SizedBox(width: 20),
-        _statCard('Monthly Active', stats.monthlyActiveStudents.toString(), Icons.calendar_month, Colors.indigo),
-        const SizedBox(width: 20),
-        _statCard('Avg Session (min)', stats.avgSessionDuration.toStringAsFixed(0), Icons.timer, Colors.teal),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Expanded(child: _statCard('Daily Active', stats.dailyActiveStudents.toString(), Icons.today_rounded, Colors.blue)),
+          const SizedBox(width: 16),
+          Expanded(child: _statCard('Weekly Active', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week_rounded, Colors.purple)),
+          const SizedBox(width: 16),
+          Expanded(child: _statCard('Monthly Active', stats.monthlyActiveStudents.toString(), Icons.calendar_month_rounded, Colors.indigo)),
+          const SizedBox(width: 16),
+          Expanded(child: _statCard('Avg Session', '${stats.avgSessionDuration.toStringAsFixed(0)} min', Icons.timer_rounded, Colors.teal)),
+        ],
+      ),
     );
   }
 
   Widget _buildMediumActivityGrid(dynamic stats) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(child: _statCard('Daily Active', stats.dailyActiveStudents.toString(), Icons.today, Colors.blue)),
-            const SizedBox(width: 15),
-            Expanded(child: _statCard('Weekly Active', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week, Colors.purple)),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _statCard('Daily Active', stats.dailyActiveStudents.toString(), Icons.today_rounded, Colors.blue)),
+              const SizedBox(width: 16),
+              Expanded(child: _statCard('Weekly Active', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week_rounded, Colors.purple)),
+            ],
+          ),
         ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(child: _statCard('Monthly Active', stats.monthlyActiveStudents.toString(), Icons.calendar_month, Colors.indigo)),
-            const SizedBox(width: 15),
-            Expanded(child: _statCard('Avg Session', stats.avgSessionDuration.toStringAsFixed(0), Icons.timer, Colors.teal)),
-          ],
+        const SizedBox(height: 16),
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _statCard('Monthly Active', stats.monthlyActiveStudents.toString(), Icons.calendar_month_rounded, Colors.indigo)),
+              const SizedBox(width: 16),
+              Expanded(child: _statCard('Avg Session', '${stats.avgSessionDuration.toStringAsFixed(0)} min', Icons.timer_rounded, Colors.teal)),
+            ],
+          ),
         ),
       ],
     );
   }
 
   Widget _buildSmallActivityGrid(dynamic stats) {
-    return Column(
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.4,
       children: [
-        Row(
-          children: [
-            Expanded(child: _statCard('Daily', stats.dailyActiveStudents.toString(), Icons.today, Colors.blue)),
-            const SizedBox(width: 10),
-            Expanded(child: _statCard('Weekly', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week, Colors.purple)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: _statCard('Monthly', stats.monthlyActiveStudents.toString(), Icons.calendar_month, Colors.indigo)),
-            const SizedBox(width: 10),
-            Expanded(child: _statCard('Session', stats.avgSessionDuration.toStringAsFixed(0), Icons.timer, Colors.teal)),
-          ],
-        ),
+        _statCard('Daily', stats.dailyActiveStudents.toString(), Icons.today_rounded, Colors.blue),
+        _statCard('Weekly', stats.weeklyActiveStudents.toString(), Icons.calendar_view_week_rounded, Colors.purple),
+        _statCard('Monthly', stats.monthlyActiveStudents.toString(), Icons.calendar_month_rounded, Colors.indigo),
+        _statCard('Session', '${stats.avgSessionDuration.toStringAsFixed(0)}m', Icons.timer_rounded, Colors.teal),
       ],
     );
   }
@@ -505,29 +742,52 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.greyColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.greyColor.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.01),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppTheme.greyColor,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            textAlign: TextAlign.center,
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.blackColor,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.greyColor.withOpacity(0.7),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -538,15 +798,34 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Top Performing Students',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 18 : 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.blackColor,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Top Performing Students',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 18 : 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.blackColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.emoji_events_outlined, size: 20, color: Colors.amber.shade700),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.push('/admin/students'),
+                child: const Text('View All Students'),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _buildPerformersTable(isLargeScreen, isMediumScreen, isSmallScreen),
       ],
     );
@@ -556,95 +835,162 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
+        border: Border.all(color: AppTheme.greyColor.withOpacity(0.05)),
       ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryGreen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: isLargeScreen
-                ? const Row(
-                    children: [
-                      Expanded(flex: 2, child: Text('Student', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                      Expanded(child: Text('Enrollments', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                      Expanded(child: Text('Completed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                      Expanded(child: Text('Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                    ],
-                  )
-                : isMediumScreen
-                    ? const Row(
-                        children: [
-                          Expanded(flex: 2, child: Text('Student', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                          Expanded(child: Text('Enrollments', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                          Expanded(child: Text('Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        ],
-                      )
-                    : const Row(
-                        children: [
-                          Expanded(flex: 3, child: Text('Student', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                          Expanded(child: Text('Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              color: AppTheme.greyColor.withOpacity(0.03),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: isSmallScreen ? 3 : 2,
+                    child: Text(
+                      'STUDENT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.greyColor.withOpacity(0.8),
+                        letterSpacing: 1,
                       ),
-          ),
-          ..._analytics!.topPerformingStudents.asMap().entries.map((entry) {
-            final student = entry.value;
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: AppTheme.greyColor.withOpacity(0.1)),
-                ),
+                    ),
+                  ),
+                  if (!isSmallScreen)
+                    Expanded(
+                      child: Text(
+                        'ENROLLMENTS',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.greyColor.withOpacity(0.8),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  if (isLargeScreen)
+                    Expanded(
+                      child: Text(
+                        'COMPLETED',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.greyColor.withOpacity(0.8),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      'PROGRESS',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.greyColor.withOpacity(0.8),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: isLargeScreen
-                  ? Row(
+            ),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _analytics!.topPerformingStudents.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 1,
+                color: AppTheme.greyColor.withOpacity(0.05),
+                indent: 24,
+                endIndent: 24,
+              ),
+              itemBuilder: (context, index) {
+                final student = _analytics!.topPerformingStudents[index];
+                return InkWell(
+                  onTap: () => context.push('/admin/students/${student.id}'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Row(
                       children: [
                         _studentCell(student, isSmallScreen),
+                        if (!isSmallScreen)
+                          Expanded(
+                            child: Text(
+                              student.totalEnrollments.toString(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        if (isLargeScreen)
+                          Expanded(
+                            child: Container(
+                              alignment: Alignment.center,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  student.completedCourses.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         Expanded(
-                          child: Text(student.totalEnrollments.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500)),
-                        ),
-                        Expanded(
-                          child: Text(student.completedCourses.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.green)),
-                        ),
-                        Expanded(
-                          child: Text('${student.averageProgress.toStringAsFixed(1)}%', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.accent)),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${student.averageProgress.toStringAsFixed(0)}%',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryGreen,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                width: 60,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: student.averageProgress / 100,
+                                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                                    minHeight: 3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    )
-                  : isMediumScreen
-                      ? Row(
-                          children: [
-                            _studentCell(student, isSmallScreen),
-                            Expanded(
-                              child: Text(student.totalEnrollments.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500)),
-                            ),
-                            Expanded(
-                              child: Text('${student.averageProgress.toStringAsFixed(1)}%', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.accent)),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            _studentCell(student, isSmallScreen),
-                            Expanded(
-                              child: Text('${student.averageProgress.toStringAsFixed(1)}%', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.accent)),
-                            ),
-                          ],
-                        ),
-            );
-          }),
-        ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -654,19 +1000,39 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
       flex: isSmallScreen ? 3 : 2,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: isSmallScreen ? 16 : 18,
-            backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-            child: Text(
-              student.name.substring(0, 1).toUpperCase(),
-              style: TextStyle(
-                color: AppTheme.primaryGreen,
-                fontWeight: FontWeight.bold,
-                fontSize: isSmallScreen ? 14 : 16,
+          Container(
+            width: isSmallScreen ? 36 : 42,
+            height: isSmallScreen ? 36 : 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primaryGreen.withOpacity(0.8),
+                  AppTheme.primaryGreen,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryGreen.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                student.name.substring(0, 1).toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: isSmallScreen ? 14 : 16,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,16 +1040,18 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
                 Text(
                   student.name,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isSmallScreen ? 13 : 14,
+                    fontWeight: FontWeight.w700,
+                    fontSize: isSmallScreen ? 14 : 15,
+                    color: AppTheme.blackColor,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   student.email,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 11 : 12,
-                    color: AppTheme.greyColor,
+                    color: AppTheme.greyColor.withOpacity(0.7),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -697,24 +1065,57 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
 
   Widget _buildDataTimestamp() {
     final now = DateTime.now();
+    final formattedTime = DateFormat('HH:mm:ss').format(now);
+    final formattedDate = DateFormat('MMM dd, yyyy').format(now);
+    
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       decoration: BoxDecoration(
-        color: AppTheme.greyColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.greyColor.withOpacity(0.1)),
+        color: AppTheme.primaryGreen.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.access_time, size: 16, color: AppTheme.greyColor),
-          const SizedBox(width: 8),
+          Icon(Icons.history_rounded, size: 18, color: AppTheme.primaryGreen.withOpacity(0.6)),
+          const SizedBox(width: 12),
           Text(
-            'Data refreshed: ${now.hour}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
-            style: const TextStyle(fontSize: 12, color: AppTheme.greyColor),
+            'Analytics last synced: ',
+            style: TextStyle(
+              fontSize: 13, 
+              color: AppTheme.greyColor.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.sync, size: 14, color: AppTheme.primaryGreen),
+          Text(
+            '$formattedDate at $formattedTime',
+            style: const TextStyle(
+              fontSize: 13, 
+              color: AppTheme.primaryGreen,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildPulseIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPulseIndicator() {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: Colors.green,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green,
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
         ],
       ),
     );

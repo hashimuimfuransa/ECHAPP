@@ -696,24 +696,10 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           },
         ),
         IconButton(
-          icon: const Icon(Icons.video_library, size: 20, color: AppTheme.primaryGreen),
-          tooltip: 'Manage Videos',
+          icon: const Icon(Icons.analytics, size: 20, color: AppTheme.primaryGreen),
+          tooltip: 'Course Analytics',
           onPressed: () {
-            context.push('/admin/courses/${course.id}/videos');
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.note, size: 20, color: AppTheme.accent),
-          tooltip: 'Manage Materials',
-          onPressed: () {
-            context.push('/admin/courses/${course.id}/materials');
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.quiz, size: 20, color: Colors.orange),
-          tooltip: 'Manage Exams',
-          onPressed: () {
-            context.push('/admin/courses/${course.id}/exams');
+            context.push('/admin/courses/${course.id}/analytics');
           },
         ),
         IconButton(
@@ -739,14 +725,8 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           case 'content':
             context.push('/admin/courses/${course.id}/content');
             break;
-          case 'videos':
-            context.push('/admin/courses/${course.id}/videos');
-            break;
-          case 'materials':
-            context.push('/admin/courses/${course.id}/materials');
-            break;
-          case 'exams':
-            context.push('/admin/courses/${course.id}/exams');
+          case 'analytics':
+            context.push('/admin/courses/${course.id}/analytics');
             break;
           case 'delete':
             _confirmDeleteCourse(ref, course);
@@ -775,32 +755,12 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
           ),
         ),
         const PopupMenuItem(
-          value: 'videos',
+          value: 'analytics',
           child: Row(
             children: [
-              Icon(Icons.video_library, size: 20, color: AppTheme.primaryGreen),
+              Icon(Icons.analytics, size: 20, color: AppTheme.primaryGreen),
               SizedBox(width: 10),
-              Text('Manage Videos'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'materials',
-          child: Row(
-            children: [
-              Icon(Icons.note, size: 20, color: AppTheme.accent),
-              SizedBox(width: 10),
-              Text('Manage Materials'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'exams',
-          child: Row(
-            children: [
-              Icon(Icons.quiz, size: 20, color: Colors.orange),
-              SizedBox(width: 10),
-              Text('Manage Exams'),
+              Text('Course Analytics'),
             ],
           ),
         ),

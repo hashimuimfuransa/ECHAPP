@@ -11,7 +11,8 @@ import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
-  const AdminStudentsScreen({super.key});
+  final String? studentId;
+  const AdminStudentsScreen({super.key, this.studentId});
 
   @override
   ConsumerState<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
@@ -33,6 +34,14 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
   void initState() {
     super.initState();
     _loadStudents();
+    if (widget.studentId != null) {
+      // Delay to ensure the screen is built
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _loadStudentDetail(widget.studentId!);
+        }
+      });
+    }
   }
 
   void _handleGlobalRefresh() {

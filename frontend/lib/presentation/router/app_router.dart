@@ -33,6 +33,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_settings_
 import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_exams_review_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
@@ -185,6 +186,13 @@ class AppRouter {
             },
           ),
           GoRoute(
+            path: '/admin/courses/:courseId/analytics',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return CourseAnalyticsScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
             path: '/admin/courses/:courseId/sections/:sectionId/lessons/create',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
@@ -214,6 +222,13 @@ class AppRouter {
           GoRoute(
             path: '/admin/students',
             builder: (context, state) => const AdminStudentsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/students/:studentId',
+            builder: (context, state) {
+              final studentId = state.pathParameters['studentId'] ?? '';
+              return AdminStudentsScreen(studentId: studentId);
+            },
           ),
           GoRoute(
             path: '/admin/payments',

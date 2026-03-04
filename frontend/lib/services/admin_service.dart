@@ -284,6 +284,22 @@ class AdminService {
     }
   }
 
+  /// Get analytics for a specific course
+  Future<CourseAnalytics> getCourseAnalytics(String courseId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/analytics/course/$courseId');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      return CourseAnalytics.fromJson(data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch course analytics: $e');
+    }
+  }
+
   /// Delete a student and all related data
   Future<Map<String, dynamic>> deleteStudent(String studentId) async {
     try {
@@ -723,6 +739,89 @@ class UserDeviceInfo {
           .map((item) => Enrollment.fromJson(item as Map<String, dynamic>))
           .toList(),
       totalEnrollments: json['totalEnrollments'] as int? ?? 0,
+    );
+  }
+}
+
+class CourseAnalytics {
+  final Map<String, dynamic> course;
+  final CourseStatsDetail stats;
+  final List<CourseStudentPerformance> students;
+
+  CourseAnalytics({
+    required this.course,
+    required this.stats,
+    required this.students,
+  });
+
+  factory CourseAnalytics.fromJson(Map<String, dynamic> json) {
+    return CourseAnalytics(
+      course: json['course'] as Map<String, dynamic>,
+      stats: CourseStatsDetail.fromJson(json['stats'] as Map<String, dynamic>),
+      students: (json['students'] as List)
+          .map((item) => CourseStudentPerformance.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class CourseStatsDetail {
+  final int totalStudents;
+  final int activeStudents;
+  final int completedCount;
+  final double completionRate;
+  final double averageProgress;
+  final int newStudentsThisMonth;
+
+  CourseStatsDetail({
+    required this.totalStudents,
+    required this.activeStudents,
+    required this.completedCount,
+    required this.completionRate,
+    required this.averageProgress,
+    required this.newStudentsThisMonth,
+  });
+
+  factory CourseStatsDetail.fromJson(Map<String, dynamic> json) {
+    return CourseStatsDetail(
+      totalStudents: json['totalStudents'] as int? ?? 0,
+      activeStudents: json['activeStudents'] as int? ?? 0,
+      completedCount: json['completedCount'] as int? ?? 0,
+      completionRate: (json['completionRate'] as num?)?.toDouble() ?? 0.0,
+      averageProgress: (json['averageProgress'] as num?)?.toDouble() ?? 0.0,
+      newStudentsThisMonth: json['newStudentsThisMonth'] as int? ?? 0,
+    );
+  }
+}
+
+class CourseStudentPerformance {
+  final String id;
+  final String name;
+  final String email;
+  final DateTime enrollmentDate;
+  final double progress;
+  final String completionStatus;
+  final DateTime? lastAccessed;
+
+  CourseStudentPerformance({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.enrollmentDate,
+    required this.progress,
+    required this.completionStatus,
+    this.lastAccessed,
+  });
+
+  factory CourseStudentPerformance.fromJson(Map<String, dynamic> json) {
+    return CourseStudentPerformance(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      enrollmentDate: DateTime.parse(json['enrollmentDate'] as String),
+      progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
+      completionStatus: json['completionStatus'] as String,
+      lastAccessed: json['lastAccessed'] != null ? DateTime.parse(json['lastAccessed'] as String) : null,
     );
   }
 }
