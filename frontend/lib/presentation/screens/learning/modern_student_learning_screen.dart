@@ -45,6 +45,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   double _userRating = 0.0;
   final TextEditingController _feedbackController = TextEditingController();
   
+  bool _hasSubmittedFeedback = false;
+  
   // Progress statistics
   int _totalLessons = 0;
   int _completedLessonsCount = 0;
@@ -169,6 +171,13 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               _currentSectionIndex = _sections!.length - 1;
             }
           }
+        }
+        
+        // Load feedback if exists
+        if (_courseAccessData != null && _courseAccessData!['rating'] != null) {
+          _userRating = (_courseAccessData!['rating'] as num).toDouble();
+          _feedbackController.text = _courseAccessData!['feedback'] ?? '';
+          _hasSubmittedFeedback = true;
         }
       } catch (e) {
         print('Error loading course access data: $e');
@@ -557,6 +566,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           
           return CountdownTimer(
             expirationDate: expirationDate,
+            showSeconds: true,
             onExpiration: () {
               // Handle expiration if needed
               print('Course access has expired');
@@ -632,14 +642,16 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Enjoying this course?',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.blackColor),
+          Text(
+            _hasSubmittedFeedback ? 'Your Rating' : 'Enjoying this course?',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.blackColor),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your feedback helps us improve and helps other students.',
-            style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+          Text(
+            _hasSubmittedFeedback 
+              ? 'Thank you for your feedback! It helps us improve.'
+              : 'Your feedback helps us improve and helps other students.',
+            style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
           ),
           const SizedBox(height: 20),
           Row(
@@ -651,7 +663,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   color: Colors.amber,
                   size: 32,
                 ),
-                onPressed: () {
+                onPressed: _hasSubmittedFeedback ? null : () {
                   setState(() {
                     _userRating = index + 1.0;
                   });
@@ -663,6 +675,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             const SizedBox(height: 16),
             TextField(
               controller: _feedbackController,
+              enabled: !_hasSubmittedFeedback,
               decoration: InputDecoration(
                 hintText: 'Share your feedback (optional)',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -673,32 +686,54 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               ),
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Submit rating logic
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Thank you for your rating!'),
-                      backgroundColor: AppTheme.primaryGreen,
-                    ),
-                  );
-                  setState(() {
-                    _userRating = 0;
-                    _feedbackController.clear();
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            if (!_hasSubmittedFeedback) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (_userRating == 0) return;
+                    
+                    try {
+                      final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
+                      await enrollmentRepo.submitCourseFeedback(
+                        widget.courseId, 
+                        _userRating, 
+                        _feedbackController.text
+                      );
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Thank you for your rating!'),
+                            backgroundColor: AppTheme.primaryGreen,
+                          ),
+                        );
+                        setState(() {
+                          _hasSubmittedFeedback = true;
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to submit feedback: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Submit Rating', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('Submit Rating', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ),
+            ],
           ],
         ],
       ),
@@ -1018,51 +1053,45 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         }
 
         final exams = snapshot.data!;
+        final isSmallScreen = MediaQuery.of(context).size.width < 600;
+        
+        // Get the first exam type to determine section title
+        final firstExam = exams.first;
+        String sectionTitle;
+        Color sectionColor;
+        IconData sectionIcon;
+        
+        switch (firstExam.type.toLowerCase() ?? '') {
+          case 'quiz':
+            sectionTitle = 'Quiz Section';
+            sectionColor = Colors.blue;
+            sectionIcon = Icons.quiz_outlined;
+            break;
+          case 'pastpaper':
+            sectionTitle = 'Past Paper Section';
+            sectionColor = Colors.orange;
+            sectionIcon = Icons.article_outlined;
+            break;
+          case 'final':
+            sectionTitle = 'Final Exam Section';
+            sectionColor = Colors.red;
+            sectionIcon = Icons.school_outlined;
+            break;
+          default:
+            sectionTitle = 'Exam Section';
+            sectionColor = Colors.grey;
+            sectionIcon = Icons.help_outline;
+        }
         
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<List<exam_model.Exam>>(
-              future: ExamService().getExamsBySection(sectionId),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
-                  final exams = snapshot.data!;
-                  final isSmallScreen = MediaQuery.of(context).size.width < 600;
-                  
-                  // Get the first exam type to determine section title
-                  final firstExam = exams.first;
-                  String sectionTitle;
-                  Color sectionColor;
-                  IconData sectionIcon;
-                  
-                  switch (firstExam.type.toLowerCase() ?? '') {
-                    case 'quiz':
-                      sectionTitle = 'Quiz Section';
-                      sectionColor = Colors.blue;
-                      sectionIcon = Icons.quiz_outlined;
-                      break;
-                    case 'pastpaper':
-                      sectionTitle = 'Past Paper Section';
-                      sectionColor = Colors.orange;
-                      sectionIcon = Icons.article_outlined;
-                      break;
-                    case 'final':
-                      sectionTitle = 'Final Exam Section';
-                      sectionColor = Colors.red;
-                      sectionIcon = Icons.school_outlined;
-                      break;
-                    default:
-                      sectionTitle = 'Exam Section';
-                      sectionColor = Colors.grey;
-                      sectionIcon = Icons.help_outline;
-                  }
-                  
-                  return Padding(
-                    padding: EdgeInsets.only(top: isSmallScreen ? 12 : 16, bottom: 8, left: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
+            Padding(
+              padding: EdgeInsets.only(top: isSmallScreen ? 12 : 16, bottom: 8, left: 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                           decoration: BoxDecoration(
                             color: sectionColor.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
@@ -1124,11 +1153,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                           ),
                       ],
                     ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+                  ),
             ...exams.map((exam) {
               final isSmallScreen = MediaQuery.of(context).size.width < 600;
               Color examColor;

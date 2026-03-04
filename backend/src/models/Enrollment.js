@@ -41,6 +41,17 @@ const enrollmentSchema = new mongoose.Schema({
   accessExpirationDate: {
     type: Date,
     default: null // Will be calculated when enrollment is created based on course accessDurationDays
+  },
+  rating: {
+    type: Number,
+    min: [1, 'Rating must be at least 1'],
+    max: [5, 'Rating cannot exceed 5'],
+    default: null
+  },
+  feedback: {
+    type: String,
+    maxlength: [1000, 'Feedback cannot exceed 1000 characters'],
+    default: null
   }
 }, {
   timestamps: true

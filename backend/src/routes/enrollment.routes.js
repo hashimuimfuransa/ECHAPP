@@ -3,6 +3,7 @@ const router = express.Router();
 const { 
   enrollInCourse,
   getMyCourses,
+  submitCourseFeedback,
   getEnrollmentProgress,
   updateEnrollmentProgress,
   getCertificates,
@@ -20,6 +21,7 @@ router.get('/verify/:serialNumber', verifyCertificate);
 // Protected routes
 router.post('/', protect, enrollInCourse);
 router.get('/my-courses', protect, getMyCourses);
+router.post('/course/:courseId/feedback', protect, submitCourseFeedback);
 router.get('/:id/progress', protect, getEnrollmentProgress);
 router.put('/:id/progress', protect, updateEnrollmentProgress);
 

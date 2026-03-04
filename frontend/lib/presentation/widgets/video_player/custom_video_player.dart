@@ -31,10 +31,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   late Player _player;
   late VideoController _videoController;
   bool _isPlaying = false;
+  bool _isBuffering = false;
   bool _showControls = true;
   double _volume = 1.0;
   double _playbackSpeed = 1.0;
   bool _isInitialized = false;
+  String? _errorMessage;
   
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -44,7 +46,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   String _getOptimizedUrl(String url) {
     if (url.startsWith('http')) {
-      if (Platform.isWindows && !url.contains('type=.mp4')) {
+      if (Platform.isWindows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
         return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
       }
       return url;
@@ -67,7 +69,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _player = widget.externalPlayer!;
       _isInitialized = true;
     } else {
-      _player = Player();
+      _player = Player(
+        configuration: const PlayerConfiguration(
+          bufferSize: 64 * 1024 * 1024, // 64MB buffer for low internet
+        ),
+      );
       final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
       _player.open(Media(optimizedUrl)).then((_) {
         if (mounted) {
@@ -91,6 +97,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         if (mounted) {
           setState(() {
             _isPlaying = playing;
+          });
+        }
+      }),
+      _player.stream.buffering.listen((buffering) {
+        if (mounted) {
+          setState(() {
+            _isBuffering = buffering;
           });
         }
       }),
@@ -126,6 +139,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         if (mounted) {
           setState(() {
             _playbackSpeed = rate;
+          });
+        }
+      }),
+      _player.stream.error.listen((error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = error.toString();
           });
         }
       }),
@@ -202,8 +222,31 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Video(controller: _videoController),
-          if (!_isPlaying && !_showControls)
+          SizedBox.expand(
+            child: Video(controller: _videoController),
+          ),
+          if (_errorMessage != null)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 50),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Playback Error: $_errorMessage',
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          if (_isBuffering && _errorMessage == null)
+            const Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          if (!_isPlaying && !_showControls && !_isBuffering)
             Container(
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,

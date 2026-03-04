@@ -13,6 +13,9 @@ class Enrollment {
   final String? paymentId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? accessExpirationDate;
+  final double? rating;
+  final String? feedback;
   
   // Populated fields (from backend populate)
   final User? user;
@@ -30,6 +33,9 @@ class Enrollment {
     this.paymentId,
     required this.createdAt,
     required this.updatedAt,
+    this.accessExpirationDate,
+    this.rating,
+    this.feedback,
     this.user,
     this.course,
   });
@@ -131,6 +137,11 @@ class Enrollment {
       paymentId: _getStringValue(json['paymentId']),
       createdAt: _parseDateTime(json['createdAt']),
       updatedAt: _parseDateTime(json['updatedAt']),
+      accessExpirationDate: json['accessExpirationDate'] != null 
+          ? _parseDateTime(json['accessExpirationDate'])
+          : null,
+      rating: (json['rating'] as num?)?.toDouble(),
+      feedback: json['feedback'] as String?,
       user: json['user'] != null 
           ? User.fromJson(json['user'] as Map<String, dynamic>)
           : null,
@@ -151,6 +162,9 @@ class Enrollment {
       'paymentId': paymentId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (accessExpirationDate != null) 'accessExpirationDate': accessExpirationDate!.toIso8601String(),
+      'rating': rating,
+      'feedback': feedback,
       if (user != null) 'user': user!.toJson(),
       if (course != null) 'course': course!.toJson(),
     };
@@ -175,4 +189,12 @@ class Enrollment {
   }
 
   String get progressDisplay => '${progress.toStringAsFixed(1)}%';
+  
+  bool get isExpired => accessExpirationDate != null && DateTime.now().isAfter(accessExpirationDate!);
+  
+  Duration? get timeRemaining => accessExpirationDate != null ? accessExpirationDate!.difference(DateTime.now()) : null;
+  
+  bool get isExpiringSoon => accessExpirationDate != null && 
+      !isExpired && 
+      accessExpirationDate!.difference(DateTime.now()).inDays <= 7;
 }

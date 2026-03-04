@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import '../../models/enrollment.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../infrastructure/api_client.dart';
@@ -33,6 +33,45 @@ class EnrollmentService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to enroll in course: $e');
+    }
+  }
+
+  /// Get user's enrollment details
+  Future<List<Enrollment>> getEnrollments() async {
+    try {
+      print('Fetching user enrollments...');
+      final response = await _apiClient.get('${ApiConfig.enrollments}/my-courses');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as List;
+        
+        final enrollments = data.map((enrollmentJson) {
+          final map = enrollmentJson as Map<String, dynamic>;
+          // The backend returns courseId as a populated object, 
+          // we need to make sure the Enrollment.fromJson can handle it.
+          // Looking at enrollment.dart, _parseCourseData handles this.
+          
+          // We need to fix the courseId field in map if it's an object
+          if (map['courseId'] is Map<String, dynamic>) {
+            map['course'] = map['courseId'];
+            map['courseId'] = map['courseId']['_id'] ?? map['courseId']['id'];
+          }
+          
+          return Enrollment.fromJson(map);
+        }).toList();
+        
+        print('Processed ${enrollments.length} enrollments');
+        return enrollments;
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch enrollments');
+      }
+    } catch (e) {
+      print('Error in getEnrollments: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch enrollments: $e');
     }
   }
 
@@ -174,6 +213,33 @@ class EnrollmentService {
       print('Error in getEnrollmentProgress: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch enrollment progress: $e');
+    }
+  }
+
+  /// Submit course feedback
+  Future<void> submitCourseFeedback(String courseId, double rating, String feedback) async {
+    try {
+      final requestBody = {
+        'rating': rating,
+        'feedback': feedback,
+      };
+
+      final response = await _apiClient.post(
+        '${ApiConfig.enrollments}/course/$courseId/feedback',
+        body: requestBody,
+      );
+
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to submit feedback');
+      }
+    } catch (e) {
+      print('Error in submitCourseFeedback: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to submit feedback: $e');
     }
   }
 }

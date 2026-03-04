@@ -145,6 +145,32 @@ const getMyCourses = async (req, res) => {
   }
 };
 
+// Submit course feedback
+const submitCourseFeedback = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { rating, feedback } = req.body;
+    const userId = req.user.id;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return sendError(res, 'Invalid rating. Must be between 1 and 5', 400);
+    }
+
+    const enrollment = await Enrollment.findOne({ userId, courseId });
+    if (!enrollment) {
+      return sendNotFound(res, 'Enrollment not found for this course');
+    }
+
+    enrollment.rating = rating;
+    enrollment.feedback = feedback;
+    await enrollment.save();
+
+    sendSuccess(res, enrollment, 'Feedback submitted successfully');
+  } catch (error) {
+    sendError(res, 'Failed to submit feedback', 500, error.message);
+  }
+};
+
 // Get enrollment progress
 const getEnrollmentProgress = async (req, res) => {
   try {
@@ -339,6 +365,8 @@ const checkCourseAccess = async (req, res) => {
       completedLessons: enrollment.completedLessons,
       progress: enrollment.progress,
       completionStatus: enrollment.completionStatus,
+      rating: enrollment.rating,
+      feedback: enrollment.feedback,
     };
     
     if (isExpired) {

@@ -5,9 +5,14 @@ import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
 import 'package:excellencecoachinghub/models/category.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
+});
+
+final enrollmentRepositoryProvider = Provider<EnrollmentRepository>((ref) {
+  return EnrollmentRepository();
 });
 
 final categoriesServiceProvider = Provider<CategoriesService>((ref) {
@@ -40,8 +45,13 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
 
 final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
   // Fetch courses the user is enrolled in using the enrollment repository
-  final enrollmentRepository = EnrollmentRepository();
+  final enrollmentRepository = ref.read(enrollmentRepositoryProvider);
   return await enrollmentRepository.getEnrolledCourses();
+});
+
+final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
+  final enrollmentRepository = ref.read(enrollmentRepositoryProvider);
+  return await enrollmentRepository.getEnrollments();
 });
 
 // Category providers

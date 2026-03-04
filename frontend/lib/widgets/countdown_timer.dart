@@ -5,11 +5,17 @@ import 'dart:async';
 class CountdownTimer extends StatefulWidget {
   final DateTime? expirationDate;
   final VoidCallback? onExpiration;
+  final Color? textColor;
+  final Color? backgroundColor;
+  final bool showSeconds;
 
   const CountdownTimer({
     Key? key,
     this.expirationDate,
     this.onExpiration,
+    this.textColor,
+    this.backgroundColor,
+    this.showSeconds = true,
   }) : super(key: key);
 
   @override
@@ -17,7 +23,7 @@ class CountdownTimer extends StatefulWidget {
 }
 
 class _CountdownTimerState extends State<CountdownTimer> {
-  late Timer _timer;
+  Timer? _timer;
   Duration? _remainingTime;
 
   @override
@@ -112,22 +118,29 @@ class _CountdownTimerState extends State<CountdownTimer> {
     // Format the remaining time
     String formattedTime = _formatDuration(_remainingTime!);
 
-    Color textColor = Colors.black87;
-    Color bgColor = Colors.green.shade50;
-    Color borderColor = Colors.green.shade200;
+    Color textColor = widget.textColor ?? Colors.black87;
+    Color bgColor = widget.backgroundColor ?? Colors.green.shade50;
+    Color borderColor = widget.backgroundColor != null ? Colors.transparent : Colors.green.shade200;
 
-    // Change color if less than 7 days remaining
-    if (_remainingTime!.inDays < 7) {
-      textColor = Colors.orange[700]!;
-      bgColor = Colors.orange.shade50;
-      borderColor = Colors.orange.shade200;
-    }
+    // Default behaviors if colors are not provided
+    if (widget.textColor == null) {
+      // Change color if less than 7 days remaining
+      if (_remainingTime!.inDays < 7) {
+        textColor = Colors.orange[700]!;
+        if (widget.backgroundColor == null) {
+          bgColor = Colors.orange.shade50;
+          borderColor = Colors.orange.shade200;
+        }
+      }
 
-    // Change color if less than 1 day remaining
-    if (_remainingTime!.inHours < 24) {
-      textColor = Colors.red[700]!;
-      bgColor = Colors.red.shade50;
-      borderColor = Colors.red.shade200;
+      // Change color if less than 1 day remaining
+      if (_remainingTime!.inHours < 24) {
+        textColor = Colors.red[700]!;
+        if (widget.backgroundColor == null) {
+          bgColor = Colors.red.shade50;
+          borderColor = Colors.red.shade200;
+        }
+      }
     }
 
     return Container(
@@ -146,8 +159,9 @@ class _CountdownTimerState extends State<CountdownTimer> {
             'Expires in: $formattedTime',
             style: TextStyle(
               color: textColor,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -157,9 +171,12 @@ class _CountdownTimerState extends State<CountdownTimer> {
 
   String _formatDuration(Duration duration) {
     if (duration.inDays > 0) {
-      return '${duration.inDays}d ${duration.inHours % 24}h';
+      if (widget.showSeconds) {
+        return '${duration.inDays}d ${duration.inHours % 24}h ${duration.inMinutes % 60}m ${duration.inSeconds % 60}s';
+      }
+      return '${duration.inDays}d ${duration.inHours % 24}h ${duration.inMinutes % 60}m';
     } else if (duration.inHours > 0) {
-      return '${duration.inHours}h ${duration.inMinutes % 60}m';
+      return '${duration.inHours}h ${duration.inMinutes % 60}m ${duration.inSeconds % 60}s';
     } else if (duration.inMinutes > 0) {
       return '${duration.inMinutes}m ${duration.inSeconds % 60}s';
     } else {

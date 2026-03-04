@@ -14,10 +14,12 @@ import 'package:excellencecoachinghub/presentation/providers/course_payment_prov
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
+import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -186,6 +188,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
+    final userEnrollmentsAsync = ref.watch(userEnrollmentsProvider);
     final popularCoursesAsync = ref.watch(popularCoursesProvider);
 
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
@@ -208,8 +211,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildCategoryFilters(context),
-                  enrolledCoursesAsync.when(
-                    data: (enrolledCourses) => _buildWelcomeCard(context, user, enrolledCourses),
+                  userEnrollmentsAsync.when(
+                    data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
                     loading: () => _buildWelcomeCard(context, user, []),
                     error: (_, __) => _buildWelcomeCard(context, user, []),
                   ),
@@ -220,9 +223,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildAdminAccessButton(context),
                     const SizedBox(height: 32),
                   ],
-                  enrolledCoursesAsync.when(
-                    data: (enrolledCourses) =>
-                        _buildLearningAndOnboarding(context, enrolledCourses),
+                  userEnrollmentsAsync.when(
+                    data: (enrollments) =>
+                        _buildLearningAndOnboarding(context, enrollments),
                     loading: () => _buildLoadingCard(context, 'Continue Learning'),
                     error: (error, stack) => _buildErrorCard(
                         context, 'Continue Learning', error.toString()),
@@ -267,6 +270,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // discard provider refresh futures without the warning-suppression no-op pattern.
   Future<void> _refreshDashboard() async {
     ref.invalidate(enrolledCoursesProvider);
+    ref.invalidate(userEnrollmentsProvider);
     ref.invalidate(popularCoursesProvider);
   }
 
@@ -411,9 +415,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, user, List<Course> enrolledCourses) {
+  Widget _buildWelcomeCard(BuildContext context, user, List<Enrollment> enrollments) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final lastCourse = enrolledCourses.isNotEmpty ? enrolledCourses.first : null;
+    final lastEnrollment = enrollments.isNotEmpty ? enrollments.first : null;
+    final lastCourse = lastEnrollment?.course;
+    
+    // Calculate average progress
+    double averageProgress = 0;
+    if (enrollments.isNotEmpty) {
+      double totalProgress = enrollments.fold(0, (sum, e) => sum + e.progress);
+      averageProgress = totalProgress / enrollments.length;
+    }
     
     return Container(
       width: double.infinity,
@@ -497,6 +509,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      // Expiration Countdown for current course
+                      if (lastEnrollment != null && lastEnrollment.accessExpirationDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: CountdownTimer(
+                            expirationDate: lastEnrollment.accessExpirationDate,
+                            textColor: Colors.white,
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            showSeconds: true,
+                          ),
+                        ),
                       // Last Lesson Widget
                       if (lastCourse != null)
                         InkWell(
@@ -597,19 +620,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '0% Completed',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+                              Text(
+                                '${averageProgress.toInt()}% Completed',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
                               ),
                               const SizedBox(height: 16),
-                              _buildWelcomeStatItem(Icons.school, '${enrolledCourses.length} Courses', 'Enrolled', const Color(0xFF10B981)),
+                              _buildWelcomeStatItem(Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
                               const SizedBox(height: 12),
                               _buildWelcomeStatItem(Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
                             ],
                           ),
                         ),
                         const SizedBox(width: 16),
-                        _buildCircularProgress(),
+                        _buildCircularProgress(averageProgress),
                       ],
                     ),
                   ),
@@ -644,7 +667,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildCircularProgress() {
+  Widget _buildCircularProgress(double progress) {
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -652,18 +675,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           width: 70,
           height: 70,
           child: CircularProgressIndicator(
-            value: 0.1, // Placeholder
+            value: progress / 100,
             strokeWidth: 8,
             backgroundColor: const Color(0xFFF3F4F6),
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
             strokeCap: StrokeCap.round,
           ),
         ),
-        const Column(
+        Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('0%', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
-            Text('Completed', style: TextStyle(fontSize: 8, color: Color(0xFF9CA3AF))),
+            Text('${progress.toInt()}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
+            const Text('Completed', style: TextStyle(fontSize: 8, color: Color(0xFF9CA3AF))),
           ],
         ),
       ],
@@ -865,14 +888,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildLearningAndOnboarding(BuildContext context, List<Course> enrolledCourses) {
+  Widget _buildLearningAndOnboarding(BuildContext context, List<Enrollment> enrollments) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     if (isDesktop) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _buildContinueLearning(context, enrolledCourses)),
+          Expanded(child: _buildContinueLearning(context, enrollments)),
           const SizedBox(width: 32),
           Expanded(child: _buildGetStarted(context)),
         ],
@@ -880,7 +903,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else {
       return Column(
         children: [
-          _buildContinueLearning(context, enrolledCourses),
+          _buildContinueLearning(context, enrollments),
           const SizedBox(height: 32),
           _buildGetStarted(context),
         ],
@@ -987,12 +1010,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildContinueLearning(
-      BuildContext context, List<Course> enrolledCourses) {
+      BuildContext context, List<Enrollment> enrollments) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final isMobile = !isDesktop && !isTablet;
     
-    if (enrolledCourses.isEmpty) {
+    if (enrollments.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1103,24 +1126,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
-                childAspectRatio: isDesktop ? 1.1 : 0.85, // Adjusted for better card fit
+                childAspectRatio: isDesktop ? 1.05 : 0.82, // Adjusted for extra countdown text
               ),
-              itemCount: enrolledCourses.take(isDesktop ? 2 : crossAxisCount).length,
+              itemCount: enrollments.take(isDesktop ? 2 : crossAxisCount).length,
               itemBuilder: (context, index) {
-                return _buildEnrolledCourseCard(context, enrolledCourses[index]);
+                return _buildEnrolledCourseCard(context, enrollments[index]);
               },
             )
           else
             SizedBox(
-              height: 250, // Increased height to prevent overflow
+              height: 270, // Increased height for countdown
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: enrolledCourses.length,
+                itemCount: enrollments.length,
                 itemBuilder: (context, index) {
                   return Container(
                     width: 280,
                     margin: const EdgeInsets.only(right: 16),
-                    child: _buildEnrolledCourseCard(context, enrolledCourses[index]),
+                    child: _buildEnrolledCourseCard(context, enrollments[index]),
                   );
                 },
               ),
@@ -1130,7 +1153,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
   
-  Widget _buildEnrolledCourseCard(BuildContext context, Course course) {
+  Widget _buildEnrolledCourseCard(BuildContext context, Enrollment enrollment) {
+    final course = enrollment.course;
+    if (course == null) return const SizedBox.shrink();
+    
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     
@@ -1201,6 +1227,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
+                if (enrollment.accessExpirationDate != null) ...[
+                  CountdownTimer(
+                    expirationDate: enrollment.accessExpirationDate,
+                    showSeconds: true,
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1216,7 +1249,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
                         Text(
-                          '45%',
+                          '${enrollment.progress.toInt()}%',
                           style: TextStyle(
                             fontSize: isMobile ? 10 : 11,
                             fontWeight: FontWeight.w700,
@@ -1229,7 +1262,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
-                        value: 0.45,
+                        value: enrollment.progress / 100,
                         backgroundColor: AppTheme.primary.withOpacity(0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
                         minHeight: isMobile ? 4 : 6,

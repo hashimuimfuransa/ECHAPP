@@ -1,5 +1,6 @@
 import '../../services/api/enrollment_service.dart';
 import '../../models/course.dart';
+import '../../models/enrollment.dart';
 
 class EnrollmentRepository {
   final EnrollmentService _enrollmentService;
@@ -10,6 +11,11 @@ class EnrollmentRepository {
   /// Enroll in a course
   Future<void> enrollInCourse(String courseId) async {
     return await _enrollmentService.enrollInCourse(courseId);
+  }
+
+  /// Get user's enrollment details
+  Future<List<Enrollment>> getEnrollments() async {
+    return await _enrollmentService.getEnrollments();
   }
 
   /// Get user's enrolled courses
@@ -35,5 +41,10 @@ class EnrollmentRepository {
   /// Get enrollment progress
   Future<Map<String, dynamic>?> getEnrollmentProgress(String enrollmentId) async {
     return await _enrollmentService.getEnrollmentProgress(enrollmentId);
+  }
+
+  /// Submit course feedback
+  Future<void> submitCourseFeedback(String courseId, double rating, String feedback) async {
+    return await _enrollmentService.submitCourseFeedback(courseId, rating, feedback);
   }
 }
