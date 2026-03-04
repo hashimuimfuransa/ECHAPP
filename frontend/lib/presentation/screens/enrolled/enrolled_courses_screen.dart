@@ -345,8 +345,8 @@ class EnrolledCoursesScreen extends ConsumerWidget {
   }
 
   void _viewCourse(BuildContext context, Course course) {
-    // Navigate to course detail page
-    context.push('/course/${course.id}', extra: course);
+    // Navigate to the student learning screen for this course instead of course details
+    _continueLearning(context, course);
   }
 
   void _continueLearning(BuildContext context, Course course) {

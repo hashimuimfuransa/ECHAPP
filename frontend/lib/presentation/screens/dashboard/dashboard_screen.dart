@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
@@ -123,9 +124,10 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTickerProviderStateMixin {
   bool _hasCheckedRole = false;
   Timer? _autoRefreshTimer;
+  AnimationController? _animationController;
 
   @override
   void didChangeDependencies() {
@@ -136,8 +138,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     // Start auto-refresh timer to check payment status periodically
     _startAutoRefresh();
+    
+    // Play entrance animation
+    _animationController?.forward();
   }
 
   void _startAutoRefresh() {
@@ -157,6 +166,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _animationController?.dispose();
     super.dispose();
   }
 
@@ -231,17 +241,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         context, 'Continue Learning', error.toString()),
                   ),
                   const SizedBox(height: 32),
+                  _buildResponsiveQuickActions(context),
+                  const SizedBox(height: 32),
                   popularCoursesAsync.when(
-                    data: (popularCourses) =>
-                        _buildRecommendedCourses(context, popularCourses),
+                    data: (popularCourses) => enrolledCoursesAsync.when(
+                      data: (enrolledCourses) => _buildRecommendedCourses(context, popularCourses, enrolledCourses),
+                      loading: () => _buildRecommendedCourses(context, popularCourses, []),
+                      error: (_, __) => _buildRecommendedCourses(context, popularCourses, []),
+                    ),
                     loading: () => _buildLoadingCard(context, 'Recommended Courses'),
                     error: (error, stack) => _buildErrorCard(
                         context, 'Recommended Courses', error.toString()),
                   ),
                   const SizedBox(height: 32),
                   popularCoursesAsync.when(
-                    data: (popularCourses) =>
-                        _buildResponsivePopularCourses(context, popularCourses),
+                    data: (popularCourses) => enrolledCoursesAsync.when(
+                      data: (enrolledCourses) => _buildResponsivePopularCourses(context, popularCourses, enrolledCourses),
+                      loading: () => _buildResponsivePopularCourses(context, popularCourses, []),
+                      error: (_, __) => _buildResponsivePopularCourses(context, popularCourses, []),
+                    ),
                     loading: () => _buildLoadingCard(context, 'Popular Courses'),
                     error: (error, stack) => _buildErrorCard(
                         context, 'Popular Courses', error.toString()),
@@ -762,62 +780,110 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildResponsiveQuickActions(BuildContext context) {
     final actions = [
       {
-        'title': 'Browse Categories',
-        'subtitle': 'Explore coaching categories',
-        'icon': Icons.category_outlined,
-        'color': AppTheme.primaryGreen,
-        'onTap': () =>
-            context.push('/categories'), // FIX #5: use go_router consistently
-      },
-      {
         'title': 'My Learning',
-        'subtitle': 'Continue courses',
-        'icon': Icons.play_circle_outline,
-        'color': const Color(0xFF00cdac),
+        'subtitle': 'Continue learning',
+        'icon': Icons.play_lesson_rounded,
+        'color': const Color(0xFF10B981), // Solid Emerald
         'onTap': () => context.push('/my-courses'),
       },
       {
+        'title': 'Downloaded',
+        'subtitle': 'Offline videos',
+        'icon': Icons.file_download_done_rounded,
+        'color': const Color(0xFF3B82F6), // Solid Blue
+        'onTap': () => context.push('/downloads'),
+      },
+      {
+        'title': 'Exams History',
+        'subtitle': 'View results',
+        'icon': Icons.assignment_turned_in_rounded,
+        'color': const Color(0xFF8B5CF6), // Solid Purple
+        'onTap': () => context.push('/exams/history'),
+      },
+      {
         'title': 'Certificates',
-        'subtitle': 'View achievements',
-        'icon': Icons.verified_outlined,
-        'color': const Color(0xFFfa709a),
+        'subtitle': 'Your awards',
+        'icon': Icons.verified_rounded,
+        'color': const Color(0xFFF59E0B), // Solid Amber
         'onTap': () => context.push('/certificates'),
       },
     ];
 
-    final gridCount = ResponsiveGridCount(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: ResponsiveBreakpoints.isDesktop(context) ? 24 : 20,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            const Text(
+              'Quick Access',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'New',
+                style: TextStyle(
+                  color: AppTheme.primaryGreen,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: gridCount.crossAxisCount,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
-            childAspectRatio: gridCount.childAspectRatio,
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: isDesktop ? 20 : 16,
+            mainAxisSpacing: isDesktop ? 20 : 16,
+            childAspectRatio: isDesktop ? 1.6 : 1.4,
           ),
           itemCount: actions.length,
           itemBuilder: (context, index) {
             final action = actions[index];
-            return _buildResponsiveActionCard(
-              context,
-              action['title'] as String,
-              action['subtitle'] as String,
-              action['icon'] as IconData,
-              action['color'] as Color,
-              action['onTap'] as Function,
+            
+            // Staggered entrance animation with safe controller access
+            final animation = _animationController != null 
+              ? CurvedAnimation(
+                  parent: _animationController!,
+                  curve: Interval(
+                    (index / actions.length) * 0.5,
+                    0.5 + (index / actions.length) * 0.5,
+                    curve: Curves.easeOutBack,
+                  ),
+                )
+              : const AlwaysStoppedAnimation(1.0);
+
+            return ScaleTransition(
+              scale: animation,
+              child: FadeTransition(
+                opacity: animation,
+                child: _buildResponsiveActionCard(
+                  context,
+                  action['title'] as String,
+                  action['subtitle'] as String,
+                  action['icon'] as IconData,
+                  action['color'] as Color,
+                  action['onTap'] as Function,
+                ),
+              ),
             );
           },
         ),
@@ -827,64 +893,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildResponsiveActionCard(BuildContext context, String title,
       String subtitle, IconData icon, Color color, Function onTap) {
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(isDesktop ? 16.0 : 12.0),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Theme.of(context).shadowColor.withValues(alpha: 0.08), // FIX #8
-            blurRadius: isDesktop ? 10.0 : 8.0,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color:
-              Theme.of(context).dividerColor.withValues(alpha: 0.1), // FIX #8
-          width: 0.5,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => onTap(),
-        borderRadius: BorderRadius.circular(isDesktop ? 16.0 : 12.0),
-        child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 18.0 : 15.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(isDesktop ? 16.0 : 14.0),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1), // FIX #8
-                  borderRadius: BorderRadius.circular(isDesktop ? 14.0 : 12.0),
-                ),
-                child: Icon(icon, color: color, size: isDesktop ? 36.0 : 32.0),
-              ),
-              SizedBox(height: isDesktop ? 14.0 : 12.0),
-              Text(
-                title,
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: isDesktop ? 17.0 : 16.0,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: isDesktop ? 6.0 : 5.0),
-              Text(
-                subtitle,
-                style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: isDesktop ? 14.0 : 12.0),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _QuickAccessCard(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      color: color,
+      onTap: onTap,
     );
   }
 
@@ -1278,7 +1292,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildRecommendedCourses(BuildContext context, List<Course> courses) {
+  Widget _buildRecommendedCourses(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
@@ -1317,14 +1331,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           itemCount: courses.take(isDesktop ? 3 : 2).length,
           itemBuilder: (context, index) {
-            return _buildCourseCardV2(context, courses[index]);
+            return _buildCourseCardV2(context, courses[index], enrolledCourses);
           },
         ),
       ],
     );
   }
 
-  Widget _buildCourseCardV2(BuildContext context, Course course) {
+  Widget _buildCourseCardV2(BuildContext context, Course course, List<Course> enrolledCourses) {
+    final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1335,7 +1351,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+          onTap: () {
+            if (isEnrolled) {
+              context.push('/learning/${course.id}');
+            } else {
+              CourseNavigationUtils.navigateToCourseWithContext(context, ref, course);
+            }
+          },
           borderRadius: BorderRadius.circular(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1358,37 +1380,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           : const Icon(Icons.image_outlined, size: 40, color: Color(0xFF9CA3AF)),
                     ),
                   ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                  if ((course.price ?? 0) > 0)
+                  if (isEnrolled)
                     Positioned(
                       top: 16,
-                      left: 16,
+                      right: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.9),
+                          color: const Color(0xFF10B981),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
-                          '20% OFF',
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'ENROLLED',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else ...[
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
+                    if ((course.price ?? 0) > 0)
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '20% OFF',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
               Expanded(
@@ -1420,67 +1467,92 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ],
                       ),
                       const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if ((course.price ?? 0) > 0)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFF9CA3AF),
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
+                      if (isEnrolled)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Continue Learning',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                Text(
-                                  'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF0F766E),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            const Text(
-                              'FREE',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF10B981),
                               ),
-                            ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
-                                  size: 10,
-                                  color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                              SizedBox(width: 6),
+                              Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
+                            ],
+                          ),
+                        )
+                      else
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if ((course.price ?? 0) > 0)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF9CA3AF),
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                  Text(
+                                    'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF0F766E),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              const Text(
+                                'FREE',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF10B981),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                                    size: 10,
                                     color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -1491,9 +1563,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
-
   Widget _buildResponsivePopularCourses(
-      BuildContext context, List<Course> popularCourses) {
+      BuildContext context, List<Course> popularCourses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
@@ -1530,7 +1601,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           itemCount: popularCourses.take(crossAxisCount * 2).length,
           itemBuilder: (context, index) {
-            return _buildCourseCardV2(context, popularCourses[index]);
+            return _buildCourseCardV2(context, popularCourses[index], enrolledCourses);
           },
         ),
       ],
@@ -2459,3 +2530,104 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 // FIX #1 & #2: Removed the two invalid top-level stubs that were outside the class:
 //   void _showLogoutDialog(BuildContext context) {}
 //   class _navigateToCategories {}
+
+class _QuickAccessCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final Function onTap;
+
+  const _QuickAccessCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_QuickAccessCard> createState() => _QuickAccessCardState();
+}
+
+class _QuickAccessCardState extends State<_QuickAccessCard> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final scale = _isPressed ? 0.92 : (_isHovered ? 1.05 : 1.0);
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: () => widget.onTap(),
+        child: AnimatedScale(
+          scale: scale,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            decoration: BoxDecoration(
+              color: widget.color,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(_isHovered ? 0.4 : 0.3),
+                  blurRadius: _isHovered ? 16 : 12,
+                  offset: Offset(0, _isHovered ? 8 : 6),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(_isHovered ? 0.3 : 0.2),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      color: Colors.white,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -18,6 +18,7 @@ import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_v
 import 'dart:io';
 
 import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 
 // Model for notes sections
 class NotesSection {
@@ -63,10 +64,6 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   List<exam_model.Exam>? _sectionExams;
   bool _examsLoading = false;
   final ScrollController _scrollController = ScrollController();
-  final DownloadService _downloadService = DownloadService();
-  bool _isDownloading = false;
-  double _downloadProgress = 0.0;
-  Download? _currentDownload;
   
   // Section filtering variables
   List<Section> _courseSections = [];
@@ -225,12 +222,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       }
       
       final optimizedUrl = _getWindowsOptimizedUrl(videoUrl);
-      String sanitizedTitle = _sanitizeFilename(widget.lesson.title);
-      String? localPath = await _downloadService.getLocalVideoPath(sanitizedTitle);
-      
-      if (localPath == null) {
-        localPath = await _downloadService.getLocalVideoPath('lesson_${widget.lesson.id}');
-      }
+      final downloadService = ref.read(downloadServiceProvider);
+      String? localPath = await downloadService.getLocalVideoPathById(widget.lesson.id);
       
       _player = Player(configuration: const PlayerConfiguration(bufferSize: 64 * 1024 * 1024));
       
@@ -384,6 +377,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Widget _buildVideoContent() {
+    final downloadService = ref.watch(downloadServiceProvider);
+    final download = downloadService.getDownloadStatus(widget.lesson.id);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -414,33 +410,113 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           },
         ),
         const SizedBox(height: 16),
-        _buildDownloadSection(),
+        _buildDownloadSection(download),
         const SizedBox(height: 32),
       ],
     );
   }
 
-  Widget _buildDownloadSection() {
+  Widget _buildDownloadSection(Download? download) {
+    final downloadService = ref.read(downloadServiceProvider);
+    
+    bool isDownloading = download?.isDownloading ?? false;
+    double progress = download?.downloadProgress ?? 0.0;
+    DownloadStatus status = download?.status ?? DownloadStatus.pending;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.primaryGreen.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.download_for_offline_outlined, color: AppTheme.primaryGreen, size: 20),
-          const SizedBox(width: 12),
-          const Text('Available for offline viewing', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.primaryGreen)),
-          const Spacer(),
-          _isDownloading 
-            ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, value: _downloadProgress, color: AppTheme.primaryGreen))
-            : TextButton.icon(
-                onPressed: _downloadVideo,
-                icon: const Icon(Icons.download, size: 18),
-                label: const Text('Download'),
-                style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+          Row(
+            children: [
+              const Icon(Icons.download_for_offline_outlined, color: AppTheme.primaryGreen, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      status == DownloadStatus.completed 
+                          ? 'Downloaded' 
+                          : status == DownloadStatus.paused 
+                              ? 'Download Paused'
+                              : isDownloading 
+                                  ? 'Downloading...' 
+                                  : 'Available for offline viewing',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                    ),
+                    if (isDownloading || status == DownloadStatus.paused)
+                      Text(
+                        '${(progress * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(fontSize: 11, color: AppTheme.primaryGreen.withOpacity(0.7)),
+                      ),
+                  ],
+                ),
               ),
+              if (status == DownloadStatus.completed)
+                IconButton(
+                  onPressed: () => _confirmDeleteDownload(downloadService),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  tooltip: 'Delete download',
+                )
+              else if (isDownloading)
+                IconButton(
+                  onPressed: () => downloadService.pauseDownload(widget.lesson.id),
+                  icon: const Icon(Icons.pause_circle_outline, color: AppTheme.primaryGreen, size: 24),
+                  tooltip: 'Pause',
+                )
+              else if (status == DownloadStatus.paused)
+                IconButton(
+                  onPressed: () => downloadService.resumeDownload(widget.lesson.id),
+                  icon: const Icon(Icons.play_circle_outline, color: AppTheme.primaryGreen, size: 24),
+                  tooltip: 'Resume',
+                )
+              else
+                TextButton.icon(
+                  onPressed: _downloadVideo,
+                  icon: const Icon(Icons.download, size: 18),
+                  label: const Text('Download'),
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+                ),
+            ],
+          ),
+          if (isDownloading || status == DownloadStatus.paused) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                minHeight: 4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteDownload(DownloadService downloadService) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Download'),
+        content: const Text('Are you sure you want to delete this video from your device?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              downloadService.deleteDownload(widget.lesson.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
@@ -558,21 +634,18 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
   void _downloadVideo() async {
     if (_lessonContent?.videoUrl == null || _lessonContent!.videoUrl!.isEmpty) return;
-    setState(() { _isDownloading = true; _downloadProgress = 0.0; });
+    
+    final downloadService = ref.read(downloadServiceProvider);
     try {
       String sanitizedTitle = _sanitizeFilename(widget.lesson.title);
-      await _downloadService.downloadVideo(
+      await downloadService.downloadVideo(
         url: _lessonContent!.videoUrl!,
         fileName: sanitizedTitle,
         originalTitle: widget.lesson.title,
         lessonId: widget.lesson.id,
-        onProgress: (progress) {
-          if (mounted) setState(() { _downloadProgress = progress; });
-        },
       );
-      if (mounted) setState(() { _isDownloading = false; });
     } catch (e) {
-      if (mounted) setState(() { _isDownloading = false; });
+      print('Download error: $e');
     }
   }
 

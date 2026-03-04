@@ -6,6 +6,7 @@ class Download {
   final String fileName;
   final String originalTitle;
   final String localPath;
+  final String url;
   final String? error;
   double downloadProgress;
   bool isDownloading;
@@ -17,6 +18,7 @@ class Download {
     required this.fileName,
     required this.originalTitle,
     required this.localPath,
+    required this.url,
     this.error,
     required this.downloadProgress,
     required this.isDownloading,
@@ -29,6 +31,7 @@ class Download {
     String? fileName,
     String? originalTitle,
     String? localPath,
+    String? url,
     String? error,
     double? downloadProgress,
     bool? isDownloading,
@@ -40,6 +43,7 @@ class Download {
       fileName: fileName ?? this.fileName,
       originalTitle: originalTitle ?? this.originalTitle,
       localPath: localPath ?? this.localPath,
+      url: url ?? this.url,
       error: error ?? this.error,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       isDownloading: isDownloading ?? this.isDownloading,
@@ -54,6 +58,7 @@ class Download {
       fileName: json['fileName'] as String,
       originalTitle: json['originalTitle'] as String,
       localPath: json['localPath'] as String,
+      url: json['url'] as String? ?? '',
       error: json['error'] as String?,
       downloadProgress: (json['downloadProgress'] as num).toDouble(),
       isDownloading: json['isDownloading'] as bool,
@@ -68,6 +73,7 @@ class Download {
       'fileName': fileName,
       'originalTitle': originalTitle,
       'localPath': localPath,
+      'url': url,
       'error': error,
       'downloadProgress': downloadProgress,
       'isDownloading': isDownloading,

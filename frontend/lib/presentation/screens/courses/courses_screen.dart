@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -124,6 +125,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
+    
     return Scaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show through
       body: SafeArea(
@@ -145,7 +148,16 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     const SizedBox(height: 25),
                     
                     // All Courses with responsive grid
-                    _buildResponsiveAllCourses(context, _filteredCourses),
+                    enrolledCoursesAsync.when(
+                      data: (enrolledCourses) => _buildResponsiveAllCourses(context, _filteredCourses, enrolledCourses),
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (err, stack) => _buildResponsiveAllCourses(context, _filteredCourses, []),
+                    ),
                     
                     const SizedBox(height: 40),
                   ],
@@ -753,7 +765,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     );
   }
 
-  Widget _buildResponsiveAllCourses(BuildContext context, List<Course> courses) {
+  Widget _buildResponsiveAllCourses(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     if (courses.isEmpty) {
@@ -854,7 +866,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             itemCount: courses.length,
             itemBuilder: (context, index) {
               final course = courses[index];
-              return _buildResponsiveCourseCard(context, course);
+              return _buildResponsiveCourseCard(context, course, enrolledCourses);
             },
           ),
         ],
@@ -893,7 +905,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               final course = courses[index];
               return Container(
                 margin: const EdgeInsets.only(bottom: 15),
-                child: _buildCourseListItem(context, course),
+                child: _buildCourseListItem(context, course, enrolledCourses),
               );
             },
           ),
@@ -902,8 +914,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  Widget _buildResponsiveCourseCard(BuildContext context, Course course) {
+  Widget _buildResponsiveCourseCard(BuildContext context, Course course, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
     
     return Container(
       decoration: BoxDecoration(
@@ -922,7 +935,13 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
+        onTap: () {
+          if (isEnrolled) {
+            context.push('/learning/${course.id}');
+          } else {
+            CourseNavigationUtils.navigateToCourse(context, ref, course);
+          }
+        },
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         child: Padding(
           padding: EdgeInsets.all(isDesktop ? 18 : 14),
@@ -975,7 +994,37 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                               ),
                             ),
                     ),
-                    if ((course.price ?? 0) > 0)
+                    if (isEnrolled)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Colors.white, size: 10),
+                              SizedBox(width: 4),
+                              Text(
+                                'ENROLLED',
+                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if ((course.price ?? 0) > 0)
                       Positioned(
                         top: 8,
                         left: 8,
@@ -1144,7 +1193,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Enroll',
+                      isEnrolled ? 'Continue' : 'Enroll',
                       style: TextStyle(
                         color: AppTheme.whiteColor,
                         fontSize: isDesktop ? 13 : 11,
@@ -1161,7 +1210,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     );
   }
 
-  Widget _buildCourseListItem(BuildContext context, Course course) {
+  Widget _buildCourseListItem(BuildContext context, Course course, List<Course> enrolledCourses) {
+    final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
+    
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
@@ -1179,7 +1230,13 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
+        onTap: () {
+          if (isEnrolled) {
+            context.push('/learning/${course.id}');
+          } else {
+            CourseNavigationUtils.navigateToCourse(context, ref, course);
+          }
+        },
         borderRadius: BorderRadius.circular(15),
         child: Padding(
           padding: const EdgeInsets.all(15),
@@ -1231,7 +1288,20 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                               ),
                             ),
                     ),
-                    if ((course.price ?? 0) > 0)
+                    if (isEnrolled)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 10),
+                        ),
+                      )
+                    else if ((course.price ?? 0) > 0)
                       Positioned(
                         top: 4,
                         left: 4,
@@ -1396,9 +1466,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'Enroll',
-                      style: TextStyle(
+                    child: Text(
+                      isEnrolled ? 'Continue' : 'Enroll',
+                      style: const TextStyle(
                         color: AppTheme.whiteColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

@@ -138,6 +138,21 @@ class CourseNavigationUtils {
     Course course,
   ) async {
     try {
+      print('Smart navigation for course (context method): ${course.id}');
+      
+      // First check enrollment status
+      final isEnrolled = await ref.read(isEnrolledInCourseProvider(course.id).future);
+      print('Enrollment check result (context method): $isEnrolled');
+      
+      if (isEnrolled) {
+        // If already enrolled, go directly to modern learning screen
+        print('✅ User already enrolled - navigating to modern learning screen');
+        if (context.mounted) {
+          context.push('/learning/${course.id}');
+        }
+        return;
+      }
+
       print('🔍 Checking for pending payments (context method) for course ID: ${course.id}');
       final hasPendingPayment = await ref.read(hasPendingPaymentProvider(course.id).future);
       
@@ -160,6 +175,7 @@ class CourseNavigationUtils {
         }
       }
     } catch (e) {
+      print('Error in context-based navigation: $e');
       if (context.mounted) {
         context.push('/course/${course.id}');
       }

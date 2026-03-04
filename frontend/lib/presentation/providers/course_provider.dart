@@ -43,12 +43,6 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
   return result;
 });
 
-final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
-  // Fetch courses the user is enrolled in using the enrollment repository
-  final enrollmentRepository = ref.read(enrollmentRepositoryProvider);
-  return await enrollmentRepository.getEnrolledCourses();
-});
-
 final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
   final enrollmentRepository = ref.read(enrollmentRepositoryProvider);
   return await enrollmentRepository.getEnrollments();

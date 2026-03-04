@@ -5,14 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
+import 'package:flutter/foundation.dart';
 
-class DownloadService {
+class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
   factory DownloadService() => _instance;
   DownloadService._internal();
 
   final Dio _dio = Dio();
   final Map<String, Download> _downloads = {}; // Key: lessonId
+  final Map<String, CancelToken> _cancelTokens = {}; // Key: lessonId
   static const String _downloadsKey = 'downloaded_videos';
 
   // Initialize the service and load persisted downloads
@@ -51,6 +53,7 @@ class DownloadService {
                 fileName: fileName,
                 originalTitle: fileName, // We don't have the original title
                 localPath: file.path,
+                url: '', // Unknown URL for scanned files
                 downloadProgress: 1.0,
                 isDownloading: false,
                 status: DownloadStatus.completed,
@@ -63,6 +66,7 @@ class DownloadService {
         if (_downloads.isNotEmpty) {
           await _saveDownloadsToStorage();
           print('Created records for ${_downloads.length} existing downloads');
+          notifyListeners();
         }
       }
     } catch (e) {
@@ -105,12 +109,19 @@ class DownloadService {
           // Verify the file still exists before adding to memory
           final file = File(download.localPath);
           if (await file.exists()) {
-            _downloads[download.lessonId] = download;
+            // Reset isDownloading status on load
+            _downloads[download.lessonId] = download.copyWith(
+              isDownloading: false,
+              status: download.status == DownloadStatus.downloading 
+                  ? DownloadStatus.paused 
+                  : download.status,
+            );
           } else {
             // File doesn't exist anymore, remove from storage
             await _removeDownloadFromStorage(download.lessonId);
           }
         }
+        notifyListeners();
       }
     } catch (e) {
       print('Error loading downloads from storage: $e');
@@ -137,6 +148,7 @@ class DownloadService {
     try {
       _downloads.remove(lessonId);
       await _saveDownloadsToStorage();
+      notifyListeners();
     } catch (e) {
       print('Error removing download from storage: $e');
     }
@@ -148,13 +160,13 @@ class DownloadService {
     return directory.path;
   }
 
-  // Download video with progress tracking
+  // Download video with progress tracking and pause/resume support
   Future<String> downloadVideo({
     required String url,
     required String fileName,
     required String originalTitle,
     required String lessonId,
-    required Function(double) onProgress,
+    Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
@@ -169,92 +181,159 @@ class DownloadService {
       final filePath = p.join(directory, "$fileName.mp4");
       print('File path: $filePath');
   
-      // Check if file already exists
+      // Check if file already exists and is complete
       final file = File(filePath);
-      print('Checking if file exists: ${await file.exists()}');
       if (await file.exists()) {
-        print('File already exists, creating/updating download record');
-        // File exists, create/update download record
-        final download = Download(
-          id: lessonId,
-          lessonId: lessonId,
-          fileName: fileName,
-          originalTitle: originalTitle,
-          localPath: filePath,
-          downloadProgress: 1.0,
-          isDownloading: false,
-          status: DownloadStatus.completed,
-        );
-        _downloads[lessonId] = download;
-        await _saveDownloadsToStorage();
-        // Simulate progress callbacks for UI consistency
-        onProgress(0.0);
-        await Future.delayed(const Duration(milliseconds: 100));
-        onProgress(0.5);
-        await Future.delayed(const Duration(milliseconds: 100));
-        onProgress(1.0);
-        onSuccess?.call();
-        return filePath;
+        final download = _downloads[lessonId];
+        if (download != null && download.status == DownloadStatus.completed) {
+          print('File already exists and is complete');
+          onProgress?.call(1.0);
+          onSuccess?.call();
+          return filePath;
+        }
       }
-  
-      // Create download record
+
+      // Check for partial download
+      int downloadedBytes = 0;
+      if (await file.exists()) {
+        downloadedBytes = await file.length();
+      }
+
+      // Create/Update download record
       final download = Download(
         id: lessonId,
         lessonId: lessonId,
         fileName: fileName,
         originalTitle: originalTitle,
         localPath: filePath,
-        downloadProgress: 0.0,
+        url: url,
+        downloadProgress: _downloads[lessonId]?.downloadProgress ?? 0.0,
         isDownloading: true,
         status: DownloadStatus.downloading,
       );
       _downloads[lessonId] = download;
-      print('Created download record');
-      await _saveDownloadsToStorage(); // Save to persistent storage
-      print('Saved download record to storage');
-  
-      print('Starting actual download with Dio');
-      await _dio.download(
-        url,
-        filePath,
-        onReceiveProgress: (received, total) async {
-          print('Dio progress callback called: received=$received, total=$total');
-          if (total != -1) {
-            double progress = received / total;
-            print('Download service progress: ${(progress * 100).round()}%');
-            download.downloadProgress = progress;
-            onProgress(progress);
-              
-            // Update download record with current progress
-            _downloads[lessonId] = download.copyWith(
-              downloadProgress: progress,
-            );
-            // Save progress to persistent storage
-            await _saveDownloadsToStorage();
-          }
-        },
-      );
+      notifyListeners();
+      await _saveDownloadsToStorage();
+
+      final cancelToken = CancelToken();
+      _cancelTokens[lessonId] = cancelToken;
+
+      print('Starting actual download with Dio. Range: bytes=$downloadedBytes-');
+      
+      try {
+        final response = await _dio.get<ResponseBody>(
+          url,
+          options: Options(
+            responseType: ResponseType.stream,
+            followRedirects: true,
+            validateStatus: (status) => status == 200 || status == 206,
+            headers: {
+              if (downloadedBytes > 0) 'range': 'bytes=$downloadedBytes-',
+            },
+          ),
+          cancelToken: cancelToken,
+        );
+
+        final File file = File(filePath);
         
-      print('Download completed successfully');
-      // Update download status
-      _downloads[lessonId] = download.copyWith(
-        isDownloading: false,
-        status: DownloadStatus.completed,
-      );
-      await _saveDownloadsToStorage(); // Save to persistent storage
-      onSuccess?.call();
-  
-      return filePath;
+        // If we requested a range but got 200 (Full Content), it means the server 
+        // doesn't support Range or the file changed. We must restart from 0.
+        bool isResuming = downloadedBytes > 0 && response.statusCode == 206;
+        int currentReceived = isResuming ? downloadedBytes : 0;
+        
+        final IOSink raf = file.openWrite(mode: isResuming ? FileMode.append : FileMode.write);
+
+        try {
+          int? contentLength = int.tryParse(response.headers.value('content-length') ?? '-1');
+          int actualTotal = (contentLength != null && contentLength != -1) ? (contentLength + currentReceived) : -1;
+
+          await response.data!.stream.listen(
+            (List<int> chunk) {
+              raf.add(chunk);
+              currentReceived += chunk.length;
+
+              if (actualTotal != -1) {
+                double progress = currentReceived / actualTotal;
+                
+                if (progress > (download.downloadProgress + 0.01) || progress >= 1.0) {
+                  download.downloadProgress = progress;
+                  _downloads[lessonId] = download.copyWith(downloadProgress: progress);
+                  onProgress?.call(progress);
+                  notifyListeners();
+                  _saveDownloadsToStorage(); // Fire and forget save for progress
+                }
+              }
+            },
+            onError: (e) {
+              // If it's a cancellation, we don't want to rethrow as an error that marks download as failed
+              if (CancelToken.isCancel(e)) return;
+              throw e;
+            },
+            cancelOnError: true,
+          ).asFuture();
+        } finally {
+          await raf.close();
+        }
+    
+        print('Download completed successfully');
+        _downloads[lessonId] = download.copyWith(
+          isDownloading: false,
+          downloadProgress: 1.0,
+          status: DownloadStatus.completed,
+        );
+        _cancelTokens.remove(lessonId);
+        notifyListeners();
+        await _saveDownloadsToStorage();
+        onSuccess?.call();
+
+        return filePath;
+      } on DioException catch (e) {
+        if (CancelToken.isCancel(e)) {
+          print('Download paused: $lessonId');
+          _downloads[lessonId] = download.copyWith(
+            isDownloading: false,
+            status: DownloadStatus.paused,
+          );
+          notifyListeners();
+          await _saveDownloadsToStorage();
+          return filePath;
+        }
+        rethrow;
+      }
     } catch (e) {
       print('Download failed with error: $e');
-      _downloads[lessonId] = _downloads[lessonId]!.copyWith(
-        isDownloading: false,
-        status: DownloadStatus.failed,
-        error: e.toString(),
-      );
-      await _saveDownloadsToStorage(); // Save error state to persistent storage
+      if (_downloads.containsKey(lessonId)) {
+        _downloads[lessonId] = _downloads[lessonId]!.copyWith(
+          isDownloading: false,
+          status: DownloadStatus.failed,
+          error: e.toString(),
+        );
+        notifyListeners();
+        await _saveDownloadsToStorage();
+      }
       onError?.call(e.toString());
       rethrow;
+    }
+  }
+
+  // Pause a download
+  void pauseDownload(String lessonId) {
+    if (_cancelTokens.containsKey(lessonId)) {
+      _cancelTokens[lessonId]!.cancel();
+      _cancelTokens.remove(lessonId);
+    }
+  }
+
+  // Resume a download
+  Future<void> resumeDownload(String lessonId) async {
+    final download = _downloads[lessonId];
+    if (download != null && (download.status == DownloadStatus.paused || download.status == DownloadStatus.failed)) {
+      await downloadVideo(
+        url: download.url,
+        fileName: download.fileName,
+        originalTitle: download.originalTitle,
+        lessonId: download.lessonId,
+      );
     }
   }
 
@@ -283,14 +362,34 @@ class DownloadService {
     }
   }
 
-  // Get local file path for a downloaded video
+  // Get local file path for a downloaded video ONLY if it's fully completed
+  Future<String?> getLocalVideoPathById(String lessonId) async {
+    try {
+      final download = _downloads[lessonId];
+      if (download != null && download.status == DownloadStatus.completed) {
+        final file = File(download.localPath);
+        if (await file.exists()) {
+          return download.localPath;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get local file path for a downloaded video by filename (legacy compatibility)
   Future<String?> getLocalVideoPath(String fileName) async {
     try {
-      final directory = await _getAppDirectory();
-      final filePath = p.join(directory, "$fileName.mp4");
-      final file = File(filePath);
+      // Find download record by filename
+      final download = _downloads.values.firstWhere(
+        (d) => d.fileName == fileName && d.status == DownloadStatus.completed,
+        orElse: () => throw Exception('Not found'),
+      );
+      
+      final file = File(download.localPath);
       if (await file.exists()) {
-        return filePath;
+        return download.localPath;
       }
       return null;
     } catch (e) {
@@ -311,6 +410,8 @@ class DownloadService {
   // Delete a downloaded video
   Future<bool> deleteDownload(String lessonId) async {
     try {
+      pauseDownload(lessonId); // Ensure it's not downloading
+      
       final download = _downloads[lessonId];
       if (download != null) {
         final file = File(download.localPath);

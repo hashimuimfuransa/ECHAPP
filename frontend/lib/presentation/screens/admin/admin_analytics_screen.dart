@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';

@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_notification_provider.dart';
 import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
