@@ -38,6 +38,28 @@ const platformSettingsSchema = new mongoose.Schema({
     description: { type: String, default: '' },
     contactEmail: { type: String, default: '' },
     contactPhone: { type: String, default: '' }
+  },
+  userManagement: {
+    allowRegistration: { type: Boolean, default: true },
+    requireEmailVerification: { type: Boolean, default: true },
+    defaultUserRole: { type: String, default: 'Student' }
+  },
+  contentModeration: {
+    requireManualCourseApproval: { type: Boolean, default: true },
+    autoFilterSpam: { type: Boolean, default: true },
+    allowCommentsOnCourses: { type: Boolean, default: true }
+  },
+  notifications: {
+    enabled: { type: Boolean, default: true },
+    email: { type: Boolean, default: true },
+    push: { type: Boolean, default: false }
+  },
+  appearance: {
+    theme: { type: String, default: 'Light' }
+  },
+  dataManagement: {
+    autoSync: { type: Boolean, default: true },
+    syncInterval: { type: Number, default: 30 }
   }
 }, {
   timestamps: true

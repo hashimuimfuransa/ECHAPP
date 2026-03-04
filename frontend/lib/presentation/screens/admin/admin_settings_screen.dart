@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import '../../../models/platform_settings.dart';
+import '../../providers/platform_settings_provider.dart';
 
-class AdminSettingsScreen extends StatefulWidget {
+class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
 
   @override
-  State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
+  ConsumerState<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
 }
 
-class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
+class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   // Settings state
   bool _notificationsEnabled = true;
   bool _emailNotifications = true;
@@ -17,9 +20,23 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   String _selectedTheme = 'Light';
   bool _autoSyncEnabled = true;
   int _autoSyncInterval = 30; // minutes
+  bool _isInitialized = false;
+
+  void _initialize(PlatformSettings settings) {
+    if (_isInitialized) return;
+    _notificationsEnabled = settings.notifications.enabled;
+    _emailNotifications = settings.notifications.email;
+    _pushNotifications = settings.notifications.push;
+    _selectedTheme = settings.appearance.theme;
+    _autoSyncEnabled = settings.dataManagement.autoSync;
+    _autoSyncInterval = settings.dataManagement.syncInterval;
+    _isInitialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final settingsAsync = ref.watch(platformSettingsProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: context.canPop() ? IconButton(
@@ -31,73 +48,76 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Platform Configuration',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Manage your admin panel preferences and platform settings',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.greyColor,
-              ),
-            ),
-            const SizedBox(height: 30),
-            
-            // Notifications Section
-            _buildSection(
-              title: 'Notifications',
-              icon: Icons.notifications,
+      body: settingsAsync.when(
+        data: (settings) {
+          _initialize(settings);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildToggleSetting(
-                  title: 'Enable Notifications',
-                  subtitle: 'Receive important platform updates',
-                  value: _notificationsEnabled,
-                  onChanged: (value) => setState(() => _notificationsEnabled = value),
+                const Text(
+                  'Platform Configuration',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.blackColor,
+                  ),
                 ),
-                const SizedBox(height: 15),
-                _buildToggleSetting(
-                  title: 'Email Notifications',
-                  subtitle: 'Send notifications via email',
-                  value: _emailNotifications,
-                  onChanged: (value) => setState(() => _emailNotifications = value),
+                const SizedBox(height: 10),
+                const Text(
+                  'Manage your admin panel preferences and platform settings',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.greyColor,
+                  ),
                 ),
-                const SizedBox(height: 15),
-                _buildToggleSetting(
-                  title: 'Push Notifications',
-                  subtitle: 'Show push notifications on device',
-                  value: _pushNotifications,
-                  onChanged: (value) => setState(() => _pushNotifications = value),
+                const SizedBox(height: 30),
+                
+                // Notifications Section
+                _buildSection(
+                  title: 'Notifications',
+                  icon: Icons.notifications,
+                  children: [
+                    _buildToggleSetting(
+                      title: 'Enable Notifications',
+                      subtitle: 'Receive important platform updates',
+                      value: _notificationsEnabled,
+                      onChanged: (value) => setState(() => _notificationsEnabled = value),
+                    ),
+                    const SizedBox(height: 15),
+                    _buildToggleSetting(
+                      title: 'Email Notifications',
+                      subtitle: 'Send notifications via email',
+                      value: _emailNotifications,
+                      onChanged: (value) => setState(() => _emailNotifications = value),
+                    ),
+                    const SizedBox(height: 15),
+                    _buildToggleSetting(
+                      title: 'Push Notifications',
+                      subtitle: 'Show push notifications on device',
+                      value: _pushNotifications,
+                      onChanged: (value) => setState(() => _pushNotifications = value),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            
-            const SizedBox(height: 30),
-            
-            // Appearance Section
-            _buildSection(
-              title: 'Appearance',
-              icon: Icons.brush,
-              children: [
-                _buildDropdownSetting(
-                  title: 'Theme',
-                  subtitle: 'Choose your preferred theme',
-                  value: _selectedTheme,
-                  items: ['Light', 'Dark', 'System'],
-                  onChanged: (value) => setState(() => _selectedTheme = value!),
+                
+                const SizedBox(height: 30),
+                
+                // Appearance Section
+                _buildSection(
+                  title: 'Appearance',
+                  icon: Icons.brush,
+                  children: [
+                    _buildDropdownSetting(
+                      title: 'Theme',
+                      subtitle: 'Choose your preferred theme',
+                      value: _selectedTheme,
+                      items: ['Light', 'Dark', 'System'],
+                      onChanged: (value) => setState(() => _selectedTheme = value!),
+                    ),
+                  ],
                 ),
-              ],
-            ),
             
             const SizedBox(height: 30),
             
@@ -133,39 +153,31 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               icon: Icons.settings_applications,
               children: [
                 _buildSettingTile(
+                  title: 'General Settings',
+                  subtitle: 'Configure platform name, description and contact info',
+                  icon: Icons.info_outline,
+                  onTap: () => context.push('/admin/settings/general'),
+                ),
+                const SizedBox(height: 15),
+                _buildSettingTile(
                   title: 'Payment Configuration',
                   subtitle: 'Configure payment gateways and methods',
                   icon: Icons.payment,
-                  onTap: () {
-                    // TODO: Navigate to payment settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Payment settings coming soon')),
-                    );
-                  },
+                  onTap: () => context.push('/admin/settings/payments'),
                 ),
                 const SizedBox(height: 15),
                 _buildSettingTile(
                   title: 'User Management',
                   subtitle: 'Configure user roles and permissions',
                   icon: Icons.people,
-                  onTap: () {
-                    // TODO: Navigate to user management settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('User management settings coming soon')),
-                    );
-                  },
+                  onTap: () => context.push('/admin/settings/users'),
                 ),
                 const SizedBox(height: 15),
                 _buildSettingTile(
                   title: 'Content Moderation',
                   subtitle: 'Set content review and approval policies',
                   icon: Icons.security,
-                  onTap: () {
-                    // TODO: Navigate to content moderation settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Content moderation settings coming soon')),
-                    );
-                  },
+                  onTap: () => context.push('/admin/settings/moderation'),
                 ),
               ],
             ),
@@ -568,32 +580,36 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  void _saveSettings() {
-    // TODO: Save settings to backend
-    // final settings = {
-    //   'notifications': {
-    //     'enabled': _notificationsEnabled,
-    //     'email': _emailNotifications,
-    //     'push': _pushNotifications,
-    //   },
-    //   'appearance': {
-    //     'theme': _selectedTheme,
-    //   },
-    //   'dataManagement': {
-    //     'autoSync': _autoSyncEnabled,
-    //     'syncInterval': _autoSyncInterval,
-    //   }
-    // };
-    // 
-    // // Save to backend API
-    // // await apiService.saveAdminSettings(settings);
+  void _saveSettings() async {
+    final notifier = ref.read(platformSettingsProvider.notifier);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Settings saved successfully'),
-        backgroundColor: Colors.green,
-      ),
+    final newNotifications = NotificationSettings(
+      enabled: _notificationsEnabled,
+      email: _emailNotifications,
+      push: _pushNotifications,
     );
+    
+    final newAppearance = AppearanceSettings(theme: _selectedTheme);
+    
+    final newDataManagement = DataManagementSettings(
+      autoSync: _autoSyncEnabled,
+      syncInterval: _autoSyncInterval,
+    );
+    
+    final successNotifications = await notifier.updateNotificationSettings(newNotifications);
+    final successAppearance = await notifier.updateAppearanceSettings(newAppearance);
+    final successData = await notifier.updateDataManagementSettings(newDataManagement);
+    
+    final success = successNotifications && successAppearance && successData;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Settings saved successfully' : 'Failed to save some settings'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   void _confirmDataReset() {

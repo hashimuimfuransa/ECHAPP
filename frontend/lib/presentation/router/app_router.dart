@@ -36,6 +36,10 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics
 import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_exams_review_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_notifications_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_payment_settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_general_settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt_settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
@@ -247,6 +251,22 @@ class AppRouter {
           GoRoute(
             path: '/admin/settings',
             builder: (context, state) => const AdminSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/settings/payments',
+            builder: (context, state) => const AdminPaymentSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/settings/general',
+            builder: (context, state) => const AdminGeneralSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/settings/users',
+            builder: (context, state) => const AdminUserManagementSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/settings/moderation',
+            builder: (context, state) => const AdminContentModerationSettingsScreen(),
           ),
           GoRoute(
             path: '/admin/analytics',
