@@ -6,6 +6,7 @@ class Course {
   final String description;
   final double? price;
   final int duration;
+  final String durationUnit;
   final String level;
   final String? thumbnail;
   final bool isPublished;
@@ -15,6 +16,8 @@ class Course {
   final DateTime createdAt;
   final List<String>? learningObjectives;
   final List<String>? requirements;
+  final int? accessDuration;
+  final String? accessDurationUnit;
   final int? accessDurationDays;
   final int? enrollmentCount;
   final double? averageRating;
@@ -25,6 +28,7 @@ class Course {
     required this.description,
     this.price,
     required this.duration,
+    this.durationUnit = 'minutes',
     required this.level,
     this.thumbnail,
     required this.isPublished,
@@ -34,6 +38,8 @@ class Course {
     required this.createdAt,
     this.learningObjectives,
     this.requirements,
+    this.accessDuration,
+    this.accessDurationUnit,
     this.accessDurationDays,
     this.enrollmentCount,
     this.averageRating,
@@ -57,6 +63,7 @@ class Course {
       description: _getStringValue(json['description']) ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       duration: json['duration'] as int? ?? 0,
+      durationUnit: _getStringValue(json['durationUnit']) ?? 'minutes',
       level: _getStringValue(json['level']) ?? 'Beginner',
       thumbnail: _getStringValue(json['thumbnail']),
       isPublished: json['isPublished'] as bool? ?? false,
@@ -76,6 +83,8 @@ class Course {
       requirements: json['requirements'] is List
           ? List<String>.from((json['requirements'] as List).map((e) => _getStringValue(e) ?? '').toList())
           : null,
+      accessDuration: json['accessDuration'] as int?,
+      accessDurationUnit: _getStringValue(json['accessDurationUnit']),
       accessDurationDays: json['accessDurationDays'] as int?,
       enrollmentCount: json['enrollmentCount'] as int? ?? 0,
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
@@ -89,6 +98,7 @@ class Course {
       'description': description,
       'price': price,
       'duration': duration,
+      'durationUnit': durationUnit,
       'level': level,
       'thumbnail': thumbnail,
       'isPublished': isPublished,
@@ -98,6 +108,8 @@ class Course {
       'createdAt': createdAt.toIso8601String(),
       'learningObjectives': learningObjectives,
       'requirements': requirements,
+      'accessDuration': accessDuration,
+      'accessDurationUnit': accessDurationUnit,
       'accessDurationDays': accessDurationDays,
       'enrollmentCount': enrollmentCount,
       'averageRating': averageRating,

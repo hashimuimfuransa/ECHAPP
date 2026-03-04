@@ -104,12 +104,15 @@ class CourseService {
     required String description,
     required double price,
     required int duration,
+    String? durationUnit,
     required String level,
     String? thumbnail,
     String? categoryId,
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDuration,
+    String? accessDurationUnit,
     int? accessDurationDays,
   }) async {
     try {
@@ -118,12 +121,15 @@ class CourseService {
         'description': description,
         'price': price,
         'duration': duration,
+        'durationUnit': durationUnit ?? 'minutes',
         'level': level,
         if (thumbnail != null) 'thumbnail': thumbnail,
         if (categoryId != null) 'categoryId': categoryId,
         if (isPublished != null) 'isPublished': isPublished,
         if (learningObjectives != null) 'learningObjectives': learningObjectives,
         if (requirements != null) 'requirements': requirements,
+        if (accessDuration != null) 'accessDuration': accessDuration,
+        if (accessDurationUnit != null) 'accessDurationUnit': accessDurationUnit,
         if (accessDurationDays != null) 'accessDurationDays': accessDurationDays,
       };
 
@@ -153,12 +159,15 @@ class CourseService {
     String? description,
     double? price,
     int? duration,
+    String? durationUnit,
     String? level,
     String? thumbnail,
     String? categoryId,
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDuration,
+    String? accessDurationUnit,
     int? accessDurationDays,
   }) async {
     try {
@@ -167,12 +176,15 @@ class CourseService {
         if (description != null) 'description': description,
         if (price != null) 'price': price,
         if (duration != null) 'duration': duration,
+        if (durationUnit != null) 'durationUnit': durationUnit,
         if (level != null) 'level': level,
         if (thumbnail != null) 'thumbnail': thumbnail,
         if (categoryId != null) 'categoryId': categoryId,
         if (isPublished != null) 'isPublished': isPublished,
         if (learningObjectives != null) 'learningObjectives': learningObjectives,
         if (requirements != null) 'requirements': requirements,
+        if (accessDuration != null) 'accessDuration': accessDuration,
+        if (accessDurationUnit != null) 'accessDurationUnit': accessDurationUnit,
         if (accessDurationDays != null) 'accessDurationDays': accessDurationDays,
       };
 

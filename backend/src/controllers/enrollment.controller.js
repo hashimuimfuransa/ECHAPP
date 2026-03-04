@@ -50,7 +50,31 @@ const enrollInCourse = async (req, res) => {
 
     // Calculate access expiration date based on course duration
     let accessExpirationDate = null;
-    if (course.accessDurationDays) {
+    if (course.accessDuration) {
+      accessExpirationDate = new Date();
+      const unit = course.accessDurationUnit || 'days';
+      const value = course.accessDuration;
+      
+      switch (unit) {
+        case 'hours':
+          accessExpirationDate.setHours(accessExpirationDate.getHours() + value);
+          break;
+        case 'days':
+          accessExpirationDate.setDate(accessExpirationDate.getDate() + value);
+          break;
+        case 'weeks':
+          accessExpirationDate.setDate(accessExpirationDate.getDate() + (value * 7));
+          break;
+        case 'months':
+          accessExpirationDate.setMonth(accessExpirationDate.getMonth() + value);
+          break;
+        case 'years':
+          accessExpirationDate.setFullYear(accessExpirationDate.getFullYear() + value);
+          break;
+        default:
+          accessExpirationDate.setDate(accessExpirationDate.getDate() + value);
+      }
+    } else if (course.accessDurationDays) {
       accessExpirationDate = new Date();
       accessExpirationDate.setDate(accessExpirationDate.getDate() + course.accessDurationDays);
     }

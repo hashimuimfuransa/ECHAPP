@@ -121,7 +121,11 @@ const getCourseById = async (req, res) => {
 // Create course (admin only)
 const createCourse = async (req, res) => {
   try {
-    const { title, description, price, duration, level, thumbnail, categoryId, accessDurationDays } = req.body;
+    const { 
+      title, description, price, duration, durationUnit, 
+      level, thumbnail, categoryId, 
+      accessDuration, accessDurationUnit, accessDurationDays 
+    } = req.body;
     
     // Validate required fields
     if (!title || !title.trim()) {
@@ -149,10 +153,40 @@ const createCourse = async (req, res) => {
       description: description.trim(),
       price: parsedPrice,
       duration: parsedDuration,
+      durationUnit: durationUnit || 'minutes',
       level,
       thumbnail: thumbnail || null, // Ensure thumbnail is null if not provided
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      accessDuration: accessDuration || null,
+      accessDurationUnit: accessDurationUnit || 'days'
     };
+    
+    // Calculate accessDurationDays for backward compatibility
+    if (accessDuration) {
+      const value = parseInt(accessDuration);
+      const unit = accessDurationUnit || 'days';
+      let days = value;
+      
+      switch (unit) {
+        case 'hours':
+          days = value / 24;
+          break;
+        case 'weeks':
+          days = value * 7;
+          break;
+        case 'months':
+          days = value * 30; // Approximation
+          break;
+        case 'years':
+          days = value * 365; // Approximation
+          break;
+      }
+      courseData.accessDurationDays = Math.ceil(days);
+    } else if (accessDurationDays !== undefined) {
+      courseData.accessDurationDays = accessDurationDays === null || accessDurationDays === '' ? null : parseInt(accessDurationDays);
+      courseData.accessDuration = courseData.accessDurationDays;
+      courseData.accessDurationUnit = 'days';
+    }
     
     // Add learning objectives and requirements if provided
     if (req.body.learningObjectives && Array.isArray(req.body.learningObjectives)) {
@@ -165,11 +199,6 @@ const createCourse = async (req, res) => {
     // Add category if provided
     if (categoryId) {
       courseData.category = categoryId;
-    }
-    
-    // Add access duration if provided
-    if (accessDurationDays !== undefined) {
-      courseData.accessDurationDays = parseInt(accessDurationDays);
     }
     
     const course = await Course.create(courseData);
@@ -213,9 +242,33 @@ const updateCourse = async (req, res) => {
     // Prepare update data
     const updateData = { ...req.body };
     
-    // Handle accessDurationDays separately to ensure proper parsing
-    if (req.body.accessDurationDays !== undefined) {
+    // Calculate accessDurationDays for backward compatibility if accessDuration is updated
+    if (req.body.accessDuration) {
+      const value = parseInt(req.body.accessDuration);
+      const unit = req.body.accessDurationUnit || 'days';
+      let days = value;
+      
+      switch (unit) {
+        case 'hours':
+          days = value / 24;
+          break;
+        case 'weeks':
+          days = value * 7;
+          break;
+        case 'months':
+          days = value * 30; // Approximation
+          break;
+        case 'years':
+          days = value * 365; // Approximation
+          break;
+      }
+      updateData.accessDurationDays = Math.ceil(days);
+    } else if (req.body.accessDurationDays !== undefined) {
       updateData.accessDurationDays = req.body.accessDurationDays === null || req.body.accessDurationDays === '' ? null : parseInt(req.body.accessDurationDays);
+      if (updateData.accessDurationDays) {
+        updateData.accessDuration = updateData.accessDurationDays;
+        updateData.accessDurationUnit = 'days';
+      }
     }
     
     const course = await Course.findByIdAndUpdate(

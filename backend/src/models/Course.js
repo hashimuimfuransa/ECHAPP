@@ -22,6 +22,11 @@ const courseSchema = new mongoose.Schema({
     required: [true, 'Duration is required'],
     min: [0, 'Duration cannot be negative']
   },
+  durationUnit: {
+    type: String,
+    enum: ['minutes', 'hours', 'days', 'weeks', 'months'],
+    default: 'minutes'
+  },
   level: {
     type: String,
     required: [true, 'Level is required'],
@@ -54,6 +59,16 @@ const courseSchema = new mongoose.Schema({
   requirements: [{
     type: String
   }],
+  accessDuration: {
+    type: Number,
+    default: null, // null means unlimited access
+    min: [1, 'Access duration must be at least 1']
+  },
+  accessDurationUnit: {
+    type: String,
+    enum: ['hours', 'days', 'weeks', 'months', 'years'],
+    default: 'days'
+  },
   accessDurationDays: {
     type: Number,
     default: null, // null means unlimited access

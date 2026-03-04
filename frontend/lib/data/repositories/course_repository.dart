@@ -21,12 +21,15 @@ class CourseRepository {
     required String description,
     required double price,
     required int duration,
+    String? durationUnit,
     required String level,
     String? thumbnail,
     String? categoryId,
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDuration,
+    String? accessDurationUnit,
     int? accessDurationDays,
   }) async {
     return await _courseService.createCourse(
@@ -34,12 +37,15 @@ class CourseRepository {
       description: description,
       price: price,
       duration: duration,
+      durationUnit: durationUnit,
       level: level,
       thumbnail: thumbnail,
       categoryId: categoryId,
       isPublished: isPublished,
       learningObjectives: learningObjectives,
       requirements: requirements,
+      accessDuration: accessDuration,
+      accessDurationUnit: accessDurationUnit,
       accessDurationDays: accessDurationDays,
     );
   }
@@ -50,12 +56,15 @@ class CourseRepository {
     String? description,
     double? price,
     int? duration,
+    String? durationUnit,
     String? level,
     String? thumbnail,
     String? categoryId,
     bool? isPublished,
     List<String>? learningObjectives,
     List<String>? requirements,
+    int? accessDuration,
+    String? accessDurationUnit,
     int? accessDurationDays,
   }) async {
     return await _courseService.updateCourse(
@@ -64,12 +73,15 @@ class CourseRepository {
       description: description,
       price: price,
       duration: duration,
+      durationUnit: durationUnit,
       level: level,
       thumbnail: thumbnail,
       categoryId: categoryId,
       isPublished: isPublished,
       learningObjectives: learningObjectives,
       requirements: requirements,
+      accessDuration: accessDuration,
+      accessDurationUnit: accessDurationUnit,
       accessDurationDays: accessDurationDays,
     );
   }

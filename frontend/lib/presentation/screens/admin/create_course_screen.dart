@@ -35,6 +35,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   bool _isPublished = false; // Add publish status
   String? _selectedCategoryId;
   String _selectedLevel = 'beginner';
+  String _selectedDurationUnit = 'minutes';
+  String _selectedAccessDurationUnit = 'days';
   String? _thumbnailUrl;
   File? _selectedImage;
   bool _isUploadingImage = false;
@@ -91,6 +93,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       _descriptionController.text = course.description;
       _priceController.text = course.price.toString();
       _durationController.text = course.duration.toString();
+      _selectedDurationUnit = course.durationUnit;
       _isFree = course.price == 0.0;
       _selectedLevel = course.level.toLowerCase();
       _thumbnailUrl = course.thumbnail;
@@ -98,9 +101,13 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       _selectedCategoryId = course.category?['id'];
       _thumbnailKey = UniqueKey(); // Refresh key when loading course details
       
-      // Load access duration days if available
-      if (course.accessDurationDays != null) {
+      // Load access duration if available
+      if (course.accessDuration != null) {
+        _accessDurationController.text = course.accessDuration.toString();
+        _selectedAccessDurationUnit = course.accessDurationUnit ?? 'days';
+      } else if (course.accessDurationDays != null) {
         _accessDurationController.text = course.accessDurationDays.toString();
+        _selectedAccessDurationUnit = 'days';
       } else {
         _accessDurationController.text = '';
       }
@@ -300,7 +307,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
 
       if (_isEditing && widget.courseId != null) {
         // Update existing course
-        final accessDurationDays = _accessDurationController.text.trim().isEmpty 
+        final accessDuration = _accessDurationController.text.trim().isEmpty 
             ? null 
             : int.tryParse(_accessDurationController.text.trim());
         
@@ -310,12 +317,14 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           description: description,
           price: price,
           duration: duration,
+          durationUnit: _selectedDurationUnit,
           level: _selectedLevel,
           categoryId: _selectedCategoryId,
           thumbnail: _thumbnailUrl,
           learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
           requirements: _requirementsList.isEmpty ? null : _requirementsList,
-          accessDurationDays: accessDurationDays,
+          accessDuration: accessDuration,
+          accessDurationUnit: _selectedAccessDurationUnit,
         );
 
         if (mounted) {
@@ -329,7 +338,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
         }
       } else {
         // Create new course
-        final accessDurationDays = _accessDurationController.text.trim().isEmpty 
+        final accessDuration = _accessDurationController.text.trim().isEmpty 
             ? null 
             : int.tryParse(_accessDurationController.text.trim());
         
@@ -338,13 +347,15 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
           description: description,
           price: price,
           duration: duration,
+          durationUnit: _selectedDurationUnit,
           level: _selectedLevel,
           categoryId: _selectedCategoryId,
           thumbnail: _thumbnailUrl,
           isPublished: _isPublished, // Add publish status
           learningObjectives: _learningObjectives.isEmpty ? null : _learningObjectives,
           requirements: _requirementsList.isEmpty ? null : _requirementsList,
-          accessDurationDays: accessDurationDays,
+          accessDuration: accessDuration,
+          accessDurationUnit: _selectedAccessDurationUnit,
         );
 
         if (mounted) {
@@ -920,14 +931,18 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
               ),
             ),
             const SizedBox(height: 16),
+            
+            // Duration row
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
+                  flex: 2,
                   child: TextFormField(
                     controller: _durationController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Duration (minutes) *',
+                      labelText: 'Duration *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.schedule),
                     ),
@@ -943,11 +958,96 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 1,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedDurationUnit,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['minutes', 'hours', 'days', 'weeks', 'months']
+                        .map((unit) => DropdownMenuItem(
+                              value: unit,
+                              child: Text(unit),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedDurationUnit = value;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Access Duration row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _accessDurationController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Access Duration',
+                      hintText: 'Leave empty for unlimited',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.timer),
+                    ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final parsedValue = int.tryParse(value);
+                        if (parsedValue == null || parsedValue <= 0) {
+                          return 'Please enter a valid number';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 1,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedAccessDurationUnit,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['hours', 'days', 'weeks', 'months', 'years']
+                        .map((unit) => DropdownMenuItem(
+                              value: unit,
+                              child: Text(unit),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedAccessDurationUnit = value;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Switches row
+            Row(
+              children: [
                 Expanded(
                   child: SwitchListTile(
-                    title: const Text('Free Course'),
+                    title: const Text('Free Course', style: TextStyle(fontSize: 14)),
                     value: _isFree,
+                    contentPadding: EdgeInsets.zero,
                     onChanged: (value) {
                       setState(() {
                         _isFree = value;
@@ -960,8 +1060,9 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 ),
                 Expanded(
                   child: SwitchListTile(
-                    title: const Text('Publish Course'),
+                    title: const Text('Publish Course', style: TextStyle(fontSize: 14)),
                     value: _isPublished,
+                    contentPadding: EdgeInsets.zero,
                     onChanged: (value) {
                       setState(() {
                         _isPublished = value;
@@ -973,26 +1074,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
               ],
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _accessDurationController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Access Duration (days) - Leave empty for unlimited access',
-                hintText: 'e.g., 30, 60, 90 (Leave empty for unlimited)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.timer),
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final parsedValue = int.tryParse(value);
-                  if (parsedValue == null || parsedValue <= 0) {
-                    return 'Please enter a valid positive number of days';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+
             if (!_isFree)
               TextFormField(
                 controller: _priceController,
@@ -1003,9 +1085,14 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                   prefixIcon: Icon(Icons.attach_money),
                 ),
                 validator: (value) {
-                  // Only validate if not free and has a value
-                  if (!_isFree && value != null && value.isNotEmpty && double.tryParse(value) == null) {
-                    return 'Please enter a valid price';
+                  // Only validate if not free
+                  if (!_isFree) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid price';
+                    }
                   }
                   return null;
                 },
