@@ -7,6 +7,28 @@ const { sendSuccess, sendError, sendNotFound } = require('../utils/response.util
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
 
+// Helper function to send notifications when a course is published
+const sendCourseNotifications = async (course) => {
+  try {
+    // 1. Send emails to all active users
+    const users = await User.find({ isActive: true }, 'fullName email');
+    if (users.length > 0) {
+      await emailService.sendNewCourseEmail(users, course);
+      console.log(`New course email sent to ${users.length} users for course: ${course.title}`);
+    }
+    
+    // 2. Send push notification to topic
+    await notificationController.sendPushToTopic(
+      'courses',
+      'New Course Available!',
+      `New course "${course.title}" is now available. Check it out!`,
+      { route: '/course/' + course._id, id: course._id.toString() }
+    );
+  } catch (error) {
+    console.error('Error sending course notifications:', error);
+  }
+};
+
 // Get all courses
 const getCourses = async (req, res) => {
   try {
@@ -209,24 +231,7 @@ const createCourse = async (req, res) => {
 
     // If the course is published, send notification email and push notification
     if (populatedCourse.isPublished) {
-      try {
-        // 1. Send emails
-        const users = await User.find({ isActive: true }, 'fullName email');
-        if (users.length > 0) {
-          await emailService.sendNewCourseEmail(users, populatedCourse);
-          console.log(`New course email sent to ${users.length} users for course: ${populatedCourse.title}`);
-        }
-        
-        // 2. Send push notification to topic (Professional way)
-        await notificationController.sendPushToTopic(
-          'courses',
-          'New Course Available!',
-          `New course "${populatedCourse.title}" is now available. Check it out!`,
-          { route: '/course/' + populatedCourse._id, id: populatedCourse._id.toString() }
-        );
-      } catch (error) {
-        console.error('Error sending new course notifications:', error);
-      }
+      await sendCourseNotifications(populatedCourse);
     }
 
     sendSuccess(res, populatedCourse, 'Course created successfully', 201);
@@ -271,6 +276,15 @@ const updateCourse = async (req, res) => {
       }
     }
     
+    // Check if isPublished is being changed from false to true
+    const oldCourse = await Course.findById(req.params.id);
+    if (!oldCourse) {
+      return sendNotFound(res, 'Course not found');
+    }
+    
+    const wasPublished = oldCourse.isPublished;
+    const isNowPublished = req.body.isPublished === true || req.body.isPublished === 'true';
+
     const course = await Course.findByIdAndUpdate(
       req.params.id,
       updateData,
@@ -279,6 +293,11 @@ const updateCourse = async (req, res) => {
     
     if (!course) {
       return sendNotFound(res, 'Course not found');
+    }
+
+    // Trigger notifications if course was just published
+    if (!wasPublished && isNowPublished) {
+      await sendCourseNotifications(course);
     }
     
     sendSuccess(res, course, 'Course updated successfully');
