@@ -525,6 +525,7 @@ module.exports = {
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,
+  submitCourseFeedback,
   checkCourseAccess,
   downloadCertificateFile,
   verifyCertificate
