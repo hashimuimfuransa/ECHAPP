@@ -68,6 +68,7 @@ const lessonRoutes = require('./src/routes/lesson.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
 const documentRoutes = require('./src/routes/document.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
+const platformSettingsRoutes = require('./src/routes/platformSettings.routes');
 const aiChatRoutes = require('./routes/ai_chat'); // AI Chat routes
 const voiceChatRoutes = require('./routes/voice_chat'); // Voice Chat routes
 
@@ -85,6 +86,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/exam-processing', documentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/platform-settings', platformSettingsRoutes);
 app.use('/api/ai', aiChatRoutes); // AI Chat routes
 app.use('/api/voice', voiceChatRoutes); // Voice Chat routes
 

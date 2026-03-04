@@ -52,6 +52,9 @@ class ApiConfig {
   
   // Notification endpoints
   static String get notifications => '$baseUrl/notifications';
+  
+  // Platform settings endpoints
+  static String get platformSettings => '$baseUrl/platform-settings';
 }
 
 class StorageKeys {
