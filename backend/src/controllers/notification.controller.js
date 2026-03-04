@@ -594,6 +594,27 @@ NotificationController.createCourseExpirationNotification = async (userId, cours
   }
 };
 
+NotificationController.createCourseExpirationWarning = async (userId, courseTitle, daysLeft, courseId) => {
+  try {
+    const data = { courseId, type: 'course_expiration_warning', daysLeft };
+    const title = 'Course Expiring Soon! ⚠️';
+    const message = `Your access to "${courseTitle}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Complete it soon!`;
+    
+    const notification = await Notification.createNotification({
+      userId,
+      title,
+      message,
+      type: 'course',
+      data
+    });
+    
+    await notificationController.sendPushNotification(userId, title, message, data, true);
+    return notification;
+  } catch (error) {
+    console.error('Error creating expiration warning:', error);
+  }
+};
+
 NotificationController.createAchievementNotification = async (userId, achievementTitle) => {
   try {
     const data = { achievementTitle };
