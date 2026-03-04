@@ -17,6 +17,7 @@ const {
   resetUserDevice,
   toggleStudentStatus
 } = require('../controllers/admin.controller');
+const notificationController = require('../controllers/notification.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 
@@ -37,6 +38,9 @@ router.get('/payment-stats', protect, authorize('admin'), getPaymentStats);
 router.get('/exam-stats', protect, authorize('admin'), getExamStats);
 router.get('/analytics/students', protect, authorize('admin'), getStudentAnalytics);
 router.get('/analytics/course/:courseId', protect, authorize('admin'), getCourseAnalytics);
+
+// Notifications
+router.get('/notifications', protect, authorize('admin'), (req, res) => notificationController.getAdminNotifications(req, res));
 
 // Device management routes
 router.get('/students/:id/device-info', protect, authorize('admin'), getUserDeviceInfo);

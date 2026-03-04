@@ -26,6 +26,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   String? _syncMessage;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(adminDashboardProvider.notifier).loadDashboardData();
+        ref.read(adminNotificationProvider.notifier).loadNotifications();
+      }
+    });
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _checkUserRole();
@@ -70,6 +81,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(adminDashboardProvider.notifier).loadDashboardData();
+        ref.read(adminNotificationProvider.notifier).loadNotifications();
       }
     });
     
@@ -601,46 +613,46 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
           const SizedBox(width: 16),
           Consumer(
-                builder: (context, ref, child) {
-                  final notificationState = ref.watch(notificationProvider);
-                  final unreadCount = notificationState.notifications.where((n) => !n.isRead).length;
-                  
-                  return IconButton(
-                    icon: Stack(
-                      children: [
-                        const Icon(Icons.notifications_outlined, size: 24),
-                        if (unreadCount > 0)
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                unreadCount > 99 ? '99+' : unreadCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+            builder: (context, ref, child) {
+              final adminNotifications = ref.watch(adminNotificationProvider);
+              final unreadCount = adminNotifications.notifications.where((n) => !n.isRead).length;
+              
+              return IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined, size: 24),
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                      ],
-                    ),
-                    onPressed: () => _showNotificationCenter(context),
-                    tooltip: 'Notifications',
-                  );
-                },
-              ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () => _showNotificationCenter(context),
+                tooltip: 'Notifications',
+              );
+            },
+          ),
               Consumer(
                 builder: (context, ref, child) {
                   final user = ref.watch(authProvider).user;
@@ -748,212 +760,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
   
   void _showNotificationCenter(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final notificationState = ref.watch(notificationProvider);
-            final notificationNotifier = ref.read(notificationProvider.notifier);
-              
-            // Load notifications when dialog opens
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (notificationState.notifications.isEmpty && !notificationState.isLoading) {
-                notificationNotifier.loadNotifications();
-              }
-            });
-              
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: 400,
-                height: 500,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    // Header
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Notifications',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
-                      ),
-                    ),
-                      
-                    // Notifications list
-                    Expanded(
-                      child: notificationState.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : notificationState.error != null
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.error,
-                                    size: 60,
-                                    color: Colors.red,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Error loading notifications',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      notificationNotifier.loadNotifications();
-                                    },
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : notificationState.notifications.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.notifications_none,
-                                      size: 60,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'No new notifications',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: notificationState.notifications.length,
-                                itemBuilder: (context, index) {
-                                  final notification = notificationState.notifications[index];
-                                  Color iconColor = Colors.grey;
-                                  switch (notification.type) {
-                                    case 'success':
-                                      iconColor = Colors.green;
-                                      break;
-                                    case 'info':
-                                      iconColor = AppTheme.primaryGreen;
-                                      break;
-                                    case 'achievement':
-                                      iconColor = Colors.orange;
-                                      break;
-                                    case 'warning':
-                                      iconColor = Colors.orange;
-                                      break;
-                                    case 'error':
-                                      iconColor = Colors.red;
-                                      break;
-                                    default:
-                                      iconColor = AppTheme.primaryGreen;
-                                  }
-                                    
-                                  String timeAgo = _getTimeAgo(notification.timestamp);
-                                    
-                                  return ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: iconColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        notification.type == 'success' ? Icons.payment : 
-                                        notification.type == 'info' ? Icons.person_add : 
-                                        notification.type == 'achievement' ? Icons.school : 
-                                        notification.type == 'warning' ? Icons.warning : 
-                                        notification.type == 'error' ? Icons.error : 
-                                        Icons.notifications,
-                                        color: iconColor,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      notification.title,
-                                      style: TextStyle(
-                                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Text(notification.message),
-                                    trailing: Text(
-                                      timeAgo,
-                                      style: const TextStyle(color: Colors.grey),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    onTap: () {
-                                      notificationNotifier.markAsRead(notification.id);
-                                    },
-                                    tileColor: notification.isRead ? null : Colors.grey[50],
-                                  );
-                                },
-                              ),
-                    ),
-                      
-                    // Footer with mark all as read
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: notificationState.notifications.isNotEmpty ? () {
-                          notificationNotifier.markAllAsRead();
-                        } : null,
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('Mark All as Read'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGreen,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    context.push('/admin/notifications');
   }
-    
+
   String _getTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -994,6 +803,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 children: [
                   _buildMobileNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true),
+                  _buildMobileNavItem(context, 'Notifications', Icons.notifications_active_rounded, '/admin/notifications', false),
                   _buildMobileNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false),
                   _buildMobileNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false),
                   _buildMobileNavItem(context, 'Exams', Icons.quiz_rounded, '/admin/exams-review', false),

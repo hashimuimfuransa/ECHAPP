@@ -3,6 +3,7 @@ const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Section = require('../models/Section');
 const Lesson = require('../models/Lesson');
+const Notification = require('../models/Notification');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
@@ -24,6 +25,18 @@ const sendCourseNotifications = async (course) => {
       `New course "${course.title}" is now available. Check it out!`,
       { route: '/course/' + course._id, id: course._id.toString() }
     );
+
+    // 3. Create a real notification for all admins to track in their system notifications
+    const admins = await User.find({ role: 'admin' }, '_id');
+    for (const adminUser of admins) {
+      await Notification.createNotification({
+        userId: adminUser._id,
+        title: 'Course Published Successfully',
+        message: `Your course "${course.title}" has been published and notifications have been sent to all users.`,
+        type: 'course',
+        data: { courseId: course._id, severity: 'info' }
+      });
+    }
   } catch (error) {
     console.error('Error sending course notifications:', error);
   }

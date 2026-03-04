@@ -19,6 +19,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     final isCollapsed = ref.watch(sidebarProvider);
     final user = ref.watch(authProvider).user;
     final bool isAuth = user == null || currentPage == 'auth';
+    final bool isAdmin = user?.role == 'admin';
 
     final navItems = isAuth ? [
       {
@@ -44,6 +45,55 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'icon': Icons.help_outline_rounded,
         'route': '/help',
         'key': 'help'
+      },
+    ] : isAdmin ? [
+      {
+        'title': 'Dashboard',
+        'icon': Icons.dashboard_outlined,
+        'route': '/admin',
+        'key': 'dashboard'
+      },
+      {
+        'title': 'Notifications',
+        'icon': Icons.notifications_active_outlined,
+        'route': '/admin/notifications',
+        'key': 'admin-notifications'
+      },
+      {
+        'title': 'Courses',
+        'icon': Icons.school_outlined,
+        'route': '/admin/courses',
+        'key': 'courses'
+      },
+      {
+        'title': 'Students',
+        'icon': Icons.people_outline,
+        'route': '/admin/students',
+        'key': 'students'
+      },
+      {
+        'title': 'Payments',
+        'icon': Icons.payments_outlined,
+        'route': '/admin/payments',
+        'key': 'payments'
+      },
+      {
+        'title': 'Analytics',
+        'icon': Icons.analytics_outlined,
+        'route': '/admin/analytics',
+        'key': 'analytics'
+      },
+      {
+        'title': 'Profile',
+        'icon': Icons.person_outline,
+        'route': '/profile',
+        'key': 'profile'
+      },
+      {
+        'title': 'Settings',
+        'icon': Icons.settings_outlined,
+        'route': '/settings',
+        'key': 'settings'
       },
     ] : [
       {

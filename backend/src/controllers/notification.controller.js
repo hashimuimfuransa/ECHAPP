@@ -233,6 +233,133 @@ class NotificationController {
     }
   }
 
+  // Get all system notifications for admin
+  async getAdminNotifications(req, res) {
+    try {
+      const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000); // Last 48 hours for virtual notifications
+      
+      // 1. Fetch real notifications for the admin user
+      const adminNotifications = await Notification.getUserNotifications(req.user.id);
+      
+      // 2. Fetch pending payments as virtual notifications (no time limit on pending)
+      const Payment = require('../models/Payment');
+      const pendingPayments = await Payment.find({ status: 'pending' })
+        .populate('userId', 'fullName email')
+        .populate('courseId', 'title')
+        .sort({ createdAt: -1 });
+      
+      const paymentNotifications = pendingPayments.map(payment => ({
+        id: `payment_${payment._id}`,
+        title: 'Pending Payment Approval',
+        message: `${payment.userId?.fullName || 'A student'} is waiting for approval for "${payment.courseId?.title || 'a course'}" (RWF ${payment.amount.toLocaleString()})`,
+        type: 'payment',
+        isRead: false,
+        severity: 'high',
+        data: { 
+          paymentId: payment._id, 
+          userId: payment.userId?._id,
+          courseId: payment.courseId?._id 
+        },
+        timestamp: payment.createdAt,
+        isVirtual: true
+      }));
+
+      // 3. Fetch new user registrations
+      const newUsers = await User.find({ 
+        createdAt: { $gte: recentCutoff },
+        role: 'student'
+      }).sort({ createdAt: -1 });
+
+      const newUserNotifications = newUsers.map(user => ({
+        id: `user_${user._id}`,
+        title: 'New Student Registered',
+        message: `${user.fullName} (${user.email}) just joined the platform.`,
+        type: 'user',
+        isRead: false,
+        severity: 'info',
+        data: { userId: user._id },
+        timestamp: user.createdAt,
+        isVirtual: true
+      }));
+
+      // 4. Fetch recent exam submissions
+      const Result = require('../models/Result');
+      const recentResults = await Result.find({ createdAt: { $gte: recentCutoff } })
+        .populate('userId', 'fullName')
+        .populate('examId', 'title')
+        .sort({ createdAt: -1 });
+
+      const examNotifications = recentResults.map(result => ({
+        id: `exam_${result._id}`,
+        title: 'Exam Submitted',
+        message: `${result.userId?.fullName || 'A student'} submitted the exam "${result.examId?.title || 'Unknown Exam'}" with score ${result.score}/${result.totalPoints}`,
+        type: 'exam',
+        isRead: false,
+        severity: 'medium',
+        data: { resultId: result._id, userId: result.userId?._id },
+        timestamp: result.createdAt,
+        isVirtual: true
+      }));
+
+      // 5. Fetch new enrollments (paid ones that are recent)
+      const Enrollment = require('../models/Enrollment');
+      const recentEnrollments = await Enrollment.find({ 
+        createdAt: { $gte: recentCutoff },
+        paymentStatus: 'paid'
+      })
+        .populate('userId', 'fullName')
+        .populate('courseId', 'title')
+        .sort({ createdAt: -1 });
+
+      const enrollmentNotifications = recentEnrollments.map(enrollment => ({
+        id: `enrollment_${enrollment._id}`,
+        title: 'New Enrollment',
+        message: `${enrollment.userId?.fullName || 'A student'} enrolled in "${enrollment.courseId?.title || 'a course'}"`,
+        type: 'enrollment',
+        isRead: false,
+        severity: 'info',
+        data: { enrollmentId: enrollment._id, userId: enrollment.userId?._id },
+        timestamp: enrollment.createdAt,
+        isVirtual: true
+      }));
+
+      // 6. Combine and sort
+      const allNotifications = [
+        ...adminNotifications.map(n => ({
+          id: n._id,
+          title: n.title,
+          message: n.message,
+          type: n.type,
+          isRead: n.isRead,
+          severity: n.data?.severity || 'info',
+          data: n.data,
+          timestamp: n.createdAt,
+          isVirtual: false
+        })),
+        ...paymentNotifications,
+        ...newUserNotifications,
+        ...examNotifications,
+        ...enrollmentNotifications
+      ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      res.status(200).json({
+        success: true,
+        message: 'Admin notifications fetched successfully',
+        data: {
+          notifications: allNotifications,
+          unreadCount: allNotifications.filter(n => !n.isRead).length
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch admin notifications',
+        error: error.message
+      });
+    }
+  }
+
   // Check if user has exceeded daily notification limit (e.g. 2 per day)
   async checkDailyLimit(userId) {
     try {

@@ -35,6 +35,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_sc
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_exams_review_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_notifications_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
@@ -245,6 +246,10 @@ class AppRouter {
           GoRoute(
             path: '/admin/exams-review',
             builder: (context, state) => const AdminExamsReviewScreen(),
+          ),
+          GoRoute(
+            path: '/admin/notifications',
+            builder: (context, state) => const AdminNotificationsScreen(),
           ),
 
           // Learning Routes - Outside MainLayout for full-screen focus

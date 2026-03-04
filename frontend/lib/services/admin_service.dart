@@ -300,6 +300,25 @@ class AdminService {
     }
   }
 
+  /// Get admin notifications
+  Future<List<AdminNotification>> getNotifications() async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.admin}/notifications');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      final notifications = (data['notifications'] as List)
+          .map((item) => AdminNotification.fromJson(item as Map<String, dynamic>))
+          .toList();
+      
+      return notifications;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch notifications: $e');
+    }
+  }
+
   /// Delete a student and all related data
   Future<Map<String, dynamic>> deleteStudent(String studentId) async {
     try {
@@ -822,6 +841,46 @@ class CourseStudentPerformance {
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
       completionStatus: json['completionStatus'] as String,
       lastAccessed: json['lastAccessed'] != null ? DateTime.parse(json['lastAccessed'] as String) : null,
+    );
+  }
+}
+
+class AdminNotification {
+  final String id;
+  final String title;
+  final String message;
+  final String type;
+  final bool isRead;
+  final Map<String, dynamic> data;
+  final DateTime timestamp;
+  final bool isVirtual;
+  final String severity;
+
+  AdminNotification({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.type,
+    required this.isRead,
+    required this.data,
+    required this.timestamp,
+    required this.isVirtual,
+    this.severity = 'info',
+  });
+
+  factory AdminNotification.fromJson(Map<String, dynamic> json) {
+    return AdminNotification(
+      id: json['id']?.toString() ?? '',
+      title: json['title'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      type: json['type'] as String? ?? 'info',
+      isRead: json['isRead'] as bool? ?? false,
+      data: json['data'] as Map<String, dynamic>? ?? {},
+      timestamp: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp'] as String)
+          : DateTime.now(),
+      isVirtual: json['isVirtual'] as bool? ?? false,
+      severity: json['severity'] as String? ?? 'info',
     );
   }
 }
