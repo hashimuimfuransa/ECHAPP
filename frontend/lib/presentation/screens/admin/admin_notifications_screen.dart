@@ -43,6 +43,16 @@ class _AdminNotificationsScreenState extends ConsumerState<AdminNotificationsScr
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.done_all_rounded),
+            onPressed: () => ref.read(adminNotificationProvider.notifier).markAllAsRead(),
+            tooltip: 'Mark all as read',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_rounded),
+            onPressed: () => _showDeleteAllConfirmation(context),
+            tooltip: 'Delete all notifications',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.read(adminNotificationProvider.notifier).loadNotifications(),
             tooltip: 'Refresh Notifications',
@@ -61,6 +71,30 @@ class _AdminNotificationsScreenState extends ConsumerState<AdminNotificationsScr
       body: TabBarView(
         controller: _tabController,
         children: _tabs.map((tab) => _buildBody(state, tab.toLowerCase())).toList(),
+      ),
+    );
+  }
+
+  void _showDeleteAllConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete All Notifications'),
+        content: const Text('Are you sure you want to delete all notifications? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(adminNotificationProvider.notifier).deleteAllNotifications();
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
       ),
     );
   }

@@ -319,6 +319,28 @@ class AdminService {
     }
   }
 
+  /// Mark all notifications as read
+  Future<void> markAllAsRead() async {
+    try {
+      final response = await _apiClient.put('${ApiConfig.notifications}/read-all', body: {});
+      response.validateStatus();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to mark all as read: $e');
+    }
+  }
+
+  /// Delete all notifications
+  Future<void> deleteAllNotifications() async {
+    try {
+      final response = await _apiClient.delete(ApiConfig.notifications);
+      response.validateStatus();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete all notifications: $e');
+    }
+  }
+
   /// Delete a student and all related data
   Future<Map<String, dynamic>> deleteStudent(String studentId) async {
     try {

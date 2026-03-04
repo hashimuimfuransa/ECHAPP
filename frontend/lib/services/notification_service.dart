@@ -111,5 +111,61 @@ class NotificationService {
     }
   }
 
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      final token = await TokenManager().getIdToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/notifications/$notificationId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Failed to delete notification');
+        }
+      } else {
+        throw Exception('Failed to delete notification: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      _handleError(e, 'Error deleting notification');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAllNotifications() async {
+    try {
+      final token = await TokenManager().getIdToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] != true) {
+          throw Exception(data['message'] ?? 'Failed to delete all notifications');
+        }
+      } else {
+        throw Exception('Failed to delete all notifications: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      _handleError(e, 'Error deleting all notifications');
+      rethrow;
+    }
+  }
 }

@@ -25,6 +25,9 @@ router.put('/read-all', notificationController.markAllAsRead);
 // DELETE /api/notifications/:id - Delete a notification
 router.delete('/:id', notificationController.deleteNotification);
 
+// DELETE /api/notifications - Delete all notifications for current user
+router.delete('/', notificationController.deleteAllNotifications);
+
 // POST /api/notifications - Create a notification (admin/internal use)
 router.post('/', notificationController.createNotification);
 

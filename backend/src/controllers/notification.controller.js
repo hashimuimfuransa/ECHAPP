@@ -191,6 +191,30 @@ class NotificationController {
     }
   }
 
+  // Delete all notifications for current user
+  async deleteAllNotifications(req, res) {
+    try {
+      const userId = req.user.id;
+      
+      const result = await Notification.deleteMany({
+        userId: userId
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: `Deleted ${result.deletedCount} notifications successfully`,
+        data: { deletedCount: result.deletedCount }
+      });
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete all notifications',
+        error: error.message
+      });
+    }
+  }
+
   // Get notification by ID
   async getNotificationById(req, res) {
     try {

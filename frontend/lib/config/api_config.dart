@@ -49,6 +49,9 @@ class ApiConfig {
   
   // Lesson endpoints
   static String get lessons => '$baseUrl/lessons';
+  
+  // Notification endpoints
+  static String get notifications => '$baseUrl/notifications';
 }
 
 class StorageKeys {

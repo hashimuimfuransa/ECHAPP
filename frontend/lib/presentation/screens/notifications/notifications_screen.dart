@@ -108,7 +108,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         actions: [
-          if (notificationState.notifications.isNotEmpty)
+          if (notificationState.notifications.isNotEmpty) ...[
             IconButton(
               icon: const Icon(Icons.done_all),
               onPressed: () {
@@ -123,6 +123,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               },
               tooltip: 'Mark all as read',
             ),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined),
+              onPressed: () => _showDeleteAllConfirmation(context),
+              tooltip: 'Delete all notifications',
+            ),
+          ],
         ],
       ),
       body: RefreshIndicator(
@@ -221,86 +227,140 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               final notification = notificationState.notifications[index] as app_notification.Notification;
                               final notificationNotifier = ref.read(notificationProvider.notifier);
                               
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                              return Dismissible(
+                                key: Key(notification.id),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20.0),
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade400,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.delete, color: Colors.white),
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.all(16),
-                                  leading: Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: _getNotificationColor(notification, context).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
+                                onDismissed: (direction) {
+                                  notificationNotifier.deleteNotification(notification.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Notification deleted'),
+                                      duration: Duration(seconds: 2),
                                     ),
-                                    child: Icon(
-                                      _getNotificationIcon(notification),
-                                      color: _getNotificationColor(notification, context),
-                                      size: 24,
-                                    ),
+                                  );
+                                },
+                                child: Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  title: Text(
-                                    notification.title,
-                                    style: TextStyle(
-                                      fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-                                      color: AppTheme.getTextColor(context),
-                                    ),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        notification.message,
-                                        style: TextStyle(
-                                          color: AppTheme.greyColor,
-                                          fontSize: 14,
-                                        ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.all(16),
+                                    leading: Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: _getNotificationColor(notification, context).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            _getTimeAgo(notification.timestamp),
-                                            style: const TextStyle(
-                                              color: AppTheme.greyColor,
-                                              fontSize: 12,
-                                            ),
+                                      child: Icon(
+                                        _getNotificationIcon(notification),
+                                        color: _getNotificationColor(notification, context),
+                                        size: 24,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      notification.title,
+                                      style: TextStyle(
+                                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                                        color: AppTheme.getTextColor(context),
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          notification.message,
+                                          style: TextStyle(
+                                            color: AppTheme.greyColor,
+                                            fontSize: 14,
                                           ),
-                                          if (!notification.isRead)
-                                            Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: const BoxDecoration(
-                                                color: AppTheme.primaryGreen,
-                                                shape: BoxShape.circle,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              _getTimeAgo(notification.timestamp),
+                                              style: const TextStyle(
+                                                color: AppTheme.greyColor,
+                                                fontSize: 12,
                                               ),
                                             ),
-                                        ],
-                                      ),
-                                    ],
+                                            if (!notification.isRead)
+                                              Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: const BoxDecoration(
+                                                  color: AppTheme.primaryGreen,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      // Mark as read when tapped
+                                      if (!notification.isRead) {
+                                        notificationNotifier.markAsRead(notification.id);
+                                      }
+                                      
+                                      // Handle notification actions based on type
+                                      _handleNotificationAction(notification);
+                                    },
+                                    tileColor: notification.isRead 
+                                        ? null 
+                                        : Theme.of(context).cardColor.withOpacity(0.7),
                                   ),
-                                  onTap: () {
-                                    // Mark as read when tapped
-                                    if (!notification.isRead) {
-                                      notificationNotifier.markAsRead(notification.id);
-                                    }
-                                    
-                                    // Handle notification actions based on type
-                                    _handleNotificationAction(notification);
-                                  },
-                                  tileColor: notification.isRead 
-                                      ? null 
-                                      : Theme.of(context).cardColor.withOpacity(0.7),
                                 ),
                               );
                             },
                           ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDeleteAllConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete All Notifications'),
+        content: const Text('Are you sure you want to delete all notifications? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(notificationProvider.notifier).deleteAllNotifications();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('All notifications deleted'),
+                  backgroundColor: AppTheme.primaryGreen,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
       ),
     );
   }

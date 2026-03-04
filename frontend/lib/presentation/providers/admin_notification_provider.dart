@@ -45,6 +45,24 @@ class AdminNotificationNotifier extends StateNotifier<AdminNotificationState> {
       );
     }
   }
+
+  Future<void> markAllAsRead() async {
+    try {
+      await _adminService.markAllAsRead();
+      await loadNotifications();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> deleteAllNotifications() async {
+    try {
+      await _adminService.deleteAllNotifications();
+      await loadNotifications();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
 }
 
 final adminNotificationProvider = StateNotifierProvider<AdminNotificationNotifier, AdminNotificationState>((ref) {

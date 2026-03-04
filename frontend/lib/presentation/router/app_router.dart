@@ -44,6 +44,8 @@ import 'package:excellencecoachinghub/widgets/main_layout.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 
 class AppRouter {
   // Static instance for singleton
@@ -146,6 +148,13 @@ class AppRouter {
           GoRoute(
             path: '/admin/courses',
             builder: (context, state) => const AdminCoursesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/courses/:courseId',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return AdminCourseContentScreen(courseId: courseId);
+            },
           ),
           GoRoute(
             path: '/admin/courses/create',
@@ -340,6 +349,14 @@ class AppRouter {
               GoRoute(
                 path: '/notifications',
                 builder: (context, state) => const NotificationsScreen(),
+              ),
+              GoRoute(
+                path: '/payments/history',
+                builder: (context, state) => const PaymentHistoryScreen(),
+              ),
+              GoRoute(
+                path: '/exams/history',
+                builder: (context, state) => const ExamHistoryScreen(),
               ),
               GoRoute(
                 path: '/profile',

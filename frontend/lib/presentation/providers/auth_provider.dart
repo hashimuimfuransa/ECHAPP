@@ -105,13 +105,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       String errorMessage = e.toString();
       
       // Provide user-friendly error messages
-      if (errorMessage.contains('Invalid email or password')) {
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('invalid email or password') || 
+          msgLower.contains('wrong-password') || 
+          msgLower.contains('user-not-found') ||
+          msgLower.contains('incorrect password')) {
         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-      } else if (errorMessage.contains('Account is deactivated')) {
+      } else if (msgLower.contains('account is deactivated') || msgLower.contains('user-disabled')) {
         errorMessage = 'Your account has been deactivated. Please contact support.';
-      } else if (errorMessage.contains('Network error')) {
+      } else if (msgLower.contains('network error') || 
+                 msgLower.contains('connection failed') || 
+                 msgLower.contains('socketexception') ||
+                 msgLower.contains('internet connection')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
-      } else if (errorMessage.contains('Login failed')) {
+      } else if (msgLower.contains('login failed')) {
         errorMessage = 'Login failed. Please try again.';
       } else {
         // Remove technical prefixes for cleaner user messages
@@ -185,17 +192,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
       String errorMessage = e.toString();
       
       // Provide user-friendly error messages
-      if (errorMessage.contains('email-already-in-use')) {
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('email-already-in-use')) {
         errorMessage = 'An account with this email already exists. Please try logging in instead.';
-      } else if (errorMessage.contains('invalid-email')) {
+      } else if (msgLower.contains('invalid-email')) {
         errorMessage = 'Please enter a valid email address.';
-      } else if (errorMessage.contains('weak-password')) {
+      } else if (msgLower.contains('weak-password')) {
         errorMessage = 'Password is too weak. Please use a stronger password.';
-      } else if (errorMessage.contains('operation-not-allowed')) {
+      } else if (msgLower.contains('operation-not-allowed')) {
         errorMessage = 'Email/password registration is not enabled.';
-      } else if (errorMessage.contains('Network error')) {
+      } else if (msgLower.contains('network error') || 
+                 msgLower.contains('connection failed') || 
+                 msgLower.contains('socketexception') ||
+                 msgLower.contains('internet connection')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
-      } else if (errorMessage.contains('Registration failed')) {
+      } else if (msgLower.contains('registration failed')) {
         errorMessage = 'Registration failed. Please try again or contact support.';
       } else {
         // Remove technical prefixes for cleaner user messages

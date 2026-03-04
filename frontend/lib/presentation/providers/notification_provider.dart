@@ -102,7 +102,31 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     }
   }
 
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      final notificationService = NotificationService();
+      await notificationService.deleteNotification(notificationId);
+      
+      final updatedNotifications = state.notifications
+          .where((notification) => notification.id != notificationId)
+          .toList();
+      
+      state = state.copyWith(notifications: updatedNotifications);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
 
+  Future<void> deleteAllNotifications() async {
+    try {
+      final notificationService = NotificationService();
+      await notificationService.deleteAllNotifications();
+      
+      state = state.copyWith(notifications: []);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
 }
 
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
