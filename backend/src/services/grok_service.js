@@ -476,6 +476,32 @@ Generate a professional exam title that reflects the main topic covered. Keep it
     }
   }
 
+  /**
+   * Generate a chat response using Grok AI
+   * @param {Array} messages - Chat message history
+   * @param {Object} context - Learning context
+   * @returns {Promise<string>} - AI generated response
+   */
+  async generateChatResponse(messages, context) {
+    if (!this.isConfigured()) {
+      return "I'm sorry, my AI brain is not currently connected. Please contact support.";
+    }
+
+    try {
+      const chatCompletion = await this.groq.chat.completions.create({
+        messages: messages,
+        model: await this.getModel(),
+        temperature: 0.7,
+        max_tokens: 2048,
+      });
+
+      return chatCompletion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
+    } catch (error) {
+      console.error("Error generating chat response with Grok:", error);
+      return "I encountered an error while processing your request. Please try again.";
+    }
+  }
+
   // Helper methods
   
   async extractTextFromBuffer(buffer, mimeType) {

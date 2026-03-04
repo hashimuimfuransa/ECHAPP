@@ -1,5 +1,6 @@
 const ChatMessage = require('../models/ChatMessage');
 const Conversation = require('../models/Conversation');
+const GrokService = require('../services/grok_service');
 const { v4: uuidv4 } = require('uuid');
 
 class ChatController {
@@ -311,27 +312,14 @@ class ChatController {
     return prompt;
   }
 
-  // Helper method to generate AI response (placeholder - integrate with your AI service)
+  // Helper method to generate AI response using Grok AI
   static async generateAIResponse(messages, context) {
-    // This is a placeholder implementation
-    // In production, integrate with Groq, OpenAI, or your preferred AI service
-    
-    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-    if (!lastUserMessage) {
-      return "Hello! How can I help you with your learning today?";
-    }
-
-    // Simple response logic - replace with actual AI integration
-    const userMessage = lastUserMessage.content.toLowerCase();
-    
-    if (userMessage.includes('hello') || userMessage.includes('hi')) {
-      return "Hello! I'm your AI learning assistant. How can I help you with your studies today?";
-    } else if (userMessage.includes('help') || userMessage.includes('explain')) {
-      return "I'd be happy to help you understand this concept better. Could you tell me more about what specifically you'd like me to explain?";
-    } else if (context?.sectionTitle) {
-      return `I see you're working on "${context.sectionTitle}". I'm here to help you with any questions about this topic. What would you like to know?`;
-    } else {
-      return "Thanks for your message! I'm here to help with your learning. Feel free to ask me anything about the course material or learning concepts.";
+    try {
+      // Return response from Grok Service
+      return await GrokService.generateChatResponse(messages, context);
+    } catch (error) {
+      console.error("Error in generateAIResponse:", error);
+      return "I'm having trouble thinking right now. Could you please repeat that?";
     }
   }
 }
