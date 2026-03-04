@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,18 @@ class AuthRepository {
   final http.Client _client;
 
   AuthRepository({http.Client? client}) : _client = client ?? http.Client();
+  
+  void _handleError(dynamic e, String defaultMessage) {
+    if (e is SocketException) {
+      throw Exception('Connection failed. Please check your internet connection and try again.');
+    } else if (e is http.ClientException) {
+      throw Exception('Network error occurred. Please check your network connection.');
+    } else if (e is TimeoutException) {
+      throw Exception('The request timed out. Please check your connection or try again later.');
+    } else {
+      throw Exception('$defaultMessage: ${e.toString()}');
+    }
+  }
 
   Future<AuthResponse> login(String email, String password, {String? deviceId}) async {
     try {
@@ -64,7 +77,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Login failed');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Login error');
+      rethrow; // For static analysis, though _handleError always throws
     }
   }
 
@@ -99,7 +113,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Registration failed');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Registration error');
+      rethrow;
     }
   }
 
@@ -109,7 +124,7 @@ class AuthRepository {
       // and invalidate the token on the server side
       await Future.delayed(const Duration(milliseconds: 100)); // Simulate API call
     } catch (e) {
-      throw Exception('Logout failed: ${e.toString()}');
+      _handleError(e, 'Logout failed');
     }
   }
 
@@ -189,7 +204,7 @@ class AuthRepository {
       print('Error type: ${e.runtimeType}');
       print('Error stack: ${e.toString().substring(0, e.toString().length < 500 ? e.toString().length : 500)}');
       
-      // Re-throw with more context
+      _handleError(e, 'Firebase login error');
       rethrow;
     }
   }
@@ -229,7 +244,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to send password reset email');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Send password reset email error');
+      rethrow;
     }
   }
 
@@ -259,7 +275,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to reset password');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Reset password error');
+      rethrow;
     }
   }
 
@@ -278,7 +295,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Invalid or expired reset token');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Verify reset token error');
+      rethrow;
     }
   }
 
@@ -290,7 +308,8 @@ class AuthRepository {
       await Future.delayed(const Duration(milliseconds: 100)); // Simulate API call
       throw Exception('Not implemented - would fetch user profile with token');
     } catch (e) {
-      throw Exception('Failed to fetch profile: ${e.toString()}');
+      _handleError(e, 'Fetch profile error');
+      rethrow;
     }
   }
 
@@ -320,7 +339,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to refresh token');
       }
     } catch (e) {
-      throw Exception('Refresh token error: ${e.toString()}');
+      _handleError(e, 'Refresh token error');
+      rethrow;
     }
   }
 
@@ -350,7 +370,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to update profile');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Update profile error');
+      rethrow;
     }
   }
 
@@ -389,7 +410,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to upload image');
       }
     } catch (e) {
-      throw Exception('Upload error: ${e.toString()}');
+      _handleError(e, 'Upload error');
+      rethrow;
     }
   }
 
@@ -408,7 +430,8 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to delete account');
       }
     } catch (e) {
-      throw Exception('Network error: ${e.toString()}');
+      _handleError(e, 'Delete account error');
+      rethrow;
     }
   }
 }

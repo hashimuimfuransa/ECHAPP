@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../models/api_response.dart';
@@ -192,6 +193,18 @@ class ApiClient {
         print('Response Status: ${response.statusCode}');
         
         return response;
+      } on SocketException catch (e) {
+        print('Socket error: $e');
+        
+        // Retry logic for socket errors
+        if (retryCount < maxRetries) {
+          retryCount++;
+          print('Retrying request... Attempt $retryCount of $maxRetries');
+          await Future.delayed(Duration(milliseconds: 1000 * retryCount)); // Exponential backoff
+          continue;
+        }
+        
+        throw ApiException.network('Connection failed. Please check your internet connection and try again.');
       } on http.ClientException catch (e) {
         print('Network error: $e');
         
@@ -203,7 +216,7 @@ class ApiClient {
           continue;
         }
         
-        throw ApiException.network('Network connection failed: $e');
+        throw ApiException.network('Network error occurred. Please check your network connection.');
       } on TimeoutException catch (e) {
         print('Request timeout: $e');
         
@@ -215,7 +228,7 @@ class ApiClient {
           continue;
         }
         
-        throw ApiException.timeout('Request timed out after $_timeoutSeconds seconds');
+        throw ApiException.timeout('The request timed out. Please check your connection or try again later.');
       } catch (e) {
         print('Unexpected error: $e');
         throw ApiException.unknown('An unexpected error occurred: $e');
@@ -245,7 +258,7 @@ class ApiException implements Exception {
   factory ApiException.unknown(String message) => ApiException(message, 0);
 
   @override
-  String toString() => 'ApiException: $message (Status: $statusCode)';
+  String toString() => message;
 }
 
 /// Extension to handle API response parsing

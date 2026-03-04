@@ -12,6 +12,72 @@ class EmailService {
   }
 
   /**
+   * Common responsive styles for email templates
+   */
+  _getCommonStyles() {
+    return `
+        <style>
+            * { box-sizing: border-box; }
+            body { 
+                font-family: 'Segoe UI', Arial, sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+                margin: 0; 
+                padding: 0; 
+                width: 100% !important; 
+                -webkit-text-size-adjust: 100%; 
+            }
+            .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #00b09b, #96c93d); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { color: white; margin: 0; font-size: 28px; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .button { 
+                display: inline-block; 
+                padding: 15px 30px; 
+                background: #00b09b; 
+                color: white !important; 
+                text-decoration: none; 
+                border-radius: 5px; 
+                font-weight: bold;
+                margin: 20px 0;
+                text-align: center;
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #eee; margin-top: 20px; }
+            h2 { color: #2d3436; margin-top: 0; }
+            h3 { color: #2d3436; }
+            ul, ol { padding-left: 20px; }
+            li { margin-bottom: 10px; }
+            .details, .features, .status-box, .payment-details, .results-card, .result-details, .welcome-card, .course-info, .next-steps, .course-card {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 20px 0;
+                border-left: 4px solid #00b09b;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 10px 0;
+                border-bottom: 1px solid #eee;
+            }
+            .detail-row:last-child { border-bottom: none; }
+            
+            /* Responsive Utilities */
+            @media screen and (max-width: 600px) {
+                .container { padding: 10px !important; }
+                .header, .content { padding: 20px !important; }
+                .header h1 { font-size: 22px !important; }
+                .button { display: block !important; padding: 15px 10px !important; margin: 20px 0 !important; }
+                .detail-row { flex-direction: column !important; align-items: flex-start !important; }
+                .detail-row strong { margin-top: 4px; }
+                .course-meta { flex-direction: column !important; gap: 10px !important; }
+            }
+        </style>
+    `;
+  }
+
+  /**
    * Send password reset email
    */
   async sendPasswordResetEmail(email, resetTokenOrUrl, user) {
@@ -104,37 +170,12 @@ class EmailService {
   getPasswordResetTemplate(fullName, resetUrl, resetToken) {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Password Reset</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #00b09b, #96c93d); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { 
-                display: inline-block; 
-                padding: 15px 30px; 
-                background: #00b09b; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-                margin: 20px 0;
-            }
-            .button:hover { background: #009a86; }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
-            }
-        </style>
+        ${this._getCommonStyles()}
     </head>
     <body>
         <div class="container">
@@ -143,16 +184,16 @@ class EmailService {
             </div>
             <div class="content">
                 <h2>Hello ${fullName},</h2>
-                <p>To reset your password, please click the button below:</p>
+                <p>We received a request to reset your password. To proceed, please click the button below:</p>
                 
                 <div style="text-align: center;">
                     <a href="${resetUrl}" class="button">Reset Password</a>
                 </div>
                 
                 <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #00b09b;">${resetUrl}</p>
+                <p style="word-break: break-all; color: #00b09b; background: #eee; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 14px;">${resetUrl}</p>
                 
-                <p>If you didn't request this, please ignore this email.</p>
+                <p>If you didn't request this, you can safely ignore this email. Your password will remain unchanged.</p>
             </div>
             <div class="footer">
                 <p>© ${new Date().getFullYear()} Excellence Coaching Hub. All rights reserved.</p>
@@ -169,17 +210,13 @@ class EmailService {
   getPasswordResetConfirmationTemplate(fullName, loginUrl) {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Password Reset Successful</title>
+        ${this._getCommonStyles()}
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #00b09b, #96c93d); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
             .success { 
                 background: #d4edda; 
                 border: 1px solid #c3e6cb; 
@@ -187,24 +224,7 @@ class EmailService {
                 border-radius: 5px; 
                 margin: 20px 0;
                 text-align: center;
-            }
-            .button { 
-                display: inline-block; 
-                padding: 15px 30px; 
-                background: #00b09b; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-                margin: 20px 0;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
+                color: #155724;
             }
         </style>
     </head>
@@ -223,9 +243,13 @@ class EmailService {
                 
                 <p>If you did not make this change, please contact our support team immediately.</p>
                 
-                <p>To access your account, please open the Excellence Coaching Hub app and log in with your new password.</p>
+                <p>To access your account, please open the Excellence Coaching Hub app or visit our website to log in.</p>
                 
-                <p>Thank you for using Excellence Coaching Hub!</p>
+                <div style="text-align: center;">
+                    <a href="${loginUrl}" class="button">Go to Login</a>
+                </div>
+                
+                <p>Thank you for choosing Excellence Coaching Hub!</p>
             </div>
             <div class="footer">
                 <p>© ${new Date().getFullYear()} Excellence Coaching Hub. All rights reserved.</p>
@@ -243,43 +267,12 @@ class EmailService {
   getWelcomeTemplate(fullName, loginUrl) {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Welcome to Excellence Coaching Hub</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #00b09b, #96c93d); padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { 
-                display: inline-block; 
-                padding: 15px 30px; 
-                background: #00b09b; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-                margin: 20px 0;
-            }
-            .features { 
-                background: white; 
-                padding: 20px; 
-                border-radius: 5px; 
-                margin: 20px 0;
-                border-left: 4px solid #00b09b;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
-            }
-        </style>
+        ${this._getCommonStyles()}
     </head>
     <body>
         <div class="container">
@@ -302,7 +295,11 @@ class EmailService {
                     </ul>
                 </div>
                 
-                <p>To start learning, please open the Excellence Coaching Hub app and log in to your account.</p>
+                <p>To start learning, please open the Excellence Coaching Hub app or visit our website to log in to your account.</p>
+                
+                <div style="text-align: center;">
+                    <a href="${loginUrl}" class="button">Go to Dashboard</a>
+                </div>
                 
                 <p>If you have any questions or need assistance, our support team is always here to help.</p>
                 <p>Happy learning!</p>
@@ -412,45 +409,66 @@ class EmailService {
   getAdminPaymentNotificationTemplate(user, payment, course) {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>New Payment Request</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #00b09b; padding: 20px; text-align: center; color: white; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 10px 10px; }
-            .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #00b09b; }
-            .footer { text-align: center; padding: 10px; font-size: 12px; color: #777; }
-        </style>
+        ${this._getCommonStyles()}
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h2>📢 New Payment Request</h2>
+                <h1>📢 New Payment Request</h1>
             </div>
             <div class="content">
                 <p>A user has initiated a payment request that requires your review.</p>
                 
                 <div class="details">
-                    <h3>User Details:</h3>
-                    <p><strong>Name:</strong> ${user.fullName}</p>
-                    <p><strong>Email:</strong> ${user.email}</p>
-                    <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                    <h3>👤 User Details:</h3>
+                    <div class="detail-row">
+                        <span>Name:</span>
+                        <strong>${user.fullName}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Email:</span>
+                        <strong>${user.email}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Phone:</span>
+                        <strong>${user.phone || 'N/A'}</strong>
+                    </div>
                 </div>
                 
                 <div class="details">
-                    <h3>Payment Details:</h3>
-                    <p><strong>Course:</strong> ${course.title}</p>
-                    <p><strong>Amount:</strong> ${payment.currency} ${payment.amount.toLocaleString()}</p>
-                    <p><strong>Method:</strong> ${payment.paymentMethod}</p>
-                    <p><strong>Transaction ID:</strong> ${payment.transactionId}</p>
-                    <p><strong>Contact Info:</strong> ${payment.contactInfo}</p>
+                    <h3>💳 Payment Details:</h3>
+                    <div class="detail-row">
+                        <span>Course:</span>
+                        <strong>${course.title}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Amount:</span>
+                        <strong>${payment.currency} ${payment.amount.toLocaleString()}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Method:</span>
+                        <strong>${payment.paymentMethod}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Transaction ID:</span>
+                        <strong>${payment.transactionId}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Contact Info:</span>
+                        <strong>${payment.contactInfo}</strong>
+                    </div>
                 </div>
                 
                 <p>Please log in to the admin dashboard to verify and approve this payment.</p>
+                
+                <div style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin" class="button">Go to Admin Dashboard</a>
+                </div>
             </div>
             <div class="footer">
                 <p>© ${new Date().getFullYear()} Excellence Coaching Hub Admin System</p>
@@ -506,77 +524,47 @@ class EmailService {
 
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Payment Status Update</title>
+        ${this._getCommonStyles()}
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { 
-              background: linear-gradient(135deg, #00b09b, #96c93d); 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-            }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
             .status-box {
               background: ${statusColor}20;
               border: 2px solid ${statusColor};
-              padding: 20px;
-              border-radius: 8px;
               text-align: center;
-              margin: 20px 0;
+              border-left: 4px solid ${statusColor};
             }
             .status-icon {
               font-size: 48px;
               display: block;
               margin-bottom: 10px;
             }
-            .payment-details {
-              background: white;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-              border-left: 4px solid #00b09b;
-            }
-            .detail-row {
-              display: flex;
-              justify-content: space-between;
-              padding: 8px 0;
-              border-bottom: 1px solid #eee;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
+            .status-text {
+                color: ${statusColor};
+                font-weight: bold;
+                text-transform: uppercase;
             }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>${statusIcon} Payment Status Update</h1>
+                <h1>${statusIcon} Payment Update</h1>
             </div>
             <div class="content">
                 <h2>Hello ${fullName},</h2>
                 
                 <div class="status-box">
                     <span class="status-icon">${statusIcon}</span>
-                    <h3>Your payment has been <span style="color: ${statusColor};">${statusMessage}</span></h3>
+                    <h3>Your payment has been <span class="status-text">${statusMessage}</span></h3>
                     <p>${this.getPaymentStatusMessage(payment, status)}</p>
                 </div>
                 
                 <div class="payment-details">
-                    <h3>Payment Details:</h3>
+                    <h3>💳 Payment Details:</h3>
                     <div class="detail-row">
                         <span>Transaction ID:</span>
                         <strong>${payment.transactionId || 'N/A'}</strong>
@@ -744,33 +732,30 @@ class EmailService {
 
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Exam Results - ${exam.title}</title>
+        ${this._getCommonStyles()}
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { 
-              background: linear-gradient(135deg, #00b09b, #96c93d); 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-            }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .results-card {
-              background: white;
-              padding: 25px;
-              border-radius: 10px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              margin: 20px 0;
+            .status-box {
+              background: ${statusColor}20;
+              border: 2px solid ${statusColor};
+              text-align: center;
               border-left: 4px solid ${statusColor};
+            }
+            .status-icon {
+              font-size: 48px;
+              display: block;
+              margin-bottom: 10px;
             }
             .score-display {
               text-align: center;
               margin: 20px 0;
+              padding: 20px;
+              background: #f8f9fa;
+              border-radius: 10px;
             }
             .score-number {
               font-size: 48px;
@@ -779,53 +764,18 @@ class EmailService {
               display: block;
             }
             .score-label {
-              font-size: 18px;
+              font-size: 16px;
               color: #666;
               display: block;
+              text-transform: uppercase;
+              letter-spacing: 1px;
             }
             .score-percentage {
-              font-size: 36px;
+              font-size: 32px;
               font-weight: bold;
               color: ${statusColor};
               display: block;
-              margin: 10px 0;
-            }
-            .status-box {
-              background: ${statusColor}20;
-              border: 2px solid ${statusColor};
-              padding: 20px;
-              border-radius: 8px;
-              text-align: center;
-              margin: 20px 0;
-            }
-            .status-icon {
-              font-size: 48px;
-              display: block;
-              margin-bottom: 10px;
-            }
-            .result-details {
-              background: white;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-              border-left: 4px solid #00b09b;
-            }
-            .detail-row {
-              display: flex;
-              justify-content: space-between;
-              padding: 8px 0;
-              border-bottom: 1px solid #eee;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
+              margin-top: 5px;
             }
         </style>
     </head>
@@ -845,13 +795,13 @@ class EmailService {
                 
                 <div class="results-card">
                     <div class="score-display">
-                        <span class="score-number">${result.score}/${result.totalPoints}</span>
                         <span class="score-label">Points Earned</span>
+                        <span class="score-number">${result.score} / ${result.totalPoints}</span>
                         <span class="score-percentage">${result.percentage.toFixed(1)}%</span>
                     </div>
                     
                     <div class="result-details">
-                        <h3>Exam Details:</h3>
+                        <h3>📊 Exam Details:</h3>
                         <div class="detail-row">
                             <span>Exam:</span>
                             <strong>${exam.title}</strong>
@@ -865,12 +815,8 @@ class EmailService {
                             <strong>${result.totalPoints}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Score:</span>
+                            <span>Your Score:</span>
                             <strong>${result.score}</strong>
-                        </div>
-                        <div class="detail-row">
-                            <span>Percentage:</span>
-                            <strong>${result.percentage.toFixed(1)}%</strong>
                         </div>
                         <div class="detail-row">
                             <span>Status:</span>
@@ -879,24 +825,28 @@ class EmailService {
                     </div>
                     
                     ${result.passed ? `
-                    <h3>Next Steps:</h3>
-                    <ul>
-                        <li>Congratulations on your success!</li>
-                        <li>Check your course progress in the Excellence Coaching Hub app</li>
-                        <li>Continue to the next modules in your course</li>
-                        <li>Explore additional resources and practice materials</li>
-                    </ul>
+                    <div class="next-steps">
+                        <h3>✅ Next Steps:</h3>
+                        <ul>
+                            <li>Congratulations on your success!</li>
+                            <li>Check your course progress in the app</li>
+                            <li>Continue to the next modules</li>
+                            <li>Explore additional resources</li>
+                        </ul>
+                    </div>
                     ` : `
-                    <h3>Next Steps:</h3>
-                    <ul>
-                        <li>Review the material covered in this exam</li>
-                        <li>Take advantage of additional study resources in the app</li>
-                        <li>Retake the exam when you're ready</li>
-                        <li>Contact your instructor if you need help</li>
-                    </ul>
+                    <div class="next-steps">
+                        <h3>📝 Next Steps:</h3>
+                        <ul>
+                            <li>Review the material covered in this exam</li>
+                            <li>Use the study resources in the app</li>
+                            <li>Retake the exam when you're ready</li>
+                            <li>Contact your instructor if you need help</li>
+                        </ul>
+                    </div>
                     `}
                     
-                    <p>To view your course progress, please open the Excellence Coaching Hub app and navigate to your course dashboard.</p>
+                    <p>To view your course progress, please open the Excellence Coaching Hub app or visit our website.</p>
                 </div>
                 
                 <p>Keep up the great work on your educational journey!</p>
@@ -941,51 +891,22 @@ class EmailService {
   getEnrollmentConfirmationTemplate(fullName, course) {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Enrollment Confirmation - ${course.title}</title>
+        ${this._getCommonStyles()}
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { 
-              background: linear-gradient(135deg, #00b09b, #96c93d); 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-            }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .welcome-card {
-              background: white;
-              padding: 25px;
-              border-radius: 10px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              margin: 20px 0;
-              border-left: 4px solid #00b09b;
-            }
             .course-info {
               background: #e8f4fd;
-              padding: 15px;
-              border-radius: 8px;
-              margin: 20px 0;
               border-left: 4px solid #007bff;
+              color: #0c5460;
             }
             .next-steps {
               background: #fff3cd;
-              padding: 15px;
-              border-radius: 8px;
-              margin: 20px 0;
               border-left: 4px solid #ffc107;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
+              color: #856404;
             }
         </style>
     </head>
@@ -999,32 +920,44 @@ class EmailService {
                 
                 <div class="welcome-card">
                     <h3>Congratulations! You've been enrolled in:</h3>
-                    <h2 style="color: #00b09b; margin: 15px 0;">${course.title}</h2>
+                    <h2 style="color: #00b09b; margin: 15px 0; font-size: 24px;">${course.title}</h2>
                     <p>Your enrollment has been successfully processed. You now have access to all course materials, including video lectures, assignments, quizzes, and additional resources.</p>
                 </div>
                 
                 <div class="course-info">
-                    <h3>Course Information:</h3>
-                    <p><strong>Course Title:</strong> ${course.title}</p>
-                    <p><strong>Enrollment Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p><strong>Status:</strong> Active</p>
+                    <h3>📚 Course Information:</h3>
+                    <div class="detail-row">
+                        <span>Course Title:</span>
+                        <strong>${course.title}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Enrollment Date:</span>
+                        <strong>${new Date().toLocaleDateString()}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Status:</span>
+                        <strong style="color: #28a745;">Active</strong>
+                    </div>
                 </div>
                 
                 <div class="next-steps">
-                    <h3>Next Steps:</h3>
+                    <h3>🚀 Next Steps:</h3>
                     <ol>
                         <li>Open the Excellence Coaching Hub app on your device</li>
                         <li>Navigate to the "My Courses" section</li>
                         <li>Find "${course.title}" in your course list</li>
                         <li>Begin with the first module or introduction section</li>
                         <li>Complete lessons at your own pace</li>
-                        <li>Take advantage of all available resources and assessments</li>
                     </ol>
                 </div>
                 
-                <p>We're excited to have you join us in this learning journey! Our platform offers comprehensive educational resources designed to help you succeed and achieve your goals.</p>
+                <p>We're excited to have you join us in this learning journey! Our platform offers comprehensive educational resources designed to help you succeed.</p>
                 
-                <p>If you have any questions or need assistance, please don't hesitate to reach out to our support team through the app.</p>
+                <div style="text-align: center;">
+                    <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/my-courses" class="button">Go to My Courses</a>
+                </div>
+                
+                <p>If you have any questions or need assistance, please don't hesitate to reach out to our support team.</p>
                 
                 <p>Happy learning!</p>
             </div>
@@ -1046,30 +979,13 @@ class EmailService {
 
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>New Course Available - ${course.title}</title>
+        ${this._getCommonStyles()}
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { 
-              background: linear-gradient(135deg, #00b09b, #96c93d); 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-            }
-            .header h1 { color: white; margin: 0; font-size: 28px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .course-card {
-              background: white;
-              padding: 25px;
-              border-radius: 10px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              margin: 20px 0;
-              border-left: 4px solid #00b09b;
-            }
             .course-title {
               color: #00b09b;
               font-size: 24px;
@@ -1080,6 +996,9 @@ class EmailService {
               gap: 20px;
               margin: 15px 0;
               flex-wrap: wrap;
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
             }
             .course-meta-item {
               display: flex;
@@ -1088,32 +1007,12 @@ class EmailService {
               font-size: 14px;
               color: #666;
             }
-            .button { 
-                display: inline-block; 
-                padding: 15px 30px; 
-                background: #00b09b; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                font-weight: bold;
-                margin: 20px 0;
-                transition: background 0.3s;
-            }
-            .button:hover { background: #009a86; }
             .features { 
                 background: white; 
                 padding: 20px; 
                 border-radius: 8px; 
                 margin: 20px 0;
                 border-left: 4px solid #96c93d;
-            }
-            .footer { 
-                text-align: center; 
-                padding: 20px; 
-                color: #666; 
-                font-size: 12px;
-                border-top: 1px solid #eee;
-                margin-top: 20px;
             }
         </style>
     </head>
@@ -1149,14 +1048,16 @@ class EmailService {
                     
                     ${course.learningObjectives && course.learningObjectives.length > 0 ? `
                     <div class="features">
-                        <h3>What You'll Learn:</h3>
+                        <h3>✨ What You'll Learn:</h3>
                         <ul>
                             ${course.learningObjectives.slice(0, 3).map(obj => `<li>${obj}</li>`).join('')}
                         </ul>
                     </div>
                     ` : ''}
                     
-                    <p>To explore this course, please open the Excellence Coaching Hub app and search for this course in the course catalog.</p>
+                    <div style="text-align: center;">
+                        <a href="${courseUrl}" class="button">View Course Details</a>
+                    </div>
                 </div>
                 
                 <p>Stay ahead of the curve by enrolling in our latest offerings. New courses are added regularly, so keep checking back!</p>
