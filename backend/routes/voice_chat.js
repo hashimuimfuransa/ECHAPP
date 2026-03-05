@@ -41,119 +41,89 @@ const conversations = new Map();
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || 'your-google-api-key-here');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'your-groq-api-key-here' });
 
-// Voice transcription using Whisper-like model via OpenAI-compatible API
+const Section = require('../src/models/Section');
+const Lesson = require('../src/models/Lesson');
+const Course = require('../src/models/Course');
+const ChatController = require('../src/controllers/chat.controller');
+
+// Voice transcription using Whisper-like model via Groq API
 async function transcribeAudio(audioFilePath) {
-  // This would typically use a service like OpenAI Whisper API or similar
-  // For this implementation, we'll simulate the transcription
-  // In a real implementation, you would use the actual transcription service
-  
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulated transcription - in reality, this would process the audio file
-      resolve("Hello, how can I help you with your learning today?");
-    }, 1000);
-  });
+  try {
+    const transcription = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(audioFilePath),
+      model: "whisper-large-v3-turbo", // Use turbo for speed
+      response_format: "json",
+      language: "en",
+    });
+    return transcription.text;
+  } catch (error) {
+    console.error('Transcription error:', error);
+    throw error;
+  }
 }
 
-// Text-to-Speech simulation (in a real implementation, you'd use a TTS service)
+// Text-to-Speech simulation - we will use frontend TTS for higher quality
 async function generateSpeech(text, outputFile) {
-  // This would typically use a TTS service like Google TTS, Amazon Polly, etc.
-  // For this implementation, we'll just return a placeholder
-  return { audioUrl: `/uploads/voice/response-${Date.now()}.mp3` };
+  return { audioUrl: null }; // Returning null so frontend uses its internal TTS
 }
 
 // Endpoint to handle voice message
-router.post('/voice/send', upload.single('audio'), async (req, res) => {
+router.post('/send', upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Audio file is required' });
     }
 
-    const { conversationId, context } = req.body;
+    let { conversationId, context } = req.body;
     
+    // context might be stringified if sent via multipart/form-data
+    if (typeof context === 'string') {
+      try {
+        context = JSON.parse(context);
+      } catch (e) {
+        console.error('Error parsing context:', e);
+      }
+    }
+
     // Transcribe the audio to text
     const transcribedText = await transcribeAudio(req.file.path);
     
-    // Get or create conversation
-    let conversation = conversations.get(conversationId);
-    if (!conversation) {
-      const { v4: uuidv4 } = require('uuid');
-      const newConversationId = uuidv4();
-      conversation = {
-        id: newConversationId,
-        context: context || {},
-        messages: [],
-        createdAt: new Date()
-      };
-      conversations.set(newConversationId, conversation);
+    // Get or create conversation (using DB if possible)
+    const Conversation = require('../src/models/Conversation');
+    let conversation;
+    
+    if (conversationId && conversationId.length > 5 && !conversationId.startsWith('conversation_')) {
+      conversation = await Conversation.findById(conversationId);
     }
     
-    // Add user's transcribed message to conversation
-    const userMessage = {
-      id: `user_${Date.now()}`,
-      sender: 'user',
-      message: transcribedText,
-      originalAudio: req.file.path,
-      timestamp: new Date(),
-      isContextAware: false
-    };
+    // Prepare enriched context
+    const enrichedContext = context || {};
     
-    conversation.messages.push(userMessage);
-    
-    // Prepare messages for Groq API (including context)
+    // Generate AI response using ChatController logic for consistency
     const messagesForAI = [
       {
         role: 'system',
-        content: createContextAwareSystemPrompt(conversation.context)
+        content: ChatController.createContextAwareSystemPrompt(enrichedContext)
       },
-      ...conversation.messages.slice(-10).map(msg => ({ // Use last 10 messages for context
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.message
-      }))
+      {
+        role: 'user',
+        content: transcribedText
+      }
     ];
     
-    // Generate AI response using Groq (Grok model)
-    const chatCompletion = await groq.chat.completions.create({
-      messages: messagesForAI,
-      model: "mixtral-8x7b-32768", // Using Mixtral as a placeholder; replace with actual Grok model when available
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 1,
-      stream: false
-    });
-    
-    const aiResponse = chatCompletion.choices[0]?.message?.content || "I'm listening carefully, but I had a small hiccup processing that. Could you please say it again? I really want to help you with your learning!";
-    
-    // Generate speech for the AI response
-    const speechResult = await generateSpeech(aiResponse, `response-${Date.now()}.mp3`);
-    
-    // Add AI response to conversation
-    const aiMessage = {
-      id: `ai_${Date.now()}`,
-      sender: 'ai',
-      message: aiResponse,
-      audioUrl: speechResult.audioUrl,
-      timestamp: new Date(),
-      isContextAware: true
-    };
-    
-    conversation.messages.push(aiMessage);
-    
-    // Update context if provided
-    if (context) {
-      conversation.context = { ...conversation.context, ...context };
-    }
+    const aiResponse = await ChatController.generateAIResponse(messagesForAI, enrichedContext);
     
     res.json({
       textResponse: aiResponse,
-      audioResponse: speechResult.audioUrl,
-      conversationId: conversation.id
+      audioResponse: null, // Frontend will use TTS
+      transcribedText: transcribedText,
+      conversationId: conversationId
     });
   } catch (error) {
     console.error('Error processing voice message:', error);
     res.status(500).json({ 
       error: 'Failed to process voice message', 
-      message: 'I\'m sorry, I hit a snag while trying to process your voice message. Let\'s try one more time so I can help you with your studies!'
+      message: 'I\'m sorry, I hit a snag while trying to process your voice message.'
     });
   }
 });

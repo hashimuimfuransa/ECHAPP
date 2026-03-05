@@ -74,9 +74,25 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
 
     _flutterTts = FlutterTts();
     _flutterTts.setLanguage("en-US");
-    _flutterTts.setSpeechRate(0.45); // Slightly slower for better clarity and natural feel
+    _flutterTts.setSpeechRate(0.5); // Natural speed
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.1); // Slightly higher pitch for a more friendly, attractive voice
+    _flutterTts.setPitch(1.2); // Higher pitch for a clear, attractive female voice
+    
+    // Try to set a female voice explicitly if available
+    _flutterTts.getVoices.then((voices) {
+      try {
+        final femaleVoice = voices.firstWhere(
+          (voice) => 
+            voice['name'].toString().toLowerCase().contains('female') || 
+            voice['name'].toString().toLowerCase().contains('samantha') ||
+            voice['name'].toString().toLowerCase().contains('zira'),
+          orElse: () => voices.first,
+        );
+        _flutterTts.setVoice({"name": femaleVoice['name'], "locale": femaleVoice['locale']});
+      } catch (e) {
+        print('Error setting female voice: $e');
+      }
+    });
     
     _animationController.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 150), () {
@@ -407,6 +423,12 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                             context: {
                               'courseTitle': widget.currentCourse?.title ?? '',
                               'lessonTitle': widget.currentLesson?.title ?? '',
+                              'currentLessonNotes': widget.currentLesson?.notes ?? '',
+                              'allSections': widget.allSections,
+                              'sectionLessons': widget.sectionLessons,
+                            },
+                            onAIResponse: (text) {
+                              _speakMessage(text);
                             },
                             onVoiceMessageReceived: (text) {
                               final userMessage = AIChatMessage(

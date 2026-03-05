@@ -81,9 +81,25 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
 
     _flutterTts = FlutterTts();
     _flutterTts.setLanguage("en-US");
-    _flutterTts.setSpeechRate(0.45);
+    _flutterTts.setSpeechRate(0.5); // Natural speed
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.1);
+    _flutterTts.setPitch(1.2); // Higher pitch for an attractive female voice
+
+    // Try to set a female voice explicitly
+    _flutterTts.getVoices.then((voices) {
+      try {
+        final femaleVoice = voices.firstWhere(
+          (voice) => 
+            voice['name'].toString().toLowerCase().contains('female') || 
+            voice['name'].toString().toLowerCase().contains('samantha') ||
+            voice['name'].toString().toLowerCase().contains('zira'),
+          orElse: () => voices.first,
+        );
+        _flutterTts.setVoice({"name": femaleVoice['name'], "locale": femaleVoice['locale']});
+      } catch (e) {
+        print('Error setting female voice: $e');
+      }
+    });
 
     if (widget.showWelcome) {
       Future.delayed(const Duration(seconds: 1), () {

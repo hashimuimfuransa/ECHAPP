@@ -41,8 +41,7 @@ dependencies:
   device_info_plus: ^10.0.0
   bitsdojo_window: ^0.1.5
   uuid: ^4.5.1
-  # record: ^5.1.2  # Temporarily removed due to Linux compatibility issues
-
+  record: ^5.1.2
   firebase_auth: ^5.3.1
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3

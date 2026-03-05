@@ -7,6 +7,8 @@ import 'package:path/path.dart' as path;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Voice Chat Recording Widget
 class VoiceChatWidget extends StatefulWidget {
@@ -14,6 +16,7 @@ class VoiceChatWidget extends StatefulWidget {
   final Map<String, dynamic>? context;
   final Function(String text)? onVoiceMessageReceived;
   final Function(String text)? onTextMessageReceived;
+  final Function(String text)? onAIResponse;
 
   const VoiceChatWidget({
     super.key,
@@ -21,6 +24,7 @@ class VoiceChatWidget extends StatefulWidget {
     this.context,
     this.onVoiceMessageReceived,
     this.onTextMessageReceived,
+    this.onAIResponse,
   });
 
   @override
@@ -36,6 +40,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
   String? _audioResponseUrl;
   final TextEditingController _textController = TextEditingController();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioRecorder _recorder = AudioRecorder();
   String? _tempAudioPath;
 
   @override
@@ -52,45 +57,51 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
   void dispose() {
     _textController.dispose();
     _audioPlayer.dispose();
+    _recorder.dispose();
     super.dispose();
   }
 
   Future<void> _startRecording() async {
-    setState(() {
-      _isRecording = true;
-      _recordingText = null;
-      _responseText = null;
-      _audioResponseUrl = null;
-    });
-
-    // TODO: Implement actual recording functionality with correct API
-    // For now, simulate recording completion
-    await Future.delayed(Duration(milliseconds: 500));
-    
-    // Simulate a temporary audio file path for demonstration
-    final tempDir = await Directory.systemTemp.createTemp();
-    final fileName = 'recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    _tempAudioPath = path.join(tempDir.path, fileName);
-    
-    // Create a dummy file for testing purposes
-    File(_tempAudioPath!).createSync();
-    
-    setState(() {
-      _isRecording = false;
-    });
-    
-    await _sendVoiceMessage();
+    try {
+      if (await _recorder.hasPermission()) {
+        final tempDir = await getTemporaryDirectory();
+        _tempAudioPath = path.join(tempDir.path, 'recording_${DateTime.now().millisecondsSinceEpoch}.m4a');
+        
+        const config = RecordConfig();
+        
+        await _recorder.start(config, path: _tempAudioPath!);
+        
+        setState(() {
+          _isRecording = true;
+          _recordingText = 'Recording...';
+          _responseText = null;
+          _audioResponseUrl = null;
+        });
+      }
+    } catch (e) {
+      print('Error starting recording: $e');
+      _showError('Could not start recording');
+    }
   }
 
   Future<void> _stopRecording() async {
-    // Stop recording simulation
-    if (_tempAudioPath != null && File(_tempAudioPath!).existsSync()) {
-      await _sendVoiceMessage();
+    try {
+      final path = await _recorder.stop();
+      setState(() {
+        _isRecording = false;
+        _recordingText = 'Processing...';
+      });
+      
+      if (path != null) {
+        _tempAudioPath = path;
+        await _sendVoiceMessage();
+      }
+    } catch (e) {
+      print('Error stopping recording: $e');
+      setState(() {
+        _isRecording = false;
+      });
     }
-    
-    setState(() {
-      _isRecording = false;
-    });
   }
 
   Future<void> _sendVoiceMessage() async {
@@ -127,11 +138,15 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
         var responseData = jsonDecode(responseBody);
         
         setState(() {
-          _recordingText = responseData['transcription'] ?? 'Audio received';
+          _recordingText = responseData['transcribedText'] ?? 'Audio received';
           _responseText = responseData['textResponse'];
           _audioResponseUrl = responseData['audioResponse'];
           _isProcessing = false;
         });
+
+        if (widget.onAIResponse != null && responseData['textResponse'] != null) {
+          widget.onAIResponse!(responseData['textResponse']);
+        }
 
         if (widget.onVoiceMessageReceived != null) {
           widget.onVoiceMessageReceived!(responseData['textResponse'] ?? '');
@@ -199,6 +214,10 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
           _responseText = data['message'];
           _isProcessing = false;
         });
+
+        if (widget.onAIResponse != null && data['message'] != null) {
+          widget.onAIResponse!(data['message']);
+        }
 
         if (widget.onTextMessageReceived != null) {
           widget.onTextMessageReceived!(data['message']);

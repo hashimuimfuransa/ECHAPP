@@ -351,9 +351,21 @@ class ChatController {
       prompt += `\nHere are the notes for the current lesson:\n${context.currentLessonNotes}\n`;
     }
 
-    if (context.courseStructure && context.courseStructure.length > 0) {
+    const courseStructure = context.courseStructure || (context.allSections && context.allSections.map(section => {
+      const lessons = (context.sectionLessons && context.sectionLessons[section.id]) || [];
+      return {
+        sectionTitle: section.title,
+        lessons: lessons.map(l => ({
+          title: l.title,
+          description: l.description,
+          content: l.notes
+        }))
+      };
+    }));
+
+    if (courseStructure && courseStructure.length > 0) {
       prompt += `\nHere is the detailed content and structure of the course "${context.courseTitle || 'this course'}":\n`;
-      context.courseStructure.forEach(section => {
+      courseStructure.forEach(section => {
         prompt += `- Section: ${section.sectionTitle}\n`;
         section.lessons.forEach(lesson => {
           prompt += `  * Lesson: ${lesson.title}\n`;
