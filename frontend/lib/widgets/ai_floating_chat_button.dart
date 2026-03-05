@@ -3,20 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 /// Floating AI Chat Button that expands to full chat when clicked
 class AIFloatingChatButton extends ConsumerStatefulWidget {
   final Course? currentCourse;
   final Lesson? currentLesson;
+  final List<Section>? allSections;
+  final Map<String, List<Lesson>>? sectionLessons;
   final VoidCallback? onChatOpen;
+  final bool showWelcome;
 
   const AIFloatingChatButton({
     super.key,
     this.currentCourse,
     this.currentLesson,
+    this.allSections,
+    this.sectionLessons,
     this.onChatOpen,
+    this.showWelcome = false,
   });
 
   @override
@@ -28,11 +36,20 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
   late AnimationController _animationController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _welcomeController;
+  late Animation<double> _welcomeScaleAnimation;
   bool _isExpanded = false;
+  bool _showWelcomeBubble = false;
+  late FlutterTts _flutterTts;
+  late RealAIChatService _aiChatService;
+  late String _conversationId;
 
   @override
   void initState() {
     super.initState();
+    _aiChatService = RealAIChatService();
+    _conversationId = 'conversation_${DateTime.now().millisecondsSinceEpoch}';
+    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -51,18 +68,70 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
       parent: _pulseController,
       curve: Curves.easeInOutSine,
     ));
+
+    _welcomeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _welcomeScaleAnimation = CurvedAnimation(
+      parent: _welcomeController,
+      curve: Curves.easeOutBack,
+    );
+
+    _flutterTts = FlutterTts();
+    _flutterTts.setLanguage("en-US");
+    _flutterTts.setSpeechRate(0.45);
+    _flutterTts.setVolume(1.0);
+    _flutterTts.setPitch(1.1);
+
+    if (widget.showWelcome) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _showWelcomeBubble = true;
+          });
+          _welcomeController.forward();
+          _speakWelcome();
+          
+          // Hide welcome bubble after 10 seconds
+          Future.delayed(const Duration(seconds: 10), () {
+            if (mounted && _showWelcomeBubble) {
+              _welcomeController.reverse().then((_) {
+                if (mounted) {
+                  setState(() {
+                    _showWelcomeBubble = false;
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  }
+
+  void _speakWelcome() {
+    String welcomeText = "Hello! I'm your AI learning assistant. I can help you summarize lessons, explain concepts, or answer any questions about your course. Just click me if you need help!";
+    _flutterTts.speak(welcomeText);
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _pulseController.dispose();
+    _welcomeController.dispose();
+    _flutterTts.stop();
     super.dispose();
   }
 
   void _toggleChat() {
     setState(() {
       _isExpanded = !_isExpanded;
+      if (_isExpanded && _showWelcomeBubble) {
+        _showWelcomeBubble = false;
+        _welcomeController.reverse();
+      }
     });
     
     if (_isExpanded) {
@@ -80,10 +149,6 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
 
   @override
   Widget build(BuildContext context) {
-    // Use the real AI service
-    final aiChatService = RealAIChatService();
-    final conversationId = 'conversation_${DateTime.now().millisecondsSinceEpoch}';
-
     return Stack(
       children: [
         // Modern theme-aware label with animation
@@ -135,6 +200,96 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
             ),
           ),
         ),
+
+        // Welcome Popup Bubble
+        if (widget.showWelcome && _showWelcomeBubble)
+          Positioned(
+            right: 20,
+            bottom: 120,
+            child: ScaleTransition(
+              scale: _welcomeScaleAnimation,
+              child: Container(
+                width: 220,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.auto_awesome,
+                            color: AppTheme.primary,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          "AI Tutor",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            _welcomeController.reverse().then((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _showWelcomeBubble = false;
+                                });
+                              }
+                            });
+                          },
+                          child: Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Hello! I can help you summarize this course and answer any questions. How can I assist you today?",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         
         // Enhanced floating chat button with modern glass morphism effect
         Positioned(
@@ -246,8 +401,10 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
                     child: ModernAIChatDialog(
                       currentCourse: widget.currentCourse,
                       currentLesson: widget.currentLesson,
-                      chatService: aiChatService,
-                      conversationId: conversationId,
+                      allSections: widget.allSections,
+                      sectionLessons: widget.sectionLessons,
+                      chatService: _aiChatService,
+                      conversationId: _conversationId,
                       onClose: _toggleChat,
                     ),
                   ),

@@ -416,6 +416,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         AIFloatingChatButton(
           currentCourse: _course,
           currentLesson: null,
+          allSections: _sections,
+          sectionLessons: _sectionLessons,
+          showWelcome: true,
         ),
       ],
     );
@@ -1779,6 +1782,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           builder: (context) => LessonViewer(
             lesson: lesson,
             courseId: widget.courseId,
+            allSections: _sections,
+            sectionLessons: _sectionLessons,
             certificates: _courseCertificates,
             onComplete: () => _markLessonAsComplete(lesson),
           ),

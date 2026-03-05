@@ -39,6 +39,8 @@ class NotesSection {
 class LessonViewer extends ConsumerStatefulWidget {
   final Lesson lesson;
   final String courseId;
+  final List<Section>? allSections;
+  final Map<String, List<Lesson>>? sectionLessons;
   final List<Certificate>? certificates;
   final VoidCallback? onComplete;
   
@@ -46,6 +48,8 @@ class LessonViewer extends ConsumerStatefulWidget {
     super.key,
     required this.lesson,
     required this.courseId,
+    this.allSections,
+    this.sectionLessons,
     this.certificates,
     this.onComplete,
   });
@@ -251,6 +255,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     }
   }
 
+  Map<String, List<Lesson>> _getSectionLessonsMap() {
+    final map = <String, List<Lesson>>{};
+    for (var lesson in _courseLessons) {
+      if (!map.containsKey(lesson.sectionId)) {
+        map[lesson.sectionId] = [];
+      }
+      map[lesson.sectionId]!.add(lesson);
+    }
+    return map;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -314,7 +329,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
               ],
             ),
           ),
-          AIFloatingChatButton(currentLesson: widget.lesson, currentCourse: null),
+          AIFloatingChatButton(
+            currentLesson: widget.lesson,
+            currentCourse: null,
+            allSections: widget.allSections ?? _courseSections,
+            sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
+          ),
         ],
       ),
     );

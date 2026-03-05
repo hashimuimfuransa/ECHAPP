@@ -339,12 +339,27 @@ class ChatController {
     prompt += "4. NO HALLUCINATIONS: Only speak about facts related to the courses and the student's data. If you don't know something about the student's data, don't invent it.\n";
     prompt += "5. TONE: Be very professional, attractive, user-friendly, and feel like a real human coach and instructor, not a robotic script.\n";
     
-    if (context.courseId) {
-      prompt += `The current focus is on a specific course material. `;
+    if (context.courseTitle) {
+      prompt += `The current focus is on the course: "${context.courseTitle}". `;
     }
     
-    if (context.lessonId) {
-      prompt += `The student is currently looking at a specific lesson. `;
+    if (context.lessonTitle) {
+      prompt += `The student is currently looking at the lesson: "${context.lessonTitle}". `;
+    }
+
+    if (context.currentLessonNotes) {
+      prompt += `\nHere are the notes for the current lesson:\n${context.currentLessonNotes}\n`;
+    }
+
+    if (context.courseStructure && context.courseStructure.length > 0) {
+      prompt += `\nHere is the overall structure of the course "${context.courseTitle || 'this course'}":\n`;
+      context.courseStructure.forEach(section => {
+        prompt += `- Section: ${section.sectionTitle}\n`;
+        section.lessons.forEach(lesson => {
+          prompt += `  * Lesson: ${lesson.title}${lesson.description ? ` - ${lesson.description}` : ''}\n`;
+        });
+      });
+      prompt += `\nYou have access to all these sections and lessons. You can help the student by summarizing any of these lessons, explaining concepts, or answering questions about any part of the course.\n`;
     }
     
     prompt += "\nFeel free to discuss anything the student wants. You are their dedicated instructor, so provide value in every response, whether it's about their specific course, general knowledge, or personal growth.";

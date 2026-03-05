@@ -1,5 +1,6 @@
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:http/http.dart' as http;
@@ -51,12 +52,16 @@ class AIChatContext {
   final Lesson? currentLesson;
   final String? studentName;
   final String? studentLevel;
+  final List<Section>? allSections;
+  final Map<String, List<Lesson>>? sectionLessons;
 
   AIChatContext({
     this.currentCourse,
     this.currentLesson,
     this.studentName,
     this.studentLevel,
+    this.allSections,
+    this.sectionLessons,
   });
 
   AIChatContext copyWith({
@@ -64,12 +69,16 @@ class AIChatContext {
     Lesson? currentLesson,
     String? studentName,
     String? studentLevel,
+    List<Section>? allSections,
+    Map<String, List<Lesson>>? sectionLessons,
   }) {
     return AIChatContext(
       currentCourse: currentCourse ?? this.currentCourse,
       currentLesson: currentLesson ?? this.currentLesson,
       studentName: studentName ?? this.studentName,
       studentLevel: studentLevel ?? this.studentLevel,
+      allSections: allSections ?? this.allSections,
+      sectionLessons: sectionLessons ?? this.sectionLessons,
     );
   }
 }
@@ -139,6 +148,17 @@ class RealAIChatService implements AIChatService {
           'lessonTitle': context.currentLesson?.title ?? '',
           'studentName': context.studentName ?? '',
           'studentLevel': context.studentLevel ?? '',
+          'currentLessonNotes': context.currentLesson?.notes ?? '',
+          'courseStructure': context.allSections?.map((section) {
+            final lessons = context.sectionLessons?[section.id] ?? [];
+            return {
+              'sectionTitle': section.title,
+              'lessons': lessons.map((l) => {
+                'title': l.title,
+                'description': l.description ?? '',
+              }).toList(),
+            };
+          }).toList(),
         },
       };
 
@@ -194,6 +214,17 @@ class RealAIChatService implements AIChatService {
         'lessonTitle': context.currentLesson?.title ?? '',
         'studentName': context.studentName ?? '',
         'studentLevel': context.studentLevel ?? '',
+        'currentLessonNotes': context.currentLesson?.notes ?? '',
+        'courseStructure': context.allSections?.map((section) {
+          final lessons = context.sectionLessons?[section.id] ?? [];
+          return {
+            'sectionTitle': section.title,
+            'lessons': lessons.map((l) => {
+              'title': l.title,
+              'description': l.description ?? '',
+            }).toList(),
+          };
+        }).toList(),
       });
       
       request.files.add(
@@ -242,6 +273,17 @@ class RealAIChatService implements AIChatService {
           'lessonTitle': context.currentLesson?.title ?? '',
           'studentName': context.studentName ?? '',
           'studentLevel': context.studentLevel ?? '',
+          'currentLessonNotes': context.currentLesson?.notes ?? '',
+          'courseStructure': context.allSections?.map((section) {
+            final lessons = context.sectionLessons?[section.id] ?? [];
+            return {
+              'sectionTitle': section.title,
+              'lessons': lessons.map((l) => {
+                'title': l.title,
+                'description': l.description ?? '',
+              }).toList(),
+            };
+          }).toList(),
         },
       };
 
@@ -283,6 +325,17 @@ class RealAIChatService implements AIChatService {
           'lessonTitle': context.currentLesson?.title ?? '',
           'studentName': context.studentName ?? '',
           'studentLevel': context.studentLevel ?? '',
+          'currentLessonNotes': context.currentLesson?.notes ?? '',
+          'courseStructure': context.allSections?.map((section) {
+            final lessons = context.sectionLessons?[section.id] ?? [];
+            return {
+              'sectionTitle': section.title,
+              'lessons': lessons.map((l) => {
+                'title': l.title,
+                'description': l.description ?? '',
+              }).toList(),
+            };
+          }).toList(),
         },
       };
 

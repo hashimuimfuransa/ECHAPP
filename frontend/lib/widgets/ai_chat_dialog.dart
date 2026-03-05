@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_messages_list.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_input_widget.dart';
@@ -13,6 +14,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 class ModernAIChatDialog extends StatefulWidget {
   final Course? currentCourse;
   final Lesson? currentLesson;
+  final List<Section>? allSections;
+  final Map<String, List<Lesson>>? sectionLessons;
   final AIChatService chatService;
   final String conversationId;
   final VoidCallback onClose;
@@ -21,6 +24,8 @@ class ModernAIChatDialog extends StatefulWidget {
     super.key,
     this.currentCourse,
     this.currentLesson,
+    this.allSections,
+    this.sectionLessons,
     required this.chatService,
     required this.conversationId,
     required this.onClose,
@@ -113,6 +118,8 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     final context = AIChatContext(
       currentCourse: widget.currentCourse,
       currentLesson: widget.currentLesson,
+      allSections: widget.allSections,
+      sectionLessons: widget.sectionLessons,
     );
 
     final welcomeMessage = 'Hello! I\'m your AI Learning Assistant. ';
@@ -124,11 +131,15 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
       if (widget.currentLesson != null) {
         message += 'Currently working on "${widget.currentLesson!.title}". ';
       }
+      
+      if (widget.allSections != null && widget.allSections!.isNotEmpty) {
+        message += 'I have access to all ${widget.allSections!.length} sections and their lessons. ';
+      }
     } else if (widget.currentLesson != null) {
       message += 'I see you\'re studying "${widget.currentLesson!.title}". ';
     }
     
-    message += 'Ask me anything about your learning materials, and I\'ll help you understand concepts better!';
+    message += 'Ask me anything about your learning materials, and I\'ll help you summarize lessons, understand concepts, or answer any questions!';
 
     final aiMessage = AIChatMessage(
       id: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
