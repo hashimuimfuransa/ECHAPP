@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/data/repositories/enrollment_repository.da
 import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
