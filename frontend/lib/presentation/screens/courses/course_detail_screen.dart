@@ -36,6 +36,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return course.formattedDuration;
   }
 
+  String _formatAccessDuration(Course course) {
+    if (course.accessDurationDays != null) {
+      if (course.accessDurationDays! >= 365) return 'Lifetime';
+      return '${course.accessDurationDays} Days';
+    }
+    
+    if (course.accessDuration != null && course.accessDurationUnit != null) {
+      String unit = course.accessDurationUnit!;
+      if (unit.toLowerCase() == 'days') return '${course.accessDuration} Days';
+      if (unit.toLowerCase() == 'months') return '${course.accessDuration} Months';
+      if (unit.toLowerCase() == 'years') return course.accessDuration! >= 1 ? 'Lifetime' : '${course.accessDuration} Years';
+    }
+    
+    return 'Lifetime';
+  }
+
   String _getCategoryName(WidgetRef ref, Course course) {
     if (course.category != null && course.category!['name'] != null) {
       return course.category!['name'].toString();
@@ -238,15 +254,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF667eea),
-                  Color(0xFF764ba2),
-                  Color(0xFFf093fb),
-                  Color(0xFFf5576c),
+                  Color(0xFF1E3A8A), // Deep Blue
+                  Color(0xFF3B82F6), // Blue
                 ],
-                stops: [0.0, 0.4, 0.7, 1.0],
               ),
             ),
             child: CustomScrollView(
@@ -398,29 +411,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Course category badge
-                              if (course.category != null && course.category!['name'] != null) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    course.category!['name'],
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
                               // Course title
                               Text(
                                 course.title,
@@ -438,10 +428,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-
-                              const SizedBox(height: 6),
-                              // Rating and students (if available)
+                              const SizedBox(height: 12),
+                              // Rating and students
                               Row(
                                 children: [
                                   const Icon(
@@ -450,9 +438,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                     size: 16,
                                   ),
                                   const SizedBox(width: 4),
-                                  const Text(
-                                    '4.8',
-                                    style: TextStyle(
+                                  Text(
+                                    course.averageRating != null && course.averageRating! > 0 
+                                      ? course.averageRating!.toStringAsFixed(1) 
+                                      : '4.8',
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -460,7 +450,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '(1,248 ratings)',
+                                    '(\${course.enrollmentCount ?? 0} students enrolled)',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.8),
                                       fontSize: 14,
@@ -480,7 +470,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 SliverToBoxAdapter(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.getCardColor(context),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
                       boxShadow: [
                         BoxShadow(
@@ -497,6 +487,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         children: [
                           // Enhanced Price and Actions
                           _buildEnhancedPriceSection(course),
+                          
+                          const SizedBox(height: 24),
+
+                          // Horizontal Category Card
+                          if (course.category != null && course.category!['name'] != null)
+                            _buildHorizontalCategoryCard(course),
                           
                           const SizedBox(height: 30),
                           
@@ -519,6 +515,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                           // Enhanced Requirements
                           if (course.requirements != null && course.requirements!.isNotEmpty)
                             _buildEnhancedRequirements(course),
+                          
+                          const SizedBox(height: 30),
+
+                          // Enhanced Instructor Info
+                          _buildEnhancedInstructorInfo(course),
                           
                           const SizedBox(height: 30),
                           
@@ -582,18 +583,77 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     );
   }
 
+  Widget _buildHorizontalCategoryCard(Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.category_outlined,
+              color: Color(0xFF3B82F6),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'COURSE CATEGORY',
+                  style: TextStyle(
+                    color: isDark ? Colors.white60 : Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  course.category!['name'],
+                  style: TextStyle(
+                    color: AppTheme.getTextColor(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: isDark ? Colors.white60 : Colors.grey,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEnhancedPriceSection(Course course) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667eea).withOpacity(0.3),
+            color: const Color(0xFF1E3A8A).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -935,12 +995,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       return Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4facfe).withOpacity(0.4),
+              color: const Color(0xFF1E3A8A).withOpacity(0.4),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1099,34 +1159,29 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 'label': 'Students',
                 'color': const Color(0xFFf093fb)
               },
+              {
+                'icon': Icons.update_outlined,
+                'value': _formatAccessDuration(course),
+                'label': 'Access',
+                'color': const Color(0xFF10B981)
+              },
             ];
-
-            // Add category if it's available
-            final categoryName = _getCategoryName(ref, course);
-            if (categoryName != 'Uncategorized') {
-              stats.add({
-                'icon': Icons.category_outlined,
-                'value': categoryName,
-                'label': 'Category',
-                'color': const Color(0xFFf5576c)
-              });
-            }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Course Overview',
                   style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 22,
+                    color: AppTheme.getTextColor(context),
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
                 ),
               ],
@@ -1149,36 +1204,33 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               },
               {
                 'icon': Icons.people_outline,
-                'value': 'Loading...',
+                'value': '...',
                 'label': 'Students',
                 'color': const Color(0xFFf093fb)
               },
+              {
+                'icon': Icons.update_outlined,
+                'value': _formatAccessDuration(course),
+                'label': 'Access',
+                'color': const Color(0xFF10B981)
+              },
             ];
-
-            if (course.category != null && course.category!['name'] != null) {
-              stats.add({
-                'icon': Icons.category_outlined,
-                'value': course.category!['name'],
-                'label': 'Category',
-                'color': const Color(0xFFf5576c)
-              });
-            }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Course Overview',
                   style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 22,
+                    color: AppTheme.getTextColor(context),
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
                 ),
               ],
@@ -1205,32 +1257,29 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 'label': 'Students',
                 'color': const Color(0xFFf093fb)
               },
+              {
+                'icon': Icons.update_outlined,
+                'value': _formatAccessDuration(course),
+                'label': 'Access',
+                'color': const Color(0xFF10B981)
+              },
             ];
-
-            if (course.category != null && course.category!['name'] != null) {
-              stats.add({
-                'icon': Icons.category_outlined,
-                'value': course.category!['name'],
-                'label': 'Category',
-                'color': const Color(0xFFf5576c)
-              });
-            }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Course Overview',
                   style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 22,
+                    color: AppTheme.getTextColor(context),
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
                 ),
               ],
@@ -1242,46 +1291,50 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedStatItem(Map<String, dynamic> stat) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 110,
-      padding: const EdgeInsets.all(16),
+      width: 95,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            stat['color'],
-            stat['color'].withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.getCardColor(context),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: stat['color'].withOpacity(0.3),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6)),
       ),
       child: Column(
         children: [
-          Icon(stat['icon'], color: Colors.white, size: 28),
-          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: stat['color'].withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(stat['icon'], color: stat['color'], size: 24),
+          ),
+          const SizedBox(height: 12),
           Text(
             stat['value'],
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
+            style: TextStyle(
+              color: AppTheme.getTextColor(context),
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             stat['label'],
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
+            style: TextStyle(
+              color: AppTheme.getSecondaryTextColor(context),
+              fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
@@ -1374,14 +1427,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedDescription(Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'About This Course',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
+            color: AppTheme.getTextColor(context),
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1389,17 +1443,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.grey[200]!,
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
               width: 1,
             ),
           ),
           child: Text(
             course.description,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: AppTheme.getSecondaryTextColor(context),
               fontSize: 16,
               height: 1.7,
             ),
@@ -1442,25 +1496,27 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedLearningObjectives(Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'What You Will Learn',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
+            color: AppTheme.getTextColor(context),
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.getCardColor(context),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -1477,7 +1533,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     ? null 
                     : Border(
                         bottom: BorderSide(
-                          color: Colors.grey[200]!,
+                          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
                           width: 1,
                         ),
                       ),
@@ -1486,7 +1542,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
                         color: Color(0xFF10B981),
                         shape: BoxShape.circle,
@@ -1494,17 +1550,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                       child: const Icon(
                         Icons.check,
                         color: Colors.white,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         objective,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          height: 1.5,
+                        style: TextStyle(
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -1580,25 +1635,27 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedRequirements(Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Requirements',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
+            color: AppTheme.getTextColor(context),
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.getCardColor(context),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -1615,7 +1672,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     ? null 
                     : Border(
                         bottom: BorderSide(
-                          color: Colors.grey[200]!,
+                          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
                           width: 1,
                         ),
                       ),
@@ -1624,25 +1681,24 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
                         color: Colors.orange,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.info,
+                        Icons.info_outline,
                         color: Colors.white,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         requirement,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          height: 1.5,
+                        style: TextStyle(
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -1816,25 +1872,27 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedInstructorInfo(Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Meet Your Instructor',
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 22,
+            color: AppTheme.getTextColor(context),
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.getCardColor(context),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -1849,12 +1907,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   height: 80,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF667eea).withOpacity(0.3),
+                        color: const Color(0xFF1E3A8A).withOpacity(0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -1878,17 +1936,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     children: [
                       Text(
                         course.createdBy.fullName,
-                        style: const TextStyle(
-                          color: Colors.black87,
+                        style: TextStyle(
+                          color: AppTheme.getTextColor(context),
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Lead Instructor & Course Creator',
                         style: TextStyle(
-                          color: Colors.grey,
+                          color: AppTheme.getSecondaryTextColor(context),
                           fontSize: 15,
                         ),
                       ),
@@ -1896,16 +1954,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.email_outlined,
-                              color: Colors.grey,
+                              color: AppTheme.getSecondaryTextColor(context),
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               course.createdBy.email,
-                              style: const TextStyle(
-                                color: Colors.grey,
+                              style: TextStyle(
+                                color: AppTheme.getSecondaryTextColor(context),
                                 fontSize: 14,
                               ),
                             ),
@@ -1913,10 +1971,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         ),
                       ],
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'With 5+ years of teaching experience and expertise in modern development practices, our instructor brings real-world knowledge to help you succeed.',
                         style: TextStyle(
-                          color: Colors.grey,
+                          color: AppTheme.getSecondaryTextColor(context),
                           fontSize: 14,
                           height: 1.5,
                         ),
@@ -2028,14 +2086,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667eea).withOpacity(0.3),
+            color: const Color(0xFF1E3A8A).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

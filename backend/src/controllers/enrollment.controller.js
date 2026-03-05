@@ -88,6 +88,9 @@ const enrollInCourse = async (req, res) => {
       accessExpirationDate
     });
 
+    // Update course enrollment count
+    await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
+
     // Get user and course details for email notification
     const user = await User.findById(userId).select('fullName email');
     
@@ -164,6 +167,17 @@ const submitCourseFeedback = async (req, res) => {
     enrollment.rating = rating;
     enrollment.feedback = feedback;
     await enrollment.save();
+
+    // Update course average rating
+    const mongoose = require('mongoose');
+    const stats = await Enrollment.aggregate([
+      { $match: { courseId: new mongoose.Types.ObjectId(courseId), rating: { $ne: null } } },
+      { $group: { _id: '$courseId', averageRating: { $avg: '$rating' } } }
+    ]);
+
+    if (stats.length > 0) {
+      await Course.findByIdAndUpdate(courseId, { averageRating: stats[0].averageRating });
+    }
 
     sendSuccess(res, enrollment, 'Feedback submitted successfully');
   } catch (error) {
