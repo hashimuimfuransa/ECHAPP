@@ -352,14 +352,16 @@ class ChatController {
     }
 
     if (context.courseStructure && context.courseStructure.length > 0) {
-      prompt += `\nHere is the overall structure of the course "${context.courseTitle || 'this course'}":\n`;
+      prompt += `\nHere is the detailed content and structure of the course "${context.courseTitle || 'this course'}":\n`;
       context.courseStructure.forEach(section => {
         prompt += `- Section: ${section.sectionTitle}\n`;
         section.lessons.forEach(lesson => {
-          prompt += `  * Lesson: ${lesson.title}${lesson.description ? ` - ${lesson.description}` : ''}\n`;
+          prompt += `  * Lesson: ${lesson.title}\n`;
+          if (lesson.description) prompt += `    Description: ${lesson.description}\n`;
+          if (lesson.content) prompt += `    CONTENT/NOTES: ${lesson.content.substring(0, 1000)}${lesson.content.length > 1000 ? '...' : ''}\n`;
         });
       });
-      prompt += `\nYou have access to all these sections and lessons. You can help the student by summarizing any of these lessons, explaining concepts, or answering questions about any part of the course.\n`;
+      prompt += `\nYou have access to all these sections, lesson titles, and lesson materials/notes. You can help the student by summarizing any of these lessons, explaining concepts from the materials, or answering questions about any part of the course content.\n`;
     }
     
     prompt += "\nFeel free to discuss anything the student wants. You are their dedicated instructor, so provide value in every response, whether it's about their specific course, general knowledge, or personal growth.";

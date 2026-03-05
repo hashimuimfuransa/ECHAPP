@@ -156,6 +156,7 @@ class RealAIChatService implements AIChatService {
               'lessons': lessons.map((l) => {
                 'title': l.title,
                 'description': l.description ?? '',
+                'content': l.notes ?? '', // Include actual lesson content/notes
               }).toList(),
             };
           }).toList(),
@@ -222,6 +223,7 @@ class RealAIChatService implements AIChatService {
             'lessons': lessons.map((l) => {
               'title': l.title,
               'description': l.description ?? '',
+              'content': l.notes ?? '', // Include actual lesson content/notes
             }).toList(),
           };
         }).toList(),
@@ -281,6 +283,7 @@ class RealAIChatService implements AIChatService {
               'lessons': lessons.map((l) => {
                 'title': l.title,
                 'description': l.description ?? '',
+                'content': l.notes ?? '', // Include actual lesson content/notes
               }).toList(),
             };
           }).toList(),
@@ -333,6 +336,7 @@ class RealAIChatService implements AIChatService {
               'lessons': lessons.map((l) => {
                 'title': l.title,
                 'description': l.description ?? '',
+                'content': l.notes ?? '', // Include actual lesson content/notes
               }).toList(),
             };
           }).toList(),
