@@ -395,10 +395,117 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+// Get recommended courses for the user
+const getRecommendedCourses = async (req, res) => {
+  try {
+    const userId = req.user ? req.user.id : null;
+    const limit = parseInt(req.query.limit) || 8;
+
+    let enrolledCourseIds = [];
+    const interestedCategoryIds = new Set();
+    const levelProgress = {
+      'beginner': 0,
+      'intermediate': 0,
+      'advanced': 0
+    };
+
+    if (userId) {
+      // 1. Get user's enrolled courses
+      const enrollments = await Enrollment.find({ userId }).populate('courseId');
+      enrolledCourseIds = enrollments.map(e => e.courseId ? e.courseId._id : null).filter(id => id !== null);
+      
+      // 2. Identify categories and levels user is interested in
+      enrollments.forEach(e => {
+        if (e.courseId) {
+          if (e.courseId.category) interestedCategoryIds.add(e.courseId.category.toString());
+          if (e.courseId.level) levelProgress[e.courseId.level]++;
+        }
+      });
+    }
+
+    // Determine target level (if they've done many beginner, suggest intermediate)
+    let targetLevel = 'beginner';
+    if (levelProgress['beginner'] > 2) targetLevel = 'intermediate';
+    if (levelProgress['intermediate'] > 1) targetLevel = 'advanced';
+
+    // 3. Recommendation aggregation pipeline
+    const aggregationPipeline = [
+      { 
+        $match: { 
+          isPublished: true,
+          _id: { $nin: enrolledCourseIds } // Exclude already enrolled
+        } 
+      },
+      {
+        $lookup: {
+          from: 'enrollments',
+          localField: '_id',
+          foreignField: 'courseId',
+          as: 'allEnrollments'
+        }
+      },
+      {
+        $addFields: {
+          enrollmentCount: { $size: '$allEnrollments' },
+          averageRating: { 
+            $ifNull: [
+              { $avg: '$allEnrollments.rating' }, 
+              0 
+            ] 
+          },
+          // Scoring factors
+          categoryScore: {
+            $cond: [
+              { $in: [{ $toString: '$category' }, Array.from(interestedCategoryIds)] },
+              10,
+              0
+            ]
+          },
+          levelScore: {
+            $cond: [
+              { $eq: ['$level', targetLevel] },
+              5,
+              0
+            ]
+          }
+        }
+      },
+      {
+        $addFields: {
+          totalScore: {
+            $add: [
+              '$categoryScore',
+              '$levelScore',
+              { $multiply: ['$averageRating', 2] }, // Rating weight
+              { $divide: ['$enrollmentCount', 10] }  // Popularity weight
+            ]
+          }
+        }
+      },
+      { $sort: { totalScore: -1, createdAt: -1 } },
+      { $limit: limit }
+    ];
+
+    let recommendedCourses = await Course.aggregate(aggregationPipeline);
+    
+    // Populate
+    recommendedCourses = await Course.populate(recommendedCourses, [
+      { path: 'createdBy', select: 'fullName' },
+      { path: 'category', select: 'name' }
+    ]);
+
+    sendSuccess(res, recommendedCourses, 'Recommended courses retrieved successfully');
+  } catch (error) {
+    console.error('Error in getRecommendedCourses:', error);
+    sendError(res, 'Failed to retrieve recommended courses', 500, error.message);
+  }
+};
+
 module.exports = {
   getCourses,
   getCourseById,
   createCourse,
   updateCourse,
-  deleteCourse
+  deleteCourse,
+  getRecommendedCourses
 };

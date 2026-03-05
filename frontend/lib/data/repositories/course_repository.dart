@@ -93,4 +93,8 @@ class CourseRepository {
   Future<void> deleteCourse(String id) async {
     await _courseService.deleteCourse(id);
   }
+
+  Future<List<Course>> getRecommendedCourses({int limit = 8}) async {
+    return await _courseService.getRecommendedCourses(limit: limit);
+  }
 }

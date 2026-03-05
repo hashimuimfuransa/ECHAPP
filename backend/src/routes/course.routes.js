@@ -5,13 +5,15 @@ const {
   getCourseById, 
   createCourse, 
   updateCourse, 
-  deleteCourse 
+  deleteCourse,
+  getRecommendedCourses
 } = require('../controllers/course.controller');
 const { protect, optionalProtect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 
 // Public routes
 router.get('/', optionalProtect, getCourses);
+router.get('/recommendations', optionalProtect, getRecommendedCourses);
 router.get('/:id', optionalProtect, getCourseById); // Make basic course info public
 
 // Admin routes

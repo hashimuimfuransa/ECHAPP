@@ -228,6 +228,28 @@ class CourseService {
     }
   }
 
+  /// Get recommended courses for the user
+  Future<List<Course>> getRecommendedCourses({int limit = 8}) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.courses}/recommendations',
+        queryParams: {'limit': limit.toString()},
+      );
+
+      response.validateStatus();
+      final apiResponse = response.toApiResponseList(Course.fromJson);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        throw ApiException(apiResponse.message);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch recommended courses: $e');
+    }
+  }
+
   /// Dispose of resources
   void dispose() {
     _apiClient.dispose();

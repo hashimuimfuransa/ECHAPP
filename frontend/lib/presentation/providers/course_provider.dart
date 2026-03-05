@@ -50,6 +50,18 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
 });
 
 final recommendedCoursesProvider = FutureProvider<List<Course>>((ref) async {
+  final repository = ref.read(courseRepositoryProvider);
+  
+  try {
+    final backendRecommendations = await repository.getRecommendedCourses();
+    if (backendRecommendations.isNotEmpty) {
+      return backendRecommendations;
+    }
+  } catch (e) {
+    print('Error fetching recommended courses from backend: $e');
+  }
+
+  // Fallback to frontend-only logic if backend fails, returns empty, or for unauthenticated users
   final allCoursesAsync = ref.watch(coursesProvider);
   // Using enrollment_provider.dart's enrolledCoursesProvider
   final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
