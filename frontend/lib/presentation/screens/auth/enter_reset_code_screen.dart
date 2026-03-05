@@ -55,25 +55,38 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
                       Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(25),
+                            width: 200,
+                            height: 200,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00C896).withOpacity(0.3),
+                                  blurRadius: 40,
+                                  spreadRadius: 8,
+                                )
+                              ],
                             ),
                             child: ClipOval(
                               child: Padding(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(25),
                                 child: Image.asset(
                                   'assets/logo.png',
                                   fit: BoxFit.contain,
-                                  width: 90,
-                                  height: 90,
                                 ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          const Text(
+                            'Excellence Coaching Hub',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF00C896),
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
                             ),
                           ),
                           const SizedBox(height: 25),

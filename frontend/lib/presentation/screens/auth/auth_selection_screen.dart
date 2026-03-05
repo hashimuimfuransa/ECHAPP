@@ -65,9 +65,9 @@ class _LogoBadge extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: _kAccent.withOpacity(0.2),
-              blurRadius: 12,
-              spreadRadius: 2,
+              color: _kAccent.withOpacity(isLarge ? 0.4 : 0.25),
+              blurRadius: isLarge ? 24 : 12,
+              spreadRadius: isLarge ? 4 : 2,
             ),
           ],
         ),
@@ -214,9 +214,9 @@ class _BrandPanel extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isMobile 
-            ? [const Color(0xFF0D1F2D), const Color(0xFF1a3a4a), const Color(0xFF0F2835)]
-            : [const Color(0xFF041420), const Color(0xFF062838), const Color(0xFF041B2D)],
-          stops: const [0.0, 0.5, 1.0],
+            ? [const Color(0xFF041B2D), const Color(0xFF072A3E), const Color(0xFF0A4A5A)]
+            : [const Color(0xFF020D17), const Color(0xFF041B2D), const Color(0xFF072A3E)],
+          stops: const [0.0, 0.4, 1.0],
         ),
       ),
       child: Stack(
@@ -230,12 +230,15 @@ class _BrandPanel extends StatelessWidget {
                 child: _GlowCircle(size: 160,
                     color: _kGold.withOpacity(0.04))),
           if (compact) ...[
-            Positioned(top: -80, right: -80,
-                child: _GlowCircle(size: 220,
-                    color: _kAccent.withOpacity(0.14))),
-            Positioned(bottom: -100, left: -60,
-                child: _GlowCircle(size: 180,
-                    color: _kAccent.withOpacity(0.08))),
+            Positioned(top: -100, right: -100,
+                child: _GlowCircle(size: 300,
+                    color: _kAccent.withOpacity(0.18))),
+            Positioned(top: 40, left: -60,
+                child: _GlowCircle(size: 140,
+                    color: _kGold.withOpacity(0.06))),
+            Positioned(bottom: -60, left: -40,
+                child: _GlowCircle(size: 200,
+                    color: _kAccent.withOpacity(0.1))),
           ],
           SafeArea(
             child: SizedBox.expand(
@@ -255,35 +258,39 @@ class _BrandPanel extends StatelessWidget {
 
   Widget _fullContent() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // ── Logo + name row ──────────────────────────────────────────
-        Row(children: [
-          const _LogoBadge(),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Excellence',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2)),
-              Text('Coaching Hub',
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.55),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500)),
-            ],
-          ),
-        ]),
+        // ── Extra Large Logo + name ──────────────────────────────────
+        Column(
+          children: [
+            const _LogoBadge(size: 200),
+            const SizedBox(height: 24),
+            const Text(
+              'Excellence',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+            Text(
+              'Coaching Hub',
+              style: TextStyle(
+                color: _kAccent,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
+        ),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 60),
 
         // ── Headline ─────────────────────────────────────────────────
-        // Bold large white text like in image
         RichText(
+          textAlign: TextAlign.center,
           text: TextSpan(
             style: const TextStyle(
                 color: Colors.white,
@@ -301,10 +308,11 @@ class _BrandPanel extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
 
         // ── Subheading matching image italic/mixed weight ─────────────
         RichText(
+          textAlign: TextAlign.center,
           text: const TextSpan(
             style: TextStyle(
                 color: Colors.white70, fontSize: 14.5, height: 1.6),
@@ -327,18 +335,27 @@ class _BrandPanel extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 40),
 
         // ── Feature rows ─────────────────────────────────────────────
-        const _FeatureRow(
-            icon: Icons.play_circle_outline_rounded,
-            text: '1,000+ On-Demand Video Courses'),
-        const _FeatureRow(
-            icon: Icons.verified_outlined,
-            text: 'Industry-Recognised Certifications'),
-        const _FeatureRow(
-            icon: Icons.people_outline_rounded,
-            text: 'Live Mentorship & Coaching Sessions'),
+        Center(
+          child: SizedBox(
+            width: 320,
+            child: Column(
+              children: const [
+                _FeatureRow(
+                    icon: Icons.play_circle_outline_rounded,
+                    text: '1,000+ On-Demand Video Courses'),
+                _FeatureRow(
+                    icon: Icons.verified_outlined,
+                    text: 'Industry-Recognised Certifications'),
+                _FeatureRow(
+                    icon: Icons.people_outline_rounded,
+                    text: 'Live Mentorship & Coaching Sessions'),
+              ],
+            ),
+          ),
+        ),
 
         const Spacer(),
       ],
@@ -351,41 +368,46 @@ class _BrandPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: isMobile ? 100 : 130,
-          height: isMobile ? 100 : 130,
+          width: isMobile ? 140 : 180,
+          height: isMobile ? 140 : 180,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: _kAccent.withOpacity(0.35),
-                blurRadius: 32,
-                spreadRadius: 6,
+                color: _kAccent.withOpacity(0.4),
+                blurRadius: 40,
+                spreadRadius: 8,
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.1),
+                blurRadius: 20,
+                spreadRadius: -4,
               ),
             ],
           ),
-          child: _LogoBadge(size: isMobile ? 100 : 130),
+          child: _LogoBadge(size: isMobile ? 140 : 180),
         ),
-        SizedBox(height: isMobile ? 16 : 24),
+        SizedBox(height: isMobile ? 24 : 32),
         Column(
           children: [
             Text('Excellence',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.white,
-                    fontSize: isMobile ? 22 : 28,
+                    fontSize: isMobile ? 28 : 36,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
+                    letterSpacing: 0.5,
                     height: 1.0)),
-            SizedBox(height: isMobile ? 2 : 4),
+            SizedBox(height: isMobile ? 4 : 6),
             Text('Coaching Hub',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.68),
-                    fontSize: isMobile ? 13 : 15,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3)),
+                    color: _kAccent,
+                    fontSize: isMobile ? 16 : 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2.5)),
           ],
         ),
-        SizedBox(height: isMobile ? 14 : 20),
+        SizedBox(height: isMobile ? 20 : 28),
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: isMobile ? 15 : 18,
@@ -474,16 +496,16 @@ class _GoogleButtonState extends State<_GoogleButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isMobile ? 52 : 56,
+          height: isMobile ? 54 : 58,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kBorder, width: 1.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFDADCE0), width: 1.2),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3)),
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4)),
             ],
           ),
           child: Row(
@@ -491,22 +513,22 @@ class _GoogleButtonState extends State<_GoogleButton>
             children: [
               if (widget.isLoading)
                 const SizedBox(
-                  width: 20, height: 20,
+                  width: 22, height: 22,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
+                    strokeWidth: 3,
                     valueColor: AlwaysStoppedAnimation(_kAccent),
                   ),
                 )
               else
-                _GoogleGIcon(size: 22),
-              const SizedBox(width: 14),
+                _GoogleGIcon(size: 24),
+              const SizedBox(width: 12),
               Text(
                 widget.isLoading ? 'Connecting...' : 'Continue with Google',
                 style: TextStyle(
-                    color: _kText1,
-                    fontSize: isMobile ? 15 : 16,
+                    color: const Color(0xFF3C4043),
+                    fontSize: isMobile ? 16 : 17,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2),
+                    letterSpacing: 0.2),
               ),
             ],
           ),
@@ -531,48 +553,46 @@ class _GoogleGIcon extends StatelessWidget {
 class _GoogleGPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final r = size.width / 2;
-    final cx = r;
-    final cy = r;
-
-    final colors = [
-      const Color(0xFF4285F4), // blue - top-right arc
-      const Color(0xFF34A853), // green - bottom-right
-      const Color(0xFFFBBC05), // yellow - bottom-left
-      const Color(0xFFEA4335), // red - top-left
-    ];
-
-    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = size.width * 0.17;
-    final sweeps = [pi / 2, pi / 2, pi / 2, pi / 2];
-
-    double startAngle = -pi / 4;
-    for (int i = 0; i < 4; i++) {
-      paint.color = colors[i];
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r - paint.strokeWidth / 2),
-        startAngle,
-        sweeps[i],
-        false,
-        paint,
-      );
-      startAngle += sweeps[i];
-    }
-
-    // White cutout bar for the "G" crossbar
-    final barPaint = Paint()
-      ..color = Colors.white
+    final double w = size.width;
+    final double h = size.height;
+    final double sw = w * 0.22; // stroke width
+    final Rect rect = Rect.fromLTWH(sw / 2, sw / 2, w - sw, h - sw);
+    
+    final Paint paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.17
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(cx, cy),
-      Offset(cx + r * 0.7, cy),
-      barPaint,
-    );
+      ..strokeWidth = sw
+      ..strokeCap = StrokeCap.butt;
+
+    // Google Colors
+    const red = Color(0xFFEA4335);
+    const yellow = Color(0xFFFBBC05);
+    const green = Color(0xFF34A853);
+    const blue = Color(0xFF4285F4);
+
+    // Blue section (Right arc + Bar)
+    paint.color = blue;
+    // Blue arc starts from around -0.7 rad to 0.8 rad
+    canvas.drawArc(rect, -0.7, 1.5, false, paint); 
+    
+    // Blue Bar
+    final barPaint = Paint()..color = blue..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(w/2, h/2 - sw/2, w/2, sw), barPaint);
+
+    // Green section (Bottom)
+    paint.color = green;
+    canvas.drawArc(rect, 0.8, 1.6, false, paint);
+
+    // Yellow section (Left)
+    paint.color = yellow;
+    canvas.drawArc(rect, 2.4, 1.3, false, paint);
+
+    // Red section (Top)
+    paint.color = red;
+    canvas.drawArc(rect, 3.7, 1.8, false, paint);
   }
 
   @override
-  bool shouldRepaint(_) => false;
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 // ─── Email / primary button ───────────────────────────────────────────────────
@@ -623,8 +643,8 @@ class _PrimaryButtonState extends State<_PrimaryButton>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [_kAccent, _kAccentDark],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
@@ -651,9 +671,9 @@ class _PrimaryButtonState extends State<_PrimaryButton>
               Text(widget.label,
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: isMobile ? 15 : 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2)),
+                      fontSize: isMobile ? 17 : 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2)),
             ],
           ),
         ),
@@ -896,27 +916,70 @@ class _AuthCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Sign In',
-            style: TextStyle(
-                color: _kText1,
-                fontSize: isMobile ? 26 : 32,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.6)),
-        const SizedBox(height: 4),
-        Text('Continue your learning',
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sign In',
+                    style: TextStyle(
+                        color: _kText1,
+                        fontSize: isMobile ? 32 : 40,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.0,
+                        height: 1.0)),
+                const SizedBox(height: 6),
+                Container(
+                    width: 50, height: 4,
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [_kAccent, _kAccentDark]),
+                        borderRadius: BorderRadius.circular(2))),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _kAccent.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.vpn_key_rounded, color: _kAccent, size: isMobile ? 24 : 30),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text('Access your dashboard & courses',
             style: TextStyle(
                 color: _kText2, 
-                fontSize: isMobile ? 13.5 : 15,
+                fontSize: isMobile ? 15 : 17,
                 height: 1.4,
                 fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
-        Container(
-            width: 40, height: 2.5,
-            decoration: BoxDecoration(
-                color: _kAccent,
-                borderRadius: BorderRadius.circular(2))),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
+
+        if (error != null && error!.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(children: [
+              Icon(Icons.error_rounded, color: Colors.red.shade600, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(error!,
+                    style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3)),
+              ),
+            ]),
+          ),
+        ],
 
         _PrimaryButton(
           icon: Icons.mail_outline_rounded,
@@ -925,40 +988,31 @@ class _AuthCard extends StatelessWidget {
           onPressed: isLoading ? null : onEmail,
         ),
 
-        if (error != null && error!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.red.shade200),
-            ),
-            child: Row(children: [
-              Icon(Icons.error_outline, color: Colors.red.shade400, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(error!,
-                    style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        height: 1.3)),
-              ),
-            ]),
-          ),
-        ],
-
-        const SizedBox(height: 16),
-
         if (!ResponsiveBreakpoints.isDesktop(context) && onGoogle != null && !kIsWeb) ...[
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('OR',
+                    style: TextStyle(
+                        color: _kText3,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2)),
+              ),
+              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+            ],
+          ),
+          const SizedBox(height: 24),
           _GoogleButton(
             isLoading: isLoading,
             onPressed: !isLoading ? onGoogle : null,
           ),
-          const SizedBox(height: 18),
         ],
 
+        const SizedBox(height: 32),
         const _DeviceWarningBadge(),
 
         const SizedBox(height: 16),
@@ -1113,7 +1167,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
             children: [
               SizedBox(
                 width: screenWidth,
-                height: screenHeight * 0.35,
+                height: screenHeight * 0.45,
                 child: const SafeArea(
                   bottom: false,
                   child: _BrandPanel(compact: true),
@@ -1124,16 +1178,17 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(32)),
+                      BorderRadius.vertical(top: Radius.circular(40)),
                   boxShadow: [
                     BoxShadow(
-                        color: Color(0x12000000),
-                        blurRadius: 28,
-                        offset: Offset(0, -8)),
+                        color: Color(0x1A000000),
+                        blurRadius: 32,
+                        spreadRadius: 4,
+                        offset: Offset(0, -12)),
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(28, 36, 28, 32),
                   child: _AuthCard(
                     isLoading: authState.isLoading,
                     error: authState.error,

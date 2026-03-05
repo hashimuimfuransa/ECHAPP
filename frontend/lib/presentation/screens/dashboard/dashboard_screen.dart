@@ -35,29 +35,31 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED), // Very light orange/cream
+        color: isDark ? const Color(0xFF431407).withOpacity(0.3) : const Color(0xFFFFF7ED), // Very light orange/cream
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFFFEDD5), // Light orange border
+          color: isDark ? const Color(0xFF7C2D12).withOpacity(0.4) : const Color(0xFFFFEDD5), // Light orange border
           width: 1,
         ),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: Color(0xFFF97316), // Orange icon
+            color: isDark ? const Color(0xFFFB923C) : const Color(0xFFF97316), // Orange icon
             size: 22,
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Text(
               'Device Security: Your account is secured to this device for your protection. Contact support to change devices.',
               style: TextStyle(
-                color: Color(0xFF92400E), // Brownish orange text
+                color: isDark ? const Color(0xFFFFEDD5).withOpacity(0.9) : const Color(0xFF92400E), // Brownish orange text
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.2,
@@ -111,9 +113,9 @@ class _StatItem extends StatelessWidget {
               ),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: AppTheme.getSecondaryTextColor(context),
                 ),
               ),
             ],
@@ -200,6 +202,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
     final userEnrollmentsAsync = ref.watch(userEnrollmentsProvider);
     final popularCoursesAsync = ref.watch(popularCoursesProvider);
+    final recommendedCoursesAsync = ref.watch(recommendedCoursesProvider);
 
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final padding = isDesktop 
@@ -243,11 +246,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   const SizedBox(height: 32),
                   _buildResponsiveQuickActions(context),
                   const SizedBox(height: 32),
-                  popularCoursesAsync.when(
-                    data: (popularCourses) => enrolledCoursesAsync.when(
-                      data: (enrolledCourses) => _buildRecommendedCourses(context, popularCourses, enrolledCourses),
-                      loading: () => _buildRecommendedCourses(context, popularCourses, []),
-                      error: (_, __) => _buildRecommendedCourses(context, popularCourses, []),
+                  recommendedCoursesAsync.when(
+                    data: (recommendedCourses) => enrolledCoursesAsync.when(
+                      data: (enrolledCourses) => _buildRecommendedCourses(
+                        context, 
+                        recommendedCourses.isNotEmpty 
+                            ? recommendedCourses 
+                            : (popularCoursesAsync.value ?? []), 
+                        enrolledCourses
+                      ),
+                      loading: () => _buildRecommendedCourses(context, recommendedCourses, []),
+                      error: (_, __) => _buildRecommendedCourses(context, recommendedCourses, []),
                     ),
                     loading: () => _buildLoadingCard(context, 'Recommended Courses'),
                     error: (error, stack) => _buildErrorCard(
@@ -290,6 +299,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     ref.invalidate(enrolledCoursesProvider);
     ref.invalidate(userEnrollmentsProvider);
     ref.invalidate(popularCoursesProvider);
+    ref.invalidate(recommendedCoursesProvider);
   }
 
   void _showStatsDialog(BuildContext context) {
@@ -434,6 +444,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   }
 
   Widget _buildWelcomeCard(BuildContext context, user, List<Enrollment> enrollments) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final lastEnrollment = enrollments.isNotEmpty ? enrollments.first : null;
     final lastCourse = lastEnrollment?.course;
@@ -459,7 +470,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(0.2),
+            color: const Color(0xFF10B981).withOpacity(isDark ? 0.3 : 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -626,10 +637,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     width: 280,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+                        BoxShadow(color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05), blurRadius: 10),
                       ],
                     ),
                     child: Row(
@@ -640,17 +651,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             children: [
                               Text(
                                 '${averageProgress.toInt()}% Completed',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF333333)),
+                                style: TextStyle(
+                                  fontSize: 15, 
+                                  fontWeight: FontWeight.w700, 
+                                  color: isDark ? Colors.white : const Color(0xFF333333),
+                                ),
                               ),
                               const SizedBox(height: 16),
-                              _buildWelcomeStatItem(Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
+                              _buildWelcomeStatItem(context, Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
                               const SizedBox(height: 12),
-                              _buildWelcomeStatItem(Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
+                              _buildWelcomeStatItem(context, Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
                             ],
                           ),
                         ),
                         const SizedBox(width: 16),
-                        _buildCircularProgress(averageProgress),
+                        _buildCircularProgress(context, averageProgress),
                       ],
                     ),
                   ),
@@ -663,7 +678,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildWelcomeStatItem(IconData icon, String value, String label, Color color) {
+  Widget _buildWelcomeStatItem(BuildContext context, IconData icon, String value, String label, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
@@ -676,8 +692,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF333333), height: 1.1)),
-              Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), height: 1.1)),
+              Text(value, style: TextStyle(
+                fontSize: 13, 
+                fontWeight: FontWeight.w800, 
+                color: isDark ? Colors.white : const Color(0xFF333333), 
+                height: 1.1,
+              )),
+              Text(label, style: TextStyle(
+                fontSize: 11, 
+                color: isDark ? Colors.white70 : const Color(0xFF9CA3AF), 
+                height: 1.1,
+              )),
             ],
           ),
         ),
@@ -685,7 +710,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCircularProgress(double progress) {
+  Widget _buildCircularProgress(BuildContext context, double progress) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -695,7 +721,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           child: CircularProgressIndicator(
             value: progress / 100,
             strokeWidth: 8,
-            backgroundColor: const Color(0xFFF3F4F6),
+            backgroundColor: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFF3F4F6),
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
             strokeCap: StrokeCap.round,
           ),
@@ -703,13 +729,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('${progress.toInt()}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
-            const Text('Completed', style: TextStyle(fontSize: 8, color: Color(0xFF9CA3AF))),
+            Text('${progress.toInt()}%', style: TextStyle(
+              fontSize: 16, 
+              fontWeight: FontWeight.w800, 
+              color: isDark ? Colors.white : const Color(0xFF333333),
+            )),
+            Text('Completed', style: TextStyle(
+              fontSize: 8, 
+              color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
+            )),
           ],
         ),
       ],
     );
   }
+
 
   Widget _buildAdminAccessButton(BuildContext context) {
     return Container(
@@ -926,6 +960,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   }
 
   Widget _buildGetStarted(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = !isDesktop && !ResponsiveBreakpoints.isTablet(context);
 
@@ -935,9 +970,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Get Started',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: AppTheme.getTextColor(context),
+              ),
             ),
             TextButton(
               onPressed: () => context.push('/courses'),
@@ -956,10 +996,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           width: double.infinity,
           height: 200,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.getCardColor(context),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFF3F4F6)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            border: Border.all(
+              color: isDark 
+                  ? Colors.white.withOpacity(0.1) 
+                  : const Color(0xFFF3F4F6),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark 
+                    ? Colors.black.withOpacity(0.3) 
+                    : Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+              ),
+            ],
           ),
           child: Stack(
             children: [
@@ -981,33 +1032,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Start learning today',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1F2937)),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextColor(context),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: isMobile ? double.infinity : 200,
-                      child: const Text(
+                      child: Text(
                         'Begin your learning journey with one of our recommended courses.',
-                        style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), height: 1.4),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.getSecondaryTextColor(context),
+                          height: 1.4,
+                        ),
                       ),
                     ),
                     const Spacer(),
                     ElevatedButton(
                       onPressed: () => context.push('/courses'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1F2937),
+                        backgroundColor:
+                            isDark ? const Color(0xFF334155) : Colors.white,
+                        foregroundColor:
+                            isDark ? Colors.white : const Color(0xFF1F2937),
                         elevation: 0,
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        side: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF475569)
+                                : const Color(0xFFE5E7EB)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Browse Courses', style: TextStyle(fontWeight: FontWeight.w700)),
+                          Text('Browse Courses',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
                           SizedBox(width: 8),
                           Icon(Icons.chevron_right_rounded, size: 18),
                         ],
@@ -1023,8 +1090,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
+
   Widget _buildContinueLearning(
       BuildContext context, List<Enrollment> enrollments) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final isMobile = !isDesktop && !isTablet;
@@ -1033,19 +1102,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Continue Learning',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: AppTheme.getTextColor(context),
+            ),
           ),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
             height: 200,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.getCardColor(context),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFF3F4F6)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+              border: Border.all(
+                color: isDark 
+                    ? Colors.white.withOpacity(0.1) 
+                    : const Color(0xFFF3F4F6),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark 
+                      ? Colors.black.withOpacity(0.3) 
+                      : Colors.black.withOpacity(0.02), 
+                  blurRadius: 10,
+                ),
+              ],
             ),
             child: Stack(
               children: [
@@ -1067,16 +1152,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'No active courses yet',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.w700, 
+                          color: AppTheme.getTextColor(context),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: isMobile ? double.infinity : 200,
-                        child: const Text(
+                        child: Text(
                           'Enroll in a course to start learning.',
-                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 14, height: 1.4),
+                          style: TextStyle(
+                            color: AppTheme.getSecondaryTextColor(context), 
+                            fontSize: 14, 
+                            height: 1.4,
+                          ),
                         ),
                       ),
                       const Spacer(),
@@ -1107,6 +1200,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         ],
       );
     } else {
+
       // Adjusted grid counts for better responsiveness when split with Get Started on desktop
       // and when full width on tablet/mobile
       final crossAxisCount = isDesktop ? 2 : (isTablet ? 3 : 2);
@@ -1117,12 +1211,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Continue Learning',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
+                  color: AppTheme.getTextColor(context),
                 ),
               ),
               TextButton(
@@ -1171,6 +1266,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final course = enrollment.course;
     if (course == null) return const SizedBox.shrink();
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     
@@ -1181,17 +1277,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: AppTheme.borderGrey.withOpacity(0.2)),
+        border: Border.all(
+          color: isDark 
+              ? Colors.white.withOpacity(0.1) 
+              : AppTheme.borderGrey.withOpacity(0.2),
+        ),
       ),
+
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -1207,7 +1308,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   child: Container(
                     height: imageHeight,
                     width: double.infinity,
-                    color: AppTheme.primary.withOpacity(0.05),
+                    color: isDark ? AppTheme.primary.withOpacity(0.1) : AppTheme.primary.withOpacity(0.05),
                     child: course.thumbnail != null && course.thumbnail!.isNotEmpty
                         ? Image.network(
                             course.thumbnail!, 
@@ -1226,6 +1327,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     fontWeight: FontWeight.w700, 
                     letterSpacing: -0.2,
                     height: 1.2,
+                    color: AppTheme.getTextColor(context),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -1234,7 +1336,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 Text(
                   'By ${course.createdBy.fullName}',
                   style: TextStyle(
-                    color: AppTheme.greyColor, 
+                    color: AppTheme.getSecondaryTextColor(context), 
                     fontSize: isMobile ? 10 : 11,
                   ),
                   maxLines: 1,
@@ -1263,7 +1365,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                           'Progress',
                           style: TextStyle(
                             fontSize: isMobile ? 9 : 10,
-                            color: AppTheme.greyColor,
+                            color: AppTheme.getSecondaryTextColor(context),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1282,7 +1384,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         value: enrollment.progress / 100,
-                        backgroundColor: AppTheme.primary.withOpacity(0.1),
+                        backgroundColor: isDark 
+                            ? AppTheme.primary.withOpacity(0.15) 
+                            : AppTheme.primary.withOpacity(0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
                         minHeight: isMobile ? 3 : 5,
                       ),
@@ -1325,33 +1429,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           ],
         ),
         const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
-            childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
+        if (isDesktop || isTablet)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+              childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
+            ),
+            itemCount: courses.take(isDesktop ? 3 : 2).length,
+            itemBuilder: (context, index) {
+              return _buildCourseCardV2(context, courses[index], enrolledCourses);
+            },
+          )
+        else
+          SizedBox(
+            height: 280,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: courses.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  width: 280,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: _buildCourseCardV2(context, courses[index], enrolledCourses),
+                );
+              },
+            ),
           ),
-          itemCount: courses.take(isDesktop ? 3 : 2).length,
-          itemBuilder: (context, index) {
-            return _buildCourseCardV2(context, courses[index], enrolledCourses);
-          },
-        ),
       ],
     );
   }
 
   Widget _buildCourseCardV2(BuildContext context, Course course, List<Course> enrolledCourses) {
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFF3F4F6)),
+        boxShadow: [BoxShadow(color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.02), blurRadius: 10)],
       ),
       child: Material(
         color: Colors.transparent,
@@ -1382,7 +1503,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       ),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
                           ? Image.network(course.thumbnail!, fit: BoxFit.cover)
-                          : const Icon(Icons.image_outlined, size: 40, color: Color(0xFF9CA3AF)),
+                          : Icon(Icons.image_outlined, size: 40, color: isDark ? Colors.white38 : const Color(0xFF9CA3AF)),
                     ),
                   ),
                   if (isEnrolled)
@@ -1451,7 +1572,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     children: [
                       Text(
                         course.title,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1F2937), height: 1.2),
+                        style: TextStyle(
+                          fontSize: 15, 
+                          fontWeight: FontWeight.w800, 
+                          color: isDark ? Colors.white : const Color(0xFF1F2937), 
+                          height: 1.2,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1461,14 +1587,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                           const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            (course.averageRating ?? 0) > 0 ? (course.averageRating ?? 4.5).toStringAsFixed(1) : '4.5',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                            (course.averageRating ?? 0.0).toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: 11, 
+                              fontWeight: FontWeight.bold, 
+                              color: isDark ? Colors.white : const Color(0xFF1F2937),
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              '(${(course.enrollmentCount ?? 0) > 0 ? (course.enrollmentCount ?? 0) : "125"}+)',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                              '(${course.enrollmentCount ?? 0})',
+                              style: TextStyle(
+                                fontSize: 11, 
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1509,18 +1642,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                 children: [
                                   Text(
                                     'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 9,
-                                      color: Color(0xFF9CA3AF),
+                                      color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
                                       decoration: TextDecoration.lineThrough,
                                     ),
                                   ),
                                   Text(
                                     'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w900,
-                                      color: Color(0xFF0F766E),
+                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E),
                                     ),
                                   ),
                                 ],
@@ -1571,6 +1704,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       ),
     );
   }
+
   Widget _buildResponsivePopularCourses(
       BuildContext context, List<Course> popularCourses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
@@ -1598,32 +1732,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           ],
         ),
         const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
-            childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
+        if (isDesktop || isTablet)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+              childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
+            ),
+            itemCount: popularCourses.take(crossAxisCount * 2).length,
+            itemBuilder: (context, index) {
+              return _buildCourseCardV2(context, popularCourses[index], enrolledCourses);
+            },
+          )
+        else
+          SizedBox(
+            height: 280,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: popularCourses.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  width: 280,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: _buildCourseCardV2(context, popularCourses[index], enrolledCourses),
+                );
+              },
+            ),
           ),
-          itemCount: popularCourses.take(crossAxisCount * 2).length,
-          itemBuilder: (context, index) {
-            return _buildCourseCardV2(context, popularCourses[index], enrolledCourses);
-          },
-        ),
       ],
     );
   }
 
   Widget _buildCourseCard(BuildContext context, Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1648,7 +1800,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       color: AppTheme.primary.withOpacity(0.1),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
                           ? Image.network(course.thumbnail!, fit: BoxFit.cover)
-                          : const Icon(Icons.image_outlined, color: AppTheme.primary, size: 40),
+                          : Icon(Icons.image_outlined, color: isDark ? Colors.white38 : AppTheme.primary, size: 40),
                     ),
                     if ((course.price ?? 0) > 0)
                       Positioned(
@@ -1710,13 +1862,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             ],
                           )
                         else
-                          const Text(
+                          Text(
                             'FREE',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.green),
+                            style: TextStyle(
+                              fontSize: 15, 
+                              fontWeight: FontWeight.w800, 
+                              color: isDark ? const Color(0xFF10B981) : Colors.green,
+                            ),
                           ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
+
                             color: Colors.amber.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -1810,16 +1967,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: AppTheme.whiteColor,
-          title: const Text('Logout',
-              style: TextStyle(color: AppTheme.blackColor)),
-          content: const Text('Are you sure you want to logout?',
-              style: TextStyle(color: AppTheme.greyColor)),
+          title: Text('Logout',
+              style: TextStyle(color: AppTheme.getTextColor(context))),
+          content: Text('Are you sure you want to logout?',
+              style: TextStyle(color: AppTheme.getSecondaryTextColor(context))),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppTheme.greyColor)),
+              child: Text('Cancel',
+                  style: TextStyle(color: AppTheme.getSecondaryTextColor(context))),
             ),
             TextButton(
               onPressed: () {
@@ -1929,7 +2085,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           title: Row(children: [
             Icon(Icons.contact_support, color: AppTheme.primaryGreen),
             const SizedBox(width: 10),
-            const Text('Contact Us'),
+            Text('Contact Us',
+                style: TextStyle(color: AppTheme.getTextColor(context))),
           ]),
           content: SingleChildScrollView(
             child: Column(
@@ -1972,7 +2129,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close')),
+                child: Text('Close',
+                    style:
+                        TextStyle(color: AppTheme.getSecondaryTextColor(context)))),
           ],
         );
       },
@@ -1984,16 +2143,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       required String title,
       required String subtitle,
       required VoidCallback onTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.primaryGreen.withValues(alpha: 0.05), // FIX #8
+          color: isDark
+              ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+              : AppTheme.primaryGreen.withValues(alpha: 0.05), // FIX #8
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+              color: isDark
+                  ? AppTheme.primaryGreen.withValues(alpha: 0.3)
+                  : AppTheme.primaryGreen.withValues(alpha: 0.2),
               width: 1), // FIX #8
         ),
         child: Row(
@@ -2013,13 +2177,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   Text(subtitle,
                       style: TextStyle(
                           fontSize: 14,
-                          color:
-                              Theme.of(context).textTheme.bodyMedium?.color)),
+                          color: AppTheme.getSecondaryTextColor(context))),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 16, color: AppTheme.primaryGreen),
+            Icon(Icons.arrow_forward_ios,
+                color: AppTheme.getSecondaryTextColor(context), size: 14),
           ],
         ),
       ),

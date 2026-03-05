@@ -33,14 +33,68 @@ final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
   if (allCourses.isNotEmpty) {
     print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
   }
-  // Sort by popularity (more enrolled)
-  final sortedByEnrolled = List<Course>.from(allCourses)..sort((a, b) => (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0));
-  final result = sortedByEnrolled.take(6).toList();
+  // Sort by popularity: highest enrollment count first, then highest rating
+  final sortedByPopularity = List<Course>.from(allCourses)..sort((a, b) {
+    final enrollmentDiff = (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0);
+    if (enrollmentDiff != 0) return enrollmentDiff;
+    // Tie-breaker: use average rating
+    return (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0);
+  });
+  
+  final result = sortedByPopularity.take(8).toList();
   print('PopularCoursesProvider: Returning ${result.length} popular courses');
   if (result.isNotEmpty) {
     print('PopularCoursesProvider: First popular course thumbnail: ${result[0].thumbnail ?? "null"}');
   }
   return result;
+});
+
+final recommendedCoursesProvider = FutureProvider<List<Course>>((ref) async {
+  final allCoursesAsync = ref.watch(coursesProvider);
+  // Using enrollment_provider.dart's enrolledCoursesProvider
+  final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
+
+  return allCoursesAsync.when(
+    data: (allCourses) => enrolledCoursesAsync.when(
+      data: (enrolledCourses) {
+        final enrolledIds = enrolledCourses.map((e) => e.id).toSet();
+        
+        // 1. Filter out courses user is already enrolled in
+        final availableCourses = allCourses.where((c) => !enrolledIds.contains(c.id)).toList();
+        
+        if (availableCourses.isEmpty) return [];
+
+        // 2. Identify categories user is interested in from their current enrollments
+        final interestedCategories = enrolledCourses
+            .map((e) => e.categoryId)
+            .where((id) => id != null)
+            .toSet();
+
+        // 3. Score and sort courses
+        final scoredCourses = List<Course>.from(availableCourses)..sort((a, b) {
+          // Check for category match (highest priority)
+          final aMatches = a.categoryId != null && interestedCategories.contains(a.categoryId);
+          final bMatches = b.categoryId != null && interestedCategories.contains(b.categoryId);
+          
+          if (aMatches && !bMatches) return -1;
+          if (!aMatches && bMatches) return 1;
+          
+          // Secondary sort: enrollmentCount (popularity)
+          final enrollmentDiff = (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0);
+          if (enrollmentDiff != 0) return enrollmentDiff;
+          
+          // Tertiary sort: average rating
+          return (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0);
+        });
+
+        return scoredCourses.take(8).toList();
+      },
+      loading: () => [],
+      error: (_, __) => [],
+    ),
+    loading: () => [],
+    error: (_, __) => [],
+  );
 });
 
 final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {

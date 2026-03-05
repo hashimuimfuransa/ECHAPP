@@ -101,16 +101,40 @@ const getCourses = async (req, res) => {
     
     console.log('Final filter before query:', filter);
     
-    let query = Course.find(filter).populate('createdBy', 'fullName');
+    // Use aggregation to calculate enrollmentCount and averageRating on the fly
+    const aggregationPipeline = [
+      { $match: filter },
+      {
+        $lookup: {
+          from: 'enrollments', // MongoDB collection name for Enrollment model
+          localField: '_id',
+          foreignField: 'courseId',
+          as: 'enrollments'
+        }
+      },
+      {
+        $addFields: {
+          enrollmentCount: { $size: '$enrollments' },
+          averageRating: { 
+            $ifNull: [
+              { $avg: '$enrollments.rating' }, 
+              0 
+            ] 
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: (Number(page) - 1) * Number(limit) },
+      { $limit: Number(limit) }
+    ];
+
+    let courses = await Course.aggregate(aggregationPipeline);
     
-    if (category) {
-      query = query.populate('category', 'name');
-    }
-    
-    const courses = await query
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    // Since aggregation returns plain objects, we need to populate them manually
+    courses = await Course.populate(courses, [
+      { path: 'createdBy', select: 'fullName' },
+      { path: 'category', select: 'name' }
+    ]);
     
     const total = await Course.countDocuments(filter);
     
@@ -132,12 +156,48 @@ const getCourses = async (req, res) => {
 // Get course by ID
 const getCourseById = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id)
-      .populate('createdBy', 'fullName');
+    const mongoose = require('mongoose');
+    const ObjectId = mongoose.Types.ObjectId;
     
-    if (!course) {
+    if (!ObjectId.isValid(req.params.id)) {
+      return sendNotFound(res, 'Invalid course ID');
+    }
+
+    const courses = await Course.aggregate([
+      { $match: { _id: new ObjectId(req.params.id) } },
+      {
+        $lookup: {
+          from: 'enrollments',
+          localField: '_id',
+          foreignField: 'courseId',
+          as: 'enrollments'
+        }
+      },
+      {
+        $addFields: {
+          enrollmentCount: { $size: '$enrollments' },
+          averageRating: { 
+            $ifNull: [
+              { $avg: '$enrollments.rating' }, 
+              0 
+            ] 
+          }
+        }
+      },
+      { $limit: 1 }
+    ]);
+    
+    if (!courses || courses.length === 0) {
       return sendNotFound(res, 'Course not found');
     }
+    
+    let course = courses[0];
+    
+    // Manually populate course createdBy and category
+    course = await Course.populate(course, [
+      { path: 'createdBy', select: 'fullName' },
+      { path: 'category', select: 'name' }
+    ]);
     
     // If course is not published, only allow admin access
     if (!course.isPublished) {

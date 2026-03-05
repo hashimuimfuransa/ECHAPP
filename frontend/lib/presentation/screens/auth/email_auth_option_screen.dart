@@ -133,8 +133,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
               child: Column(
                 children: [
                   Container(
-                    width: 160,
-                    height: 160,
+                    width: 220,
+                    height: 220,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
@@ -145,14 +145,14 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF00C896).withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 5,
+                          blurRadius: 40,
+                          spreadRadius: 8,
                         ),
                       ],
                     ),
                     child: ClipOval(
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(25),
                         child: Image.asset(
                           'assets/logo.png',
                           fit: BoxFit.contain,
@@ -160,26 +160,15 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 60),
                   const Text(
-                    'Welcome to',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Excellence\nCoaching Hub',
+                    'Excellence Coaching Hub',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                      letterSpacing: -1,
+                      color: Color(0xFF00C896),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -342,9 +331,9 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF0F172A),
-                  Color(0xFF1E293B),
-                  Color(0xFF0F4C75),
+                  Color(0xFF041B2D),
+                  Color(0xFF072A3E),
+                  Color(0xFF0A4A5A),
                 ],
               ),
             ),
@@ -366,44 +355,56 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                     ],
                   ),
                   const SizedBox(height: 30),
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                  Center(
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF047857)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withOpacity(0.4),
+                            blurRadius: 40,
+                            spreadRadius: 8,
+                          ),
+                        ],
                       ),
-                    ),
-                    child: ClipOval(
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Image.asset(
-                          'assets/logo.png',
-                          fit: BoxFit.contain,
+                      child: ClipOval(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
                   const Text(
                     'Choose Your Path',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.w900,
+                      letterSpacing: -1.0,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const Text(
                     'Select how you\'d like to proceed',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
+                      color: Colors.white70,
+                      fontSize: 16,
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 50),
                   _AuthOptionButton(
                     icon: Icons.login_rounded,
                     title: 'Sign In',

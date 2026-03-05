@@ -233,7 +233,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppTheme.getBackgroundColor(context),
         body: const Center(
           child: CircularProgressIndicator(color: AppTheme.primaryGreen),
         ),
@@ -262,6 +262,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return AppBar(
       leading: Container(
         margin: const EdgeInsets.all(8),
@@ -270,14 +272,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : Colors.grey.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new, 
+            size: 20,
+            color: AppTheme.getTextColor(context),
+          ),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -322,7 +330,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primaryGreen.withOpacity(0.3),
+                color: AppTheme.primaryGreen.withOpacity(isDark ? 0.1 : 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -353,14 +361,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: isDark 
+                  ? Colors.black.withOpacity(0.3) 
+                  : Colors.grey.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: IconButton(
-            icon: const Icon(Icons.history_outlined, size: 20),
+            icon: Icon(
+              Icons.history_outlined, 
+              size: 20,
+              color: AppTheme.getTextColor(context),
+            ),
             onPressed: _navigateToExamHistory,
             tooltip: 'Exam History',
           ),
@@ -414,19 +428,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     // Calculate progress based on lessons for more granularity
     final progress = _totalLessons > 0 ? _completedLessonsCount / _totalLessons : 0.0;
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF047857)],
+          colors: AppTheme.primaryGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(0.3),
+            color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -624,16 +639,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildRatingSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.whiteColor,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2)),
+        border: Border.all(
+          color: AppTheme.primaryGreen.withOpacity(isDark ? 0.3 : 0.2),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -644,14 +663,21 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         children: [
           Text(
             _hasSubmittedFeedback ? 'Your Rating' : 'Enjoying this course?',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.blackColor),
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold, 
+              color: AppTheme.getTextColor(context),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             _hasSubmittedFeedback 
               ? 'Thank you for your feedback! It helps us improve.'
               : 'Your feedback helps us improve and helps other students.',
-            style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
+            style: TextStyle(
+              fontSize: 14, 
+              color: AppTheme.getSecondaryTextColor(context),
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -676,9 +702,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             TextField(
               controller: _feedbackController,
               enabled: !_hasSubmittedFeedback,
+              style: TextStyle(color: AppTheme.getTextColor(context)),
               decoration: InputDecoration(
                 hintText: 'Share your feedback (optional)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                hintStyle: TextStyle(color: AppTheme.getSecondaryTextColor(context)),
+                fillColor: isDark ? AppTheme.darkSurface : Colors.grey.shade50,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.primaryGreen.withOpacity(0.2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.primaryGreen.withOpacity(0.2)),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
@@ -742,18 +779,21 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
   Widget _buildSectionCard(Section section, bool isUnlocked, bool isCurrent, int index) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         gradient: isUnlocked
-          ? const LinearGradient(
-              colors: [Color(0xFFF8FAFC), Color(0xFFFFFFFF)],
+          ? LinearGradient(
+              colors: isDark ? AppTheme.darkCardGradient : AppTheme.modernCardGradient,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             )
-          : const LinearGradient(
-              colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+          : LinearGradient(
+              colors: isDark 
+                ? [const Color(0xFF1E293B).withOpacity(0.5), const Color(0xFF0F172A).withOpacity(0.5)] 
+                : [const Color(0xFFF1F5F9), const Color(0xFFE2E8F0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -761,12 +801,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         border: Border.all(
           color: isCurrent 
             ? AppTheme.primaryGreen 
-            : (isUnlocked ? Colors.grey.shade200 : Colors.grey.shade300),
+            : (isUnlocked 
+                ? (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade200) 
+                : (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade300)),
           width: isCurrent ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -794,18 +836,20 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             decoration: BoxDecoration(
               gradient: isUnlocked
                 ? const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF047857)],
+                    colors: AppTheme.primaryGradient,
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
-                : const LinearGradient(
-                    colors: [Color(0xFF9CA3AF), Color(0xFF6B7280)],
+                : LinearGradient(
+                    colors: isDark 
+                      ? [const Color(0xFF475569), const Color(0xFF334155)]
+                      : [const Color(0xFF9CA3AF), const Color(0xFF6B7280)],
                   ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: isUnlocked 
-                    ? const Color(0xFF10B981).withOpacity(0.3)
+                    ? AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3)
                     : Colors.grey.withOpacity(0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
@@ -826,8 +870,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               fontSize: isSmallScreen ? 18 : 20,
               fontWeight: FontWeight.bold,
               color: isUnlocked 
-                ? const Color(0xFF1F2937)
-                : const Color(0xFF6B7280),
+                ? AppTheme.getTextColor(context)
+                : AppTheme.getSecondaryTextColor(context),
             ),
           ),
           subtitle: Padding(
@@ -837,14 +881,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 Icon(
                   Icons.school,
                   size: 14,
-                  color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
+                  color: isUnlocked ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '${_sectionLessons[section.id]?.length ?? 0} lessons',
                   style: TextStyle(
                     fontSize: isSmallScreen ? 13 : 15,
-                    color: isUnlocked ? AppTheme.greyColor : Colors.grey,
+                    color: isUnlocked ? AppTheme.getSecondaryTextColor(context) : AppTheme.getSecondaryTextColor(context).withOpacity(0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -862,12 +906,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF10B981), Color(0xFF047857)],
+                      colors: AppTheme.primaryGradient,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -897,7 +941,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               ],
               Icon(
                 Icons.arrow_forward_ios,
-                color: isUnlocked ? AppTheme.primaryGreen : Colors.grey,
+                color: isUnlocked ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
                 size: 16,
               ),
             ],
@@ -913,19 +957,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 child: Container(
                   padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.grey.shade200,
+                      color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade200,
                       width: 1,
                     ),
                   ),
                   child: Column(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.lock_clock,
                         size: 32,
-                        color: Colors.grey,
+                        color: AppTheme.getSecondaryTextColor(context),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -933,14 +977,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
+                          color: AppTheme.getTextColor(context).withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Complete the previous section to unlock',
                         style: TextStyle(
-                          color: Colors.grey,
+                          color: AppTheme.getSecondaryTextColor(context),
                           fontSize: 14,
                           fontStyle: FontStyle.italic,
                         ),
@@ -1470,15 +1514,16 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     // Check if lesson is completed
     final isCompleted = _lessonCompletionStatus[lesson.id] ?? false;
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Determine lesson type and styling
     final bool isVideoLesson = lesson.videoId != null && lesson.videoId!.isNotEmpty;
     final Color lessonTypeColor = isVideoLesson ? AppTheme.primaryGreen : AppTheme.accent;
     final Color lessonBgColor = isCompleted
-        ? Colors.grey.withOpacity(0.1)
+        ? (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1))
         : (isVideoLesson 
-            ? AppTheme.primaryGreen.withOpacity(0.08) 
-            : AppTheme.accent.withOpacity(0.08));
+            ? AppTheme.primaryGreen.withOpacity(isDark ? 0.12 : 0.08) 
+            : AppTheme.accent.withOpacity(isDark ? 0.12 : 0.08));
     final IconData lessonIcon = isVideoLesson ? Icons.play_circle_fill : Icons.article;
     final String lessonTypeLabel = isVideoLesson ? 'Video' : 'Notes';
     
@@ -1490,12 +1535,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
           color: isNext 
-            ? AppTheme.primaryGreen.withOpacity(0.1) 
+            ? AppTheme.primaryGreen.withOpacity(isDark ? 0.15 : 0.1) 
             : lessonBgColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isCompleted
-              ? Colors.grey.withOpacity(0.3)
+              ? (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.3))
               : (isNext 
                   ? AppTheme.primaryGreen.withOpacity(0.3) 
                   : lessonTypeColor.withOpacity(0.2)),
@@ -1504,9 +1549,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           boxShadow: [
             BoxShadow(
               color: isNext 
-                ? AppTheme.primaryGreen.withOpacity(0.1) 
+                ? AppTheme.primaryGreen.withOpacity(isDark ? 0.05 : 0.1) 
                 : (isCompleted 
-                    ? Colors.grey.withOpacity(0.05)
+                    ? (isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.05))
                     : lessonTypeColor.withOpacity(0.05)),
               blurRadius: 4,
               offset: const Offset(0, 2),
@@ -1521,12 +1566,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               height: isSmallScreen ? 40 : 48,
               decoration: BoxDecoration(
                 color: isCompleted
-                  ? Colors.grey.withOpacity(0.3)
+                  ? (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.3))
                   : lessonTypeColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isCompleted
-                    ? Colors.grey.withOpacity(0.4)
+                    ? (isDark ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.4))
                     : lessonTypeColor.withOpacity(0.3),
                   width: 2,
                 ),
@@ -1534,7 +1579,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               child: Center(
                 child: Icon(
                   isCompleted ? Icons.check : lessonIcon,
-                  color: isCompleted ? Colors.grey : lessonTypeColor,
+                  color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : lessonTypeColor,
                   size: isSmallScreen ? 20 : 24,
                 ),
               ),
@@ -1555,7 +1600,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                             fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: isCompleted ? FontWeight.normal : FontWeight.w600,
                             color: isCompleted
-                              ? Colors.grey
+                              ? (isDark ? Colors.white60 : Colors.grey)
                               : (isNext 
                                   ? AppTheme.primaryGreen 
                                   : AppTheme.getTextColor(context)),
@@ -1634,14 +1679,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       Icon(
                         Icons.access_time,
                         size: isSmallScreen ? 12 : 14,
-                        color: isCompleted ? Colors.grey : AppTheme.greyColor,
+                        color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : AppTheme.getSecondaryTextColor(context),
                       ),
                       SizedBox(width: isSmallScreen ? 2 : 4),
                       Text(
                         '${lesson.duration} mins',
                         style: TextStyle(
                           fontSize: isSmallScreen ? 10 : 12,
-                          color: isCompleted ? Colors.grey : AppTheme.greyColor,
+                          color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : AppTheme.getSecondaryTextColor(context),
                         ),
                       ),
                       SizedBox(width: isSmallScreen ? 8 : 12),
@@ -1649,28 +1694,28 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                         Icon(
                           Icons.hd_outlined,
                           size: isSmallScreen ? 12 : 14,
-                          color: AppTheme.greyColor,
+                          color: AppTheme.getSecondaryTextColor(context),
                         ),
                         SizedBox(width: isSmallScreen ? 2 : 4),
                         Text(
                           'HD Video',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 10 : 12,
-                            color: AppTheme.greyColor,
+                            color: AppTheme.getSecondaryTextColor(context),
                           ),
                         ),
                       ] else if (!isVideoLesson && !isCompleted) ...[
                         Icon(
                           Icons.text_snippet_outlined,
                           size: isSmallScreen ? 12 : 14,
-                          color: AppTheme.greyColor,
+                          color: AppTheme.getSecondaryTextColor(context),
                         ),
                         SizedBox(width: isSmallScreen ? 2 : 4),
                         Text(
                           'Text Content',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 10 : 12,
-                            color: AppTheme.greyColor,
+                            color: AppTheme.getSecondaryTextColor(context),
                           ),
                         ),
                       ],
@@ -1695,7 +1740,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryGreen.withOpacity(0.3),
+                          color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1715,7 +1760,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 ],
                 Icon(
                   isCompleted ? Icons.check_circle : Icons.arrow_forward_ios,
-                  color: isCompleted ? Colors.green : (isNext ? AppTheme.primaryGreen : AppTheme.greyColor),
+                  color: isCompleted ? Colors.green : (isNext ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context)),
                   size: isSmallScreen ? 16 : 18,
                 ),
               ],
@@ -1765,17 +1810,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildCompleteSectionButton(Section section, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF047857)],
+          colors: AppTheme.primaryGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(0.3),
+            color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

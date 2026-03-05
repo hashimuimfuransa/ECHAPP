@@ -205,8 +205,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               child: Column(
                 children: [
                   Container(
-                    width: 140,
-                    height: 140,
+                    width: 220,
+                    height: 220,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
@@ -217,14 +217,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF00C896).withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 5,
+                          blurRadius: 40,
+                          spreadRadius: 8,
                         ),
                       ],
                     ),
                     child: ClipOval(
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(25),
                         child: Image.asset(
                           'assets/logo.png',
                           fit: BoxFit.contain,
@@ -232,17 +232,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                       ),
                     ),
                   ),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 60),
                   const Text(
-                    'Welcome Back',
+                    'Excellence Coaching Hub',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
+                      color: Color(0xFF00C896),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
                   const Text(
                     'Sign In to Your Account',
                     textAlign: TextAlign.center,

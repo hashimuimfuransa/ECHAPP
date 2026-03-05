@@ -78,6 +78,14 @@ const courseSchema = new mongoose.Schema({
     type: Number,
     default: null, // null means unlimited access
     min: [1, 'Access duration must be at least 1 day']
+  },
+  enrollmentCount: {
+    type: Number,
+    default: 0
+  },
+  averageRating: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
