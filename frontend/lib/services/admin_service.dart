@@ -804,11 +804,13 @@ class CourseAnalytics {
   final Map<String, dynamic> course;
   final CourseStatsDetail stats;
   final List<CourseStudentPerformance> students;
+  final List<CourseReview> reviews;
 
   CourseAnalytics({
     required this.course,
     required this.stats,
     required this.students,
+    required this.reviews,
   });
 
   factory CourseAnalytics.fromJson(Map<String, dynamic> json) {
@@ -818,6 +820,9 @@ class CourseAnalytics {
       students: (json['students'] as List)
           .map((item) => CourseStudentPerformance.fromJson(item as Map<String, dynamic>))
           .toList(),
+      reviews: json['reviews'] != null 
+          ? (json['reviews'] as List).map((item) => CourseReview.fromJson(item as Map<String, dynamic>)).toList()
+          : [],
     );
   }
 }
@@ -829,6 +834,8 @@ class CourseStatsDetail {
   final double completionRate;
   final double averageProgress;
   final int newStudentsThisMonth;
+  final double averageRating;
+  final int totalRatings;
 
   CourseStatsDetail({
     required this.totalStudents,
@@ -837,6 +844,8 @@ class CourseStatsDetail {
     required this.completionRate,
     required this.averageProgress,
     required this.newStudentsThisMonth,
+    required this.averageRating,
+    required this.totalRatings,
   });
 
   factory CourseStatsDetail.fromJson(Map<String, dynamic> json) {
@@ -847,6 +856,31 @@ class CourseStatsDetail {
       completionRate: (json['completionRate'] as num?)?.toDouble() ?? 0.0,
       averageProgress: (json['averageProgress'] as num?)?.toDouble() ?? 0.0,
       newStudentsThisMonth: json['newStudentsThisMonth'] as int? ?? 0,
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      totalRatings: json['totalRatings'] as int? ?? 0,
+    );
+  }
+}
+
+class CourseReview {
+  final String userName;
+  final double? rating;
+  final String? feedback;
+  final DateTime date;
+
+  CourseReview({
+    required this.userName,
+    this.rating,
+    this.feedback,
+    required this.date,
+  });
+
+  factory CourseReview.fromJson(Map<String, dynamic> json) {
+    return CourseReview(
+      userName: json['userName'] as String? ?? 'Unknown Student',
+      rating: (json['rating'] as num?)?.toDouble(),
+      feedback: json['feedback'] as String?,
+      date: json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now(),
     );
   }
 }
@@ -859,6 +893,8 @@ class CourseStudentPerformance {
   final double progress;
   final String completionStatus;
   final DateTime? lastAccessed;
+  final double? rating;
+  final String? feedback;
 
   CourseStudentPerformance({
     required this.id,
@@ -868,6 +904,8 @@ class CourseStudentPerformance {
     required this.progress,
     required this.completionStatus,
     this.lastAccessed,
+    this.rating,
+    this.feedback,
   });
 
   factory CourseStudentPerformance.fromJson(Map<String, dynamic> json) {
@@ -879,6 +917,8 @@ class CourseStudentPerformance {
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
       completionStatus: json['completionStatus'] as String,
       lastAccessed: json['lastAccessed'] != null ? DateTime.parse(json['lastAccessed'] as String) : null,
+      rating: (json['rating'] as num?)?.toDouble(),
+      feedback: json['feedback'] as String?,
     );
   }
 }

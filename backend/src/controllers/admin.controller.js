@@ -824,8 +824,25 @@ const getCourseAnalytics = async (req, res) => {
       progress: e.progress,
       completionStatus: e.completionStatus,
       lastAccessed: e.lastAccessed,
+      rating: e.rating,
+      feedback: e.feedback,
       examScores: [] // We could populate this if needed
     }));
+
+    // Calculate ratings data
+    const ratings = enrollments.filter(e => e.rating != null).map(e => e.rating);
+    const totalRatings = ratings.length;
+    const averageRating = totalRatings > 0 ? ratings.reduce((sum, r) => sum + r, 0) / totalRatings : 0;
+    
+    // Get reviews with user details
+    const reviews = enrollments
+      .filter(e => e.rating != null || e.feedback != null)
+      .map(e => ({
+        userName: e.userId?.fullName || 'Unknown Student',
+        rating: e.rating,
+        feedback: e.feedback,
+        date: e.updatedAt
+      }));
     
     // Get new enrollments this month
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -847,8 +864,11 @@ const getCourseAnalytics = async (req, res) => {
         completedCount,
         completionRate,
         averageProgress,
-        newStudentsThisMonth
+        newStudentsThisMonth,
+        averageRating,
+        totalRatings
       },
+      reviews,
       students: studentsPerformance
     }, 'Course analytics retrieved successfully');
   } catch (error) {

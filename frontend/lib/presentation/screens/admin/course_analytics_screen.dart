@@ -178,6 +178,8 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
               const SizedBox(height: 40),
               _buildChartsSection(isLargeScreen, isMediumScreen, isSmallScreen),
               const SizedBox(height: 40),
+              _buildReviewsSection(isLargeScreen, isMediumScreen, isSmallScreen),
+              const SizedBox(height: 40),
               _buildStudentList(isLargeScreen, isMediumScreen, isSmallScreen),
               const SizedBox(height: 48),
               _buildDataTimestamp(),
@@ -269,9 +271,11 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
               const SizedBox(width: 16),
               Expanded(child: _metricCard('Active Students', stats.activeStudents.toString(), Icons.bolt_rounded, Colors.orange)),
               const SizedBox(width: 16),
-              Expanded(child: _metricCard('Completions', stats.completedCount.toString(), Icons.check_circle_rounded, Colors.blue)),
-              const SizedBox(width: 16),
               Expanded(child: _metricCard('Avg. Progress', '${stats.averageProgress.toStringAsFixed(1)}%', Icons.auto_graph_rounded, Colors.indigo)),
+              const SizedBox(width: 16),
+              Expanded(child: _metricCard('Avg. Rating', stats.averageRating.toStringAsFixed(1), Icons.star_rounded, Colors.amber)),
+              const SizedBox(width: 16),
+              Expanded(child: _metricCard('Total Ratings', stats.totalRatings.toString(), Icons.rate_review_rounded, Colors.teal)),
             ],
           )
         else if (isMediumScreen)
@@ -287,9 +291,9 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _metricCard('Completions', stats.completedCount.toString(), Icons.check_circle_rounded, Colors.blue)),
-                  const SizedBox(width: 16),
                   Expanded(child: _metricCard('Avg. Progress', '${stats.averageProgress.toStringAsFixed(1)}%', Icons.auto_graph_rounded, Colors.indigo)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _metricCard('Avg. Rating', stats.averageRating.toStringAsFixed(1), Icons.star_rounded, Colors.amber)),
                 ],
               ),
             ],
@@ -303,10 +307,10 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
             crossAxisSpacing: 12,
             childAspectRatio: 1.1,
             children: [
-              _metricCard('Total', stats.totalStudents.toString(), Icons.people_alt_rounded, AppTheme.primaryGreen),
-              _metricCard('Active', stats.activeStudents.toString(), Icons.bolt_rounded, Colors.orange),
-              _metricCard('Done', stats.completedCount.toString(), Icons.check_circle_rounded, Colors.blue),
-              _metricCard('Progress', '${stats.averageProgress.toStringAsFixed(0)}%', Icons.auto_graph_rounded, Colors.indigo),
+              _metricCard('Total Enrolled', stats.totalStudents.toString(), Icons.people_alt_rounded, AppTheme.primaryGreen),
+              _metricCard('Avg. Progress', '${stats.averageProgress.toStringAsFixed(0)}%', Icons.auto_graph_rounded, Colors.indigo),
+              _metricCard('Avg. Rating', stats.averageRating.toStringAsFixed(1), Icons.star_rounded, Colors.amber),
+              _metricCard('Total Ratings', stats.totalRatings.toString(), Icons.rate_review_rounded, Colors.teal),
             ],
           ),
       ],
@@ -408,6 +412,99 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
     );
   }
 
+  Widget _buildReviewsSection(bool isLargeScreen, bool isMediumScreen, bool isSmallScreen) {
+    if (_analytics!.reviews.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Course Reviews',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 18 : 22,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.blackColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: AppTheme.greyColor.withOpacity(0.05)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemCount: _analytics!.reviews.length,
+              separatorBuilder: (context, index) => Divider(height: 32, color: AppTheme.greyColor.withOpacity(0.1)),
+              itemBuilder: (context, index) {
+                final review = _analytics!.reviews[index];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                              child: Text(review.userName[0].toUpperCase(), style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            if (review.rating != null) ...[
+                              Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                              const SizedBox(width: 4),
+                              Text(review.rating!.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            ],
+                            const SizedBox(width: 12),
+                            Text(DateFormat('MMM dd, yyyy').format(review.date), style: TextStyle(fontSize: 12, color: AppTheme.greyColor)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (review.feedback != null && review.feedback!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.greyColor.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          review.feedback!,
+                          style: TextStyle(fontSize: 14, color: AppTheme.blackColor.withOpacity(0.8), height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStudentList(bool isLargeScreen, bool isMediumScreen, bool isSmallScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,6 +551,8 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                     children: [
                       Expanded(flex: 3, child: _headerText('STUDENT')),
                       Expanded(child: _headerText('PROGRESS', textAlign: TextAlign.center)),
+                      if (!isSmallScreen)
+                        Expanded(child: _headerText('RATING', textAlign: TextAlign.center)),
                       if (!isSmallScreen)
                         Expanded(child: _headerText('STATUS', textAlign: TextAlign.center)),
                       if (isLargeScreen)
@@ -511,6 +610,24 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                                 ],
                               ),
                             ),
+                            if (!isSmallScreen)
+                              Expanded(
+                                child: Center(
+                                  child: student.rating != null
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              student.rating!.toStringAsFixed(1),
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ],
+                                        )
+                                      : const Text('-', style: TextStyle(color: AppTheme.greyColor)),
+                                ),
+                              ),
                             if (!isSmallScreen)
                               Expanded(
                                 child: Center(
