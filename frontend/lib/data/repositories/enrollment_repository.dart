@@ -38,6 +38,11 @@ class EnrollmentRepository {
     return await _enrollmentService.updateEnrollmentProgress(enrollmentId, lessonId, completed);
   }
 
+  /// Mark section as completed
+  Future<Map<String, dynamic>> completeSection(String enrollmentId, String sectionId) async {
+    return await _enrollmentService.completeSection(enrollmentId, sectionId);
+  }
+
   /// Get enrollment progress
   Future<Map<String, dynamic>?> getEnrollmentProgress(String enrollmentId) async {
     return await _enrollmentService.getEnrollmentProgress(enrollmentId);

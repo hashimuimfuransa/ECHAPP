@@ -271,7 +271,7 @@ class WishlistScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'by ${course.createdBy.fullName}',
+                          'by ${course.displayInstructor}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],

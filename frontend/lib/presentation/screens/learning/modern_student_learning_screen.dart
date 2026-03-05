@@ -1772,6 +1772,25 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   void _viewLesson(Lesson lesson) async {
+    // Navigate to the lesson viewer
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => LessonViewer(
+            lesson: lesson,
+            courseId: widget.courseId,
+            certificates: _courseCertificates,
+            onComplete: () => _markLessonAsComplete(lesson),
+          ),
+        ),
+      );
+    }
+    
+    // Also mark as complete when viewing (as per existing logic, but refactored)
+    _markLessonAsComplete(lesson);
+  }
+
+  void _markLessonAsComplete(Lesson lesson) async {
     // Only update if not already completed
     if (_lessonCompletionStatus[lesson.id] != true) {
       // Mark lesson as completed locally first for better UX
@@ -1787,25 +1806,18 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         try {
           print('Updating enrollment $enrollmentId progress for lesson: ${lesson.title}');
           final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
-          await enrollmentRepo.updateEnrollmentProgress(enrollmentId, lesson.id, true);
-          print('Progress updated successfully in backend');
+          final result = await enrollmentRepo.updateEnrollmentProgress(enrollmentId, lesson.id, true);
+          print('Progress updated successfully in backend: ${result['progress']}%');
+          
+          // Update local progress from backend to ensure accuracy
+          if (result['progress'] != null) {
+            // If backend returns updated progress, we could update our local state
+            // But we already calculate it locally for immediate feedback
+          }
         } catch (e) {
           print('Error updating enrollment progress in backend: $e');
         }
       }
-    }
-    
-    // Navigate to the lesson viewer
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => LessonViewer(
-            lesson: lesson,
-            courseId: widget.courseId,
-            certificates: _courseCertificates,
-          ),
-        ),
-      );
     }
   }
 
@@ -1911,8 +1923,32 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     });
     
     try {
-      // Simulate API call to mark section as completed
-      await Future.delayed(const Duration(seconds: 1));
+      // Call backend to mark section as completed
+      if (_courseAccessData != null && _courseAccessData!['enrollmentId'] != null) {
+        final enrollmentId = _courseAccessData!['enrollmentId'].toString();
+        final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
+        
+        print('Completing section ${section.title} for enrollment $enrollmentId');
+        await enrollmentRepo.completeSection(enrollmentId, section.id);
+        
+        // Update all lessons in this section as completed locally
+        final lessons = _sectionLessons[section.id] ?? [];
+        setState(() {
+          for (var lesson in lessons) {
+            if (_lessonCompletionStatus[lesson.id] != true) {
+              _lessonCompletionStatus[lesson.id] = true;
+              _completedLessonsCount++;
+              _completedDurationMinutes += lesson.duration;
+            }
+          }
+          _sectionCompletionStatus[section.id] = true;
+        });
+      } else {
+        // Fallback if no enrollment found (should not happen if they are on this screen)
+        setState(() {
+          _sectionCompletionStatus[section.id] = true;
+        });
+      }
       
       // Unlock next section if exists
       if (index < _sections!.length - 1) {
@@ -1927,7 +1963,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 "${section.title}" completed! Next section unlocked.'),
+            content: Text('🎉 "${section.title}" completed! ${index < _sections!.length - 1 ? "Next section unlocked." : "Course completed!"}'),
             backgroundColor: AppTheme.primaryGreen,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -1938,6 +1974,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         );
       }
     } catch (e) {
+      print('Error completing section: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

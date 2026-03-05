@@ -1,5 +1,7 @@
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
+const Section = require('../models/Section');
+const Lesson = require('../models/Lesson');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Certificate = require('../models/Certificate');
@@ -232,8 +234,12 @@ const updateEnrollmentProgress = async (req, res) => {
 
     if (completed && !enrollment.completedLessons.includes(lessonId)) {
       enrollment.completedLessons.push(lessonId);
-      // Update progress percentage (this would be calculated based on total lessons)
-      enrollment.progress = Math.min(100, enrollment.completedLessons.length * 10); // Simple calculation
+      
+      // Calculate real progress percentage
+      const totalLessons = await Lesson.countDocuments({ courseId: enrollment.courseId });
+      enrollment.progress = totalLessons > 0 
+        ? Math.round((enrollment.completedLessons.length / totalLessons) * 100) 
+        : 0;
       
       if (enrollment.progress === 100) {
         enrollment.completionStatus = 'completed';
@@ -241,7 +247,7 @@ const updateEnrollmentProgress = async (req, res) => {
 
         // Send Achievement Notification
         try {
-          const NotificationController = notificationController.constructor;
+          const NotificationController = require('./notification.controller').constructor;
           await NotificationController.createAchievementNotification(
             userId, 
             `Completed Course: ${enrollment.courseId.title}`
@@ -262,6 +268,62 @@ const updateEnrollmentProgress = async (req, res) => {
     sendSuccess(res, enrollment, 'Enrollment progress updated successfully');
   } catch (error) {
     sendError(res, 'Failed to update enrollment progress', 500, error.message);
+  }
+};
+
+// Mark section as completed (all lessons in section)
+const completeSection = async (req, res) => {
+  try {
+    const { id } = req.params; // enrollment id
+    const { sectionId } = req.body;
+    const userId = req.user.id;
+
+    const enrollment = await Enrollment.findOne({ _id: id, userId });
+    if (!enrollment) {
+      return sendNotFound(res, 'Enrollment not found');
+    }
+    
+    if (isEnrollmentExpired(enrollment)) {
+      return sendError(res, 'Access to this course has expired', 403);
+    }
+
+    // Find all lessons in this section
+    const sectionLessons = await Lesson.find({ sectionId });
+    if (!sectionLessons || sectionLessons.length === 0) {
+      return sendNotFound(res, 'No lessons found in this section');
+    }
+    
+    const sectionLessonIds = sectionLessons.map(l => l._id.toString());
+    
+    // Add missing lessons to completedLessons
+    let addedCount = 0;
+    sectionLessonIds.forEach(lessonId => {
+      if (!enrollment.completedLessons.includes(lessonId)) {
+        enrollment.completedLessons.push(lessonId);
+        addedCount++;
+      }
+    });
+    
+    if (addedCount > 0 || enrollment.progress < 100) {
+      // Calculate real progress percentage
+      const totalLessons = await Lesson.countDocuments({ courseId: enrollment.courseId });
+      enrollment.progress = totalLessons > 0 
+        ? Math.round((enrollment.completedLessons.length / totalLessons) * 100) 
+        : 0;
+      
+      if (enrollment.progress === 100) {
+        enrollment.completionStatus = 'completed';
+        enrollment.certificateEligible = true;
+      } else {
+        enrollment.completionStatus = 'in-progress';
+      }
+      
+      await enrollment.save();
+    }
+    
+    sendSuccess(res, enrollment, 'Section marked as completed');
+  } catch (error) {
+    sendError(res, 'Failed to complete section', 500, error.message);
   }
 };
 
@@ -536,6 +598,7 @@ module.exports = {
   getMyCourses,
   getEnrollmentProgress,
   updateEnrollmentProgress,
+  completeSection,
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,

@@ -1334,7 +1334,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'By ${course.createdBy.fullName}',
+                  'By ${course.displayInstructor}',
                   style: TextStyle(
                     color: AppTheme.getSecondaryTextColor(context), 
                     fontSize: isMobile ? 10 : 11,
@@ -1834,7 +1834,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'By ${course.createdBy.fullName}',
+                      'By ${course.displayInstructor}',
                       style: TextStyle(color: AppTheme.greyColor, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

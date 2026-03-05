@@ -196,6 +196,34 @@ class EnrollmentService {
     }
   }
 
+  /// Mark section as completed
+  Future<Map<String, dynamic>> completeSection(String enrollmentId, String sectionId) async {
+    try {
+      final requestBody = {
+        'sectionId': sectionId,
+      };
+
+      final response = await _apiClient.put(
+        '${ApiConfig.enrollments}/$enrollmentId/complete-section',
+        body: requestBody,
+      );
+
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        return jsonBody['data'] as Map<String, dynamic>;
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to mark section as completed');
+      }
+    } catch (e) {
+      print('Error in completeSection: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to mark section as completed: $e');
+    }
+  }
+
   /// Get enrollment progress
   Future<Map<String, dynamic>?> getEnrollmentProgress(String enrollmentId) async {
     try {

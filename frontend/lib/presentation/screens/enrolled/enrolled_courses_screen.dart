@@ -304,7 +304,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               // Instructor
               Text(
-                'By ${course.createdBy.fullName}',
+                'By ${course.displayInstructor}',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppTheme.greyColor,

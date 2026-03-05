@@ -638,7 +638,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                               ),
                               const SizedBox(height: 5),
                               Text(
-                                'by ${course.createdBy.fullName}',
+                                'by ${course.displayInstructor}',
                                 style: const TextStyle(
                                   color: AppTheme.greyColor,
                                   fontSize: 13,
@@ -667,9 +667,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                     size: 14,
                                   ),
                                   const SizedBox(width: 4),
-                                  const Text(
-                                    '0 students', // This would come from the API
-                                    style: TextStyle(
+                                  Text(
+                                    '${course.enrollmentCount ?? 0} students',
+                                    style: const TextStyle(
                                       color: AppTheme.greyColor,
                                       fontSize: 12,
                                     ),
@@ -686,7 +686,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '4.5 ', // This would come from the API
+                                    (course.averageRating ?? 0.0).toStringAsFixed(1),
                                     style: TextStyle(
                                       color: AppTheme.getTextColor(context),
                                       fontSize: 13,
@@ -1064,7 +1064,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     
                     // Instructor
                     Text(
-                      'by ${course.createdBy.fullName}',
+                      'by ${course.displayInstructor}',
                       style: TextStyle(
                         color: AppTheme.greyColor,
                         fontSize: isDesktop ? 12 : 11,
@@ -1097,9 +1097,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           size: isDesktop ? 14 : 12,
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '0',
-                          style: TextStyle(
+                        Text(
+                          '${course.enrollmentCount ?? 0}',
+                          style: const TextStyle(
                             color: AppTheme.greyColor,
                             fontSize: 10,
                           ),
@@ -1121,7 +1121,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '4.5',
+                              (course.averageRating ?? 0.0).toStringAsFixed(1),
                               style: TextStyle(
                                 color: AppTheme.getTextColor(context),
                                 fontSize: 11,
@@ -1348,7 +1348,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      'by ${course.createdBy.fullName}',
+                      'by ${course.displayInstructor}',
                       style: const TextStyle(
                         color: AppTheme.greyColor,
                         fontSize: 13,
@@ -1377,9 +1377,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           size: 14,
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '0 students',
-                          style: TextStyle(
+                        Text(
+                          '${course.enrollmentCount ?? 0} students',
+                          style: const TextStyle(
                             color: AppTheme.greyColor,
                             fontSize: 12,
                           ),
@@ -1396,7 +1396,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '4.5 ',
+                          (course.averageRating ?? 0.0).toStringAsFixed(1),
                           style: TextStyle(
                             color: AppTheme.getTextColor(context),
                             fontSize: 13,

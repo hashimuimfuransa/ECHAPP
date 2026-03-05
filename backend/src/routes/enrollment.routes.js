@@ -6,6 +6,7 @@ const {
   submitCourseFeedback,
   getEnrollmentProgress,
   updateEnrollmentProgress,
+  completeSection,
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,
@@ -24,6 +25,7 @@ router.get('/my-courses', protect, getMyCourses);
 router.post('/course/:courseId/feedback', protect, submitCourseFeedback);
 router.get('/:id/progress', protect, getEnrollmentProgress);
 router.put('/:id/progress', protect, updateEnrollmentProgress);
+router.put('/:id/complete-section', protect, completeSection);
 
 // Certificate routes
 router.get('/certificates', protect, getCertificates);

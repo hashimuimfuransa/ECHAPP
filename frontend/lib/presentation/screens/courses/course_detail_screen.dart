@@ -184,7 +184,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   // Method to handle sharing
   void _handleShare(Course course) async {
     final String shareText = 'Check out this amazing course: ${course.title}\n'
-        'Instructor: ${course.createdBy.fullName}\n'
+        'Instructor: ${course.displayInstructor}\n'
         'Price: ${(course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
         'Duration: ${_formatDuration(course)}\n\n'
@@ -446,14 +446,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                       color: Colors.white,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '(\${course.enrollmentCount ?? 0} students enrolled)',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 14,
                                     ),
                                   ),
                                 ],
@@ -1253,7 +1245,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               },
               {
                 'icon': Icons.people_outline,
-                'value': '0',
+                'value': (course.enrollmentCount ?? 0).toString(),
                 'label': 'Students',
                 'color': const Color(0xFFf093fb)
               },
@@ -1920,7 +1912,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      course.createdBy.fullName.split(' ').map((n) => n[0]).join('').toUpperCase(),
+                      course.displayInstructor.split(' ').map((n) => n[0]).join('').toUpperCase(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 28,
@@ -1935,7 +1927,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        course.createdBy.fullName,
+                        course.displayInstructor,
                         style: TextStyle(
                           color: AppTheme.getTextColor(context),
                           fontSize: 20,
@@ -2012,7 +2004,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   radius: 30,
                   backgroundColor: Colors.white.withOpacity(0.2),
                   child: Text(
-                    course.createdBy.fullName.split(' ').map((n) => n[0]).join('').toUpperCase(),
+                    course.displayInstructor.split(' ').map((n) => n[0]).join('').toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -2026,7 +2018,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        course.createdBy.fullName,
+                        course.displayInstructor,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,

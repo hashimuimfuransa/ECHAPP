@@ -56,6 +56,13 @@ class Course {
     return '$duration $unit';
   }
 
+  String get displayInstructor {
+    if (instructorName != null && instructorName!.isNotEmpty) {
+      return instructorName!;
+    }
+    return createdBy.fullName;
+  }
+
   static String? _getStringValue(dynamic value) {
     if (value == null) return null;
     if (value is String) return value;
