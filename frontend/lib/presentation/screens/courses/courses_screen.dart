@@ -27,6 +27,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   String _selectedCategory = 'all';
   List<Course> _allCourses = [];
   List<Course> _filteredCourses = [];
+  bool _isLoading = true;
+
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -39,6 +42,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         setState(() {
           _allCourses = courses;
           _filteredCourses = courses;
+          _isLoading = false;
+          _errorMessage = null;
           if (widget.categoryId != null) {
             _selectedCategory = widget.categoryId!;
           }
@@ -48,6 +53,13 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         if (widget.categoryId != null && widget.categoryId != 'all') {
           _filterCourses();
         }
+      }
+    }).catchError((error) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error.toString();
+        });
       }
     });
   }
@@ -148,16 +160,66 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     const SizedBox(height: 25),
                     
                     // All Courses with responsive grid
-                    enrolledCoursesAsync.when(
-                      data: (enrolledCourses) => _buildResponsiveAllCourses(context, _filteredCourses, enrolledCourses),
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(40.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (err, stack) => _buildResponsiveAllCourses(context, _filteredCourses, []),
-                    ),
+                    _isLoading
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40.0),
+                            child: CircularProgressIndicator(
+                              color: AppTheme.primaryGreen,
+                            ),
+                          ),
+                        )
+                      : _errorMessage != null
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(40.0),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Failed to load courses',
+                                    style: TextStyle(
+                                      color: AppTheme.getTextColor(context),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: AppTheme.greyColor),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLoading = true;
+                                        _errorMessage = null;
+                                      });
+                                      initState();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryGreen,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Try Again'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : enrolledCoursesAsync.when(
+                            data: (enrolledCourses) => _buildResponsiveAllCourses(context, _filteredCourses, enrolledCourses),
+                            loading: () => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            error: (err, stack) => _buildResponsiveAllCourses(context, _filteredCourses, []),
+                          ),
                     
                     const SizedBox(height: 40),
                   ],

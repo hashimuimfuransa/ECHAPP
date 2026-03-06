@@ -70,6 +70,9 @@ class PushNotificationService {
         _handleNotificationTap(initialMessage);
       }
       
+      // 8. Schedule daily reminder
+      await scheduleDailyReminder();
+      
     } catch (e) {
       print('Error initializing push notifications: $e');
     }
@@ -209,5 +212,71 @@ class PushNotificationService {
     } catch (e) {
       print('Error unsubscribing from topic: $e');
     }
+  }
+
+  // Schedule daily reminder (Duolingo style)
+  static Future<void> scheduleDailyReminder() async {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
+
+    final reminder = _getRandomReminder();
+    
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'daily_reminder_channel',
+      'Daily Reminders',
+      channelDescription: 'Notifications to remind you to keep learning',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      badgeNumber: 1,
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // Using periodicallyShow as a simple way to schedule daily without timezone package
+    // In a real app, you'd use tz.TZDateTime for specific time of day
+    await _localNotifications.periodicallyShow(
+      999, // Unique ID for daily reminder
+      reminder['title'],
+      reminder['body'],
+      RepeatInterval.daily,
+      platformDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: '/dashboard',
+    );
+    
+    print('Daily reminder scheduled: ${reminder['title']}');
+  }
+
+  // Clear all notifications and badges
+  static Future<void> clearNotifications() async {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
+    
+    await _localNotifications.cancelAll();
+    // For iOS/Android badges, FCM usually handles it or you need a plugin
+    // But clearing notifications helps
+    print('Notifications cleared');
+  }
+
+  // Get a random Duolingo-style reminder
+  static Map<String, String> _getRandomReminder() {
+    final reminders = [
+      {'title': 'Don\'t break your streak! 🔥', 'body': 'Your brain misses learning. Just 5 minutes today?'},
+      {'title': 'Excellence Hub misses you 🥺', 'body': 'Ready to master that next lesson? Come on back!'},
+      {'title': 'Your goal is waiting! 🎯', 'body': 'Success doesn\'t happen by itself. Let\'s learn something new.'},
+      {'title': 'Quick reminder... ⏰', 'body': 'Consistency is the key to mastery. See you in the app!'},
+      {'title': 'Psst... 🎓', 'body': 'A little bird told me you haven\'t learned anything today.'},
+      {'title': 'Keep the momentum! 🚀', 'body': 'You were doing so well! Don\'t stop now.'},
+    ];
+    
+    return reminders[DateTime.now().millisecond % reminders.length];
   }
 }

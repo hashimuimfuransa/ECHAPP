@@ -106,9 +106,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
 
   Widget _buildEnrolledCoursesGrid(BuildContext context, WidgetRef ref, List<Enrollment> enrollments, String activeFilter) {
     return Padding(
-      padding: ResponsiveBreakpoints.isDesktop(context)
-          ? const EdgeInsets.all(32)
-          : const EdgeInsets.all(16),
+      padding: ResponsiveBreakpoints.getPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -118,7 +116,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               Text(
                 'My Learning (${enrollments.length})',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: ResponsiveBreakpoints.isMobile(context) ? 20 : 24,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.blackColor,
                 ),
@@ -131,28 +129,22 @@ class EnrolledCoursesScreen extends ConsumerWidget {
           Expanded(
             child: enrollments.isEmpty 
               ? _buildNoFilteredResults(activeFilter)
-              : !ResponsiveBreakpoints.isMobile(context)
-                ? GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: ResponsiveBreakpoints.isDesktop(context) ? 3 : 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: ResponsiveBreakpoints.isDesktop(context) ? 0.75 : 0.72,
-                    ),
-                    itemCount: enrollments.length,
-                    itemBuilder: (context, index) {
-                      return _buildCourseCard(context, enrollments[index], true);
-                    },
-                  )
-                : ListView.builder(
-                    itemCount: enrollments.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildCourseCard(context, enrollments[index], false),
-                      );
-                    },
+              : GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: ResponsiveBreakpoints.isDesktop(context) 
+                        ? 3 
+                        : (ResponsiveBreakpoints.isTablet(context) ? 2 : (ResponsiveBreakpoints.isSmallMobile(context) ? 1 : 2)),
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: ResponsiveBreakpoints.isDesktop(context) 
+                        ? 0.75 
+                        : (ResponsiveBreakpoints.isSmallMobile(context) ? 1.1 : 0.72),
                   ),
+                  itemCount: enrollments.length,
+                  itemBuilder: (context, index) {
+                    return _buildCourseCard(context, enrollments[index], true);
+                  },
+                ),
           ),
         ],
       ),
@@ -218,6 +210,11 @@ class EnrolledCoursesScreen extends ConsumerWidget {
     final course = enrollment.course;
     if (course == null) return const SizedBox.shrink();
 
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final cardPadding = isMobile ? 12.0 : 16.0;
+    final imageHeight = isSmallMobile ? 150.0 : 100.0;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -231,7 +228,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: () => _viewCourse(context, enrollment),
         child: Padding(
-          padding: isGrid ? const EdgeInsets.all(16) : const EdgeInsets.all(12),
+          padding: EdgeInsets.all(cardPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -239,7 +236,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               Stack(
                 children: [
                   Container(
-                    height: isGrid ? 100 : 120,
+                    height: imageHeight,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryGreen.withOpacity(0.1),
@@ -294,9 +291,10 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               Text(
                 course.title,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: isMobile ? 13 : 14,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.blackColor,
+                  height: 1.2,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -306,7 +304,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               Text(
                 'By ${course.displayInstructor}',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: isMobile ? 10 : 11,
                   color: AppTheme.greyColor,
                 ),
               ),
@@ -321,7 +319,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                       Text(
                         enrollment.isCompleted ? 'Completed' : '${enrollment.progress.toInt()}% Complete',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: isMobile ? 9 : 10,
                           fontWeight: FontWeight.w500,
                           color: enrollment.isCompleted ? AppTheme.primaryGreen : AppTheme.greyColor,
                         ),
@@ -360,8 +358,8 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                   ),
                   child: Text(
                     enrollment.isCompleted ? 'Review Course' : 'Continue Learning',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: TextStyle(
+                      fontSize: isMobile ? 11 : 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

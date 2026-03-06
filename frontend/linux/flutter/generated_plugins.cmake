@@ -9,6 +9,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_secure_storage_linux
   media_kit_libs_linux
   media_kit_video
+  record_linux
+  rive_native
   url_launcher_linux
 )
 

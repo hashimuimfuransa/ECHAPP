@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
@@ -32,6 +33,12 @@ class MainLayout extends ConsumerWidget {
     PushNotificationService.setContext(context);
     
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
+    
+    // We want the sidebar layout for large screens OR for any desktop platform window that is wide enough
+    // This provides the "window layout" the user expects on Windows
+    final bool useSidebarLayout = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
+
     final app_models.User? user = ref.watch(authProvider).user;
     final String currentRoute = GoRouterState.of(context).uri.path;
     final isCollapsed = ref.watch(sidebarProvider);
@@ -56,18 +63,19 @@ class MainLayout extends ConsumerWidget {
     if (currentRoute.contains('/settings')) currentPage = 'settings';
     if (isAuthRoute) currentPage = 'auth';
 
-    if (isDesktop) {
+    if (useSidebarLayout) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Column(
           children: [
-            DesktopTitleBar(
-              title: "Excellence Coaching Hub",
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Image.asset('assets/logo.png', width: 16, height: 16),
+            if (isPlatformDesktop)
+              DesktopTitleBar(
+                title: "Excellence Coaching Hub",
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Image.asset('assets/logo.png', width: 16, height: 16),
+                ),
               ),
-            ),
             Expanded(
               child: Row(
                 children: [
@@ -117,9 +125,24 @@ class MainLayout extends ConsumerWidget {
           ],
         ),
         drawer: isAuthRoute ? null : ResponsiveNavigationDrawer(currentPage: currentPage),
-        body: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: child,
+        body: Column(
+          children: [
+            // Always show title bar on desktop platform, even in mobile layout mode
+            if (isPlatformDesktop)
+              DesktopTitleBar(
+                title: "Excellence Coaching Hub",
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Image.asset('assets/logo.png', width: 16, height: 16),
+                ),
+              ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: child,
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: (isAuthRoute || user == null) ? null : _buildBottomNavBar(context, currentRoute),
       );

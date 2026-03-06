@@ -13,7 +13,9 @@ import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
-import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
+import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'dart:io';
 
@@ -59,6 +61,7 @@ class LessonViewer extends ConsumerStatefulWidget {
 }
 
 class _LessonViewerState extends ConsumerState<LessonViewer> {
+  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   Player? _player;
   LessonContent? _lessonContent;
   bool _isLoading = true;
@@ -81,6 +84,11 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   List<NotesSection> _notesSections = [];
   String? _selectedNotesSection;
   Map<String, double> _sectionPositions = {};
+
+  // AI Chat state
+  bool _isChatExpanded = false;
+  final RealAIChatService _aiChatService = RealAIChatService();
+  final String _conversationId = 'conversation_${DateTime.now().millisecondsSinceEpoch}';
 
   @override
   void initState() {
@@ -125,6 +133,16 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+
+        // Show welcome message from AI coach
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _guideKey.currentState != null) {
+            _guideKey.currentState!.updateState(
+              StudentGuideState.greeting,
+              message: "I'm here to help with this lesson on ${widget.lesson.title}! Need a summary or explanation? Just ask! 👋",
+            );
+          }
         });
       }
 
@@ -221,6 +239,16 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
+    // Better Player on Android handles its own initialization within CustomVideoPlayer
+    if (Platform.isAndroid) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     try {
       if (_player != null) {
         await _player!.dispose();
@@ -231,7 +259,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       final downloadService = ref.read(downloadServiceProvider);
       String? localPath = await downloadService.getLocalVideoPathById(widget.lesson.id);
       
-      _player = Player(configuration: const PlayerConfiguration(bufferSize: 64 * 1024 * 1024));
+      _player = Player(configuration: const PlayerConfiguration(
+        bufferSize: 32 * 1024 * 1024,
+      ));
       
       if (mounted) setState(() {});
       
@@ -244,6 +274,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         }
       });
       
+      if (!mounted) return;
+      
       if (localPath != null) {
         final path = Platform.isWindows ? localPath.replaceAll('/', '\\') : localPath;
         _player!.open(Media(path));
@@ -251,7 +283,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         _player!.open(Media(optimizedUrl));
       }
     } catch (e) {
-      setState(() { _hasError = true; });
+      if (mounted) setState(() { _hasError = true; });
     }
   }
 
@@ -329,12 +361,52 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
               ],
             ),
           ),
-          AIFloatingChatButton(
-            currentLesson: widget.lesson,
-            currentCourse: null,
-            allSections: widget.allSections ?? _courseSections,
-            sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
+          // Student Guide Character + AI integration
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: StudentGuideWidget(
+              key: _guideKey,
+              initialState: StudentGuideState.greeting,
+              config: const GuideConfig(
+                character: GuideCharacter.guide,
+                isAiMode: true, // Enable AI features (glow, etc)
+              ),
+              message: 'How can I help you with this lesson?',
+              autoDismiss: false,
+              onTap: () {
+                setState(() {
+                  _isChatExpanded = !_isChatExpanded;
+                });
+              },
+            ),
           ),
+
+          // AI Chat overlay (appears when expanded)
+          if (_isChatExpanded)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => setState(() => _isChatExpanded = false), // Close when tapping outside
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () {}, // Prevent closing when tapping on dialog
+                      child: ModernAIChatDialog(
+                        currentCourse: null, // LessonViewer doesn't have course object easily accessible, passing null is fine
+                        currentLesson: widget.lesson,
+                        allSections: widget.allSections ?? _courseSections,
+                        sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
+                        chatService: _aiChatService,
+                        conversationId: _conversationId,
+                        guideKey: _guideKey,
+                        onClose: () => setState(() => _isChatExpanded = false),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -535,12 +607,27 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))],
               ),
-              child: _player != null
+              child: Platform.isAndroid
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: CustomVideoPlayer(externalPlayer: _player, title: widget.lesson.title, description: widget.lesson.description ?? ''),
+                      child: CustomVideoPlayer(
+                        videoId: widget.lesson.id,
+                        videoUrl: _lessonContent!.videoUrl,
+                        title: widget.lesson.title,
+                        description: widget.lesson.description ?? '',
+                      ),
                     )
-                  : const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+                  : _player != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: CustomVideoPlayer(
+                            videoId: widget.lesson.id,
+                            externalPlayer: _player,
+                            title: widget.lesson.title,
+                            description: widget.lesson.description ?? '',
+                          ),
+                        )
+                      : const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
             );
           },
         ),

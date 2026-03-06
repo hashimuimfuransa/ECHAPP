@@ -11,7 +11,8 @@ import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'package:excellencecoachinghub/widgets/lesson_viewer.dart';
-import 'package:excellencecoachinghub/widgets/ai_floating_chat_button.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
@@ -19,6 +20,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -31,6 +33,7 @@ class ModernStudentLearningScreen extends ConsumerStatefulWidget {
 }
 
 class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearningScreen> {
+  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   Course? _course;
   List<Section>? _sections;
   Map<String, dynamic>? _courseAccessData;
@@ -46,6 +49,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   final TextEditingController _feedbackController = TextEditingController();
   
   bool _hasSubmittedFeedback = false;
+  
+  // AI Chat state
+  bool _isChatExpanded = false;
+  final RealAIChatService _aiChatService = RealAIChatService();
+  final String _conversationId = 'conversation_${DateTime.now().millisecondsSinceEpoch}';
   
   // Progress statistics
   int _totalLessons = 0;
@@ -189,6 +197,16 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
       setState(() {
         _isLoading = false;
+      });
+
+      // Show welcome message from AI coach
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _guideKey.currentState != null) {
+          _guideKey.currentState!.updateState(
+            StudentGuideState.greeting,
+            message: "Welcome to ${_course?.title}! I'm your AI Coach, and I'm here to help you master this course. Click me anytime if you have questions! 👋",
+          );
+        }
       });
     } catch (e) {
       print('Error loading course data: $e');
@@ -412,14 +430,52 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           ),
         ),
         
-        // AI Floating Chat Button
-        AIFloatingChatButton(
-          currentCourse: _course,
-          currentLesson: null,
-          allSections: _sections,
-          sectionLessons: _sectionLessons,
-          showWelcome: true,
+        // Student Guide Character + AI integration
+        Positioned(
+          bottom: 20, // Moved back to original bottom area as it replaces AI button
+          right: 20,
+          child: StudentGuideWidget(
+            key: _guideKey,
+            initialState: StudentGuideState.greeting,
+            config: const GuideConfig(
+              character: GuideCharacter.guide,
+              isAiMode: true, // Enable AI features (glow, etc)
+            ),
+            message: 'Let\'s master this course together!',
+            autoDismiss: false,
+            onTap: () {
+              setState(() {
+                _isChatExpanded = !_isChatExpanded;
+              });
+            },
+          ),
         ),
+
+        // AI Chat overlay (appears when expanded)
+        if (_isChatExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _isChatExpanded = false), // Close when tapping outside
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () {}, // Prevent closing when tapping on dialog
+                    child: ModernAIChatDialog(
+                      currentCourse: _course,
+                      currentLesson: null, // No lesson selected at course level
+                      allSections: _sections,
+                      sectionLessons: _sectionLessons,
+                      chatService: _aiChatService,
+                      conversationId: _conversationId,
+                      guideKey: _guideKey,
+                      onClose: () => setState(() => _isChatExpanded = false),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -1804,6 +1860,13 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         _completedLessonsCount++;
         _completedDurationMinutes += lesson.duration;
       });
+
+      // Show student guide cheer
+      _guideKey.currentState?.updateState(
+        StudentGuideState.cheer,
+        message: 'Great job! Lesson completed!',
+        autoDismiss: true,
+      );
       
       // Call backend to update progress if enrollment is found
       if (_courseAccessData != null && _courseAccessData!['enrollmentId'] != null) {
@@ -1966,6 +2029,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       
       // Show success message
       if (mounted) {
+        _guideKey.currentState?.updateState(
+          StudentGuideState.success,
+          message: 'Amazing! You finished "${section.title}"!',
+          autoDismiss: true,
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('🎉 "${section.title}" completed! ${index < _sections!.length - 1 ? "Next section unlocked." : "Course completed!"}'),

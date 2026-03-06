@@ -21,6 +21,7 @@ import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
+import 'package:excellencecoachinghub/services/push_notification_service.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -140,6 +141,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   @override
   void initState() {
     super.initState();
+    // Clear notifications and badges when app is opened
+    PushNotificationService.clearNotifications();
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -211,74 +215,78 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show through
-      body: RefreshIndicator(
-        onRefresh: _refreshDashboard,
-        child: SingleChildScrollView(
-          padding: padding,
-          child: Center(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: isDesktop ? 1300 : double.infinity,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCategoryFilters(context),
-                  userEnrollmentsAsync.when(
-                    data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
-                    loading: () => _buildWelcomeCard(context, user, []),
-                    error: (_, __) => _buildWelcomeCard(context, user, []),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _refreshDashboard,
+            child: SingleChildScrollView(
+              padding: padding,
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 1300 : double.infinity,
                   ),
-                  const SizedBox(height: 24),
-                  const _DashboardDeviceBindingPolicy(),
-                  const SizedBox(height: 32),
-                  if (ref.watch(authProvider.notifier).isAdmin) ...[
-                    _buildAdminAccessButton(context),
-                    const SizedBox(height: 32),
-                  ],
-                  userEnrollmentsAsync.when(
-                    data: (enrollments) =>
-                        _buildLearningAndOnboarding(context, enrollments),
-                    loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                    error: (error, stack) => _buildErrorCard(
-                        context, 'Continue Learning', error.toString()),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildResponsiveQuickActions(context),
-                  const SizedBox(height: 32),
-                  recommendedCoursesAsync.when(
-                    data: (recommendedCourses) => enrolledCoursesAsync.when(
-                      data: (enrolledCourses) => _buildRecommendedCourses(
-                        context, 
-                        recommendedCourses.isNotEmpty 
-                            ? recommendedCourses 
-                            : (popularCoursesAsync.value ?? []), 
-                        enrolledCourses
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCategoryFilters(context),
+                      userEnrollmentsAsync.when(
+                        data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
+                        loading: () => _buildWelcomeCard(context, user, []),
+                        error: (_, __) => _buildWelcomeCard(context, user, []),
                       ),
-                      loading: () => _buildRecommendedCourses(context, recommendedCourses, []),
-                      error: (_, __) => _buildRecommendedCourses(context, recommendedCourses, []),
-                    ),
-                    loading: () => _buildLoadingCard(context, 'Recommended Courses'),
-                    error: (error, stack) => _buildErrorCard(
-                        context, 'Recommended Courses', error.toString()),
+                      const SizedBox(height: 24),
+                      const _DashboardDeviceBindingPolicy(),
+                      const SizedBox(height: 32),
+                      if (ref.watch(authProvider.notifier).isAdmin) ...[
+                        _buildAdminAccessButton(context),
+                        const SizedBox(height: 32),
+                      ],
+                      userEnrollmentsAsync.when(
+                        data: (enrollments) =>
+                            _buildLearningAndOnboarding(context, enrollments),
+                        loading: () => _buildLoadingCard(context, 'Continue Learning'),
+                        error: (error, stack) => _buildErrorCard(
+                            context, 'Continue Learning', error.toString()),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildResponsiveQuickActions(context),
+                      const SizedBox(height: 32),
+                      recommendedCoursesAsync.when(
+                        data: (recommendedCourses) => enrolledCoursesAsync.when(
+                          data: (enrolledCourses) => _buildRecommendedCourses(
+                            context, 
+                            recommendedCourses.isNotEmpty 
+                                ? recommendedCourses 
+                                : (popularCoursesAsync.value ?? []), 
+                            enrolledCourses
+                          ),
+                          loading: () => _buildRecommendedCourses(context, recommendedCourses, []),
+                          error: (_, __) => _buildRecommendedCourses(context, recommendedCourses, []),
+                        ),
+                        loading: () => _buildLoadingCard(context, 'Recommended Courses'),
+                        error: (error, stack) => _buildErrorCard(
+                            context, 'Recommended Courses', error.toString()),
+                      ),
+                      const SizedBox(height: 32),
+                      popularCoursesAsync.when(
+                        data: (popularCourses) => enrolledCoursesAsync.when(
+                          data: (enrolledCourses) => _buildResponsivePopularCourses(context, popularCourses, enrolledCourses),
+                          loading: () => _buildResponsivePopularCourses(context, popularCourses, []),
+                          error: (_, __) => _buildResponsivePopularCourses(context, popularCourses, []),
+                        ),
+                        loading: () => _buildLoadingCard(context, 'Popular Courses'),
+                        error: (error, stack) => _buildErrorCard(
+                            context, 'Popular Courses', error.toString()),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                  const SizedBox(height: 32),
-                  popularCoursesAsync.when(
-                    data: (popularCourses) => enrolledCoursesAsync.when(
-                      data: (enrolledCourses) => _buildResponsivePopularCourses(context, popularCourses, enrolledCourses),
-                      loading: () => _buildResponsivePopularCourses(context, popularCourses, []),
-                      error: (_, __) => _buildResponsivePopularCourses(context, popularCourses, []),
-                    ),
-                    loading: () => _buildLoadingCard(context, 'Popular Courses'),
-                    error: (error, stack) => _buildErrorCard(
-                        context, 'Popular Courses', error.toString()),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showContactInfoDialog(context),

@@ -221,35 +221,12 @@ class DownloadsSection extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _LocalVideoPlayer(
-          filePath: download.localPath,
+        builder: (context) => CustomVideoPlayer(
+          videoId: download.lessonId,
+          videoUrl: download.localPath,
           title: download.originalTitle,
-        ),
-      ),
-    );
-  }
-}
-
-class _LocalVideoPlayer extends StatelessWidget {
-  final String filePath;
-  final String title;
-
-  const _LocalVideoPlayer({required this.filePath, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: CustomVideoPlayer(
-          videoUrl: filePath,
-          title: title,
           description: 'Local video file',
+          showAppBar: true,
         ),
       ),
     );

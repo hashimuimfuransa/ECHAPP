@@ -56,20 +56,18 @@ class _AIChatMessagesListState extends State<AIChatMessagesList> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: widget.messages.length,
-        itemBuilder: (context, index) {
-          final message = widget.messages[index];
-          final isCurrentUser = message.sender == widget.currentUserId;
-          
-          return AIChatMessageWidget(
-            message: message,
-            isCurrentUser: isCurrentUser,
-          );
-        },
-      ),
+    return ListView.builder(
+      controller: _scrollController,
+      itemCount: widget.messages.length,
+      itemBuilder: (context, index) {
+        final message = widget.messages[index];
+        final isCurrentUser = message.sender == widget.currentUserId;
+        
+        return AIChatMessageWidget(
+          message: message,
+          isCurrentUser: isCurrentUser,
+        );
+      },
     );
   }
 }

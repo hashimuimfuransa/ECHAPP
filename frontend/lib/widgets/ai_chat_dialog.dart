@@ -8,6 +8,7 @@ import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_messages_list.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_input_widget.dart';
 import 'package:excellencecoachinghub/widgets/voice_chat_widget.dart';
+import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Modern AI Chat Dialog Widget with Enhanced Glass Morphism Effect
@@ -19,6 +20,7 @@ class ModernAIChatDialog extends StatefulWidget {
   final AIChatService chatService;
   final String conversationId;
   final VoidCallback onClose;
+  final GlobalKey<StudentGuideWidgetState>? guideKey;
 
   const ModernAIChatDialog({
     super.key,
@@ -29,6 +31,7 @@ class ModernAIChatDialog extends StatefulWidget {
     required this.chatService,
     required this.conversationId,
     required this.onClose,
+    this.guideKey,
   });
 
   @override
@@ -114,6 +117,31 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     _flutterTts.speak(message);
   }
 
+  void _updateGuideState(String message) {
+    if (widget.guideKey?.currentState == null) return;
+    
+    final msg = message.toLowerCase();
+    StudentGuideState state = StudentGuideState.idle;
+    
+    if (msg.contains('congratulations') || msg.contains('excellent') || msg.contains('great job') || msg.contains('🎉')) {
+      state = StudentGuideState.success;
+    } else if (msg.contains('thinking') || msg.contains('let me see') || msg.contains('analyzing')) {
+      state = StudentGuideState.thinking;
+    } else if (msg.contains('hello') || msg.contains('hi ') || msg.contains('welcome')) {
+      state = StudentGuideState.greeting;
+    } else if (msg.contains('don\'t give up') || msg.contains('try again')) {
+      state = StudentGuideState.encouraging;
+    } else if (msg.contains('level up') || msg.contains('unlocked')) {
+      state = StudentGuideState.levelUp;
+    } else if (msg.contains('hint') || msg.contains('tip')) {
+      state = StudentGuideState.hintReady;
+    } else {
+      state = StudentGuideState.cheer;
+    }
+    
+    widget.guideKey!.currentState!.updateState(state, message: null); // We don't want to double bubbles if possible, but guide update triggers movement
+  }
+
   Future<void> _loadInitialMessages() async {
     try {
       final messages = await widget.chatService.getConversation(widget.conversationId);
@@ -169,6 +197,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
       _messages.add(aiMessage);
     });
 
+    _updateGuideState(aiMessage.message);
     await _flutterTts.speak(aiMessage.message);
   }
 
@@ -188,6 +217,11 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
       _isLoading = true;
       _isTyping = true;
     });
+
+    // Character thinking movement
+    if (widget.guideKey?.currentState != null) {
+      widget.guideKey!.currentState!.updateState(StudentGuideState.thinking);
+    }
 
     try {
       final context = AIChatContext(
@@ -209,6 +243,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
         _isTyping = false;
       });
 
+      _updateGuideState(aiResponse.message);
       await _flutterTts.speak(aiResponse.message);
     } catch (e) {
       print('Error sending message: $e');
@@ -428,6 +463,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                               'sectionLessons': widget.sectionLessons,
                             },
                             onAIResponse: (text) {
+                              _updateGuideState(text);
                               _speakMessage(text);
                             },
                             onVoiceMessageReceived: (text) {
@@ -442,6 +478,10 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                               setState(() {
                                 _messages.add(userMessage);
                               });
+
+                              if (widget.guideKey?.currentState != null) {
+                                widget.guideKey!.currentState!.updateState(StudentGuideState.thinking);
+                              }
                             },
                             onTextMessageReceived: (text) {
                               final aiMessage = AIChatMessage(
@@ -456,6 +496,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                                 _messages.add(aiMessage);
                               });
 
+                              _updateGuideState(aiMessage.message);
                               _speakMessage(aiMessage.message);
                             },
                           ),

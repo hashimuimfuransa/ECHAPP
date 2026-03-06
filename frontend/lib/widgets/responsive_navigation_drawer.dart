@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
@@ -146,7 +147,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       },
     ];
 
-    if (ResponsiveBreakpoints.isDesktop(context)) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
+    
+    // Consistent with MainLayout logic - use desktop style sidebar for desktop platforms 
+    // down to 600px width
+    final bool useSidebarStyle = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
+
+    if (useSidebarStyle) {
       return _buildDesktopDrawer(context, navItems, ref, isCollapsed, isAuth);
     } else {
       return _buildMobileDrawer(context, navItems, ref);
@@ -467,8 +475,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     bool isCollapsed,
   ) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
     
-    if (isDesktop) {
+    // Use desktop style for desktop platforms down to 600px width
+    final bool useDesktopStyle = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
+    
+    if (useDesktopStyle) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Material(

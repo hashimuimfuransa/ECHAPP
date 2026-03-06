@@ -392,7 +392,9 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
     if (settings != null) {
       // Use Backend settings
-      if (settings.paymentInfo.mtnMomo.enabled) {
+      if (settings.paymentInfo.mtnMomo.enabled && 
+          (settings.paymentInfo.mtnMomo.accountName.isNotEmpty || 
+           settings.paymentInfo.mtnMomo.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
           'Payment via MTN MoMo:',
           '${settings.paymentInfo.mtnMomo.accountName} - ${settings.paymentInfo.mtnMomo.accountNumber}',
@@ -401,7 +403,9 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
         instructions.add(const SizedBox(height: 8));
       }
 
-      if (settings.paymentInfo.airtelMoney.enabled) {
+      if (settings.paymentInfo.airtelMoney.enabled &&
+          (settings.paymentInfo.airtelMoney.accountName.isNotEmpty ||
+           settings.paymentInfo.airtelMoney.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
           'Payment via Airtel Money:',
           '${settings.paymentInfo.airtelMoney.accountName} - ${settings.paymentInfo.airtelMoney.accountNumber}',
@@ -410,7 +414,9 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
         instructions.add(const SizedBox(height: 8));
       }
 
-      if (settings.paymentInfo.bankTransfer.enabled) {
+      if (settings.paymentInfo.bankTransfer.enabled &&
+          (settings.paymentInfo.bankTransfer.accountName.isNotEmpty ||
+           settings.paymentInfo.bankTransfer.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
           'Payment via Bank Transfer (${settings.paymentInfo.bankTransfer.bankName}):',
           '${settings.paymentInfo.bankTransfer.accountName} - ${settings.paymentInfo.bankTransfer.accountNumber}',
@@ -456,13 +462,13 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
         children: [
           _buildContactInstruction(
             '1. Contact for payment via:',
-            'MTN: 0793828834',
+            'MTN: +250 793 828 834',
             Icons.phone,
           ),
           const SizedBox(height: 8),
           _buildContactInstruction(
             '2. Also available via:',
-            'MTN: 0788535156',
+            'MTN: +250 788 535 156',
             Icons.phone,
           ),
           const SizedBox(height: 8),
@@ -474,7 +480,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           const SizedBox(height: 8),
           _buildContactInstruction(
             '4. Or contact us on WhatsApp:',
-            '0793828834 / 0788535156',
+            '+250 793 828 834 / +250 788 535 156',
             Icons.chat,
           ),
         ],

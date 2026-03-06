@@ -295,54 +295,13 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _LocalVideoPlayer(
-          filePath: download.localPath,
+        builder: (context) => CustomVideoPlayer(
+          videoId: download.lessonId,
+          videoUrl: download.localPath,
           title: download.originalTitle,
+          description: 'Local video file',
+          showAppBar: true,
         ),
-      ),
-    );
-  }
-}
-
-class _LocalVideoPlayer extends StatefulWidget {
-  final String filePath;
-  final String title;
-
-  const _LocalVideoPlayer({required this.filePath, required this.title});
-
-  @override
-  State<_LocalVideoPlayer> createState() => _LocalVideoPlayerState();
-}
-
-class _LocalVideoPlayerState extends State<_LocalVideoPlayer> {
-  late final Player _player;
-  late final VideoController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _player = Player();
-    _controller = VideoController(_player);
-    _player.open(Media(Platform.isWindows ? widget.filePath.replaceAll('/', '\\') : widget.filePath));
-  }
-
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Video(controller: _controller),
       ),
     );
   }

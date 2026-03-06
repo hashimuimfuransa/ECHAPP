@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart' as mk;
+import 'package:media_kit_video/media_kit_video.dart' as mkv;
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/services/video_progress_service.dart';
 import 'dart:io';
 import 'dart:async';
 
 class CustomVideoPlayer extends StatefulWidget {
+  final String? videoId;
   final String? videoUrl;
-  final Player? externalPlayer;
+  final mk.Player? externalPlayer;
   final String title;
   final String description;
   final bool showAppBar;
@@ -15,6 +20,7 @@ class CustomVideoPlayer extends StatefulWidget {
 
   const CustomVideoPlayer({
     super.key,
+    this.videoId,
     this.videoUrl,
     this.externalPlayer,
     required this.title,
@@ -28,21 +34,27 @@ class CustomVideoPlayer extends StatefulWidget {
 }
 
 class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
-  late Player _player;
-  late VideoController _videoController;
+  // Media Kit (Desktop)
+  mk.Player? _mkPlayer;
+  mkv.VideoController? _mkVideoController;
+  
+  // Chewie / Video Player (Mobile/Android)
+  VideoPlayerController? _vpController;
+  ChewieController? _chewieController;
+  
   bool _isPlaying = false;
   bool _isBuffering = false;
   bool _showControls = true;
-  double _volume = 1.0;
   double _playbackSpeed = 1.0;
   bool _isInitialized = false;
   String? _errorMessage;
   
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
-  Duration _buffer = Duration.zero;
 
   List<StreamSubscription> _subscriptions = [];
+
+  bool get _isAndroid => Platform.isAndroid;
 
   String _getOptimizedUrl(String url) {
     if (url.startsWith('http')) {
@@ -65,130 +77,191 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _initPlayer() {
-    if (widget.externalPlayer != null) {
-      _player = widget.externalPlayer!;
-      _isInitialized = true;
+    if (_isAndroid) {
+      _initMobilePlayer();
     } else {
-      _player = Player(
-        configuration: const PlayerConfiguration(
-          bufferSize: 64 * 1024 * 1024, // 64MB buffer for low internet
+      _initMediaKit();
+    }
+  }
+
+  void _initMobilePlayer() async {
+    final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
+    final isNetwork = optimizedUrl.startsWith('http');
+    
+    // Retrieve saved progress
+    Duration startAt = Duration.zero;
+    if (widget.videoId != null) {
+      startAt = await videoProgressService.getProgress(widget.videoId!);
+    }
+
+    if (isNetwork) {
+      _vpController = VideoPlayerController.networkUrl(Uri.parse(optimizedUrl));
+    } else {
+      _vpController = VideoPlayerController.file(File(optimizedUrl));
+    }
+
+    try {
+      await _vpController!.initialize();
+      
+      if (startAt > Duration.zero) {
+        await _vpController!.seekTo(startAt);
+      }
+
+      _chewieController = ChewieController(
+        videoPlayerController: _vpController!,
+        aspectRatio: 16 / 9,
+        autoPlay: false,
+        looping: false,
+        showControls: true,
+        placeholder: const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppTheme.primaryGreen,
+          handleColor: AppTheme.primaryGreen,
+          backgroundColor: Colors.grey,
+          bufferedColor: AppTheme.primaryGreen.withOpacity(0.3),
         ),
       );
+
+      _vpController!.addListener(_mobilePlayerListener);
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Failed to load video: $error";
+          _isInitialized = true;
+        });
+      }
+    }
+  }
+
+  void _mobilePlayerListener() {
+    if (_vpController == null) return;
+    
+    final position = _vpController!.value.position;
+    
+    // Save progress periodically (every 5 seconds)
+    if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
+      videoProgressService.saveProgress(widget.videoId!, position);
+    }
+
+    if (mounted) {
+      setState(() {
+        _position = position;
+        _duration = _vpController!.value.duration;
+        _isPlaying = _vpController!.value.isPlaying;
+        _isBuffering = _vpController!.value.isBuffering;
+      });
+    }
+  }
+
+  void _initMediaKit() async {
+    // Retrieve saved progress
+    Duration startAt = Duration.zero;
+    if (widget.videoId != null) {
+      startAt = await videoProgressService.getProgress(widget.videoId!);
+    }
+
+    if (widget.externalPlayer != null) {
+      _mkPlayer = widget.externalPlayer!;
+      _isInitialized = true;
+    } else {
+      _mkPlayer = mk.Player(
+        configuration: const mk.PlayerConfiguration(
+          bufferSize: 32 * 1024 * 1024,
+        ),
+      );
+      
       final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
-      _player.open(Media(optimizedUrl)).then((_) {
+      
+      _mkPlayer!.open(mk.Media(optimizedUrl)).then((_) {
+        if (startAt > Duration.zero) {
+          _mkPlayer!.seek(startAt);
+        }
         if (mounted) {
           setState(() {
+            _isInitialized = true;
+          });
+        }
+      }).catchError((error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = "Failed to load video: $error";
             _isInitialized = true;
           });
         }
       });
     }
 
-    _videoController = VideoController(_player);
-    _setupSubscriptions();
+    _mkVideoController = mkv.VideoController(
+      _mkPlayer!,
+      configuration: const mkv.VideoControllerConfiguration(
+        enableHardwareAcceleration: true,
+      ),
+    );
+    _setupMediaKitSubscriptions();
   }
 
-  void _setupSubscriptions() {
+  void _setupMediaKitSubscriptions() {
+    if (_mkPlayer == null) return;
+    
     for (final s in _subscriptions) {
       s.cancel();
     }
     _subscriptions = [
-      _player.stream.playing.listen((playing) {
+      _mkPlayer!.stream.playing.listen((playing) {
+        if (mounted) setState(() => _isPlaying = playing);
+      }),
+      _mkPlayer!.stream.buffering.listen((buffering) {
+        if (mounted) setState(() => _isBuffering = buffering);
+      }),
+      _mkPlayer!.stream.position.listen((position) {
         if (mounted) {
-          setState(() {
-            _isPlaying = playing;
-          });
+          setState(() => _position = position);
+          // Save progress periodically (every 5 seconds)
+          if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
+            videoProgressService.saveProgress(widget.videoId!, position);
+          }
         }
       }),
-      _player.stream.buffering.listen((buffering) {
-        if (mounted) {
-          setState(() {
-            _isBuffering = buffering;
-          });
-        }
-      }),
-      _player.stream.position.listen((position) {
-        if (mounted) {
-          setState(() {
-            _position = position;
-          });
-        }
-      }),
-      _player.stream.duration.listen((duration) {
+      _mkPlayer!.stream.duration.listen((duration) {
         if (mounted) {
           setState(() {
             _duration = duration;
+            _isInitialized = true;
           });
         }
       }),
-      _player.stream.buffer.listen((buffer) {
-        if (mounted) {
-          setState(() {
-            _buffer = buffer;
-          });
-        }
-      }),
-      _player.stream.volume.listen((volume) {
-        if (mounted) {
-          setState(() {
-            _volume = volume / 100.0;
-          });
-        }
-      }),
-      _player.stream.rate.listen((rate) {
-        if (mounted) {
-          setState(() {
-            _playbackSpeed = rate;
-          });
-        }
-      }),
-      _player.stream.error.listen((error) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = error.toString();
-          });
-        }
+      _mkPlayer!.stream.error.listen((error) {
+        if (mounted) setState(() => _errorMessage = error.toString());
       }),
     ];
   }
 
   @override
-  void didUpdateWidget(CustomVideoPlayer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.externalPlayer != oldWidget.externalPlayer || 
-        widget.videoUrl != oldWidget.videoUrl) {
-      if (oldWidget.externalPlayer == null && widget.externalPlayer == null) {
-        // Both use internal player, re-open media if URL changed
-        if (widget.videoUrl != oldWidget.videoUrl) {
-          final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
-          _player.open(Media(optimizedUrl));
-        }
-      } else {
-        // Switching between internal/external or external changed, full re-init
-        _disposeInternalPlayer();
-        _initPlayer();
-      }
-    }
-  }
-
-  void _disposeInternalPlayer() {
+  void dispose() {
     for (final s in _subscriptions) {
       s.cancel();
     }
-    _subscriptions = [];
     if (widget.externalPlayer == null) {
-      _player.dispose();
+      _mkPlayer?.dispose();
     }
-  }
-
-  @override
-  void dispose() {
-    _disposeInternalPlayer();
+    _vpController?.removeListener(_mobilePlayerListener);
+    _vpController?.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isAndroid) {
+      return _buildMobilePlayer();
+    }
+    
     if (widget.showAppBar) {
       return Scaffold(
         appBar: AppBar(
@@ -206,94 +279,117 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             ),
           ],
         ),
-        body: _buildVideoPlayer(),
+        body: _buildMediaKitPlayer(),
       );
     }
-    return _buildVideoPlayer();
+    return _buildMediaKitPlayer();
   }
 
-  Widget _buildVideoPlayer() {
+  Widget _buildMobilePlayer() {
+    if (_errorMessage != null) {
+      return Container(
+        color: Colors.black,
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 50),
+              const SizedBox(height: 10),
+              Text('Playback Error: $_errorMessage', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_chewieController == null || !_vpController!.value.isInitialized) {
+      return Container(
+        color: Colors.black,
+        height: 200,
+        child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Chewie(controller: _chewieController!),
+    );
+  }
+
+  Widget _buildMediaKitPlayer() {
+    if (!_isInitialized) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () {
         setState(() {
           _showControls = !_showControls;
         });
       },
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox.expand(
-            child: Video(controller: _videoController),
-          ),
-          if (_errorMessage != null)
+      child: Container(
+        color: Colors.black,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Playback Error: $_errorMessage',
-                    style: const TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: mkv.Video(
+                controller: _mkVideoController!,
+                fit: BoxFit.contain,
+                fill: Colors.black,
               ),
             ),
-          if (_isBuffering && _errorMessage == null)
-            const Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.primaryGreen,
+            if (_errorMessage != null)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 50),
+                    const SizedBox(height: 10),
+                    Text('Playback Error: $_errorMessage', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+                  ],
+                ),
               ),
-            ),
-          if (!_isPlaying && !_showControls && !_isBuffering)
-            Container(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.black26,
-              ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 60,
-              ),
-            ),
-          if (_showControls) _buildVideoControls(),
-        ],
+            if (_isBuffering && _errorMessage == null)
+              const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+            if (_showControls) _buildMediaKitControls(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildVideoControls() {
+  Widget _buildMediaKitControls() {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            Colors.black54,
-          ],
+          colors: [Colors.transparent, Colors.black54],
         ),
       ),
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isSmallScreen ? 10 : 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Progress bar
           Row(
             children: [
-              Text(
-                _formatDuration(_position),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(width: 10),
+              Text(_formatDuration(_position), style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 10 : 12)),
+              const SizedBox(width: 8),
               Expanded(
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    trackHeight: 4,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                    trackHeight: isSmallScreen ? 2 : 4,
+                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: isSmallScreen ? 4 : 6),
+                    overlayShape: RoundSliderOverlayShape(overlayRadius: isSmallScreen ? 10 : 14),
                     activeTrackColor: AppTheme.primaryGreen,
                     inactiveTrackColor: Colors.white24,
                     thumbColor: AppTheme.primaryGreen,
@@ -301,77 +397,31 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   child: Slider(
                     value: _position.inMilliseconds.toDouble().clamp(0, _duration.inMilliseconds.toDouble()),
                     min: 0,
-                    max: _duration.inMilliseconds.toDouble(),
+                    max: _duration.inMilliseconds.toDouble() > 0 ? _duration.inMilliseconds.toDouble() : 1.0,
                     onChanged: (value) {
-                      _player.seek(Duration(milliseconds: value.toInt()));
+                      _mkPlayer!.seek(Duration(milliseconds: value.toInt()));
                     },
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Text(
-                _formatDuration(_duration),
-                style: const TextStyle(color: Colors.white),
-              ),
+              const SizedBox(width: 8),
+              Text(_formatDuration(_duration), style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 10 : 12)),
             ],
           ),
-          const SizedBox(height: 20),
-          
-          // Control buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: const Icon(Icons.replay_10, color: Colors.white, size: 30),
-                onPressed: () => _seekBackward(10),
-              ),
-              const SizedBox(width: 20),
+              IconButton(icon: Icon(Icons.replay_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position - const Duration(seconds: 10))),
+              SizedBox(width: isSmallScreen ? 15 : 30),
               Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                ),
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
                 child: IconButton(
-                  icon: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: AppTheme.primaryGreen,
-                    size: 40,
-                  ),
-                  onPressed: _togglePlayPause,
+                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: AppTheme.primaryGreen, size: isSmallScreen ? 30 : 40),
+                  onPressed: () => _mkPlayer!.playOrPause(),
                 ),
               ),
-              const SizedBox(width: 20),
-              IconButton(
-                icon: const Icon(Icons.forward_10, color: Colors.white, size: 30),
-                onPressed: () => _seekForward(10),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          
-          // Volume and speed controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: Icon(
-                  _volume == 0 ? Icons.volume_off : Icons.volume_up,
-                  color: Colors.white,
-                ),
-                onPressed: _toggleMute,
-              ),
-              Text(
-                '${(_volume * 100).toInt()}%',
-                style: const TextStyle(color: Colors.white),
-              ),
-              IconButton(
-                icon: const Icon(Icons.speed, color: Colors.white),
-                onPressed: _showPlaybackSpeedDialog,
-              ),
-              Text(
-                '${_playbackSpeed}x',
-                style: const TextStyle(color: Colors.white),
-              ),
+              SizedBox(width: isSmallScreen ? 15 : 30),
+              IconButton(icon: Icon(Icons.forward_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position + const Duration(seconds: 10))),
             ],
           ),
         ],
@@ -379,74 +429,45 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
   }
 
-  void _togglePlayPause() {
-    _player.playOrPause();
-  }
-
-  void _toggleMute() {
-    setState(() {
-      _volume = _volume == 0 ? 1.0 : 0.0;
-      _player.setVolume(_volume * 100);
-    });
-  }
-
-  void _toggleFullscreen() {
-    // media_kit handles fullscreen via VideoController
-  }
-
-  void _seekForward(int seconds) {
-    _player.seek(_position + Duration(seconds: seconds));
-  }
-
-  void _seekBackward(int seconds) {
-    _player.seek(_position - Duration(seconds: seconds));
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    if (duration.inHours > 0) return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
   void _showPlaybackSpeedDialog() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      builder: (context) => AlertDialog(
+        title: const Text('Playback Speed'),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Playback Speed',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ...[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) => ListTile(
+          children: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
+            return ListTile(
               title: Text('${speed}x'),
-              trailing: _playbackSpeed == speed
-                  ? const Icon(Icons.check, color: AppTheme.primaryGreen)
-                  : null,
+              selected: _playbackSpeed == speed,
               onTap: () {
-                setState(() {
-                  _playbackSpeed = speed;
-                  _player.setRate(speed);
-                });
+                if (_isAndroid) {
+                  _vpController!.setPlaybackSpeed(speed);
+                } else {
+                  _mkPlayer!.setRate(speed);
+                }
+                setState(() => _playbackSpeed = speed);
                 Navigator.pop(context);
               },
-            )),
-          ],
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    
-    if (duration.inHours > 0) {
-      return '$hours:$minutes:$seconds';
-    } else {
-      return '$minutes:$seconds';
+  void _toggleFullscreen() {
+    if (widget.onFullScreen != null) {
+      widget.onFullScreen!();
+      return;
     }
   }
 }
