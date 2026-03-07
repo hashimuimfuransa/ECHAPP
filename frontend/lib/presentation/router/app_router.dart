@@ -154,15 +154,15 @@ class AppRouter {
             builder: (context, state) => const AdminCoursesScreen(),
           ),
           GoRoute(
+            path: '/admin/courses/create',
+            builder: (context, state) => const AdminCreateCourseScreen(),
+          ),
+          GoRoute(
             path: '/admin/courses/:courseId',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
               return AdminCourseContentScreen(courseId: courseId);
             },
-          ),
-          GoRoute(
-            path: '/admin/courses/create',
-            builder: (context, state) => const AdminCreateCourseScreen(),
           ),
           GoRoute(
             path: '/admin/courses/:courseId/edit',

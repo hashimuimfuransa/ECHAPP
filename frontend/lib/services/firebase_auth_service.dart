@@ -359,7 +359,7 @@ class FirebaseAuthService {
           throw Exception('Google Sign-In popup was blocked. Please allow popups for this site and try again.');
         }
       }
-      throw Exception('Google Sign-In failed. Please try again. Error: $e');
+      throw Exception('Google Sign-In failed. Please check your internet connection and try again.');
     }
   }
 
@@ -375,21 +375,20 @@ class FirebaseAuthService {
       throw _mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Firebase Auth Service: Desktop Sign-In Error: $e');
-      throw Exception('Google Sign-In failed. Please try again. Error: $e');
+      throw Exception('Google Sign-In failed. Please check your internet connection and try again.');
     }
   }
 
-  // Map Firebase Auth exceptions to user-friendly messages
-  // Supported on Windows desktop
+  // Map exceptions to user-friendly messages
   static Exception _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
-    debugPrint('Firebase Auth Exception - Code: ${e.code}, Message: ${e.message}');
+    debugPrint('Auth Exception - Code: ${e.code}, Message: ${e.message}');
     
     switch (e.code) {
       // Email validation errors
       case 'invalid-email':
         return Exception('The email address is invalid. Please check and try again.');
       
-      // Login/password errors (most common on desktop)
+      // Login/password errors
       case 'wrong-password':
         return Exception('Incorrect password. Please try again.');
       case 'user-not-found':
@@ -403,7 +402,7 @@ class FirebaseAuthService {
       
       // Account status errors
       case 'user-disabled':
-        return Exception('This user account has been disabled. Please contact support.');
+        return Exception('This account has been disabled. Please contact support.');
       
       // Rate limiting and security
       case 'too-many-requests':
@@ -411,26 +410,22 @@ class FirebaseAuthService {
       
       // Network errors
       case 'network-request-failed':
-        return Exception('Network error. Please check your internet connection and try again.');
+        return Exception('Network connection error. Please check your internet connection and try again.');
       
       // Configuration errors
       case 'operation-not-allowed':
-        return Exception('Email/password authentication is not enabled. Please try another sign-in method.');
+        return Exception('This sign-in method is not enabled. Please try another way.');
       
       // Multi-provider errors
       case 'account-exists-with-different-credential':
         return Exception('An account already exists with a different sign-in method.');
       
-      // Additional Windows desktop error codes
+      // Additional error codes
       case 'invalid-credential':
         return Exception('Incorrect email or password. Please try again.');
       case 'requires-recent-login':
         return Exception('Please sign in again to perform this action.');
       case 'unknown-error':
-        // Check if it's the desktop Google Sign-In error
-        if (e.message?.contains('Operation is not supported on non-mobile systems') ?? false) {
-          return Exception('Google Sign-In is initializing. Please try again.');
-        }
         // Check for network related issues first in unknown errors
         final message = (e.message ?? '').toLowerCase();
         if (message.contains('network') || 
@@ -439,24 +434,23 @@ class FirebaseAuthService {
             message.contains('host') || 
             message.contains('timeout') ||
             message.contains('offline')) {
-          return Exception('Network error. Please check your internet connection and try again.');
+          return Exception('Network connection error. Please check your internet connection and try again.');
         }
 
-        // Check if it's a wrong password error from desktop Firebase
         if (message.contains('password') || message.contains('credential') || message.contains('invalid')) {
           return Exception('Incorrect password. Please try again.');
         }
-        // Check for "An internal error has occurred" - usually password related on desktop
-        if (message.contains('internal error')) {
-          return Exception('An error occurred during login. Please verify your internet connection, email, and password, and try again.');
-        }
-        return Exception('An unknown error occurred. Please try again.');
+        return Exception('An error occurred. Please try again.');
       
       // Fallback for unmapped error codes
       default:
         final message = e.message ?? 'An authentication error occurred.';
-        debugPrint('Unmapped Firebase error code on Windows: ${e.code}');
-        return Exception(message);
+        // Clean up message if it contains "Firebase"
+        String cleanMessage = message.replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
+        if (cleanMessage.toLowerCase().contains('network') || cleanMessage.toLowerCase().contains('socket')) {
+          return Exception('Network connection error. Please check your internet connection and try again.');
+        }
+        return Exception(cleanMessage);
     }
   }
 }

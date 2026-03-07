@@ -50,16 +50,6 @@ class EnrollmentService {
         
         final enrollments = data.map((enrollmentJson) {
           final map = enrollmentJson as Map<String, dynamic>;
-          // The backend returns courseId as a populated object, 
-          // we need to make sure the Enrollment.fromJson can handle it.
-          // Looking at enrollment.dart, _parseCourseData handles this.
-          
-          // We need to fix the courseId field in map if it's an object
-          if (map['courseId'] is Map<String, dynamic>) {
-            map['course'] = map['courseId'];
-            map['courseId'] = map['courseId']['_id'] ?? map['courseId']['id'];
-          }
-          
           return Enrollment.fromJson(map);
         }).toList();
         

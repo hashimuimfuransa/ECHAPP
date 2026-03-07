@@ -123,10 +123,24 @@ class Enrollment {
   }
 
   factory Enrollment.fromJson(Map<String, dynamic> json) {
+    // Check if courseId is populated as an object
+    dynamic courseData = json['course'];
+    dynamic courseIdData = json['courseId'];
+    String courseIdStr = '';
+
+    if (courseIdData is Map<String, dynamic>) {
+      // It's populated, so move it to courseData and extract the ID
+      courseData ??= courseIdData;
+      courseIdStr = _getStringValue(courseIdData['_id']) ?? 
+                    _getStringValue(courseIdData['id']) ?? '';
+    } else {
+      courseIdStr = _getStringValue(courseIdData) ?? '';
+    }
+
     return Enrollment(
       id: _getStringValue(json['_id']) ?? _getStringValue(json['id']) ?? '',
       userId: _getStringValue(json['userId']) ?? '',
-      courseId: _getStringValue(json['courseId']) ?? '',
+      courseId: courseIdStr,
       enrollmentDate: _parseDateTime(json['enrollmentDate']),
       completionStatus: _getStringValue(json['completionStatus']) ?? 'enrolled',
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
@@ -145,7 +159,7 @@ class Enrollment {
       user: json['user'] != null 
           ? User.fromJson(json['user'] as Map<String, dynamic>)
           : null,
-      course: _parseCourseData(json['course']),
+      course: _parseCourseData(courseData),
     );
   }
 

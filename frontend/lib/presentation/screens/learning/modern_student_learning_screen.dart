@@ -21,6 +21,7 @@ import 'package:excellencecoachinghub/data/repositories/certificate_repository.d
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 /// Modern, minimalist student learning screen with clean section navigation
 class ModernStudentLearningScreen extends ConsumerStatefulWidget {
@@ -282,6 +283,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   PreferredSizeWidget _buildAppBar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    
     return AppBar(
       leading: Container(
         margin: const EdgeInsets.all(8),
@@ -314,7 +318,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         ),
       ),
       title: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallMobile ? 8 : 16, 
+          vertical: 6
+        ),
         decoration: BoxDecoration(
           color: AppTheme.primaryGreen.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
@@ -325,9 +332,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         ),
         child: Text(
           _course!.title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
-            fontSize: 18,
+            fontSize: isSmallMobile ? 14 : 16,
             color: AppTheme.primaryGreen,
           ),
           maxLines: 1,
@@ -339,41 +346,42 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       elevation: 0,
       centerTitle: true,
       actions: [
-        // Progress indicator
-        Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryGreen,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryGreen.withOpacity(isDark ? 0.1 : 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.auto_graph, color: Colors.white, size: 16),
-              SizedBox(width: 4),
-              Text(
-                'Learning',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        if (!isSmallMobile)
+          // Progress indicator
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryGreen.withOpacity(isDark ? 0.1 : 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_graph, color: Colors.white, size: 16),
+                SizedBox(width: 4),
+                Text(
+                  'Learning',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         // History button
         Container(
-          margin: const EdgeInsets.all(8),
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: AppTheme.getCardColor(context),
             borderRadius: BorderRadius.circular(12),
@@ -486,18 +494,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     
     // Calculate progress based on lessons for more granularity
     final progress = _totalLessons > 0 ? _completedLessonsCount / _totalLessons : 0.0;
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: AppTheme.primaryGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
@@ -524,17 +533,18 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Learning Progress',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Expanded(
+                child: Text(
+                  'Learning Progress',
+                  style: TextStyle(
+                    fontSize: isSmallMobile ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
@@ -544,7 +554,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   ),
                 ),
                 child: Text(
-                  '${(progress * 100).toInt()}% Complete',
+                  '${(progress * 100).toInt()}%',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -554,7 +564,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: LinearProgressIndicator(
@@ -564,14 +574,29 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               minHeight: 8,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildProgressStat('Sections', '$completedSections/$totalSections', Icons.library_books),
-              _buildProgressStat('Lessons', '$_completedLessonsCount/$_totalLessons', Icons.play_circle),
-              _buildProgressStat('Hours', '${(_completedDurationMinutes / 60).toStringAsFixed(1)}/${(_totalDurationMinutes / 60).toStringAsFixed(1)}', Icons.access_time),
-            ],
+          const SizedBox(height: 20),
+          // Stats Row
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 20) / 3;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildProgressStat('Sections', '$completedSections/$totalSections', Icons.library_books),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildProgressStat('Lessons', '$_completedLessonsCount/$_totalLessons', Icons.play_circle),
+                  ),
+                  SizedBox(
+                    width: itemWidth,
+                    child: _buildProgressStat('Hours', '${(_completedDurationMinutes / 60).toStringAsFixed(1)}/${(_totalDurationMinutes / 60).toStringAsFixed(1)}', Icons.access_time),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -579,35 +604,34 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildProgressStat(String label, String value, IconData icon) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
+        Icon(
+          icon,
+          color: Colors.white.withOpacity(0.9),
+          size: isSmallMobile ? 18 : 22,
         ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: isSmallMobile ? 14 : 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
+          style: TextStyle(
+            fontSize: isSmallMobile ? 10 : 12,
+            color: Colors.white.withOpacity(0.7),
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -837,11 +861,12 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildSectionCard(Section section, bool isUnlocked, bool isCurrent, int index) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: isSmallMobile ? 12 : 16),
       decoration: BoxDecoration(
         gradient: isUnlocked
           ? LinearGradient(
@@ -882,16 +907,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           key: ValueKey(section.id),
           initiallyExpanded: isCurrent,
           enabled: isUnlocked,
-          tilePadding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isSmallMobile ? 16 : 24, 
+            vertical: isSmallMobile ? 8 : 12
+          ),
           childrenPadding: EdgeInsets.fromLTRB(
-            isSmallScreen ? 20 : 24, 
+            isSmallMobile ? 16 : 24, 
             0, 
-            isSmallScreen ? 20 : 24, 
-            isSmallScreen ? 20 : 24
+            isSmallMobile ? 16 : 24, 
+            isSmallMobile ? 16 : 24
           ),
           leading: Container(
-            width: isSmallScreen ? 48 : 56,
-            height: isSmallScreen ? 48 : 56,
+            width: isSmallMobile ? 40 : 48,
+            height: isSmallMobile ? 40 : 48,
             decoration: BoxDecoration(
               gradient: isUnlocked
                 ? const LinearGradient(
@@ -904,7 +932,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       ? [const Color(0xFF475569), const Color(0xFF334155)]
                       : [const Color(0xFF9CA3AF), const Color(0xFF6B7280)],
                   ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: isUnlocked 
@@ -919,14 +947,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               child: Icon(
                 isUnlocked ? Icons.lock_open : Icons.lock,
                 color: Colors.white,
-                size: isSmallScreen ? 24 : 28,
+                size: isSmallMobile ? 20 : 24,
               ),
             ),
           ),
           title: Text(
             section.title,
             style: TextStyle(
-              fontSize: isSmallScreen ? 18 : 20,
+              fontSize: isSmallMobile ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: isUnlocked 
                 ? AppTheme.getTextColor(context)
@@ -939,14 +967,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               children: [
                 Icon(
                   Icons.school,
-                  size: 14,
+                  size: 13,
                   color: isUnlocked ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Text(
                   '${_sectionLessons[section.id]?.length ?? 0} lessons',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 13 : 15,
+                    fontSize: isSmallMobile ? 12 : 14,
                     color: isUnlocked ? AppTheme.getSecondaryTextColor(context) : AppTheme.getSecondaryTextColor(context).withOpacity(0.7),
                     fontWeight: FontWeight.w500,
                   ),
@@ -957,11 +985,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isCurrent) ...[
+              if (isCurrent && !isSmallMobile) ...[
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 12 : 16, 
-                    vertical: isSmallScreen ? 6 : 8
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10, 
+                    vertical: 4
                   ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -976,32 +1004,32 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       ),
                     ],
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.play_circle,
                         color: Colors.white,
-                        size: 16,
+                        size: 14,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Active',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: isSmallScreen ? 11 : 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
               ],
               Icon(
                 Icons.arrow_forward_ios,
                 color: isUnlocked ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
-                size: 16,
+                size: 14,
               ),
             ],
           ),
@@ -1014,7 +1042,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             ] else ...[
               Center(
                 child: Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(16),
@@ -1156,7 +1184,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         }
 
         final exams = snapshot.data!;
-        final isSmallScreen = MediaQuery.of(context).size.width < 600;
+        final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
         
         // Get the first exam type to determine section title
         final firstExam = exams.first;
@@ -1190,11 +1218,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.only(top: isSmallScreen ? 12 : 16, bottom: 8, left: 4),
+              padding: EdgeInsets.only(top: isSmallMobile ? 12 : 16, bottom: 8, left: 4),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
+                    padding: EdgeInsets.all(isSmallMobile ? 4 : 6),
                           decoration: BoxDecoration(
                             color: sectionColor.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
@@ -1206,24 +1234,24 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                           child: Icon(
                             sectionIcon,
                             color: sectionColor,
-                            size: isSmallScreen ? 16 : 18,
+                            size: isSmallMobile ? 16 : 18,
                           ),
                         ),
-                        SizedBox(width: isSmallScreen ? 6 : 8),
+                        SizedBox(width: isSmallMobile ? 6 : 8),
                         Text(
                           sectionTitle,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: isSmallMobile ? 14 : 16,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.getTextColor(context),
                           ),
                         ),
-                        SizedBox(width: isSmallScreen ? 6 : 8),
+                        SizedBox(width: isSmallMobile ? 6 : 8),
                         if (exams.length > 1)
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 4 : 6, 
-                              vertical: isSmallScreen ? 1 : 2
+                              horizontal: isSmallMobile ? 4 : 6, 
+                              vertical: isSmallMobile ? 1 : 2
                             ),
                             decoration: BoxDecoration(
                               color: sectionColor.withOpacity(0.2),
@@ -1233,7 +1261,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                               '${exams.length}',
                               style: TextStyle(
                                 color: sectionColor,
-                                fontSize: isSmallScreen ? 10 : 12,
+                                fontSize: isSmallMobile ? 10 : 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1250,7 +1278,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                               child: Icon(
                                 Icons.workspace_premium,
                                 color: Colors.amber,
-                                size: isSmallScreen ? 16 : 18,
+                                size: isSmallMobile ? 16 : 18,
                               ),
                             ),
                           ),
@@ -1258,7 +1286,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                     ),
                   ),
             ...exams.map((exam) {
-              final isSmallScreen = MediaQuery.of(context).size.width < 600;
+              final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
               Color examColor;
               IconData examIcon;
               String examTypeLabel;
@@ -1299,10 +1327,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   ),
                 ),
                 child: ListTile(
-                  contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  contentPadding: EdgeInsets.all(isSmallMobile ? 12 : 16),
                   leading: Container(
-                    width: isSmallScreen ? 40 : 48,
-                    height: isSmallScreen ? 40 : 48,
+                    width: isSmallMobile ? 40 : 48,
+                    height: isSmallMobile ? 40 : 48,
                     decoration: BoxDecoration(
                       color: examColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -1314,13 +1342,13 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                     child: Icon(
                       examIcon,
                       color: examColor,
-                      size: isSmallScreen ? 20 : 24,
+                      size: isSmallMobile ? 20 : 24,
                     ),
                   ),
                   title: Text(
                     exam.title,
                     style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
+                      fontSize: isSmallMobile ? 14 : 16,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.getTextColor(context),
                     ),
@@ -1328,13 +1356,13 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: isSmallScreen ? 2 : 4),
+                      SizedBox(height: isSmallMobile ? 2 : 4),
                       Row(
                         children: [
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 6 : 8, 
-                              vertical: isSmallScreen ? 1 : 2
+                              horizontal: isSmallMobile ? 6 : 8, 
+                              vertical: isSmallMobile ? 1 : 2
                             ),
                             decoration: BoxDecoration(
                               color: examColor.withOpacity(0.2),
@@ -1344,29 +1372,29 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                               examTypeLabel,
                               style: TextStyle(
                                 color: examColor,
-                                fontSize: isSmallScreen ? 9 : 11,
+                                fontSize: isSmallMobile ? 9 : 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          SizedBox(width: isSmallScreen ? 4 : 8),
-                          Icon(Icons.question_mark, size: isSmallScreen ? 12 : 14, color: AppTheme.greyColor),
-                          SizedBox(width: isSmallScreen ? 2 : 4),
+                          SizedBox(width: isSmallMobile ? 4 : 8),
+                          Icon(Icons.question_mark, size: isSmallMobile ? 12 : 14, color: AppTheme.greyColor),
+                          SizedBox(width: isSmallMobile ? 2 : 4),
                           Text(
-                            '${exam.questionsCount} questions',
+                            '${exam.questionsCount} qns',
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 10 : 12,
+                              fontSize: isSmallMobile ? 10 : 12,
                               color: AppTheme.greyColor,
                             ),
                           ),
                           if (exam.timeLimit > 0) ...[
-                            SizedBox(width: isSmallScreen ? 4 : 8),
-                            Icon(Icons.timer, size: isSmallScreen ? 12 : 14, color: AppTheme.greyColor),
-                            SizedBox(width: isSmallScreen ? 2 : 4),
+                            SizedBox(width: isSmallMobile ? 4 : 8),
+                            Icon(Icons.timer, size: isSmallMobile ? 12 : 14, color: AppTheme.greyColor),
+                            SizedBox(width: isSmallMobile ? 2 : 4),
                             Text(
-                              '${exam.timeLimit} min',
+                              '${exam.timeLimit}m',
                               style: TextStyle(
-                                fontSize: isSmallScreen ? 10 : 12,
+                                fontSize: isSmallMobile ? 10 : 12,
                                 color: AppTheme.greyColor,
                               ),
                             ),
@@ -1375,18 +1403,18 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       ),
                       if (exam.passingScore > 0)
                         Padding(
-                          padding: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
+                          padding: EdgeInsets.only(top: isSmallMobile ? 2 : 4),
                           child: Text(
-                            'Passing score: ${exam.passingScore}%',
+                            'Pass: ${exam.passingScore}%',
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 10 : 12,
+                              fontSize: isSmallMobile ? 10 : 12,
                               color: AppTheme.greyColor,
                             ),
                           ),
                         ),
                         if (examCertificate != null)
                           Padding(
-                            padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
+                            padding: EdgeInsets.only(top: isSmallMobile ? 6 : 8),
                             child: OutlinedButton.icon(
                               onPressed: () => _viewCertificate(examCertificate),
                               icon: const Icon(Icons.workspace_premium, size: 14),
@@ -1405,7 +1433,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   trailing: Icon(
                     Icons.arrow_forward_ios,
                     color: examColor,
-                    size: isSmallScreen ? 14 : 16,
+                    size: isSmallMobile ? 14 : 16,
                   ),
                   onTap: () => _takeExam(exam),
                 ),
@@ -1572,7 +1600,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   Widget _buildLessonItem(Lesson lesson, bool isNext) {
     // Check if lesson is completed
     final isCompleted = _lessonCompletionStatus[lesson.id] ?? false;
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Determine lesson type and styling
@@ -1591,7 +1619,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       borderRadius: BorderRadius.circular(12),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+        padding: EdgeInsets.all(isSmallMobile ? 12 : 16),
         decoration: BoxDecoration(
           color: isNext 
             ? AppTheme.primaryGreen.withOpacity(isDark ? 0.15 : 0.1) 
@@ -1621,13 +1649,13 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           children: [
             // Lesson type indicator circle
             Container(
-              width: isSmallScreen ? 40 : 48,
-              height: isSmallScreen ? 40 : 48,
+              width: isSmallMobile ? 36 : 44,
+              height: isSmallMobile ? 36 : 44,
               decoration: BoxDecoration(
                 color: isCompleted
                   ? (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.3))
                   : lessonTypeColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isCompleted
                     ? (isDark ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.4))
@@ -1639,11 +1667,11 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 child: Icon(
                   isCompleted ? Icons.check : lessonIcon,
                   color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : lessonTypeColor,
-                  size: isSmallScreen ? 20 : 24,
+                  size: isSmallMobile ? 18 : 22,
                 ),
               ),
             ),
-            SizedBox(width: isSmallScreen ? 12 : 16),
+            SizedBox(width: isSmallMobile ? 10 : 16),
             // Lesson content
             Expanded(
               child: Column(
@@ -1656,7 +1684,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                         child: Text(
                           lesson.title,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: isSmallMobile ? 13 : 15,
                             fontWeight: isCompleted ? FontWeight.normal : FontWeight.w600,
                             color: isCompleted
                               ? (isDark ? Colors.white60 : Colors.grey)
@@ -1673,8 +1701,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       if (isCompleted) ...[
                         Container(
                           padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 6 : 8, 
-                            vertical: isSmallScreen ? 2 : 4
+                            horizontal: isSmallMobile ? 6 : 8, 
+                            vertical: isSmallMobile ? 2 : 4
                           ),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.2),
@@ -1690,14 +1718,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                               Icon(
                                 Icons.check,
                                 color: Colors.green,
-                                size: isSmallScreen ? 10 : 12,
+                                size: isSmallMobile ? 10 : 12,
                               ),
-                              SizedBox(width: isSmallScreen ? 2 : 4),
+                              SizedBox(width: isSmallMobile ? 2 : 4),
                               Text(
-                                'Completed',
+                                'Done',
                                 style: TextStyle(
                                   color: Colors.green,
-                                  fontSize: isSmallScreen ? 8 : 10,
+                                  fontSize: isSmallMobile ? 8 : 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1708,8 +1736,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                         // Type badge
                         Container(
                           padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 6 : 8, 
-                            vertical: isSmallScreen ? 2 : 4
+                            horizontal: isSmallMobile ? 6 : 8, 
+                            vertical: isSmallMobile ? 2 : 4
                           ),
                           decoration: BoxDecoration(
                             color: lessonTypeColor.withOpacity(0.2),
@@ -1723,7 +1751,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                             lessonTypeLabel,
                             style: TextStyle(
                               color: lessonTypeColor,
-                              fontSize: isSmallScreen ? 8 : 10,
+                              fontSize: isSmallMobile ? 8 : 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1731,49 +1759,49 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       ],
                     ],
                   ),
-                  SizedBox(height: isSmallScreen ? 4 : 6),
+                  SizedBox(height: isSmallMobile ? 4 : 6),
                   // Duration and additional info
                   Row(
                     children: [
                       Icon(
                         Icons.access_time,
-                        size: isSmallScreen ? 12 : 14,
+                        size: isSmallMobile ? 11 : 13,
                         color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : AppTheme.getSecondaryTextColor(context),
                       ),
-                      SizedBox(width: isSmallScreen ? 2 : 4),
+                      SizedBox(width: isSmallMobile ? 2 : 4),
                       Text(
-                        '${lesson.duration} mins',
+                        '${lesson.duration}m',
                         style: TextStyle(
-                          fontSize: isSmallScreen ? 10 : 12,
+                          fontSize: isSmallMobile ? 10 : 12,
                           color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : AppTheme.getSecondaryTextColor(context),
                         ),
                       ),
-                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      SizedBox(width: isSmallMobile ? 8 : 12),
                       if (isVideoLesson && !isCompleted) ...[
                         Icon(
                           Icons.hd_outlined,
-                          size: isSmallScreen ? 12 : 14,
+                          size: isSmallMobile ? 11 : 13,
                           color: AppTheme.getSecondaryTextColor(context),
                         ),
-                        SizedBox(width: isSmallScreen ? 2 : 4),
+                        SizedBox(width: isSmallMobile ? 2 : 4),
                         Text(
-                          'HD Video',
+                          'HD',
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
+                            fontSize: isSmallMobile ? 10 : 12,
                             color: AppTheme.getSecondaryTextColor(context),
                           ),
                         ),
                       ] else if (!isVideoLesson && !isCompleted) ...[
                         Icon(
                           Icons.text_snippet_outlined,
-                          size: isSmallScreen ? 12 : 14,
+                          size: isSmallMobile ? 11 : 13,
                           color: AppTheme.getSecondaryTextColor(context),
                         ),
-                        SizedBox(width: isSmallScreen ? 2 : 4),
+                        SizedBox(width: isSmallMobile ? 2 : 4),
                         Text(
-                          'Text Content',
+                          'Text',
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
+                            fontSize: isSmallMobile ? 10 : 12,
                             color: AppTheme.getSecondaryTextColor(context),
                           ),
                         ),
@@ -1783,7 +1811,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 ],
               ),
             ),
-            SizedBox(width: isSmallScreen ? 8 : 12),
+            SizedBox(width: isSmallMobile ? 8 : 12),
             // Next indicator and arrow
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1791,8 +1819,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 if (isNext && !isCompleted) ...[
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 8 : 10, 
-                      vertical: isSmallScreen ? 4 : 6
+                      horizontal: isSmallMobile ? 6 : 8, 
+                      vertical: isSmallMobile ? 3 : 5
                     ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryGreen,
@@ -1809,18 +1837,18 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                       'NEXT',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isSmallScreen ? 8 : 10,
+                        fontSize: isSmallMobile ? 7 : 9,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                  SizedBox(height: isSmallScreen ? 4 : 8),
+                  SizedBox(height: isSmallMobile ? 4 : 8),
                 ],
                 Icon(
                   isCompleted ? Icons.check_circle : Icons.arrow_forward_ios,
                   color: isCompleted ? Colors.green : (isNext ? AppTheme.primaryGreen : AppTheme.getSecondaryTextColor(context)),
-                  size: isSmallScreen ? 16 : 18,
+                  size: isSmallMobile ? 14 : 16,
                 ),
               ],
             ),
@@ -2076,18 +2104,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   Widget _buildCertificateSection(Certificate certificate) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
 
     return Container(
       margin: const EdgeInsets.only(top: 20),
-      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF10B981), Color(0xFF047857)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF10B981).withOpacity(0.3),
@@ -2118,7 +2147,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 child: Text(
                   'Certificate of Completion',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 18 : 20,
+                    fontSize: isSmallMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -2130,7 +2159,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           Text(
             'Congratulations! You have completed the final exam and earned a certificate.',
             style: TextStyle(
-              fontSize: isSmallScreen ? 12 : 14,
+              fontSize: isSmallMobile ? 12 : 13,
               color: Colors.white.withOpacity(0.9),
             ),
           ),
@@ -2143,7 +2172,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -2151,9 +2180,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF10B981),
-                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+                padding: EdgeInsets.symmetric(vertical: isSmallMobile ? 12 : 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: Row(
@@ -2164,7 +2193,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                   Text(
                     'Download Certificate',
                     style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
+                      fontSize: isSmallMobile ? 13 : 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

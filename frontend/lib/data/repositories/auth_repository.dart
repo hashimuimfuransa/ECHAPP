@@ -30,15 +30,21 @@ class AuthRepository {
 
   AuthRepository({http.Client? client}) : _client = client ?? http.Client();
   
-  void _handleError(dynamic e, String defaultMessage) {
+  void _handleError(dynamic e, [String? defaultMessage]) {
     if (e is SocketException) {
-      throw Exception('Connection failed. Please check your internet connection and try again.');
+      throw Exception('Network connection error. Please check your internet connection and try again.');
     } else if (e is http.ClientException) {
-      throw Exception('Network error occurred. Please check your network connection.');
+      throw Exception('Network connection error. Please check your network connection.');
     } else if (e is TimeoutException) {
       throw Exception('The request timed out. Please check your connection or try again later.');
     } else {
-      throw Exception('$defaultMessage: ${e.toString()}');
+      String message = e.toString().replaceFirst('Exception: ', '');
+      // Remove any redundant "Firebase login error: " if it already exists
+      message = message.replaceFirst('Firebase login error: ', '');
+      message = message.replaceFirst('Login error: ', '');
+      message = message.replaceFirst('Registration error: ', '');
+      
+      throw Exception(message);
     }
   }
 
@@ -77,7 +83,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Login failed');
       }
     } catch (e) {
-      _handleError(e, 'Login error');
+      _handleError(e);
       rethrow; // For static analysis, though _handleError always throws
     }
   }
@@ -113,7 +119,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Registration failed');
       }
     } catch (e) {
-      _handleError(e, 'Registration error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -200,11 +206,11 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Firebase authentication failed');
       }
     } catch (e) {
-      print('Firebase login error: $e');
+      print('Authentication login error: $e');
       print('Error type: ${e.runtimeType}');
       print('Error stack: ${e.toString().substring(0, e.toString().length < 500 ? e.toString().length : 500)}');
       
-      _handleError(e, 'Firebase login error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -244,7 +250,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to send password reset email');
       }
     } catch (e) {
-      _handleError(e, 'Send password reset email error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -275,7 +281,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to reset password');
       }
     } catch (e) {
-      _handleError(e, 'Reset password error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -295,7 +301,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Invalid or expired reset token');
       }
     } catch (e) {
-      _handleError(e, 'Verify reset token error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -308,7 +314,7 @@ class AuthRepository {
       await Future.delayed(const Duration(milliseconds: 100)); // Simulate API call
       throw Exception('Not implemented - would fetch user profile with token');
     } catch (e) {
-      _handleError(e, 'Fetch profile error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -339,7 +345,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to refresh token');
       }
     } catch (e) {
-      _handleError(e, 'Refresh token error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -370,7 +376,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to update profile');
       }
     } catch (e) {
-      _handleError(e, 'Update profile error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -410,7 +416,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to upload image');
       }
     } catch (e) {
-      _handleError(e, 'Upload error');
+      _handleError(e);
       rethrow;
     }
   }
@@ -430,7 +436,7 @@ class AuthRepository {
         throw Exception(errorData['message'] ?? 'Failed to delete account');
       }
     } catch (e) {
-      _handleError(e, 'Delete account error');
+      _handleError(e);
       rethrow;
     }
   }

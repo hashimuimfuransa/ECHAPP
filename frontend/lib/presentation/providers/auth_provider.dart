@@ -126,13 +126,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else if (msgLower.contains('network error') || 
                  msgLower.contains('connection failed') || 
                  msgLower.contains('socketexception') ||
-                 msgLower.contains('internet connection')) {
+                 msgLower.contains('internet connection') ||
+                 msgLower.contains('host lookup')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
       } else if (msgLower.contains('login failed')) {
         errorMessage = 'Login failed. Please try again.';
       } else {
-        // Remove technical prefixes for cleaner user messages
-        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        // Remove technical prefixes and scrub Firebase mentions for cleaner user messages
+        errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       }
       
       state = state.copyWith(isLoading: false, error: errorMessage);
@@ -214,13 +215,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else if (msgLower.contains('network error') || 
                  msgLower.contains('connection failed') || 
                  msgLower.contains('socketexception') ||
-                 msgLower.contains('internet connection')) {
+                 msgLower.contains('internet connection') ||
+                 msgLower.contains('host lookup')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
       } else if (msgLower.contains('registration failed')) {
         errorMessage = 'Registration failed. Please try again or contact support.';
       } else {
-        // Remove technical prefixes for cleaner user messages
-        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        // Remove technical prefixes and scrub Firebase mentions for cleaner user messages
+        errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       }
       
       state = state.copyWith(isLoading: false, error: errorMessage);
@@ -407,7 +409,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       if (userCredential?.user == null) {
         debugPrint('AuthProvider: Google Sign-In returned null - user cancelled');
-        state = state.copyWith(isLoading: false, error: 'Google Sign-In cancelled');
+        state = state.copyWith(isLoading: false, error: 'Google Sign-In was cancelled. Please try again if you wish to proceed.');
         return;
       }
 
@@ -460,18 +462,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       debugPrint('AuthProvider Google Sign-In Error: $e');
-      String errorMessage = e.toString();
+      String errorMessage = e.toString().replaceFirst('Exception: ', '');
       
       // Handle specific error codes
       if (errorMessage.contains('ApiException: 10')) {
-        errorMessage = 'Google Sign-In is not properly configured. Please contact support.';
+        errorMessage = 'Google Sign-In is not properly configured for this device. Please contact support.';
+      } else if (errorMessage.contains('ApiException: 7') || errorMessage.contains('network_error')) {
+        errorMessage = 'A network error occurred. Please check your internet connection and try again.';
       } else if (errorMessage.contains('sign_in_failed')) {
-        errorMessage = 'Google Sign-In failed. Please check your account and try again.';
+        errorMessage = 'Google Sign-In failed. Please check your account status and try again.';
+      } else if (errorMessage.contains('account-exists-with-different-credential')) {
+        errorMessage = 'An account already exists with this email but using a different sign-in method. Please use that method.';
+      } else if (errorMessage.contains('user-disabled')) {
+        errorMessage = 'This account has been disabled. Please contact support.';
       } else if (kIsWeb) {
         if (errorMessage.contains('popup_closed') || (errorMessage.toLowerCase().contains('popup') && errorMessage.toLowerCase().contains('closed'))) {
-          errorMessage = 'Google Sign-In popup was closed. Please try again.';
+          errorMessage = 'The sign-in popup was closed before completion. Please try again.';
         } else if (errorMessage.contains('popup_blocked')) {
-          errorMessage = 'Pop-up blocked. Please allow pop-ups and try again.';
+          errorMessage = 'The sign-in popup was blocked by your browser. Please allow popups for this site.';
         }
       }
       

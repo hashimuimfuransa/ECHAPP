@@ -138,7 +138,9 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                     mainAxisSpacing: 16,
                     childAspectRatio: ResponsiveBreakpoints.isDesktop(context) 
                         ? 0.75 
-                        : (ResponsiveBreakpoints.isSmallMobile(context) ? 1.1 : 0.72),
+                        : (ResponsiveBreakpoints.isTablet(context) 
+                            ? 0.72 
+                            : (ResponsiveBreakpoints.isSmallMobile(context) ? 0.9 : 0.6)),
                   ),
                   itemCount: enrollments.length,
                   itemBuilder: (context, index) {

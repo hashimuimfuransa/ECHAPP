@@ -54,7 +54,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
   @override
   void initState() {
     super.initState();
-    _isEditing = widget.courseId != null;
+    _isEditing = widget.courseId != null && widget.courseId != 'create';
     print('Course ID in initState: ${widget.courseId}'); // Debug log
     _loadCategories();
     

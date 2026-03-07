@@ -50,6 +50,14 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   }
 
   Future<void> _loadCourseData() async {
+    if (widget.courseId == 'create') {
+      setState(() {
+        _courseLoading = false;
+        _courseError = 'Invalid Course ID';
+      });
+      return;
+    }
+    
     try {
       setState(() {
         _courseLoading = true;

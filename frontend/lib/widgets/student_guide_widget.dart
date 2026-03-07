@@ -39,7 +39,7 @@ class GuideConfig {
 
   const GuideConfig({
     this.character = GuideCharacter.guide,
-    this.size = 200,
+    this.size = 150,
     this.enableSound = true,
     this.enableParticles = true,
     this.primaryColor = const Color(0xFF58CC02),
@@ -136,9 +136,9 @@ class _BubblePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    const r = 16.0;
-    const tailW = 20.0;
-    const tailH = 14.0;
+    const r = 12.0;
+    const tailW = 16.0;
+    const tailH = 10.0;
 
     final borderPath = _buildBubblePath(size, r, tailW, tailH, 2.5);
     canvas.drawPath(borderPath, borderPaint);
@@ -229,11 +229,11 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
             Text('⚡ XP',
                 style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 11,
+                    fontSize: 10,
                     color: widget.color)),
             Text('${widget.current}/${widget.max}',
                 style: TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 11, color: widget.color)),
+                    fontWeight: FontWeight.w700, fontSize: 10, color: widget.color)),
           ],
         ),
         const SizedBox(height: 4),
@@ -247,22 +247,22 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
                     height: 10,
                     width: double.infinity,
                     color: widget.color.withOpacity(0.15)),
-                Container(
-                  height: 10,
-                  width: (MediaQuery.of(context).size.width * 0.55) *
-                      pct *
-                      _anim.value,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [widget.color, widget.color.withOpacity(0.7)],
+                FractionallySizedBox(
+                  widthFactor: pct * _anim.value,
+                  child: Container(
+                    height: 10,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [widget.color, widget.color.withOpacity(0.7)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                            color: widget.color.withOpacity(0.5),
+                            blurRadius: 6,
+                            spreadRadius: 0),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                          color: widget.color.withOpacity(0.5),
-                          blurRadius: 6,
-                          spreadRadius: 0),
-                    ],
                   ),
                 ),
               ],
@@ -692,19 +692,19 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
             borderColor: border,
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(meta.emoji, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
+                Text(meta.emoji, style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     _msg!,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                      height: 1.35,
+                      fontSize: 11.5,
+                      height: 1.25,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -806,27 +806,27 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: primary.withOpacity(0.25)),
         ),
         child: Column(
           children: [
             if (widget.streak > 0)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('🔥', style: TextStyle(fontSize: 16)),
+                    const Text('🔥', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: 4),
                     Text(
                       '${widget.streak} day streak!',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 13,
+                        fontSize: 11,
                         color: primary,
                       ),
                     ),
@@ -922,7 +922,7 @@ class _GuideDemoState extends State<GuideDemo> {
                 streak: _streak,
                 config: GuideConfig(
                   character: _char,
-                  size: 190,
+                  size: 140,
                   primaryColor: const Color(0xFF58CC02),
                   accentColor: const Color(0xFFFFD900),
                 ),
