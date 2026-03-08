@@ -275,62 +275,50 @@ class GrokService {
    */
   async processChunkWithGrok(chunk, examType, fileName, chunkNumber, totalChunks) {
     const prompt = `
-You are an expert educational content analyzer. Your task is to extract ALL questions that actually exist in the provided educational document.
+You are an expert educational content analyzer. Your task is to extract ALL questions that actually exist in the provided educational document content.
 
 DOCUMENT TYPE: ${examType.toUpperCase()}
 FILE NAME: ${fileName}
 CHUNK: ${chunkNumber}/${totalChunks}
 
+DOCUMENT CONTENT (CHUNK):
+---
+${chunk}
+---
+
 IMPORTANT INSTRUCTIONS:
-1. Extract EVERY question that appears in this document chunk - do not limit to 5 or any fixed number
-2. Look for ALL questions regardless of their position in the document
-3. Return ONLY valid JSON format - no extra text or explanations
-4. Ensure proper JSON syntax with correct quotation marks and structure
+1. Extract EVERY question that actually appears in the DOCUMENT CONTENT (CHUNK) above.
+2. DO NOT generate new questions. ONLY extract what is literally present in the document.
+3. If no questions are found in this chunk, return an empty array for "questions".
+4. Maintain the exact question text, options, and formatting as found in the document.
+5. Identify the correct answer and points from the document context. If not explicitly stated, use your best judgment based ONLY on the content provided.
+6. Look for questions in all formats: numbered (1., 2.), bulleted, or plain text.
+7. Return ONLY valid JSON format - no extra text, markdown code blocks, or explanations.
 
 REQUIRED RESPONSE FORMAT (JSON ONLY):
 {
   "questions": [
     {
-      "question": "Complete question text here",
+      "question": "Exact question text from document",
       "type": "mcq",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": "Correct answer index (0 for Option A, etc.)",
-      "points": 1
-    },
-    {
-      "question": "Is this statement true?",
-      "type": "true_false",
-      "options": ["True", "False"],
-      "correctAnswer": "Correct index (0 for True, 1 for False)",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": "Index of correct option (0, 1, 2...)",
       "points": 1
     }
   ]
 }
 
 SUPPORTED QUESTION TYPES:
-- mcq: Multiple choice questions with clear options (A/B/C/D or 1/2/3/4)
+- mcq: Multiple choice questions with options
 - true_false: True/False statements
-- fill_blank: Questions where the student must fill in a blank
-- open: Open-ended questions requiring a descriptive answer
+- fill_blank: Fill-in-the-blank questions
+- open: Open-ended/descriptive questions
 
 CRITICAL REQUIREMENTS:
-- Return ONLY the JSON object above
-- No markdown formatting, no code blocks
-- No explanations or additional text
-- Use standard double quotes (") for all strings
-- Ensure valid JSON syntax
-- Extract ALL questions that actually exist in the document - do not stop at 5 questions
-- Preserve the exact question text and options as they appear in the document
-- Do not generate new questions - only extract what is there
-- Identify the correct answer from context if possible; if not clear, use a placeholder
-
-QUESTION DETECTION:
-- Scan the entire document content for questions
-- Look for patterns like "1. Question text", "A. Option", "B. Option", etc.
-- Look for patterns like "(A) Option", "(B) Option", etc.
-- Identify all questions regardless of their complexity or length
-
-Extract ALL questions that exist in the document and return ONLY the JSON response.
+- NO HALLUCINATION: Do not create questions that are not in the document.
+- EXHAUSTIVE EXTRACTION: Extract all questions found in the chunk, regardless of quantity.
+- EXACT TEXT: Preserve the original wording of questions and options.
+- Return ONLY the JSON object. No markdown, no "Here is the JSON", no "I found X questions".
 `;
 
     const chatCompletion = await this.groq.chat.completions.create({
@@ -521,50 +509,54 @@ Generate a professional exam title that reflects the main topic covered. Keep it
       try {
         const DocumentProcessingService = require('./document_processing_service');
         const text = await DocumentProcessingService.extractTextFromDocument(buffer, mimeType);
-        return text || `Document content from ${mimeType} file. Content analysis will extract relevant educational material for exam questions.`;
+        if (!text || text.trim().length < 5) {
+          console.warn(`Extracted text is empty or too short for ${mimeType}`);
+          return '';
+        }
+        return text;
       } catch (error) {
         console.warn('Failed to extract text from document buffer:', error.message);
-        return `Document content from ${mimeType} file. Content analysis will extract relevant educational material for exam questions.`;
+        return '';
       }
     }
   }
 
   splitTextIntoChunks(text, chunkSize) {
-    // Split text by paragraphs or sections to avoid breaking questions across chunks
-    const paragraphs = text.split(/\n\s*\n/); // Split by double newlines (paragraphs)
-    
-    if (paragraphs.length <= 1) {
-      // If no clear paragraph breaks, fall back to character-based splitting
-      const chunks = [];
-      for (let i = 0; i < text.length; i += chunkSize) {
-        chunks.push(text.substring(i, i + chunkSize));
-      }
-      return chunks;
+    if (!text || text.length <= chunkSize) {
+      return [text || ''];
     }
+
+    // Try to split by double newlines but preserve question structure
+    const paragraphs = text.split(/\n\s*\n/);
     
-    // Try to group paragraphs into chunks of approximately chunkSize
+    // If no paragraphs, split by single newlines
+    const units = paragraphs.length <= 1 ? text.split(/\n/) : paragraphs;
+    
     const chunks = [];
     let currentChunk = '';
     
-    for (const paragraph of paragraphs) {
-      if (currentChunk.length + paragraph.length <= chunkSize) {
-        currentChunk += paragraph + '\n\n';
+    for (const unit of units) {
+      if (currentChunk.length + unit.length <= chunkSize) {
+        currentChunk += unit + (paragraphs.length <= 1 ? '\n' : '\n\n');
       } else {
         if (currentChunk.length > 0) {
-          chunks.push(currentChunk);
+          chunks.push(currentChunk.trim());
         }
-        // If a single paragraph is larger than chunkSize, split it by sentences
-        if (paragraph.length > chunkSize) {
-          const subChunks = this.splitLargeParagraph(paragraph, chunkSize);
-          chunks.push(...subChunks);
+        
+        // If a single unit is too large, split it by characters as last resort
+        if (unit.length > chunkSize) {
+          for (let i = 0; i < unit.length; i += chunkSize) {
+            chunks.push(unit.substring(i, i + chunkSize));
+          }
+          currentChunk = '';
         } else {
-          currentChunk = paragraph + '\n\n';
+          currentChunk = unit + (paragraphs.length <= 1 ? '\n' : '\n\n');
         }
       }
     }
     
     if (currentChunk.length > 0) {
-      chunks.push(currentChunk);
+      chunks.push(currentChunk.trim());
     }
     
     return chunks;
@@ -682,7 +674,7 @@ Generate a professional exam title that reflects the main topic covered. Keep it
     
     console.log(`Extracted ${questionCount} questions using regex method`);
     
-    return questions.length > 0 ? questions : this.generateTemplateQuestions(response, examType, 'fallback');
+    return questions;
   }
 
   generateTemplateQuestions(documentText, examType, fileName) {
