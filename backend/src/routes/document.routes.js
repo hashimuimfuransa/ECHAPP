@@ -39,7 +39,6 @@ router.post(
   '/upload',
   protect,
   authorize('admin', 'instructor', 'student'),
-  uploadController.upload.single('document'),
   uploadController.uploadDocument
 );
 
@@ -53,6 +52,7 @@ router.post(
   '/create-from-document',
   protect,
   authorize('admin', 'instructor'),
+  uploadController.upload.single('document'),
   examProcessingController.createExamFromDocument
 );
 

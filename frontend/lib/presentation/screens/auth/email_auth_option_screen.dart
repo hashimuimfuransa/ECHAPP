@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -212,111 +213,117 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   }
 
   Widget _buildRightPanel() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(width: 40),
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
-                tooltip: 'Go back',
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: Tween<Offset>(begin: const Offset(0.3, 0), end: Offset.zero)
-                  .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Text(
-                    'Choose Your Path',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Select how you\'d like to proceed with your account',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  _AuthOptionButton(
-                    icon: Icons.login_rounded,
-                    title: 'Sign In',
-                    subtitle: 'Access your existing account',
-                    color: const Color(0xFF4CAF50),
-                    onTap: () => context.push('/login'),
-                    delay: 100,
-                  ),
-                  const SizedBox(height: 20),
-                  _AuthOptionButton(
-                    icon: Icons.person_add_rounded,
-                    title: 'Create Account',
-                    subtitle: 'Join our community of learners',
-                    color: const Color(0xFF2196F3),
-                    onTap: () => context.push('/register'),
-                    delay: 200,
-                  ),
-                  const SizedBox(height: 20),
-                  _AuthOptionButton(
-                    icon: Icons.lock_reset_rounded,
-                    title: 'Reset Password',
-                    subtitle: 'Recover your account access',
-                    color: const Color(0xFFFF9800),
-                    onTap: () => context.push('/forgot-password'),
-                    delay: 300,
-                  ),
-                  const SizedBox(height: 40),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Your account is protected with enterprise-grade security',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+                    tooltip: 'Go back',
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 20),
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: Tween<Offset>(begin: const Offset(0.3, 0), end: Offset.zero)
+                      .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Choose Your Path',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Select how you\'d like to proceed with your account',
+                        style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                      _AuthOptionButton(
+                        icon: Icons.login_rounded,
+                        title: 'Sign In',
+                        subtitle: 'Access your existing account',
+                        color: const Color(0xFF4CAF50),
+                        onTap: () => context.push('/login'),
+                        delay: 100,
+                      ),
+                      const SizedBox(height: 20),
+                      _AuthOptionButton(
+                        icon: Icons.person_add_rounded,
+                        title: 'Create Account',
+                        subtitle: 'Join our community of learners',
+                        color: const Color(0xFF2196F3),
+                        onTap: () => context.push('/register'),
+                        delay: 200,
+                      ),
+                      const SizedBox(height: 20),
+                      _AuthOptionButton(
+                        icon: Icons.lock_reset_rounded,
+                        title: 'Reset Password',
+                        subtitle: 'Recover your account access',
+                        color: const Color(0xFFFF9800),
+                        onTap: () => context.push('/forgot-password'),
+                        delay: 300,
+                      ),
+                      const SizedBox(height: 40),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Your account is protected with enterprise-grade security',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const _TermsFooter(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -428,6 +435,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                     color: const Color(0xFFFF9800),
                     onTap: () => context.push('/forgot-password'),
                   ),
+                  const SizedBox(height: 40),
+                  const _TermsFooter(),
                 ],
               ),
             ),
@@ -619,6 +628,47 @@ class _StatItem extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+}
+
+class _TermsFooter extends StatelessWidget {
+  const _TermsFooter();
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(
+            color: Colors.white.withOpacity(0.5),
+            fontSize: isDesktop ? 12.5 : 11.5,
+            height: 1.5),
+        children: [
+          const TextSpan(text: 'By continuing, you agree to our '),
+          TextSpan(
+            text: 'Terms of Service',
+            style: const TextStyle(
+                color: Color(0xFF00C896),
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF00C896)),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push('/terms'),
+          ),
+          const TextSpan(text: ' and '),
+          TextSpan(
+            text: 'Privacy Policy',
+            style: const TextStyle(
+                color: Color(0xFF00C896),
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF00C896)),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push('/privacy'),
+          ),
+        ],
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }
