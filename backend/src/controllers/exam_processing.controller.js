@@ -191,10 +191,18 @@ const createExamFromDocument = async (req, res) => {
             let correctAnswer = q.correctAnswer;
             let options = q.options || [];
             
-            // For MCQ and True/False, convert correct answer to index
-            if ((q.type === 'MULTIPLE_CHOICE' || q.type === 'TRUE_FALSE') && options.length > 0) {
-              const correctAnswerIndex = options.indexOf(q.correctAnswer);
-              correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
+            // For MCQ and True/False, ensure correct answer is handled properly
+            if ((q.type === 'mcq' || q.type === 'MULTIPLE_CHOICE' || q.type === 'true_false' || q.type === 'TRUE_FALSE') && options.length > 0) {
+              // If it's already a number or a string that looks like a number, use it as an index
+              if (typeof correctAnswer === 'number') {
+                // Already an index
+              } else if (typeof correctAnswer === 'string' && /^\d+$/.test(correctAnswer)) {
+                correctAnswer = parseInt(correctAnswer);
+              } else {
+                // It's text, try to find the index in options
+                const correctAnswerIndex = options.indexOf(q.correctAnswer);
+                correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
+              }
             }
             
             // Handle missing correctAnswer for different question types
@@ -343,19 +351,28 @@ const processExistingDocument = async (req, res) => {
         // Create questions
         if (processedQuestions && processedQuestions.length > 0) {
           const questionsWithExamId = processedQuestions.map(q => {
-            // Handle missing correctAnswer for different question types
+            // Handle different question types properly
             let correctAnswer = q.correctAnswer;
+            let options = q.options || [];
             
-            if (!correctAnswer) {
-              if (q.type === 'MULTIPLE_CHOICE' || q.type === 'TRUE_FALSE') {
+            // For MCQ and True/False, ensure correct answer is handled properly
+            if ((q.type === 'mcq' || q.type === 'MULTIPLE_CHOICE' || q.type === 'true_false' || q.type === 'TRUE_FALSE') && options.length > 0) {
+              // If it's already a number or a string that looks like a number, use it as an index
+              if (typeof correctAnswer === 'number') {
+                // Already an index
+              } else if (typeof correctAnswer === 'string' && /^\d+$/.test(correctAnswer)) {
+                correctAnswer = parseInt(correctAnswer);
+              } else {
+                // It's text, try to find the index in options
+                const correctAnswerIndex = options.indexOf(q.correctAnswer);
+                correctAnswer = correctAnswerIndex !== -1 ? correctAnswerIndex : 0;
+              }
+            }
+            
+            if (!correctAnswer && correctAnswer !== 0) {
+              if (q.type === 'MULTIPLE_CHOICE' || q.type === 'mcq' || q.type === 'true_false' || q.type === 'TRUE_FALSE') {
                 // For MCQ/TrueFalse, use first option as default or provide sample answer
-                correctAnswer = (q.options && q.options.length > 0) ? 0 : 'Sample answer';
-              } else if (q.type === 'FILL_BLANK') {
-                // For fill-in-the-blank, provide a sample answer
-                correctAnswer = 'Sample answer';
-              } else if (q.type === 'OPEN_ENDED') {
-                // For open-ended questions, provide sample answer or leave as placeholder
-                correctAnswer = 'Sample answer';
+                correctAnswer = options.length > 0 ? 0 : 'Sample answer';
               } else {
                 // Default fallback
                 correctAnswer = 'Sample answer';
@@ -423,10 +440,17 @@ const getProcessingStatus = async (req, res) => {
 // Helper method to map AI question types to our enum values
 function mapQuestionType(aiType) {
   const typeMap = {
-    'MULTIPLE_CHOICE': 'mcq'
+    'mcq': 'mcq',
+    'MULTIPLE_CHOICE': 'mcq',
+    'true_false': 'true_false',
+    'TRUE_FALSE': 'true_false',
+    'fill_blank': 'fill_blank',
+    'FILL_BLANK': 'fill_blank',
+    'open': 'open',
+    'OPEN_ENDED': 'open'
   };
   
-  return typeMap[aiType] || 'mcq'; // Only return mcq since other types are filtered out
+  return typeMap[aiType] || typeMap[aiType?.toUpperCase()] || 'mcq';
 }
 
 module.exports = {

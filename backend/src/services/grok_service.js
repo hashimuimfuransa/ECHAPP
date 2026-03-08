@@ -284,22 +284,34 @@ CHUNK: ${chunkNumber}/${totalChunks}
 IMPORTANT INSTRUCTIONS:
 1. Extract EVERY question that appears in this document chunk - do not limit to 5 or any fixed number
 2. Look for ALL questions regardless of their position in the document
-3. Focus specifically on questions with answer options (A/B/C/D, 1/2/3/4, (A)/(B)/(C)/(D), etc.)
-4. Return ONLY valid JSON format - no extra text or explanations
-5. Ensure proper JSON syntax with correct quotation marks and structure
+3. Return ONLY valid JSON format - no extra text or explanations
+4. Ensure proper JSON syntax with correct quotation marks and structure
 
 REQUIRED RESPONSE FORMAT (JSON ONLY):
 {
   "questions": [
     {
       "question": "Complete question text here",
-      "type": "MULTIPLE_CHOICE",
+      "type": "mcq",
       "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": "Correct answer text or option index",
+      "correctAnswer": "Correct answer index (0 for Option A, etc.)",
+      "points": 1
+    },
+    {
+      "question": "Is this statement true?",
+      "type": "true_false",
+      "options": ["True", "False"],
+      "correctAnswer": "Correct index (0 for True, 1 for False)",
       "points": 1
     }
   ]
 }
+
+SUPPORTED QUESTION TYPES:
+- mcq: Multiple choice questions with clear options (A/B/C/D or 1/2/3/4)
+- true_false: True/False statements
+- fill_blank: Questions where the student must fill in a blank
+- open: Open-ended questions requiring a descriptive answer
 
 CRITICAL REQUIREMENTS:
 - Return ONLY the JSON object above
@@ -308,17 +320,14 @@ CRITICAL REQUIREMENTS:
 - Use standard double quotes (") for all strings
 - Ensure valid JSON syntax
 - Extract ALL questions that actually exist in the document - do not stop at 5 questions
-- Include every question that has answer options (A/B/C/D, 1/2/3/4, etc.)
-- If there are 20 questions in the document, extract all 20 questions
-- If there are 50 questions in the document, extract all 50 questions
-- Do not artificially limit the number of questions extracted
 - Preserve the exact question text and options as they appear in the document
+- Do not generate new questions - only extract what is there
+- Identify the correct answer from context if possible; if not clear, use a placeholder
 
 QUESTION DETECTION:
-- Scan the entire document content for questions with options
+- Scan the entire document content for questions
 - Look for patterns like "1. Question text", "A. Option", "B. Option", etc.
 - Look for patterns like "(A) Option", "(B) Option", etc.
-- Look for patterns with numbers: "1. Question", "1. Option", "2. Option", etc.
 - Identify all questions regardless of their complexity or length
 
 Extract ALL questions that exist in the document and return ONLY the JSON response.
@@ -607,16 +616,16 @@ Generate a professional exam title that reflects the main topic covered. Keep it
       if (!questionText.trim()) return false; // Skip empty questions
       
       // Create a more unique key that's less likely to cause false duplicates
-      let key = questionText.toLowerCase().trim().substring(0, 100); // Use first 100 chars
+      // Use more characters and include options to distinguish between similar questions
+      let key = questionText.toLowerCase().trim().substring(0, 250); 
       
-      // Add more specific identifiers to reduce false positives
-      if (question.type) {
-        key += '|type:' + question.type;
+      // Add options to the key to distinguish questions with same start but different options
+      if (Array.isArray(question.options)) {
+        key += '|opts:' + question.options.join('|').toLowerCase().substring(0, 100);
       }
       
-      // Add correct answer to make key even more unique
-      if (question.correctAnswer) {
-        key += '|ans:' + String(question.correctAnswer).toLowerCase().substring(0, 50);
+      if (question.type) {
+        key += '|type:' + question.type.toLowerCase();
       }
       
       if (seen.has(key)) {
@@ -625,7 +634,6 @@ Generate a professional exam title that reflects the main topic covered. Keep it
       }
       
       seen.add(key);
-      console.log(`Added unique question: ${questionText.substring(0, 50)}...`);
       return true;
     });
     
@@ -692,7 +700,7 @@ Generate a professional exam title that reflects the main topic covered. Keep it
   }
 
   filterQuestionTypes(questions) {
-    // Only allow MCQ questions - filter out all other question types
+    // Allow all question types supported by the model
     
     const filtered = questions.filter(question => {
       // Validate basic question structure
@@ -701,32 +709,36 @@ Generate a professional exam title that reflects the main topic covered. Keep it
         return false;
       }
       
-      // Only allow MCQ question types
-      const validTypes = ['MULTIPLE_CHOICE', 'mcq'];
+      // Supported question types in our system
+      const validTypes = ['mcq', 'true_false', 'fill_blank', 'open'];
       
-      const questionType = (question.type || '').toUpperCase();
-      const isValidType = validTypes.some(allowed => 
-        questionType === allowed.toUpperCase()
-      );
+      const questionType = (question.type || '').toLowerCase();
+      const isValidType = validTypes.includes(questionType);
       
       if (!isValidType) {
-        console.log(`Filtering out non-MCQ question type: ${question.type}`);
+        console.log(`Filtering out unsupported question type: ${question.type}`);
         return false;
       }
       
       // MCQ questions need options
-      if (questionType === 'MULTIPLE_CHOICE' || questionType === 'MCQ') {
-        // MCQ questions need options
+      if (questionType === 'mcq') {
         if (!Array.isArray(question.options) || question.options.length < 2) {
-          console.log(`Filtering MCQ with insufficient options:`, question);
+          console.log(`Filtering MCQ with insufficient options:`, question.question.substring(0, 50));
           return false;
+        }
+      }
+
+      // True/False questions need exactly 2 options if provided, or we can default them
+      if (questionType === 'true_false') {
+        if (!Array.isArray(question.options) || question.options.length < 2) {
+          question.options = ['True', 'False'];
         }
       }
       
       return true;
     });
     
-    console.log(`Filtered questions: ${filtered.length} MCQ questions from ${questions.length} total (non-MCQ removed)`);
+    console.log(`Filtered questions: ${filtered.length} valid questions from ${questions.length} total`);
     return filtered;
   }
 

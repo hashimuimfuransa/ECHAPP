@@ -37,16 +37,27 @@ class DocumentProcessingService {
       } else if (mimeType.includes('text/plain')) {
         // For text files, we can directly decode the buffer
         return buffer.toString('utf8');
-      } else if (mimeType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+      } else if (mimeType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || mimeType.includes('officedocument')) {
         // For DOCX files, use mammoth to extract text
+        // Use a more robust extraction that preserves more structure if possible
         const result = await mammoth.extractRawText({buffer: buffer});
+        if (result.messages.length > 0) {
+          console.warn('Mammoth extraction messages:', result.messages);
+        }
         return result.value;
-      } else if (mimeType.includes('application/msword')) {
-        // For older DOC files, we'll return a placeholder
-        // In a real implementation, you would use a library like '@xmldom/xmldom' and 'officeparser'
-        return `Content extracted from DOC document.
-          This would contain the actual text content of the uploaded DOC document
-          that will be processed by the AI to generate exam questions.`;
+      } else if (mimeType.includes('application/msword') || mimeType.includes('ms-word')) {
+        // For older DOC files
+        // We attempt to extract what we can using mammoth in case it's actually a docx with a doc extension
+        try {
+          const result = await mammoth.extractRawText({buffer: buffer});
+          return result.value;
+        } catch (e) {
+          console.warn('Mammoth failed for .doc file, trying string extraction');
+          // Fallback: strip most non-printable characters and return what's left
+          // This is a crude way to get some text from binary .doc files
+          const text = buffer.toString('ascii').replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+          return text.replace(/\s\s+/g, ' ');
+        }
       } else {
         // For other formats, try to decode as text
         return buffer.toString('utf8');
