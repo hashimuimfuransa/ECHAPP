@@ -76,24 +76,25 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     ));
 
     _flutterTts = FlutterTts();
-    _flutterTts.setLanguage("en-US");
+    _flutterTts.setLanguage("en-GB");
     _flutterTts.setSpeechRate(0.5); // Natural speed
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.2); // Higher pitch for a clear, attractive female voice
+    _flutterTts.setPitch(1.0); // Normal pitch for a male voice
     
-    // Try to set a female voice explicitly if available
+    // Try to set a male voice explicitly if available
     _flutterTts.getVoices.then((voices) {
       try {
-        final femaleVoice = voices.firstWhere(
+        final maleVoice = voices.firstWhere(
           (voice) => 
-            voice['name'].toString().toLowerCase().contains('female') || 
-            voice['name'].toString().toLowerCase().contains('samantha') ||
-            voice['name'].toString().toLowerCase().contains('zira'),
+            voice['name'].toString().toLowerCase().contains('male') || 
+            voice['name'].toString().toLowerCase().contains('daniel') ||
+            voice['name'].toString().toLowerCase().contains('george') ||
+            voice['name'].toString().toLowerCase().contains('arthur'),
           orElse: () => voices.first,
         );
-        _flutterTts.setVoice({"name": femaleVoice['name'], "locale": femaleVoice['locale']});
+        _flutterTts.setVoice({"name": maleVoice['name'], "locale": maleVoice['locale']});
       } catch (e) {
-        print('Error setting female voice: $e');
+        print('Error setting male voice: $e');
       }
     });
     

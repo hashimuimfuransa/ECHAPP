@@ -51,10 +51,27 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
     ));
 
     _flutterTts = FlutterTts();
-    _flutterTts.setLanguage("en-US");
+    _flutterTts.setLanguage("en-GB");
     _flutterTts.setSpeechRate(0.45); // Slower for more natural feel
     _flutterTts.setVolume(1.0);
-    _flutterTts.setPitch(1.1); // Slightly higher for more friendly tone
+    _flutterTts.setPitch(1.0); // Normal pitch for a male voice
+
+    // Try to set a male voice explicitly
+    _flutterTts.getVoices.then((voices) {
+      try {
+        final maleVoice = voices.firstWhere(
+          (voice) => 
+            voice['name'].toString().toLowerCase().contains('male') || 
+            voice['name'].toString().toLowerCase().contains('daniel') ||
+            voice['name'].toString().toLowerCase().contains('george') ||
+            voice['name'].toString().toLowerCase().contains('arthur'),
+          orElse: () => voices.first,
+        );
+        _flutterTts.setVoice({"name": maleVoice['name'], "locale": maleVoice['locale']});
+      } catch (e) {
+        print('Error setting male voice: $e');
+      }
+    });
 
     // Staggered animation for better visual flow
     Future.delayed(Duration(milliseconds: widget.isCurrentUser ? 100 : 0), () {

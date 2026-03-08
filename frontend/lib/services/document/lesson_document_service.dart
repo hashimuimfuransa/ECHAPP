@@ -60,7 +60,16 @@ class LessonDocumentService {
           throw DocumentUploadException('File data is not available for web upload');
         }
       } else {
-        if (file.bytes != null) {
+        if (file.path != null) {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'document',
+              file.path!,
+              filename: file.name,
+              contentType: _getMimeType(file.extension),
+            ),
+          );
+        } else if (file.bytes != null) {
           request.files.add(
             http.MultipartFile.fromBytes(
               'document',
@@ -70,7 +79,7 @@ class LessonDocumentService {
             ),
           );
         } else {
-          throw DocumentUploadException('File bytes not available');
+          throw DocumentUploadException('File path or bytes not available for upload');
         }
       }
 
