@@ -454,6 +454,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   Widget _buildWelcomeCard(BuildContext context, user, List<Enrollment> enrollments) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final lastEnrollment = enrollments.isNotEmpty ? enrollments.first : null;
     final lastCourse = lastEnrollment?.course;
     
@@ -475,7 +477,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF10B981).withOpacity(isDark ? 0.3 : 0.2),
@@ -491,8 +493,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             right: -20,
             top: -20,
             child: Container(
-              width: 150,
-              height: 150,
+              width: isMobile ? 100 : 150,
+              height: isMobile ? 100 : 150,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),
                 shape: BoxShape.circle,
@@ -500,7 +502,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(isDesktop ? 24 : 20),
+            padding: EdgeInsets.all(isDesktop ? 24 : (isSmallMobile ? 16 : 20)),
             child: Row(
               children: [
                 Expanded(
@@ -511,34 +513,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(isSmallMobile ? 8 : 12),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(isSmallMobile ? 12 : 16),
                             ),
-                            child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
+                            child: Icon(
+                              Icons.school_rounded, 
+                              color: Colors.white, 
+                              size: isSmallMobile ? 22 : 28
+                            ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: isSmallMobile ? 12 : 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Hello, ${user?.fullName?.split(" ")[0].toLowerCase() ?? 'student'}!',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 28,
+                                    fontSize: isSmallMobile ? 20 : (isMobile ? 24 : 28),
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: -0.5,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
                                   'Ready to continue your learning journey?',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
-                                    fontSize: 14,
+                                    fontSize: isSmallMobile ? 12 : 14,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -562,7 +572,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         InkWell(
                           onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, lastCourse),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
@@ -572,11 +582,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                               children: [
                                 const Icon(Icons.play_circle_fill, color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Last lesson: ${lastCourse.title}',
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                Flexible(
+                                  child: Text(
+                                    'Last lesson: ${lastCourse.title}',
+                                    style: const TextStyle(
+                                      color: Colors.white, 
+                                      fontSize: 13, 
+                                      fontWeight: FontWeight.w600
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.7), size: 18),
@@ -586,19 +602,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         )
                       else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.lightbulb_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                'Start a new course today!',
-                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                              const Icon(Icons.lightbulb_rounded, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Start a new course today!',
+                                  style: const TextStyle(
+                                    color: Colors.white, 
+                                    fontSize: 13, 
+                                    fontWeight: FontWeight.w600
+                                  ),
+                                  maxLines: 2,
+                                ),
                               ),
                             ],
                           ),

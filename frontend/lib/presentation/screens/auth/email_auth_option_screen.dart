@@ -329,6 +329,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   }
 
   Widget _buildMobileLayout() {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -347,25 +348,29 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallMobile ? 20 : 24, 
+                vertical: isSmallMobile ? 20 : 32
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       IconButton(
                         onPressed: () => context.pop(),
                         icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      const SizedBox(width: 8),
                     ],
                   ),
-                  const SizedBox(height: 30),
+                  SizedBox(height: isSmallMobile ? 12 : 30),
                   Center(
                     child: Container(
-                      width: 140,
-                      height: 140,
+                      width: isSmallMobile ? 100 : 140,
+                      height: isSmallMobile ? 100 : 140,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -374,14 +379,14 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF10B981).withOpacity(0.4),
-                            blurRadius: 40,
+                            blurRadius: isSmallMobile ? 24 : 40,
                             spreadRadius: 8,
                           ),
                         ],
                       ),
                       child: ClipOval(
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(isSmallMobile ? 15 : 20),
                           child: Image.asset(
                             'assets/logo.png',
                             fit: BoxFit.contain,
@@ -390,52 +395,55 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  const Text(
+                  SizedBox(height: isSmallMobile ? 24 : 40),
+                  Text(
                     'Choose Your Path',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: isSmallMobile ? 28 : 32,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.0,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: isSmallMobile ? 6 : 8),
+                  Text(
                     'Select how you\'d like to proceed',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 16,
+                      fontSize: isSmallMobile ? 14 : 16,
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 50),
+                  SizedBox(height: isSmallMobile ? 30 : 50),
                   _AuthOptionButton(
                     icon: Icons.login_rounded,
                     title: 'Sign In',
-                    subtitle: 'Access your existing account',
+                    subtitle: 'Access your account',
                     color: const Color(0xFF4CAF50),
                     onTap: () => context.push('/login'),
+                    compact: isSmallMobile,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isSmallMobile ? 12 : 16),
                   _AuthOptionButton(
                     icon: Icons.person_add_rounded,
                     title: 'Create Account',
                     subtitle: 'Join our community',
                     color: const Color(0xFF2196F3),
                     onTap: () => context.push('/register'),
+                    compact: isSmallMobile,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isSmallMobile ? 12 : 16),
                   _AuthOptionButton(
                     icon: Icons.lock_reset_rounded,
                     title: 'Reset Password',
                     subtitle: 'Recover your access',
                     color: const Color(0xFFFF9800),
                     onTap: () => context.push('/forgot-password'),
+                    compact: isSmallMobile,
                   ),
-                  const SizedBox(height: 40),
+                  SizedBox(height: isSmallMobile ? 24 : 40),
                   const _TermsFooter(),
                 ],
               ),
@@ -454,6 +462,7 @@ class _AuthOptionButton extends StatefulWidget {
   final Color color;
   final VoidCallback onTap;
   final int delay;
+  final bool compact;
 
   const _AuthOptionButton({
     required this.icon,
@@ -462,6 +471,7 @@ class _AuthOptionButton extends StatefulWidget {
     required this.color,
     required this.onTap,
     this.delay = 0,
+    this.compact = false,
   });
 
   @override
@@ -497,7 +507,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(widget.compact ? 16 : 24),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -512,7 +522,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                       Colors.white.withOpacity(0.05),
                     ],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(widget.compact ? 16 : 20),
             border: Border.all(
               color: _isHovered
                   ? widget.color.withOpacity(0.5)
@@ -532,8 +542,8 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
           child: Row(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: widget.compact ? 44 : 56,
+                height: widget.compact ? 44 : 56,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -543,7 +553,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                       widget.color.withOpacity(0.8),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(widget.compact ? 12 : 14),
                   boxShadow: [
                     BoxShadow(
                       color: widget.color.withOpacity(0.3),
@@ -555,29 +565,29 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                 child: Icon(
                   widget.icon,
                   color: Colors.white,
-                  size: 28,
+                  size: widget.compact ? 22 : 28,
                 ),
               ),
-              const SizedBox(width: 20),
+              SizedBox(width: widget.compact ? 14 : 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: widget.compact ? 16 : 18,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: widget.compact ? 2 : 4),
                     Text(
                       widget.subtitle,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.6),
-                        fontSize: 13,
+                        fontSize: widget.compact ? 12 : 13,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -588,7 +598,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
               Icon(
                 Icons.arrow_forward_rounded,
                 color: _isHovered ? widget.color : Colors.white.withOpacity(0.5),
-                size: 24,
+                size: widget.compact ? 20 : 24,
               ),
             ],
           ),

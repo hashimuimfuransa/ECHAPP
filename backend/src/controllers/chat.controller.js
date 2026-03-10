@@ -3,8 +3,9 @@ const Conversation = require('../models/Conversation');
 const Enrollment = require('../models/Enrollment');
 const Result = require('../models/Result');
 const User = require('../models/User');
-const GrokService = require('../services/grok_service');
-const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+const TTSService = require('../services/tts.service');
 
 class ChatController {
   // Get user's conversation history
@@ -248,12 +249,34 @@ class ChatController {
       await aiMessage.save();
       await conversation.incrementMessageCount();
 
+      // Generate audio response
+      let audioUrl = null;
+      try {
+        const audioDir = path.join(__dirname, '../../uploads/voice');
+        if (!fs.existsSync(audioDir)) {
+          fs.mkdirSync(audioDir, { recursive: true });
+        }
+        
+        const audioFileName = `chat-response-${Date.now()}.mp3`;
+        const audioFilePath = path.join(audioDir, audioFileName);
+        
+        const generatedAudio = await TTSService.generateSpeech(aiResponse, audioFilePath);
+        if (generatedAudio) {
+          const protocol = req.protocol;
+          const host = req.get('host');
+          audioUrl = `${protocol}://${host}/uploads/voice/${audioFileName}`;
+        }
+      } catch (ttsError) {
+        console.error("Error generating TTS for chat:", ttsError);
+      }
+
       res.json({
         success: true,
         conversation: {
           id: conversation._id,
           title: conversation.title
         },
+        audioUrl: audioUrl,
         messages: [
           {
             id: userMessage._id,
@@ -267,7 +290,8 @@ class ChatController {
             sender: 'ai',
             message: aiMessage.message,
             timestamp: aiMessage.timestamp,
-            formattedTimestamp: aiMessage.formattedTimestamp
+            formattedTimestamp: aiMessage.formattedTimestamp,
+            audioUrl: audioUrl
           }
         ]
       });
@@ -317,7 +341,7 @@ class ChatController {
 
   // Helper method to create context-aware system prompt
   static createContextAwareSystemPrompt(context) {
-    let prompt = "You are an expert AI Learning Assistant and Instructor for Excellence Coaching Hub. Your mission is to help students succeed by providing accurate, supportive, and personalized guidance across any topic they inquire about. ";
+    let prompt = "You are an expert AI Learning Assistant and Senior Instructor for Excellence Coaching Hub. You are a male professional with a clear, sophisticated British accent and a warm, encouraging personality. Your mission is to help students succeed by providing accurate, supportive, and personalized guidance across any topic they inquire about. ";
     
     // Inject Student Profile and Performance
     if (context.studentName) {
@@ -333,11 +357,12 @@ class ChatController {
     }
     
     prompt += "\n\nCRITICAL INSTRUCTIONS:\n";
-    prompt += "1. NEVER say 'I am not sure of responding' or similar phrases. Always find a helpful way to respond or ask for clarification if truly needed.\n";
-    prompt += "2. BEHAVIOR RECOMMENDATIONS: Based on the student's grades and progress, offer specific advice on how they should behave or study. For example, if a student has low grades in a specific exam, suggest they revisit that lesson or practice more. If they are progressing well, encourage them to take more advanced topics.\n";
-    prompt += "3. VERSATILITY: You are an all-knowing instructor. While your primary focus is the student's courses at Excellence Coaching Hub, you MUST answer any question the student asks, regardless of whether it's directly related to their course or not. Provide helpful, educational, and detailed answers to all queries.\n";
-    prompt += "4. NO HALLUCINATIONS: Only speak about facts related to the courses and the student's data. If you don't know something about the student's data, don't invent it.\n";
-    prompt += "5. TONE: Be very professional, attractive, user-friendly, and feel like a real human coach and instructor, not a robotic script.\n";
+    prompt += "1. PERSONALITY: Speak like a human coach. Use professional yet warm British English (e.g., use 'brilliant', 'cheers', 'well done', 'splendid' naturally where appropriate, but maintain a high level of professionalism).\n";
+    prompt += "2. NEVER say 'I am not sure of responding' or similar phrases. Always find a helpful way to respond or ask for clarification if truly needed.\n";
+    prompt += "3. BEHAVIOR RECOMMENDATIONS: Based on the student's grades and progress, offer specific advice on how they should behave or study. For example, if a student has low grades in a specific exam, suggest they revisit that lesson or practice more. If they are progressing well, encourage them to take more advanced topics.\n";
+    prompt += "4. VERSATILITY: You are an all-knowing instructor. While your primary focus is the student's courses at Excellence Coaching Hub, you MUST answer any question the student asks, regardless of whether it's directly related to their course or not. Provide helpful, educational, and detailed answers to all queries.\n";
+    prompt += "5. NO HALLUCINATIONS: Only speak about facts related to the courses and the student's data. If you don't know something about the student's data, don't invent it.\n";
+    prompt += "6. TONE: Be very professional, attractive, user-friendly, and feel like a real human coach and instructor, not a robotic script. Your British sophistication should inspire confidence and authority.\n";
     
     if (context.courseTitle) {
       prompt += `The current focus is on the course: "${context.courseTitle}". `;

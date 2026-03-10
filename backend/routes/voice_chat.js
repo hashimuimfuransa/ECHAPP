@@ -45,6 +45,7 @@ const Section = require('../src/models/Section');
 const Lesson = require('../src/models/Lesson');
 const Course = require('../src/models/Course');
 const ChatController = require('../src/controllers/chat.controller');
+const TTSService = require('../src/services/tts.service');
 
 // Voice transcription using Whisper-like model via Groq API
 async function transcribeAudio(audioFilePath) {
@@ -62,9 +63,16 @@ async function transcribeAudio(audioFilePath) {
   }
 }
 
-// Text-to-Speech simulation - we will use frontend TTS for higher quality
+/**
+ * Text-to-Speech using ElevenLabs for high-quality British male voice
+ */
 async function generateSpeech(text, outputFile) {
-  return { audioUrl: null }; // Returning null so frontend uses its internal TTS
+  try {
+    return await TTSService.generateSpeech(text, outputFile);
+  } catch (error) {
+    console.error('TTS error:', error);
+    return null;
+  }
 }
 
 // Endpoint to handle voice message
@@ -113,9 +121,21 @@ router.post('/send', upload.single('audio'), async (req, res) => {
     
     const aiResponse = await ChatController.generateAIResponse(messagesForAI, enrichedContext);
     
+    // Generate audio response
+    const audioFileName = `response-${Date.now()}.mp3`;
+    const audioFilePath = path.join('uploads/voice', audioFileName);
+    const fullAudioPath = path.join(__dirname, '../', audioFilePath);
+    
+    const generatedAudio = await generateSpeech(aiResponse, fullAudioPath);
+    
+    // Construct full URL for audio response
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const audioUrl = generatedAudio ? `${protocol}://${host}/uploads/voice/${audioFileName}` : null;
+    
     res.json({
       textResponse: aiResponse,
-      audioResponse: null, // Frontend will use TTS
+      audioResponse: audioUrl,
       transcribedText: transcribedText,
       conversationId: conversationId
     });
@@ -246,7 +266,7 @@ router.get('/voice/response/:conversationId/:messageId', (req, res) => {
 
 // Helper function to create context-aware system prompt
 function createContextAwareSystemPrompt(context) {
-  let prompt = `You are an AI Learning Assistant helping a student with their education. `;
+  let prompt = "You are an expert AI Learning Assistant and Senior Instructor for Excellence Coaching Hub. You are a male professional with a clear, sophisticated British accent and a warm, encouraging personality. Your mission is to help students succeed by providing accurate, supportive, and personalized guidance across any topic they inquire about. Speak like a human coach. Use professional yet warm British English (e.g., use 'brilliant', 'cheers', 'well done', 'splendid' naturally where appropriate, but maintain a high level of professionalism). ";
   
   if (context.courseTitle) {
     prompt += `The student is studying "${context.courseTitle}". `;
@@ -268,7 +288,7 @@ function createContextAwareSystemPrompt(context) {
   prompt += `Keep your responses informative, encouraging, and tailored to their specific learning situation. `;
   prompt += `If they're struggling with a concept, offer to break it down into simpler parts. `;
   prompt += `If they're asking for practice, suggest relevant exercises. `;
-  prompt += `Always maintain a supportive and educational tone.`;
+  prompt += `Always maintain a supportive and educational tone. Your British sophistication should inspire confidence and authority.`;
   
   return prompt;
 }

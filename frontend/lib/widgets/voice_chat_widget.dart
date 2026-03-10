@@ -144,6 +144,11 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
           _isProcessing = false;
         });
 
+        // Automatically play the response audio if available
+        if (_audioResponseUrl != null) {
+          _playAudioResponse();
+        }
+
         if (widget.onAIResponse != null && responseData['textResponse'] != null) {
           widget.onAIResponse!(responseData['textResponse']);
         }

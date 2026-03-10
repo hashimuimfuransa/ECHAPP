@@ -182,11 +182,13 @@ class XPBar extends StatefulWidget {
   final int current;
   final int max;
   final Color color;
+  final bool isMobile;
   const XPBar(
       {super.key,
       required this.current,
       required this.max,
-      required this.color});
+      required this.color,
+      this.isMobile = false});
 
   @override
   State<XPBar> createState() => _XPBarState();
@@ -220,6 +222,9 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final pct = (widget.current / widget.max).clamp(0.0, 1.0);
+    final barHeight = widget.isMobile ? 6.0 : 10.0;
+    final fontSize = widget.isMobile ? 8.0 : 10.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,14 +234,16 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
             Text('⚡ XP',
                 style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 10,
+                    fontSize: fontSize,
                     color: widget.color)),
             Text('${widget.current}/${widget.max}',
                 style: TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 10, color: widget.color)),
+                    fontWeight: FontWeight.w700,
+                    fontSize: fontSize,
+                    color: widget.color)),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: widget.isMobile ? 2 : 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: AnimatedBuilder(
@@ -244,13 +251,13 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
             builder: (_, __) => Stack(
               children: [
                 Container(
-                    height: 10,
+                    height: barHeight,
                     width: double.infinity,
                     color: widget.color.withOpacity(0.15)),
                 FractionallySizedBox(
                   widthFactor: pct * _anim.value,
                   child: Container(
-                    height: 10,
+                    height: barHeight,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [widget.color, widget.color.withOpacity(0.7)],
@@ -513,8 +520,9 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
 
   void _spawnParticles({int count = 30}) {
     if (!widget.config.enableParticles) return;
-    final cx = widget.config.size / 2;
-    final cy = widget.config.size / 2;
+    final size = _getResponsiveSize();
+    final cx = (size + (MediaQuery.of(context).size.width < 600 ? 10 : 40)) / 2;
+    final cy = (size + (MediaQuery.of(context).size.width < 600 ? 10 : 40)) / 2;
     final colors = [
       widget.config.primaryColor,
       widget.config.accentColor,
@@ -608,6 +616,12 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
       _riveUrls[widget.config.character] ??
       _riveUrls[GuideCharacter.guide]!;
 
+  double _getResponsiveSize() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Scale down character significantly on mobile devices
+    return screenWidth < 600 ? widget.config.size * 0.45 : widget.config.size;
+  }
+
   _StateMeta get _currentMeta => _meta[_state]!;
 
   @override
@@ -634,26 +648,28 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
     if (!_visible) return const SizedBox.shrink();
 
     final meta = _currentMeta;
-    final size = widget.config.size;
+    final size = _getResponsiveSize();
+    final isMobile = MediaQuery.of(context).size.width < 600;
     final primary = meta.gradient[0];
     final border = meta.border;
+    final containerSize = size + (isMobile ? 10 : 40);
 
     return FadeTransition(
       opacity: _fadeAnim,
       child: ScaleTransition(
         scale: _scaleAnim,
         child: SizedBox(
-          width: size + 40,
+          width: containerSize,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // ── Speech bubble ──────────────────────
-              if (_msg != null) _buildBubble(meta, primary, border),
+              if (_msg != null) _buildBubble(meta, primary, border, isMobile),
 
               // ── Character + particles ──────────────
               SizedBox(
-                width: size + 40,
-                height: size + 40,
+                width: containerSize,
+                height: containerSize,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -672,7 +688,7 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
               ),
 
               // ── Stats row ─────────────────────────
-              _buildStatsRow(primary),
+              _buildStatsRow(primary, isMobile),
             ],
           ),
         ),
@@ -680,31 +696,37 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
     );
   }
 
-  Widget _buildBubble(_StateMeta meta, Color primary, Color border) {
+  Widget _buildBubble(_StateMeta meta, Color primary, Color border, bool isMobile) {
     return ScaleTransition(
       scale: _bubbleAnim,
       alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.only(bottom: isMobile ? 2 : 4),
         child: CustomPaint(
           painter: _BubblePainter(
             color: _bubbleBackground(meta),
             borderColor: border,
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 8 : 12,
+              isMobile ? 4 : 8,
+              isMobile ? 8 : 12,
+              isMobile ? 14 : 20,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(meta.emoji, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 6),
+                Text(meta.emoji,
+                    style: TextStyle(fontSize: isMobile ? 10 : 16)),
+                SizedBox(width: isMobile ? 3 : 6),
                 Flexible(
                   child: Text(
                     _msg!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 11.5,
-                      height: 1.25,
+                      fontSize: isMobile ? 8 : 10.5,
+                      height: 1.1,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -801,32 +823,33 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
     _waving?.value = _state == StudentGuideState.greeting;
   }
 
-  Widget _buildStatsRow(Color primary) {
+  Widget _buildStatsRow(Color primary, bool isMobile) {
     if (widget.streak == 0 && widget.xp == 0) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: isMobile ? 4 : 10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 6 : 10, vertical: isMobile ? 4 : 8),
         decoration: BoxDecoration(
           color: primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
           border: Border.all(color: primary.withOpacity(0.25)),
         ),
         child: Column(
           children: [
             if (widget.streak > 0)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: isMobile ? 2 : 6),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('🔥', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
+                    Text('🔥', style: TextStyle(fontSize: isMobile ? 10 : 14)),
+                    SizedBox(width: isMobile ? 2 : 4),
                     Text(
                       '${widget.streak} day streak!',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 11,
+                        fontSize: isMobile ? 8 : 11,
                         color: primary,
                       ),
                     ),
@@ -836,7 +859,8 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
             XPBar(
                 current: widget.xp,
                 max: widget.maxXp,
-                color: primary),
+                color: primary,
+                isMobile: isMobile),
           ],
         ),
       ),
@@ -916,7 +940,7 @@ class _GuideDemoState extends State<GuideDemo> {
               child: StudentGuideWidget(
                 key: _guideKey,
                 initialState: StudentGuideState.greeting,
-                message: 'Hey! Ready to learn? 🚀',
+                message: 'Hi! Ready? 🚀',
                 xp: _xp,
                 maxXp: 100,
                 streak: _streak,
@@ -940,23 +964,23 @@ class _GuideDemoState extends State<GuideDemo> {
   Widget _buildControlGrid() {
     final buttons = [
       _Btn('👋 Greet', const Color(0xFF58CC02),
-          () => _guideKey.currentState?.updateState(StudentGuideState.greeting, message: 'Welcome back! 👋')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.greeting, message: 'Welcome! 👋')),
       _Btn('🤔 Think', const Color(0xFF1CB0F6),
-          () => _guideKey.currentState?.updateState(StudentGuideState.thinking, message: 'Hmm, let me think…')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.thinking, message: 'Thinking…')),
       _Btn('🏆 Win', const Color(0xFFFFD900),
-          () => _guideKey.currentState?.celebrateSuccess(message: 'Perfect answer! 🏆')),
+          () => _guideKey.currentState?.celebrateSuccess(message: 'Perfect! 🏆')),
       _Btn('🎉 Cheer', const Color(0xFFFF4B4B),
-          () => _guideKey.currentState?.updateState(StudentGuideState.cheer, message: 'You are on fire! 🔥')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.cheer, message: 'On fire! 🔥')),
       _Btn('😔 Oops', const Color(0xFFFF9600),
           () => _guideKey.currentState?.showDisappointment()),
       _Btn('💪 Encourage', const Color(0xFF8549BA),
-          () => _guideKey.currentState?.updateState(StudentGuideState.encouraging, message: 'You can do it! 💪')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.encouraging, message: 'Go! 💪')),
       _Btn('🚀 Level Up', const Color(0xFFFFD900),
           () => _guideKey.currentState?.triggerLevelUp(5)),
       _Btn('🔥 Streak', const Color(0xFFFF4B4B),
-          () => _guideKey.currentState?.updateState(StudentGuideState.streakAlert, message: '${_streak}🔥 streak! Amazing!')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.streakAlert, message: '${_streak}🔥 streak!')),
       _Btn('💡 Hint', const Color(0xFF1CB0F6),
-          () => _guideKey.currentState?.updateState(StudentGuideState.hintReady, message: 'Tap for a hint! 💡')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.hintReady, message: 'Hint! 💡')),
       _Btn('➕ XP', const Color(0xFF58CC02),
           () => setState(() => _xp = (_xp + 10).clamp(0, 100))),
     ];

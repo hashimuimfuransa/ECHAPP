@@ -344,37 +344,48 @@ class _BrandingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final size = MediaQuery.of(context).size;
+    final isShort = size.height < 680;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _LogoBadge(size: isMobile ? 140 : 180),
-        SizedBox(height: isMobile ? 32 : 40),
+        _LogoBadge(size: isSmallMobile ? 60 : (isMobile ? 100 : 180)),
+        SizedBox(height: isSmallMobile ? 8 : (isMobile ? 16 : 40)),
         Text('Excellence',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: Colors.white,
-                fontSize: isMobile ? 36 : 44,
+                fontSize: isSmallMobile ? 24 : (isMobile ? 32 : 44),
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.5,
                 height: 1.0)),
-        SizedBox(height: isMobile ? 6 : 8),
+        SizedBox(height: isSmallMobile ? 2 : (isMobile ? 4 : 8)),
         Text('Coaching Hub',
             style: TextStyle(
                 color: _kAccentLight,
-                fontSize: isMobile ? 18 : 22,
+                fontSize: isSmallMobile ? 12 : (isMobile ? 16 : 22),
                 fontWeight: FontWeight.w700,
-                letterSpacing: 2.0)),
-        SizedBox(height: isMobile ? 12 : 16),
-        Text('Learn • Grow • Succeed',
-            style: TextStyle(
-                color: Colors.white70,
-                fontSize: isMobile ? 14 : 16,
-                fontWeight: FontWeight.w500)),
-        SizedBox(height: isMobile ? 32 : 40),
+                letterSpacing: isSmallMobile ? 1.0 : 2.0)),
+        
+        if (!isShort || !isSmallMobile) ...[
+          SizedBox(height: isSmallMobile ? 4 : (isMobile ? 10 : 16)),
+          Text('Learn • Grow • Succeed',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: isSmallMobile ? 11 : (isMobile ? 13 : 16),
+                  fontWeight: FontWeight.w500)),
+        ],
+
+        SizedBox(height: isSmallMobile ? 12 : (isMobile ? 24 : 40)),
         _ExpertBadge(isMobile: isMobile),
-        SizedBox(height: isMobile ? 24 : 32),
-        const _SkillChipsRow(),
+        
+        if (!isShort || !isSmallMobile) ...[
+          SizedBox(height: isSmallMobile ? 10 : (isMobile ? 18 : 32)),
+          const _SkillChipsRow(),
+        ],
       ],
     );
   }
@@ -385,22 +396,23 @@ class _ExpertBadge extends StatelessWidget {
   const _ExpertBadge({required this.isMobile});
   @override
   Widget build(BuildContext context) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 20 : 24,
-        vertical: isMobile ? 10 : 12,
+        horizontal: isSmallMobile ? 14 : (isMobile ? 18 : 24),
+        vertical: isSmallMobile ? 6 : (isMobile ? 8 : 12),
       ),
       decoration: BoxDecoration(
         color: _kAccent.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _kAccentLight.withOpacity(0.35),
-          width: 1.5,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
             color: _kAccentLight.withOpacity(0.1),
-            blurRadius: 12,
+            blurRadius: 10,
           ),
         ],
       ),
@@ -408,14 +420,14 @@ class _ExpertBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.check_circle_rounded,
-              color: _kAccentLight, size: isMobile ? 18 : 22),
-          SizedBox(width: isMobile ? 10 : 12),
+              color: _kAccentLight, size: isSmallMobile ? 14 : (isMobile ? 16 : 22)),
+          SizedBox(width: isSmallMobile ? 6 : (isMobile ? 8 : 12)),
           Text('Expert-Led Learning',
               style: TextStyle(
                   color: Colors.white.withOpacity(0.95),
-                  fontSize: isMobile ? 14 : 16,
+                  fontSize: isSmallMobile ? 12 : (isMobile ? 13 : 16),
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2)),
+                  letterSpacing: 0.1)),
         ],
       ),
     );
@@ -426,17 +438,18 @@ class _SkillChipsRow extends StatelessWidget {
   const _SkillChipsRow();
   @override
   Widget build(BuildContext context) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          _SkillChip(icon: Icons.lightbulb_outline, label: 'AI Courses'),
-          SizedBox(width: 16),
-          _SkillChip(icon: Icons.laptop_rounded, label: 'Programming'),
-          SizedBox(width: 16),
-          _SkillChip(icon: Icons.trending_up_rounded, label: 'Business Skills'),
+        children: [
+          const _SkillChip(icon: Icons.lightbulb_outline, label: 'AI Courses'),
+          SizedBox(width: isSmallMobile ? 10 : 16),
+          const _SkillChip(icon: Icons.laptop_rounded, label: 'Programming'),
+          SizedBox(width: isSmallMobile ? 10 : 16),
+          const _SkillChip(icon: Icons.trending_up_rounded, label: 'Business Skills'),
         ],
       ),
     );
@@ -505,6 +518,7 @@ class _GoogleButtonState extends State<_GoogleButton>
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) => _handleTap(),
@@ -512,45 +526,39 @@ class _GoogleButtonState extends State<_GoogleButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isMobile ? 54 : 58,
+          height: isSmallMobile ? 46 : (isMobile ? 50 : 58),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withOpacity(0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4)),
-              BoxShadow(
-                color: const Color(0xFFF3F4F6),
-                blurRadius: 0,
-                spreadRadius: 0,
-                offset: const Offset(0, 4),
-              ),
             ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (widget.isLoading)
-                const SizedBox(
-                  width: 22, height: 22,
+                SizedBox(
+                  width: isSmallMobile ? 18 : 22, height: isSmallMobile ? 18 : 22,
                   child: CircularProgressIndicator(
-                    strokeWidth: 3,
+                    strokeWidth: 2.5,
                     valueColor: AlwaysStoppedAnimation(_kAccent),
                   ),
                 )
               else
-                _GoogleGIcon(size: 24),
-              const SizedBox(width: 12),
+                _GoogleGIcon(size: isSmallMobile ? 20 : 24),
+              SizedBox(width: isSmallMobile ? 8 : 12),
               Text(
                 widget.isLoading ? 'Connecting...' : 'Continue with Google',
                 style: TextStyle(
                     color: const Color(0xFF3C4043),
-                    fontSize: isMobile ? 16 : 17,
+                    fontSize: isSmallMobile ? 14 : (isMobile ? 15 : 17),
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2),
+                    letterSpacing: 0.1),
               ),
             ],
           ),
@@ -654,6 +662,7 @@ class _PrimaryButtonState extends State<_PrimaryButton>
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
@@ -661,52 +670,47 @@ class _PrimaryButtonState extends State<_PrimaryButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isMobile ? 54 : 60,
+          height: isSmallMobile ? 48 : (isMobile ? 54 : 60),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [_kAccentLight, _kAccentDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                  color: _kAccentDark.withOpacity(0.5),
-                  blurRadius: 20,
+                  color: _kAccentDark.withOpacity(0.4),
+                  blurRadius: 16,
                   spreadRadius: -4,
-                  offset: const Offset(0, 8)),
-              BoxShadow(
-                  color: Colors.white.withOpacity(0.2),
-                  blurRadius: 0,
-                  spreadRadius: 0,
-                  offset: const Offset(0, -2)),
+                  offset: const Offset(0, 6)),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: isSmallMobile ? 16 : 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (widget.isLoading)
-                  const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(
+                  SizedBox(
+                    width: isSmallMobile ? 18 : 20, height: isSmallMobile ? 18 : 20,
+                    child: const CircularProgressIndicator(
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation(Colors.white)),
                   )
                 else
-                  Icon(widget.icon, color: Colors.white, size: 22),
-                const SizedBox(width: 14),
+                  Icon(widget.icon, color: Colors.white, size: isSmallMobile ? 18 : 22),
+                SizedBox(width: isSmallMobile ? 10 : 14),
                 Expanded(
                   child: Text(widget.label,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: isMobile ? 17 : 18,
+                          fontSize: isSmallMobile ? 15 : (isMobile ? 16 : 18),
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2)),
+                          letterSpacing: 0.1)),
                 ),
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
+                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: isSmallMobile ? 18 : 22),
               ],
             ),
           ),
@@ -723,29 +727,30 @@ class _DeviceWarningBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 14, 
-        vertical: isMobile ? 10 : 12
+        horizontal: isSmallMobile ? 10 : (isMobile ? 12 : 14), 
+        vertical: isSmallMobile ? 8 : (isMobile ? 10 : 12)
       ),
       decoration: BoxDecoration(
         color: _kAmberBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _kAmberBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_outline_rounded,
-              color: _kAmber, size: 16),
-          const SizedBox(width: 9),
+          Icon(Icons.lock_outline_rounded,
+              color: _kAmber, size: isSmallMobile ? 14 : 16),
+          const SizedBox(width: 8),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
                     color: _kText1.withOpacity(0.75),
-                    fontSize: isMobile ? 11.5 : 12.5,
-                    height: 1.4,
+                    fontSize: isSmallMobile ? 10.5 : (isMobile ? 11.5 : 12.5),
+                    height: 1.3,
                     fontWeight: FontWeight.w500),
                 children: [
                   const TextSpan(text: 'Binds to first device. '),
@@ -963,6 +968,8 @@ class _AuthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final isShort = MediaQuery.of(context).size.height < 680;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -973,57 +980,60 @@ class _AuthCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(isSmallMobile ? 6 : 10),
                 decoration: BoxDecoration(
                   color: _kAccentLight.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.vpn_key_rounded, color: _kAccentDark, size: isMobile ? 22 : 26),
+                child: Icon(Icons.vpn_key_rounded, color: _kAccentDark, size: isSmallMobile ? 16 : (isMobile ? 22 : 26)),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: isSmallMobile ? 10 : 14),
               Text('Sign In',
                   style: TextStyle(
                       color: _kText1,
-                      fontSize: isMobile ? 28 : 32,
+                      fontSize: isSmallMobile ? 22 : (isMobile ? 28 : 32),
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5)),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _FadeInSlide(
-          delay: const Duration(milliseconds: 200),
-          child: Text('Access your dashboard & courses',
-              style: TextStyle(
-                  color: _kText2, 
-                  fontSize: isMobile ? 15 : 17,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500)),
-        ),
+        
+        if (!isShort || !isSmallMobile) ...[
+          SizedBox(height: isSmallMobile ? 6 : 16),
+          _FadeInSlide(
+            delay: const Duration(milliseconds: 200),
+            child: Text('Access your dashboard & courses',
+                style: TextStyle(
+                    color: _kText2, 
+                    fontSize: isSmallMobile ? 12 : (isMobile ? 15 : 17),
+                    height: 1.3,
+                    fontWeight: FontWeight.w500)),
+          ),
+        ],
 
-        const SizedBox(height: 32),
+        SizedBox(height: isSmallMobile ? 14 : 32),
 
         if (error != null && error!.isNotEmpty) ...[
           _FadeInSlide(
             delay: const Duration(milliseconds: 300),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              margin: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallMobile ? 8 : 10),
+              margin: EdgeInsets.only(bottom: isSmallMobile ? 12 : 24),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.red.shade200),
               ),
               child: Row(children: [
-                Icon(Icons.error_rounded, color: Colors.red.shade600, size: 20),
-                const SizedBox(width: 12),
+                Icon(Icons.error_rounded, color: Colors.red.shade600, size: isSmallMobile ? 16 : 18),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(error!,
                       style: TextStyle(
                           color: Colors.red.shade800,
-                          fontSize: 14,
+                          fontSize: isSmallMobile ? 11 : 14,
                           fontWeight: FontWeight.w600,
-                          height: 1.3)),
+                          height: 1.2)),
                 ),
               ]),
             ),
@@ -1041,26 +1051,26 @@ class _AuthCard extends StatelessWidget {
         ),
 
         if (!ResponsiveBreakpoints.isDesktop(context) && onGoogle != null && !kIsWeb) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: isSmallMobile ? 12 : 24),
           _FadeInSlide(
             delay: const Duration(milliseconds: 500),
             child: Row(
               children: [
                 Expanded(child: Divider(color: _kBorder, thickness: 1)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text('OR',
                       style: TextStyle(
                           color: _kText3,
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2)),
+                          letterSpacing: 1.0)),
                 ),
                 Expanded(child: Divider(color: _kBorder, thickness: 1)),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: isSmallMobile ? 12 : 24),
           _FadeInSlide(
             delay: const Duration(milliseconds: 600),
             child: _GoogleButton(
@@ -1070,27 +1080,28 @@ class _AuthCard extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: 32),
-        _FadeInSlide(
-          delay: const Duration(milliseconds: 700),
-          child: const _DeviceWarningBadge(),
-        ),
-
-        const SizedBox(height: 16),
+        SizedBox(height: isSmallMobile ? 16 : 32),
+        
+        if (!isShort || !isSmallMobile) ...[
+          _FadeInSlide(
+            delay: const Duration(milliseconds: 700),
+            child: const _DeviceWarningBadge(),
+          ),
+          SizedBox(height: isSmallMobile ? 10 : 16),
+        ],
 
         _FadeInSlide(
           delay: const Duration(milliseconds: 800),
           child: const _TermsFooter(),
         ),
 
-        const SizedBox(height: 14),
-
-        _FadeInSlide(
-          delay: const Duration(milliseconds: 900),
-          child: const _TrustBar(),
-        ),
-
-        const SizedBox(height: 4),
+        if (!isShort || !isSmallMobile) ...[
+          SizedBox(height: isSmallMobile ? 8 : 14),
+          _FadeInSlide(
+            delay: const Duration(milliseconds: 900),
+            child: const _TrustBar(),
+          ),
+        ],
       ],
     );
   }
@@ -1232,33 +1243,46 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   // ── Mobile layout ─────────────────────────────────────────────────────────
 
   Widget _mobileLayout(dynamic authState) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final size = MediaQuery.of(context).size;
+    final isShort = size.height < 680;
+
     return Scaffold(
       body: Stack(
         children: [
           // Background layer
           const _BrandBackground(compact: true),
           
-          // Scrollable content
+          // Content
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+              physics: isShort ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallMobile ? 16 : 20, 
+                vertical: isSmallMobile ? (isShort ? 10 : 16) : 32
+              ),
               child: Column(
                 children: [
                   // Logo & Branding at top
                   const _BrandingSection(isMobile: true),
                   
-                  const SizedBox(height: 40),
+                  SizedBox(height: isSmallMobile ? (isShort ? 12 : 20) : 32),
                   
                   // Glassmorphism Card
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(isSmallMobile ? 24 : 32),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+                        padding: EdgeInsets.fromLTRB(
+                          isSmallMobile ? 18 : 24, 
+                          isSmallMobile ? (isShort ? 16 : 24) : 32, 
+                          isSmallMobile ? 18 : 24, 
+                          isSmallMobile ? (isShort ? 16 : 20) : 28
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(32),
+                          borderRadius: BorderRadius.circular(isSmallMobile ? 24 : 32),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.4),
                             width: 1.5,
@@ -1280,7 +1304,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: isSmallMobile ? 12 : 20),
                 ],
               ),
             ),

@@ -85,16 +85,23 @@ class _AIFloatingChatButtonState extends ConsumerState<AIFloatingChatButton>
     _flutterTts.setVolume(1.0);
     _flutterTts.setPitch(1.0); // Normal pitch for a male voice
 
-    // Try to set a male voice explicitly
+    // Try to set a male British voice explicitly
     _flutterTts.getVoices.then((voices) {
       try {
         final maleVoice = voices.firstWhere(
           (voice) => 
-            voice['name'].toString().toLowerCase().contains('male') || 
-            voice['name'].toString().toLowerCase().contains('daniel') ||
-            voice['name'].toString().toLowerCase().contains('george') ||
-            voice['name'].toString().toLowerCase().contains('arthur'),
-          orElse: () => voices.first,
+            (voice['name'].toString().toLowerCase().contains('male') || 
+             voice['name'].toString().toLowerCase().contains('daniel') ||
+             voice['name'].toString().toLowerCase().contains('george') ||
+             voice['name'].toString().toLowerCase().contains('arthur')) &&
+            (voice['locale'].toString().toLowerCase().contains('gb') || 
+             voice['name'].toString().toLowerCase().contains('british')),
+          orElse: () => voices.firstWhere(
+            (voice) => 
+              voice['name'].toString().toLowerCase().contains('male') || 
+              voice['name'].toString().toLowerCase().contains('daniel'),
+            orElse: () => voices.first,
+          ),
         );
         _flutterTts.setVoice({"name": maleVoice['name'], "locale": maleVoice['locale']});
       } catch (e) {
