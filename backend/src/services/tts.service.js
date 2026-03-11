@@ -48,10 +48,23 @@ class TTSService {
 
       return new Promise((resolve, reject) => {
         writer.on('finish', () => resolve(outputFile));
-        writer.on('error', reject);
+        writer.on('error', (err) => {
+          if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile); // Clean up partial file
+          reject(err);
+        });
       });
     } catch (error) {
-      console.error('TTS Generation error:', error.response?.data || error.message);
+      if (error.response && error.response.data && typeof error.response.data.on === 'function') {
+        // If the error response is a stream, read it
+        const chunks = [];
+        for await (const chunk of error.response.data) {
+          chunks.push(chunk);
+        }
+        const data = Buffer.concat(chunks).toString();
+        console.error('TTS Generation error (from API):', data);
+      } else {
+        console.error('TTS Generation error:', error.response?.data || error.message);
+      }
       return null;
     }
   }

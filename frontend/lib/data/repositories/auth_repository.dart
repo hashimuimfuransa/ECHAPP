@@ -135,104 +135,78 @@ class AuthRepository {
   }
 
   Future<AuthResponse> firebaseLogin(String idToken, {String? fullName, String? deviceId}) async {
-    print('AuthRepository.firebaseLogin called with idToken type: ${idToken.runtimeType}');
-    print('AuthRepository.firebaseLogin idToken value: ${idToken.toString().length > 100 ? '${idToken.toString().substring(0, 100)}...' : idToken}');
-    print('AuthRepository.firebaseLogin fullName parameter: ${fullName ?? 'null'}');
-    print('AuthRepository.firebaseLogin deviceId parameter: ${deviceId ?? 'null'}');
+    print('AuthRepository.firebaseLogin called with idToken length: ${idToken.length}');
     
-    try {
-      print('Attempting to encode JSON body');
-      String encodedBody;
+    // Automatic retry logic for connection issues on Render
+    int retryCount = 0;
+    const int maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
       try {
+        String encodedBody;
         final body = {
           'idToken': idToken,
         };
-        if (fullName != null) {
-          body['fullName'] = fullName;
-          print('Adding fullName to request body: $fullName');
-        }
-        if (deviceId != null) {
-          body['deviceId'] = deviceId;
-          print('Adding deviceId to request body: $deviceId');
-        }
+        if (fullName != null) body['fullName'] = fullName;
+        if (deviceId != null) body['deviceId'] = deviceId;
         encodedBody = jsonEncode(body);
-        print('Final request body: $encodedBody');
-        print('JSON encoding successful');
-      } catch (encodeError) {
-        print('JSON encoding error: $encodeError');
-        print('idToken value that caused error: $idToken');
-        rethrow;
-      }
-      
-      // Use a fresh client and Connection: close to avoid persistent connection issues on Render
-      final client = http.Client();
-      try {
-        final response = await client.post(
-          Uri.parse('${ApiConfig.baseUrl}/auth/firebase-login'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Connection': 'close',
-            'Accept': 'application/json',
-          },
-          body: encodedBody,
-        ).timeout(const Duration(seconds: 60));
-
-        print('Firebase login response status: ${response.statusCode}');
-        print('Firebase login response body: ${response.body}');
         
-        if (response.statusCode == 200) {
-          if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
-            throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
-          }
-          final data = jsonDecode(response.body);
-          print('Parsed response data: $data');
-          print('Data type: ${data.runtimeType}');
-          
-          // Check if data is Map and has 'data' key
-          if (data is Map<String, dynamic> && data.containsKey('data')) {
-            print('Processing data[data]: ${data['data']}');
-            print('Data[data] type: ${data['data'].runtimeType}');
-            
-            if (data['data'] is Map<String, dynamic>) {
-              print('Processing as Map: ${data['data']}');
-              return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
+        final client = http.Client();
+        try {
+          print('AuthRepository: Attempting backend login (Attempt ${retryCount + 1})');
+          final response = await client.post(
+            Uri.parse('${ApiConfig.baseUrl}/auth/firebase-login'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Connection': 'close',
+              'Accept': 'application/json',
+            },
+            body: encodedBody,
+          ).timeout(const Duration(seconds: 45));
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (data is Map<String, dynamic> && data.containsKey('data')) {
+              if (data['data'] is Map<String, dynamic>) {
+                return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
+              } else {
+                final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
+                return AuthResponse.fromJson(mapData);
+              }
             } else {
-              // If it's already a string, parse it again
-              print('Processing as String: ${data['data']}');
-              final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
-              return AuthResponse.fromJson(mapData);
+              return AuthResponse.fromJson(data as Map<String, dynamic>);
             }
           } else {
-            // Direct response without wrapper - fallback
-            print('Direct response without wrapper');
-            return AuthResponse.fromJson(data as Map<String, dynamic>);
+            // Handle specific status codes
+            try {
+              final errorData = jsonDecode(response.body);
+              throw Exception(errorData['message'] ?? 'Authentication failed');
+            } catch (_) {
+              throw Exception('Authentication failed with status code ${response.statusCode}');
+            }
           }
-        } else {
-          try {
-            final errorData = jsonDecode(response.body);
-            print('Error response: $errorData');
-            throw Exception(errorData['message'] ?? 'Firebase authentication failed');
-          } catch (e) {
-            print('Raw error response: ${response.body}');
-            throw Exception('Authentication failed with status code ${response.statusCode}');
-          }
+        } finally {
+          client.close();
         }
-      } finally {
-        client.close();
+      } catch (e) {
+        bool isConnectionError = e.toString().contains('Connection closed before full header was received') || 
+                               e.toString().contains('SocketException') ||
+                               e.toString().contains('ClientException');
+                               
+        if (isConnectionError && retryCount < maxRetries) {
+          retryCount++;
+          print('AuthRepository: Connection error detected, retrying in ${retryCount * 2}s... ($retryCount/$maxRetries)');
+          await Future.delayed(Duration(seconds: retryCount * 2));
+          continue; // Try again
+        }
+        
+        print('AuthRepository: Final login error: $e');
+        _handleError(e);
+        rethrow;
       }
-    } catch (e) {
-      print('Authentication login error: $e');
-      print('Error type: ${e.runtimeType}');
-      
-      // Special handling for ClientException - common on Render
-      if (e.toString().contains('Connection closed before full header was received')) {
-        print('Detected connection closure on Render. Suggesting a retry.');
-        throw Exception('The server connection was interrupted. This often happens on Render when the backend is waking up. Please try again in a few seconds.');
-      }
-      
-      _handleError(e);
-      rethrow;
     }
+    
+    throw Exception('Authentication failed after multiple attempts.');
   }
 
   // Deprecated method - kept for backward compatibility
