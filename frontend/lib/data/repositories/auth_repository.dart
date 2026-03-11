@@ -164,51 +164,71 @@ class AuthRepository {
         rethrow;
       }
       
-      final response = await _client.post(
-        Uri.parse('${ApiConfig.baseUrl}/auth/firebase-login'),
-        headers: {'Content-Type': 'application/json'},
-        body: encodedBody,
-      ).timeout(const Duration(seconds: 60));
+      // Use a fresh client and Connection: close to avoid persistent connection issues on Render
+      final client = http.Client();
+      try {
+        final response = await client.post(
+          Uri.parse('${ApiConfig.baseUrl}/auth/firebase-login'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Connection': 'close',
+            'Accept': 'application/json',
+          },
+          body: encodedBody,
+        ).timeout(const Duration(seconds: 60));
 
-      print('Firebase login response status: ${response.statusCode}');
-      print('Firebase login response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
-          throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
-        }
-        final data = jsonDecode(response.body);
-        print('Parsed response data: $data');
-        print('Data type: ${data.runtimeType}');
+        print('Firebase login response status: ${response.statusCode}');
+        print('Firebase login response body: ${response.body}');
         
-        // Check if data is Map and has 'data' key
-        if (data is Map<String, dynamic> && data.containsKey('data')) {
-          print('Processing data[data]: ${data['data']}');
-          print('Data[data] type: ${data['data'].runtimeType}');
+        if (response.statusCode == 200) {
+          if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+            throw Exception('Server returned HTML instead of JSON. The backend might be waking up or misconfigured.');
+          }
+          final data = jsonDecode(response.body);
+          print('Parsed response data: $data');
+          print('Data type: ${data.runtimeType}');
           
-          if (data['data'] is Map<String, dynamic>) {
-            print('Processing as Map: ${data['data']}');
-            return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
+          // Check if data is Map and has 'data' key
+          if (data is Map<String, dynamic> && data.containsKey('data')) {
+            print('Processing data[data]: ${data['data']}');
+            print('Data[data] type: ${data['data'].runtimeType}');
+            
+            if (data['data'] is Map<String, dynamic>) {
+              print('Processing as Map: ${data['data']}');
+              return AuthResponse.fromJson(data['data'] as Map<String, dynamic>);
+            } else {
+              // If it's already a string, parse it again
+              print('Processing as String: ${data['data']}');
+              final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
+              return AuthResponse.fromJson(mapData);
+            }
           } else {
-            // If it's already a string, parse it again
-            print('Processing as String: ${data['data']}');
-            final mapData = jsonDecode(data['data'].toString()) as Map<String, dynamic>;
-            return AuthResponse.fromJson(mapData);
+            // Direct response without wrapper - fallback
+            print('Direct response without wrapper');
+            return AuthResponse.fromJson(data as Map<String, dynamic>);
           }
         } else {
-          // Direct response without wrapper - fallback
-          print('Direct response without wrapper');
-          return AuthResponse.fromJson(data as Map<String, dynamic>);
+          try {
+            final errorData = jsonDecode(response.body);
+            print('Error response: $errorData');
+            throw Exception(errorData['message'] ?? 'Firebase authentication failed');
+          } catch (e) {
+            print('Raw error response: ${response.body}');
+            throw Exception('Authentication failed with status code ${response.statusCode}');
+          }
         }
-      } else {
-        final errorData = jsonDecode(response.body);
-        print('Error response: $errorData');
-        throw Exception(errorData['message'] ?? 'Firebase authentication failed');
+      } finally {
+        client.close();
       }
     } catch (e) {
       print('Authentication login error: $e');
       print('Error type: ${e.runtimeType}');
-      print('Error stack: ${e.toString().substring(0, e.toString().length < 500 ? e.toString().length : 500)}');
+      
+      // Special handling for ClientException - common on Render
+      if (e.toString().contains('Connection closed before full header was received')) {
+        print('Detected connection closure on Render. Suggesting a retry.');
+        throw Exception('The server connection was interrupted. This often happens on Render when the backend is waking up. Please try again in a few seconds.');
+      }
       
       _handleError(e);
       rethrow;

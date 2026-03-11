@@ -268,10 +268,13 @@ const firebaseLogin = async (req, res) => {
     
     // Debug logging
     console.log('=== Firebase Login Debug ===');
-    console.log('Received idToken:', idToken ? 'Present' : 'Missing');
+    console.log('Received idToken:', idToken ? 'Present (length: ' + idToken.length + ')' : 'Missing');
     console.log('Received fullName:', fullName || 'Not provided');
     console.log('Received deviceId:', deviceId || 'Not provided');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    // Safely log body without printing the entire token
+    const logBody = { ...req.body };
+    if (logBody.idToken) logBody.idToken = logBody.idToken.substring(0, 20) + '...';
+    console.log('Request body (sanitized):', JSON.stringify(logBody, null, 2));
     
     if (!idToken) {
       return sendError(res, 'Firebase ID token is required', 400);
