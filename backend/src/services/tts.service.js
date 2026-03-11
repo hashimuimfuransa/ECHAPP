@@ -27,7 +27,7 @@ class TTSService {
         url: `https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`,
         data: {
           text: text,
-          model_id: 'eleven_monolingual_v1', // High quality monolingual model
+          model_id: 'eleven_turbo_v2_5', // High quality turbo model
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
