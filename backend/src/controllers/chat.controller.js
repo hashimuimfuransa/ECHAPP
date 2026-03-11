@@ -6,6 +6,7 @@ const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
 const TTSService = require('../services/tts.service');
+const GrokService = require('../services/grok_service');
 
 class ChatController {
   // Get user's conversation history
