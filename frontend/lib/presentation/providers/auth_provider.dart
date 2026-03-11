@@ -119,8 +119,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (msgLower.contains('invalid email or password') || 
           msgLower.contains('wrong-password') || 
           msgLower.contains('user-not-found') ||
-          msgLower.contains('incorrect password')) {
-        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          msgLower.contains('incorrect password') ||
+          msgLower.contains('invalid-credential') ||
+          msgLower.contains('an internal error has occurred')) {
+        errorMessage = 'Oops! It looks like the email or password you entered isn\'t correct. If you\'ve forgotten your password, you can reset it using the "Forgot password?" link below.';
       } else if (msgLower.contains('account is deactivated') || msgLower.contains('user-disabled')) {
         errorMessage = 'Your account has been deactivated. Please contact support.';
       } else if (msgLower.contains('network error') || 

@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
@@ -113,28 +114,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     });
   }
   
-  // Method to get appropriate icons for categories
-  IconData _getCategoryIcon(String categoryId) {
-    switch (categoryId) {
-      case 'professional_coaching':
-        return Icons.business;
-      case 'business_entrepreneurship':
-        return Icons.trending_up;
-      case 'academic_coaching':
-        return Icons.school;
-      case 'language_coaching':
-        return Icons.language;
-      case 'technical_digital':
-        return Icons.computer;
-      case 'job_seeker':
-        return Icons.work;
-      case 'personal_corporate':
-        return Icons.group;
-      default:
-        return Icons.category;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
@@ -144,7 +123,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar for all platforms (since it's not in MainLayout top bar)
+            // Search Bar
             _buildResponsiveSearchBar(context),
             
             // Content
@@ -159,7 +138,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     
                     const SizedBox(height: 25),
                     
-                    // All Courses with responsive grid
+                    // All Courses
                     _isLoading
                       ? const Center(
                           child: Padding(
@@ -291,32 +270,22 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     return backendCategories.when(
       data: (categories) {
         // Combine with 'All' option and assign professional colors
-        final colors = [
-          AppTheme.primaryGreen,    // Emerald green
-          AppTheme.accent,         // Blue
-          Colors.deepPurple,       // Purple
-          Colors.orange,           // Orange
-          Colors.pink,             // Pink
-          Colors.teal,             // Teal
-          Colors.amber,            // Amber
-          Colors.indigo,           // Indigo
-        ];
         
         final allCategories = [
           {
             'name': 'All', 
             'color': AppTheme.primaryGreen, 
             'id': 'all',
-            'icon': Icons.category,
+            'icon': CategoryUtils.getCategoryIcon('all', name: 'all'),
           },
           ...categories.asMap().entries.map((entry) {
-            int index = entry.key;
             var cat = entry.value;
+            final categoryId = cat.id;
             return {
               'name': cat.name,
-              'color': colors[index % colors.length],
-              'id': cat.id,
-              'icon': _getCategoryIcon(cat.id),
+              'color': CategoryUtils.getCategoryColor(categoryId, name: cat.name),
+              'id': categoryId,
+              'icon': CategoryUtils.getCategoryIcon(categoryId, name: cat.name),
             };
           }),
         ];
@@ -340,11 +309,11 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 itemCount: allCategories.length,
                 itemBuilder: (context, index) {
                   final category = allCategories[index];
+                  final isSelected = _selectedCategory == category['id'];
+                  final categoryColor = category['color'] as Color;
+
                   return Container(
-                    margin: EdgeInsets.only(
-                      right: 12,
-                      left: index == 0 ? 0 : 0,
-                    ),
+                    margin: const EdgeInsets.only(right: 12),
                     child: FilterChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -352,35 +321,35 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Icon(
                             category['icon'] as IconData,
                             size: 16,
-                            color: _selectedCategory == category['id'] 
+                            color: isSelected 
                                 ? AppTheme.whiteColor 
-                                : (category['color'] as Color),
+                                : categoryColor,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             category['name'] as String,
                             style: TextStyle(
-                              color: _selectedCategory == category['id'] 
+                              color: isSelected 
                                   ? AppTheme.whiteColor 
                                   : AppTheme.greyColor,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      selected: _selectedCategory == category['id'],
-                      selectedColor: (category['color'] as Color),
-                      backgroundColor: _selectedCategory == category['id'] 
-                          ? (category['color'] as Color).withOpacity(0.2)
+                      selected: isSelected,
+                      selectedColor: categoryColor,
+                      backgroundColor: isSelected 
+                          ? categoryColor.withOpacity(0.2)
                           : AppTheme.greyColor.withOpacity(0.1),
                       showCheckmark: false,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                         side: BorderSide(
-                          color: _selectedCategory == category['id'] 
-                              ? (category['color'] as Color)
+                          color: isSelected 
+                              ? categoryColor
                               : AppTheme.greyColor.withOpacity(0.3),
-                          width: _selectedCategory == category['id'] ? 2 : 1,
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
                       onSelected: (selected) {
@@ -435,32 +404,22 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         // Fallback to predefined categories if backend fails
         final categories = CategoriesService.getAllCategories();
         // Combine with 'All' option and assign professional colors
-        final colors = [
-          AppTheme.primaryGreen,    // Emerald green
-          AppTheme.accent,         // Blue
-          Colors.deepPurple,       // Purple
-          Colors.orange,           // Orange
-          Colors.pink,             // Pink
-          Colors.teal,             // Teal
-          Colors.amber,            // Amber
-          Colors.indigo,           // Indigo
-        ];
         
         final allCategories = [
           {
             'name': 'All', 
             'color': AppTheme.primaryGreen, 
             'id': 'all',
-            'icon': Icons.category,
+            'icon': CategoryUtils.getCategoryIcon('all', name: 'all'),
           },
           ...categories.asMap().entries.map((entry) {
-            int index = entry.key;
             var cat = entry.value;
+            final categoryId = cat.id;
             return {
               'name': cat.name,
-              'color': colors[index % colors.length],
-              'id': cat.id,
-              'icon': _getCategoryIcon(cat.id),
+              'color': CategoryUtils.getCategoryColor(categoryId, name: cat.name),
+              'id': categoryId,
+              'icon': CategoryUtils.getCategoryIcon(categoryId, name: cat.name),
             };
           }),
         ];
@@ -484,11 +443,11 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 itemCount: allCategories.length,
                 itemBuilder: (context, index) {
                   final category = allCategories[index];
+                  final isSelected = _selectedCategory == category['id'];
+                  final categoryColor = category['color'] as Color;
+
                   return Container(
-                    margin: EdgeInsets.only(
-                      right: 12,
-                      left: index == 0 ? 0 : 0,
-                    ),
+                    margin: const EdgeInsets.only(right: 12),
                     child: FilterChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -496,35 +455,35 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Icon(
                             category['icon'] as IconData,
                             size: 16,
-                            color: _selectedCategory == category['id'] 
+                            color: isSelected 
                                 ? AppTheme.whiteColor 
-                                : (category['color'] as Color),
+                                : categoryColor,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             category['name'] as String,
                             style: TextStyle(
-                              color: _selectedCategory == category['id'] 
+                              color: isSelected 
                                   ? AppTheme.whiteColor 
                                   : AppTheme.greyColor,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      selected: _selectedCategory == category['id'],
-                      selectedColor: (category['color'] as Color),
-                      backgroundColor: _selectedCategory == category['id'] 
-                          ? (category['color'] as Color).withOpacity(0.2)
+                      selected: isSelected,
+                      selectedColor: categoryColor,
+                      backgroundColor: isSelected 
+                          ? categoryColor.withOpacity(0.2)
                           : AppTheme.greyColor.withOpacity(0.1),
                       showCheckmark: false,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                         side: BorderSide(
-                          color: _selectedCategory == category['id'] 
-                              ? (category['color'] as Color)
+                          color: isSelected 
+                              ? categoryColor
                               : AppTheme.greyColor.withOpacity(0.3),
-                          width: _selectedCategory == category['id'] ? 2 : 1,
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
                       onSelected: (selected) {

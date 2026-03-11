@@ -52,4 +52,30 @@ class Lesson {
       'duration': duration,
     };
   }
+
+  Lesson copyWith({
+    String? id,
+    String? sectionId,
+    String? courseId,
+    String? title,
+    String? description,
+    String? videoId,
+    String? notes,
+    String? status,
+    int? order,
+    int? duration,
+  }) {
+    return Lesson(
+      id: id ?? this.id,
+      sectionId: sectionId ?? this.sectionId,
+      courseId: courseId ?? this.courseId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      videoId: videoId ?? this.videoId,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+      order: order ?? this.order,
+      duration: duration ?? this.duration,
+    );
+  }
 }

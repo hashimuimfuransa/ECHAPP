@@ -390,9 +390,18 @@ class FirebaseAuthService {
       
       // Login/password errors
       case 'wrong-password':
-        return Exception('Incorrect password. Please try again.');
+      case 'invalid-credential':
+        return Exception('wrong-password'); // Return internal code for AuthProvider to handle with friendly message
       case 'user-not-found':
-        return Exception('No user found with this email address. Please check and try again.');
+        return Exception('user-not-found');
+      
+      // Handle generic errors that might be password related
+      case 'unknown-error':
+      case 'internal-error':
+        if (e.message?.toLowerCase().contains('internal error') == true) {
+          return Exception('wrong-password'); // Often happens on desktop/windows when password is wrong
+        }
+        return Exception('An unexpected error occurred. Please try again.');
       
       // Registration errors
       case 'email-already-in-use':

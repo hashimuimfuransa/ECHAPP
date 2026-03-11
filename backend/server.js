@@ -1,5 +1,9 @@
 const express = require('express');
 const dotenv = require('dotenv');
+
+// Load environment variables as early as possible
+dotenv.config();
+
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
@@ -17,9 +21,6 @@ CourseExpirationService.scheduleExpirationChecks(60);
 
 // Schedule notification checks (every 24 hours)
 NotificationSchedulerService.schedule(24);
-
-// Load environment variables
-dotenv.config();
 
 console.log('🚀 Excellence Coaching Hub Backend Server Starting...');
 

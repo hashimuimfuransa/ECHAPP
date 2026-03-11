@@ -234,7 +234,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 16),
               children: items.map((item) => _buildNavItem(
                 context,
                 item['title'] as String,
@@ -249,7 +249,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           
           if (!isAuth)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: isCollapsed ? 0 : 16
+              ),
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
@@ -606,8 +609,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref, bool isCollapsed) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
     
-    if (isDesktop) {
+    // Use desktop style for desktop platforms down to 600px width
+    final bool useDesktopStyle = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
+    
+    if (useDesktopStyle) {
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 12),
         child: Material(

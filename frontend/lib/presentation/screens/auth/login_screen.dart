@@ -363,20 +363,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: authState.error!.contains('Forgot password?') 
+                                  ? Colors.orange.withOpacity(0.1) 
+                                  : Colors.red.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.withOpacity(0.3)),
+                              border: Border.all(
+                                color: authState.error!.contains('Forgot password?')
+                                    ? Colors.orange.withOpacity(0.3)
+                                    : Colors.red.withOpacity(0.3)
+                              ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline, color: Colors.red.shade400, size: 18),
+                                Icon(
+                                  authState.error!.contains('Forgot password?') 
+                                      ? Icons.info_outline_rounded 
+                                      : Icons.error_outline, 
+                                  color: authState.error!.contains('Forgot password?')
+                                      ? Colors.orange.shade400
+                                      : Colors.red.shade400, 
+                                  size: 20
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     authState.error,
                                     style: TextStyle(
-                                      color: Colors.red.shade400,
-                                      fontSize: 13,
+                                      color: authState.error!.contains('Forgot password?')
+                                          ? Colors.orange.shade200
+                                          : Colors.red.shade400,
+                                      fontSize: 14,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ),
@@ -522,16 +539,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: authState.error!.contains('Forgot password?') 
+                                  ? Colors.orange.withOpacity(0.1) 
+                                  : Colors.red.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.red.withOpacity(0.3)),
-                            ),
-                            child: Text(
-                              authState.error,
-                              style: TextStyle(
-                                color: Colors.red.shade400,
-                                fontSize: 12,
+                              border: Border.all(
+                                color: authState.error!.contains('Forgot password?')
+                                    ? Colors.orange.withOpacity(0.3)
+                                    : Colors.red.withOpacity(0.3)
                               ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  authState.error!.contains('Forgot password?') 
+                                      ? Icons.info_outline_rounded 
+                                      : Icons.error_outline, 
+                                  color: authState.error!.contains('Forgot password?')
+                                      ? Colors.orange.shade400
+                                      : Colors.red.shade400, 
+                                  size: 18
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    authState.error,
+                                    style: TextStyle(
+                                      color: authState.error!.contains('Forgot password?')
+                                          ? Colors.orange.shade200
+                                          : Colors.red.shade400,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         const SizedBox(height: 20),

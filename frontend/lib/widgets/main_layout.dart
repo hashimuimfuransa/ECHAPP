@@ -12,7 +12,6 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
-import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 import 'package:excellencecoachinghub/models/user.dart' as app_models;
 
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
@@ -41,6 +40,22 @@ class MainLayout extends ConsumerWidget {
 
     final app_models.User? user = ref.watch(authProvider).user;
     final String currentRoute = GoRouterState.of(context).uri.path;
+    
+    // Responsive sidebar auto-collapse
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool shouldBeCollapsed = screenWidth < 1100 && screenWidth >= 600;
+    
+    // Use addPostFrameCallback to avoid updating state during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isCurrentlyCollapsed = ref.read(sidebarProvider);
+      if (shouldBeCollapsed && !isCurrentlyCollapsed) {
+        ref.read(sidebarProvider.notifier).setCollapsed(true);
+      } else if (screenWidth >= 1100 && isCurrentlyCollapsed) {
+        // Optional: auto-expand on larger screens if previously auto-collapsed
+        // ref.read(sidebarProvider.notifier).setCollapsed(false);
+      }
+    });
+
     final isCollapsed = ref.watch(sidebarProvider);
     final bool isAuthRoute = currentRoute == '/login' || 
                              currentRoute == '/register' || 
@@ -66,30 +81,16 @@ class MainLayout extends ConsumerWidget {
     if (useSidebarLayout) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Column(
+        body: Row(
           children: [
-            if (isPlatformDesktop)
-              DesktopTitleBar(
-                title: "Excellence Coaching Hub",
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Image.asset('assets/logo.png', width: 16, height: 16),
-                ),
-              ),
+            if (!isAuthRoute) ResponsiveNavigationDrawer(currentPage: currentPage),
             Expanded(
-              child: Row(
+              child: Column(
                 children: [
-                  if (!isAuthRoute) ResponsiveNavigationDrawer(currentPage: currentPage),
+                  if (!isAuthRoute && currentRoute != '/') 
+                    _buildDesktopTopBar(context, ref, user, title ?? _getPageTitle(currentPage), isCollapsed),
                   Expanded(
-                    child: Column(
-                      children: [
-                        if (!isAuthRoute && currentRoute != '/') 
-                          _buildDesktopTopBar(context, ref, user, title ?? _getPageTitle(currentPage), isCollapsed),
-                        Expanded(
-                          child: ClipRect(child: child),
-                        ),
-                      ],
-                    ),
+                    child: ClipRect(child: child),
                   ),
                 ],
               ),
@@ -125,24 +126,9 @@ class MainLayout extends ConsumerWidget {
           ],
         ),
         drawer: isAuthRoute ? null : ResponsiveNavigationDrawer(currentPage: currentPage),
-        body: Column(
-          children: [
-            // Always show title bar on desktop platform, even in mobile layout mode
-            if (isPlatformDesktop)
-              DesktopTitleBar(
-                title: "Excellence Coaching Hub",
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Image.asset('assets/logo.png', width: 16, height: 16),
-                ),
-              ),
-            Expanded(
-              child: Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: child,
-              ),
-            ),
-          ],
+        body: Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: child,
         ),
         bottomNavigationBar: (isAuthRoute || user == null) ? null : _buildBottomNavBar(context, currentRoute),
       );

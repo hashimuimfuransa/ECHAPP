@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/app_router.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
@@ -18,19 +17,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   
-  // bitsdojo_window initialization early in main
-  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS)) {
-    doWhenWindowReady(() {
-      final win = appWindow;
-      const initialSize = Size(1280, 800);
-      win.minSize = const Size(800, 600);
-      win.size = initialSize;
-      win.alignment = Alignment.center;
-      win.title = "Excellence Coaching Hub";
-      win.show();
-    });
-  }
-
   // Use runZonedGuarded to catch any unhandled errors that might crash the app
   await runZonedGuarded(() async {
     try {

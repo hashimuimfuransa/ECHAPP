@@ -5,7 +5,6 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/exam_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
-import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 import 'package:intl/intl.dart';
 
 class AdminExamsReviewScreen extends ConsumerStatefulWidget {
@@ -61,31 +60,36 @@ class _AdminExamsReviewScreenState extends ConsumerState<AdminExamsReviewScreen>
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    // Responsive sidebar auto-collapse
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool shouldBeCollapsed = screenWidth < 1100 && screenWidth >= 600;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isCurrentlyCollapsed = ref.read(sidebarProvider);
+      if (shouldBeCollapsed && !isCurrentlyCollapsed) {
+        ref.read(sidebarProvider.notifier).setCollapsed(true);
+      }
+    });
+
     final isCollapsed = ref.watch(sidebarProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       drawer: !isDesktop ? _buildDrawer(context) : null,
-      body: Column(
+      body: Row(
         children: [
-          if (isDesktop) const DesktopTitleBar(),
+          if (isDesktop) _buildSidebar(context, isCollapsed),
           Expanded(
-            child: Row(
+            child: Column(
               children: [
-                if (isDesktop) _buildSidebar(context, isCollapsed),
+                _buildHeader(context, isDesktop),
                 Expanded(
-                  child: Column(
-                    children: [
-                      _buildHeader(context, isDesktop),
-                      Expanded(
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : _error != null
-                                ? _buildErrorState()
-                                : _buildContent(context),
-                      ),
-                    ],
-                  ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? _buildErrorState()
+                          : _buildContent(context),
                 ),
               ],
             ),
@@ -167,7 +171,7 @@ class _AdminExamsReviewScreenState extends ConsumerState<AdminExamsReviewScreen>
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 16),
               children: [
                 _buildSidebarItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', false, isCollapsed),
                 _buildSidebarItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false, isCollapsed),

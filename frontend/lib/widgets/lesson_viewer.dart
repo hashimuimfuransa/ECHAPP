@@ -394,7 +394,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                       onTap: () {}, // Prevent closing when tapping on dialog
                       child: ModernAIChatDialog(
                         currentCourse: null, // LessonViewer doesn't have course object easily accessible, passing null is fine
-                        currentLesson: widget.lesson,
+                        currentLesson: widget.lesson.copyWith(
+                          notes: _lessonContent?.notes,
+                        ),
                         allSections: widget.allSections ?? _courseSections,
                         sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
                         chatService: _aiChatService,

@@ -282,12 +282,16 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isDesktop = screenWidth > 1024;
+    
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.95,
-        height: MediaQuery.of(context).size.height * 0.8,
-        margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+        width: isDesktop ? 500 : screenWidth * 0.95,
+        height: isDesktop ? 700 : screenHeight * 0.8,
+        margin: EdgeInsets.fromLTRB(16, isDesktop ? 60 : 24, 16, 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           color: isDarkMode 

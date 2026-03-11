@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/category_utils.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -103,17 +104,20 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildCategoryCard(BuildContext context, dynamic category, Color color) {
+    final icon = CategoryUtils.getCategoryIcon(category.id, name: category.name);
+    final cardColor = CategoryUtils.getCategoryColor(category.id, name: category.name);
+    
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: color.withOpacity(0.15),
+          color: cardColor.withOpacity(0.15),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.06),
+            color: cardColor.withOpacity(0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -133,13 +137,14 @@ class CategoriesScreen extends ConsumerWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: cardColor.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: Text(
-                      category.icon,
-                      style: const TextStyle(fontSize: 34),
+                    child: Icon(
+                      icon,
+                      size: 32,
+                      color: cardColor,
                     ),
                   ),
                 ),
@@ -160,13 +165,13 @@ class CategoriesScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: cardColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${category.subcategories.length} Topics',
                     style: TextStyle(
-                      color: color.withOpacity(0.9),
+                      color: cardColor.withOpacity(0.9),
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.1,

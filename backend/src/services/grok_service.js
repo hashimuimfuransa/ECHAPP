@@ -24,7 +24,22 @@ class GrokService {
    * Check if Grok service is properly configured
    */
   isConfigured() {
+    this._checkConfiguration();
     return !!this.apiKey && !!this.groq;
+  }
+
+  /**
+   * Internal helper to ensure configuration is loaded
+   * (Needed because constructor may run before dotenv.config())
+   */
+  _checkConfiguration() {
+    if (!this.apiKey || !this.groq) {
+      this.apiKey = process.env.GROQ_API_KEY;
+      if (this.apiKey && !this.groq) {
+        this.groq = new Groq({ apiKey: this.apiKey });
+        console.log("Grok Service re-initialized with environment key.");
+      }
+    }
   }
 
   /**
@@ -206,6 +221,7 @@ class GrokService {
    * @returns {Promise<Array>} - Array of questions with options and answers
    */
   async extractQuestionsFromDocument(documentInput, examType) {
+    this._checkConfiguration();
     if (!this.isConfigured()) {
       throw new Error("Grok is not configured. Please set GROQ_API_KEY in environment variables.");
     }

@@ -12,7 +12,6 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_notification_provider.dart';
-import 'package:excellencecoachinghub/widgets/desktop_title_bar.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -153,6 +152,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(adminDashboardProvider);
+
+    // Responsive sidebar auto-collapse
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool shouldBeCollapsed = screenWidth < 1100 && screenWidth >= 600;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isCurrentlyCollapsed = ref.read(sidebarProvider);
+      if (shouldBeCollapsed && !isCurrentlyCollapsed) {
+        ref.read(sidebarProvider.notifier).setCollapsed(true);
+      }
+    });
       
     if (!_hasLoadedInitialData && dashboardState.stats == null && !dashboardState.isLoading) {
       _hasLoadedInitialData = true;
@@ -173,22 +183,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
+      body: Row(
         children: [
-          DesktopTitleBar(),
+          _buildDesktopSidebar(context, ref, isCollapsed),
           Expanded(
-            child: Row(
+            child: Column(
               children: [
-                _buildDesktopSidebar(context, ref, isCollapsed),
+                _buildDesktopHeader(context, ref, isCollapsed),
                 Expanded(
-                  child: Column(
-                    children: [
-                      _buildDesktopHeader(context, ref, isCollapsed),
-                      Expanded(
-                        child: _buildDashboardContent(context, ref, dashboardState),
-                      ),
-                    ],
-                  ),
+                  child: _buildDashboardContent(context, ref, dashboardState),
                 ),
               ],
             ),
@@ -408,7 +411,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 16),
               children: [
                 _buildDesktopNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true, isCollapsed),
                 _buildDesktopNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false, isCollapsed),
@@ -421,7 +424,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: isCollapsed ? 0 : 16
+            ),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(

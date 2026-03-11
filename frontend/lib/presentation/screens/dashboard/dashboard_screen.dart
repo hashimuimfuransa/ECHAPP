@@ -18,6 +18,7 @@ import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
@@ -365,28 +366,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Color _getCategoryColor(String categoryId) {
-    switch (categoryId) {
-      case 'academic_coaching':
-        return const Color(0xFF10B981); // Emerald/Green
-      case 'language_coaching':
-        return const Color(0xFF8B5CF6); // Purple
-      case 'business_entrepreneurship':
-        return const Color(0xFFEF4444); // Red
-      case 'technical_digital':
-        return const Color(0xFF06B6D4); // Cyan
-      case 'professional_coaching':
-      case 'job_seeker':
-        return const Color(0xFF3B82F6); // Blue
-      case 'personal_corporate':
-        return const Color(0xFFF59E0B); // Amber
-      case 'all':
-        return const Color(0xFF10B981);
-      default:
-        return AppTheme.primary;
-    }
-  }
-
   Widget _buildCategoryFilters(BuildContext context) {
     final categoriesAsync = ref.watch(backendCategoriesProvider);
 
@@ -401,16 +380,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           itemBuilder: (context, index) {
             final isFirst = index == 0;
             final category = isFirst ? null : categories[index - 1];
-            final color = _getCategoryColor(isFirst ? 'all' : category!.id);
+            final categoryId = isFirst ? 'all' : category!.id;
+            final color = CategoryUtils.getCategoryColor(categoryId, name: isFirst ? 'all' : category?.name);
             final name = isFirst ? 'All Courses' : category!.name;
-            final icon = isFirst ? '📚' : (category!.icon ?? '📚');
+            final icon = CategoryUtils.getCategoryIcon(categoryId, name: isFirst ? 'all' : category?.name);
 
             return Padding(
               padding: const EdgeInsets.only(right: 12),
               child: InkWell(
                 onTap: () {
                   context.push('/courses', extra: {
-                    'categoryId': isFirst ? 'all' : category!.id,
+                    'categoryId': categoryId,
                     'categoryName': name,
                   });
                 },
@@ -428,7 +408,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(icon, style: const TextStyle(fontSize: 16)),
+                      Icon(
+                        icon,
+                        size: 18,
+                        color: color.withOpacity(0.9),
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         name,

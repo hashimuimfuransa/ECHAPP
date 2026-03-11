@@ -1,7 +1,7 @@
 name: excellencecoachinghub
 description: ExcellenceCoachingHub e-learning platform
 publish_to: 'none'
-version: 1.0.5+5
+version: 1.0.6+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -39,7 +39,6 @@ dependencies:
   audioplayers: ^6.0.0
   flutter_tts: ^4.0.0
   device_info_plus: ^10.0.0
-  bitsdojo_window: ^0.1.5
   uuid: ^4.5.1
   record: ^6.2.0
   firebase_auth: ^5.3.1
@@ -94,7 +93,7 @@ msix_config:
   publisher_display_name: ECH
   publisher: CN=6B4466E8-E27C-410F-804C-21877F7B22F6
   identity_name: ECH.excellencecoachinghub
-  msix_version: 1.0.5.0
+  msix_version: 1.0.6.0
   logo_path: windows/runner/resources/app_icon.ico
   store: true
   store_id: 9NW5V60BNHNN

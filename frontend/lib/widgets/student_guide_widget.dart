@@ -236,11 +236,14 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
                     fontWeight: FontWeight.w800,
                     fontSize: fontSize,
                     color: widget.color)),
-            Text('${widget.current}/${widget.max}',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: fontSize,
-                    color: widget.color)),
+            Flexible(
+              child: Text('${widget.current}/${widget.max}',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: fontSize,
+                      color: widget.color),
+                  overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
         SizedBox(height: widget.isMobile ? 2 : 4),
@@ -618,8 +621,9 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
 
   double _getResponsiveSize() {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Scale down character significantly on mobile devices
-    return screenWidth < 600 ? widget.config.size * 0.45 : widget.config.size;
+    if (screenWidth < 600) return widget.config.size * 0.45;
+    if (screenWidth < 1024) return widget.config.size * 0.75;
+    return widget.config.size;
   }
 
   _StateMeta get _currentMeta => _meta[_state]!;
@@ -658,10 +662,14 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
       opacity: _fadeAnim,
       child: ScaleTransition(
         scale: _scaleAnim,
-        child: SizedBox(
+        child: Container(
           width: containerSize,
+          constraints: BoxConstraints(
+            maxWidth: isMobile ? 120 : 250,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // ── Speech bubble ──────────────────────
               if (_msg != null) _buildBubble(meta, primary, border, isMobile),
@@ -707,7 +715,10 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
             color: _bubbleBackground(meta),
             borderColor: border,
           ),
-          child: Padding(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isMobile ? 110 : 220,
+            ),
             padding: EdgeInsets.fromLTRB(
               isMobile ? 8 : 12,
               isMobile ? 4 : 8,
@@ -719,8 +730,8 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
               children: [
                 Text(meta.emoji,
                     style: TextStyle(fontSize: isMobile ? 10 : 16)),
-                SizedBox(width: isMobile ? 3 : 6),
-                Flexible(
+                const SizedBox(width: 4),
+                Expanded(
                   child: Text(
                     _msg!,
                     style: TextStyle(
@@ -729,6 +740,8 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
                       height: 1.1,
                     ),
                     textAlign: TextAlign.center,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -845,12 +858,15 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
                   children: [
                     Text('🔥', style: TextStyle(fontSize: isMobile ? 10 : 14)),
                     SizedBox(width: isMobile ? 2 : 4),
-                    Text(
-                      '${widget.streak} day streak!',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: isMobile ? 8 : 11,
-                        color: primary,
+                    Flexible(
+                      child: Text(
+                        '${widget.streak} day streak!',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: isMobile ? 8 : 11,
+                          color: primary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
