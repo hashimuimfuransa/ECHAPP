@@ -684,10 +684,20 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 ),
               ),
               if (status == DownloadStatus.completed)
-                IconButton(
-                  onPressed: () => _confirmDeleteDownload(downloadService),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  tooltip: 'Delete download',
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => context.push('/downloads'),
+                      icon: const Icon(Icons.folder_open, size: 18, color: AppTheme.primaryGreen),
+                      label: const Text('View in Downloads', style: TextStyle(color: AppTheme.primaryGreen, fontSize: 12)),
+                    ),
+                    IconButton(
+                      onPressed: () => _confirmDeleteDownload(downloadService),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      tooltip: 'Delete download',
+                    ),
+                  ],
                 )
               else if (isDownloading)
                 IconButton(

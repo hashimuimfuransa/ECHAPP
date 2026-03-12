@@ -240,11 +240,12 @@ CHUNK: ${chunkNum} of ${totalChunks}
 RULES:
 1. Extract ONLY questions that literally appear in the text below.
 2. Do NOT invent or paraphrase questions.
-3. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
-4. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
-5. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
-6. If no questions are found, return {"questions":[]}.
-7. Respond with ONLY valid JSON — no markdown fences, no explanation.
+3. Some questions may have sub-questions labeled a, b, c, etc. Include them as "subQuestions" with their own type, options, and correctAnswer.
+4. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
+5. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
+6. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
+7. If no questions are found, return {"questions":[]}.
+8. Respond with ONLY valid JSON — no markdown fences, no explanation.
 
 QUESTION SCHEMA:
 {
@@ -254,7 +255,17 @@ QUESTION SCHEMA:
       "type": "mcq | true_false | fill_blank | open",
       "options": ["A","B","C","D"],   // MCQ and true_false only
       "correctAnswer": 0,             // integer index for MCQ/true_false; string for others
-      "points": 1
+      "points": 1,
+      "subQuestions": [               // Optional
+        {
+          "label": "a",               // Optional (a, b, c, etc.)
+          "question": "<sub-question text>",
+          "type": "mcq | true_false | fill_blank | open",
+          "options": ["A","B","C","D"],
+          "correctAnswer": 0,
+          "points": 1
+        }
+      ]
     }
   ]
 }
@@ -332,64 +343,54 @@ ${chunk}
   validateAndNormalizeQuestions(questions) {
     const validTypes = new Set(["mcq", "true_false", "fill_blank", "open"]);
 
-    return questions.reduce((acc, q) => {
+    const normalize = (q) => {
       if (!q.question || typeof q.question !== "string" || !q.question.trim()) {
-        console.log("Skipped: missing question text");
-        return acc;
+        return null;
       }
 
       const type = (q.type || "").toLowerCase();
       if (!validTypes.has(type)) {
-        console.log(`Skipped: unknown type "${q.type}"`);
-        return acc;
+        return null;
       }
 
-      // ── MCQ ──────────────────────────────────────────────────────────────────
+      let normalized = { ...q, type, points: q.points ?? 1 };
+
       if (type === "mcq") {
-        if (!Array.isArray(q.options) || q.options.length < 2) {
-          console.log(`Skipped MCQ (too few options): ${q.question.substring(0, 60)}`);
-          return acc;
-        }
-        // Normalise correctAnswer to an integer index
+        normalized.options = Array.isArray(q.options) && q.options.length >= 2
+          ? q.options
+          : ["A", "B", "C", "D"];
+        
         let idx = parseInt(q.correctAnswer, 10);
         if (isNaN(idx)) {
-          // Model may have returned the option text instead of the index
-          idx = q.options.findIndex(
+          idx = normalized.options.findIndex(
             (o) => o.toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim()
           );
         }
-        if (idx < 0 || idx >= q.options.length) idx = 0; // safe fallback
-
-        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1 });
-        return acc;
-      }
-
-      // ── True / False ─────────────────────────────────────────────────────────
-      if (type === "true_false") {
-        const options = Array.isArray(q.options) && q.options.length >= 2
+        normalized.correctAnswer = (idx >= 0 && idx < normalized.options.length) ? idx : 0;
+      } else if (type === "true_false") {
+        normalized.options = Array.isArray(q.options) && q.options.length >= 2
           ? q.options
           : ["True", "False"];
 
         let idx = parseInt(q.correctAnswer, 10);
         if (isNaN(idx)) {
           const ans = String(q.correctAnswer).toLowerCase().trim();
-          idx = ans === "true" || ans === "0" ? 0 : 1;
+          idx = (ans === "true" || ans === "0") ? 0 : 1;
         }
-        if (idx < 0 || idx > 1) idx = 0;
-
-        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1 });
-        return acc;
+        normalized.correctAnswer = (idx === 0 || idx === 1) ? idx : 0;
+      } else {
+        normalized.correctAnswer = String(q.correctAnswer ?? "");
       }
 
-      // ── Fill-blank / Open ────────────────────────────────────────────────────
-      acc.push({
-        ...q,
-        type,
-        correctAnswer: String(q.correctAnswer ?? ""),
-        points: q.points ?? 1,
-      });
-      return acc;
-    }, []);
+      // Recursively normalize subQuestions if present
+      if (Array.isArray(q.subQuestions) && q.subQuestions.length > 0) {
+        normalized.subQuestions = q.subQuestions.map(normalize).filter(Boolean);
+      }
+
+      return normalized;
+    };
+
+    return questions.map(normalize).filter(Boolean);
   }
 
   // ─── Deduplication ───────────────────────────────────────────────────────────
@@ -398,18 +399,21 @@ ${chunk}
     const seen = new Set();
     const result = [];
 
-    for (const q of questions) {
+    const hashQuestion = (q) => {
       const text = (q.question || "").toLowerCase().trim();
-      if (!text) continue;
+      let key = text.substring(0, 200) +
+                "|" + (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
+      
+      if (Array.isArray(q.subQuestions) && q.subQuestions.length > 0) {
+        key += "|" + q.subQuestions.map(sq => hashQuestion(sq)).join("|");
+      }
+      return key;
+    };
 
-      // Key = first 200 chars of question + first option (if any)
-      const key =
-        text.substring(0, 200) +
-        "|" +
-        (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
-
+    for (const q of questions) {
+      const key = hashQuestion(q);
       if (seen.has(key)) {
-        console.log(`Duplicate skipped: ${text.substring(0, 50)}…`);
+        console.log(`Duplicate skipped: ${(q.question || "").substring(0, 50)}…`);
         continue;
       }
       seen.add(key);
