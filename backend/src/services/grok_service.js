@@ -279,7 +279,10 @@ class GrokService {
       console.log(`Total unique questions extracted: ${uniqueQuestions.length}`);
       console.log(`Questions after filtering: ${filteredQuestions.length} (all types allowed)`);
 
-      // Determine correct answers using separate Step 2 logic in batches for performance
+      // Prepare paragraphs for RAG-based grading
+      const paragraphs = this.splitIntoParagraphs(documentText);
+
+      // Determine correct answers using separate RAG logic in batches for performance
       console.log(`Determining correct answers for ${filteredQuestions.length} questions in batches...`);
       
       const batchSize = 10;
@@ -288,8 +291,10 @@ class GrokService {
         questionBatches.push(filteredQuestions.slice(i, i + batchSize));
       }
 
-      await Promise.all(questionBatches.map(async (batch, batchIdx) => {
-        const batchResults = await this.findCorrectAnswersBatch(documentText, batch);
+      await Promise.all(questionBatches.map(async (batch) => {
+        // Find relevant context for this batch to ensure accuracy and handle context limits
+        const batchContext = this.findRelevantContextForBatch(batch, paragraphs);
+        const batchResults = await this.findCorrectAnswersBatch(batchContext, batch);
         
         batchResults.forEach(res => {
           if (res.questionIndex !== undefined && res.questionIndex < batch.length) {
@@ -316,9 +321,8 @@ Rules:
 - Do NOT answer the questions.
 - Do NOT guess answers.
 - Preserve the exact question and options.
-- Identify the question type: mcq, true_false, fill_blank, open.
-- Default to "mcq" if options are present.
-- Return ONLY valid JSON.
+- Identify the question type (mcq, true_false, fill_blank, open).
+- Return JSON.
 
 Format:
 {
@@ -375,8 +379,8 @@ ${chunk}
   }
 
   /**
-   * Determine the correct answer for a question using the document content
-   * @param {string} documentText - The full document content
+   * Determine the correct answer for a question using RAG context
+   * @param {string} documentText - The full document content (will find relevant paragraph)
    * @param {Object} question - The question object
    * @returns {Promise<number|null>} - Index of the correct answer or null
    */
@@ -385,11 +389,15 @@ ${chunk}
       return null;
     }
 
-    const prompt = `
-Use the document below to determine the correct answer.
+    // Use RAG to find context
+    const paragraphs = this.splitIntoParagraphs(documentText);
+    const context = this.findRelevantParagraph(question.question, paragraphs);
 
-DOCUMENT:
-${documentText.substring(0, 8000)}
+    const prompt = `
+CONTEXT:
+---
+${context}
+---
 
 QUESTION:
 ${question.question}
@@ -398,10 +406,10 @@ OPTIONS:
 ${question.options.join("\n")}
 
 Rules:
-- The correct answer must come from the document.
-- If the document does not contain the answer return null.
+- Answer ONLY using the provided CONTEXT.
+- If the answer is not explicitly written in the context, return null.
+- NEVER guess.
 - Return ONLY the index of the correct option.
-- Indexing starts at 0.
 
 Response format (JSON ONLY):
 {
@@ -426,28 +434,30 @@ Response format (JSON ONLY):
   }
 
   /**
-   * Determine correct answers for a batch of questions
-   * @param {string} documentText - The document text
+   * Determine correct answers for a batch of questions using RAG context
+   * @param {string} contextText - The retrieved relevant context
    * @param {Array} questions - Array of question objects
    * @returns {Promise<Array>} - Array of results with correctAnswer
    */
-  async findCorrectAnswersBatch(documentText, questions) {
+  async findCorrectAnswersBatch(contextText, questions) {
     if (!this.isConfigured() || questions.length === 0) return [];
 
     const prompt = `
-Use the document below to determine the correct answers for the following questions.
+Use the CONTEXT below to determine the correct answers for the following questions.
 
-DOCUMENT (CONTEXT):
+CONTEXT:
 ---
-${documentText.substring(0, 10000)}
+${contextText}
 ---
 
 QUESTIONS:
 ${questions.map((q, idx) => `${idx + 1}. ${q.question}\nOptions: ${q.options.join(", ")}`).join("\n\n")}
 
 Rules:
-- The answers must come from the document.
-- If not found, return null for that question.
+- The answers MUST come explicitly from the provided CONTEXT.
+- If the context does not contain the answer, return null for that question.
+- Do NOT guess or use outside knowledge.
+- Never guess.
 - Return results in JSON format.
 
 Response Format (JSON ONLY):
@@ -648,6 +658,57 @@ Generate a professional exam title that reflects the main topic covered. Keep it
         return '';
       }
     }
+  }
+
+  /**
+   * Split text into meaningful paragraphs for RAG
+   */
+  splitIntoParagraphs(text) {
+    if (!text) return [];
+    return text.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+  }
+
+  /**
+   * Find the most relevant paragraph for a question (Simple Keyword Search)
+   */
+  findRelevantParagraph(questionText, paragraphs) {
+    if (!questionText || !paragraphs || paragraphs.length === 0) return "";
+    
+    let best = "";
+    let bestScore = 0;
+    // Filter out common short words to improve search quality
+    const words = questionText.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+
+    for (let p of paragraphs) {
+      let score = 0;
+      const pLower = p.toLowerCase();
+      for (let w of words) {
+        if (pLower.includes(w)) {
+          score++;
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+
+    // Fallback to first paragraph if no match found, but usually we want some context
+    return best || (paragraphs.length > 0 ? paragraphs[0].substring(0, 1000) : "");
+  }
+
+  /**
+   * Get combined context for a batch of questions
+   */
+  findRelevantContextForBatch(questions, paragraphs) {
+    const relevantParagraphs = new Set();
+    for (const q of questions) {
+      const p = this.findRelevantParagraph(q.question, paragraphs);
+      if (p) relevantParagraphs.add(p);
+    }
+    // Limit total context size to stay within token limits while providing enough info
+    return Array.from(relevantParagraphs).join("\n\n").substring(0, 15000);
   }
 
   splitTextIntoChunks(text, chunkSize) {
