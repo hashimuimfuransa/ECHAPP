@@ -179,16 +179,10 @@ class GrokService {
 
     console.log(`Document preview: ${documentText.substring(0, 200)}...`);
 
-    // 6 000 chars/chunk keeps prompt + response safely within token limits. 
-    // 500 chars overlap prevents missing questions cut across chunks.
-    const CHUNK_SIZE = 4000; // Reduced from 6000 to save memory
-    const OVERLAP = 300; // Reduced from 500
-    const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE, OVERLAP);
+    // 6 000 chars/chunk keeps prompt + response safely within the 8 192-token limit
+    const CHUNK_SIZE = 6000;
+    const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE);
     console.log(`Processing ${chunks.length} chunk(s) with model: ${await this.resolveModel()}`);
-
-    // Free up documentText memory as chunks are now stored
-    documentText = null;
-    documentInput = null;
 
     const allQuestions = [];
 
@@ -204,12 +198,6 @@ class GrokService {
         );
         console.log(`  ✓ ${questions.length} question(s) extracted`);
         allQuestions.push(...questions);
-        
-        // Clear chunk from memory after processing if document is large
-        chunks[i] = null;
-        
-        // Small pause to allow GC to breathe on memory-constrained environments
-        if (i % 2 === 0) await this.sleep(100);
       } catch (err) {
         console.error(`  ✗ Chunk ${i + 1} failed: ${err.message}`);
       }
@@ -251,15 +239,12 @@ CHUNK: ${chunkNum} of ${totalChunks}
 
 RULES:
 1. Extract ONLY questions that literally appear in the text below.
-2. Do NOT invent, paraphrase, or summarize questions. If it's not in the text, skip it.
-3. VERBATIM: Copy question text exactly as it appears, including punctuation.
-4. Some questions may have sub-questions labeled a, b, c, etc. Include them as "subQuestions" with their own type, options, and correctAnswer.
-5. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
-6. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
-7. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
-8. If no questions are found, return {"questions":[]}.
-9. Respond with ONLY valid JSON — no markdown fences, no explanation.
-10. VERIFY: Double-check each extracted question against the text to ensure it matches exactly. Skip it if you are unsure.
+2. Do NOT invent or paraphrase questions.
+3. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
+4. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
+5. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
+6. If no questions are found, return {"questions":[]}.
+7. Respond with ONLY valid JSON — no markdown fences, no explanation.
 
 QUESTION SCHEMA:
 {
@@ -269,17 +254,7 @@ QUESTION SCHEMA:
       "type": "mcq | true_false | fill_blank | open",
       "options": ["A","B","C","D"],   // MCQ and true_false only
       "correctAnswer": 0,             // integer index for MCQ/true_false; string for others
-      "points": 1,
-      "subQuestions": [               // Optional
-        {
-          "label": "a",               // Optional (a, b, c, etc.)
-          "question": "<sub-question text>",
-          "type": "mcq | true_false | fill_blank | open",
-          "options": ["A","B","C","D"],
-          "correctAnswer": 0,
-          "points": 1
-        }
-      ]
+      "points": 1
     }
   ]
 }
@@ -357,54 +332,64 @@ ${chunk}
   validateAndNormalizeQuestions(questions) {
     const validTypes = new Set(["mcq", "true_false", "fill_blank", "open"]);
 
-    const normalize = (q) => {
+    return questions.reduce((acc, q) => {
       if (!q.question || typeof q.question !== "string" || !q.question.trim()) {
-        return null;
+        console.log("Skipped: missing question text");
+        return acc;
       }
 
       const type = (q.type || "").toLowerCase();
       if (!validTypes.has(type)) {
-        return null;
+        console.log(`Skipped: unknown type "${q.type}"`);
+        return acc;
       }
 
-      let normalized = { ...q, type, points: q.points ?? 1 };
-
+      // ── MCQ ──────────────────────────────────────────────────────────────────
       if (type === "mcq") {
-        normalized.options = Array.isArray(q.options) && q.options.length >= 2
-          ? q.options
-          : ["A", "B", "C", "D"];
-        
+        if (!Array.isArray(q.options) || q.options.length < 2) {
+          console.log(`Skipped MCQ (too few options): ${q.question.substring(0, 60)}`);
+          return acc;
+        }
+        // Normalise correctAnswer to an integer index
         let idx = parseInt(q.correctAnswer, 10);
         if (isNaN(idx)) {
-          idx = normalized.options.findIndex(
+          // Model may have returned the option text instead of the index
+          idx = q.options.findIndex(
             (o) => o.toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim()
           );
         }
-        normalized.correctAnswer = (idx >= 0 && idx < normalized.options.length) ? idx : 0;
-      } else if (type === "true_false") {
-        normalized.options = Array.isArray(q.options) && q.options.length >= 2
+        if (idx < 0 || idx >= q.options.length) idx = 0; // safe fallback
+
+        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1 });
+        return acc;
+      }
+
+      // ── True / False ─────────────────────────────────────────────────────────
+      if (type === "true_false") {
+        const options = Array.isArray(q.options) && q.options.length >= 2
           ? q.options
           : ["True", "False"];
 
         let idx = parseInt(q.correctAnswer, 10);
         if (isNaN(idx)) {
           const ans = String(q.correctAnswer).toLowerCase().trim();
-          idx = (ans === "true" || ans === "0") ? 0 : 1;
+          idx = ans === "true" || ans === "0" ? 0 : 1;
         }
-        normalized.correctAnswer = (idx === 0 || idx === 1) ? idx : 0;
-      } else {
-        normalized.correctAnswer = String(q.correctAnswer ?? "");
+        if (idx < 0 || idx > 1) idx = 0;
+
+        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1 });
+        return acc;
       }
 
-      // Recursively normalize subQuestions if present
-      if (Array.isArray(q.subQuestions) && q.subQuestions.length > 0) {
-        normalized.subQuestions = q.subQuestions.map(normalize).filter(Boolean);
-      }
-
-      return normalized;
-    };
-
-    return questions.map(normalize).filter(Boolean);
+      // ── Fill-blank / Open ────────────────────────────────────────────────────
+      acc.push({
+        ...q,
+        type,
+        correctAnswer: String(q.correctAnswer ?? ""),
+        points: q.points ?? 1,
+      });
+      return acc;
+    }, []);
   }
 
   // ─── Deduplication ───────────────────────────────────────────────────────────
@@ -413,21 +398,18 @@ ${chunk}
     const seen = new Set();
     const result = [];
 
-    const hashQuestion = (q) => {
-      const text = (q.question || "").toLowerCase().trim();
-      let key = text.substring(0, 200) +
-                "|" + (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
-      
-      if (Array.isArray(q.subQuestions) && q.subQuestions.length > 0) {
-        key += "|" + q.subQuestions.map(sq => hashQuestion(sq)).join("|");
-      }
-      return key;
-    };
-
     for (const q of questions) {
-      const key = hashQuestion(q);
+      const text = (q.question || "").toLowerCase().trim();
+      if (!text) continue;
+
+      // Key = first 200 chars of question + first option (if any)
+      const key =
+        text.substring(0, 200) +
+        "|" +
+        (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
+
       if (seen.has(key)) {
-        console.log(`Duplicate skipped: ${(q.question || "").substring(0, 50)}…`);
+        console.log(`Duplicate skipped: ${text.substring(0, 50)}…`);
         continue;
       }
       seen.add(key);
@@ -677,45 +659,53 @@ ${JSON.stringify(gradingData, null, 2)}`;
   }
 
   /**
-   * Split text into chunks with optional overlap to prevent missing questions
-   * that fall exactly on a chunk boundary.
+   * Split text into chunks that respect paragraph boundaries.
+   * Avoids cutting a question in half.
    */
-  splitTextIntoChunks(text, chunkSize, overlap = 0) {
+  splitTextIntoChunks(text, chunkSize) {
     if (!text) return [];
     if (text.length <= chunkSize) return [text];
 
+    // Prefer splitting on double-newlines (paragraph breaks)
+    const paragraphs = text.split(/\n{2,}/);
     const chunks = [];
-    let start = 0;
+    let current = "";
 
-    while (start < text.length) {
-      let end = Math.min(start + chunkSize, text.length);
+    for (const para of paragraphs) {
+      const addition = current ? "\n\n" + para : para;
 
-      // If we're not at the very end, try to find a natural break (double newline or single newline)
-      if (end < text.length) {
-        const lastDoubleNewline = text.lastIndexOf("\n\n", end);
-        if (lastDoubleNewline > start + chunkSize * 0.7) {
-          end = lastDoubleNewline + 2; // Split at paragraph
-        } else {
-          const lastNewline = text.lastIndexOf("\n", end);
-          if (lastNewline > start + chunkSize * 0.7) {
-            end = lastNewline + 1; // Split at line break
+      if (current.length + addition.length <= chunkSize) {
+        current += addition;
+      } else {
+        if (current) chunks.push(current.trim());
+
+        // Paragraph itself exceeds chunk size — split by sentences
+        if (para.length > chunkSize) {
+          const sentences = para.split(/(?<=[.!?])\s+/);
+          current = "";
+          for (const sentence of sentences) {
+            if (current.length + sentence.length + 1 <= chunkSize) {
+              current += (current ? " " : "") + sentence;
+            } else {
+              if (current) chunks.push(current.trim());
+              // Single sentence too long — hard split
+              if (sentence.length > chunkSize) {
+                for (let i = 0; i < sentence.length; i += chunkSize) {
+                  chunks.push(sentence.substring(i, i + chunkSize));
+                }
+                current = "";
+              } else {
+                current = sentence;
+              }
+            }
           }
+        } else {
+          current = para;
         }
-      }
-
-      const chunk = text.substring(start, end).trim();
-      if (chunk) chunks.push(chunk);
-
-      // Move start back by overlap for the next chunk
-      start = end - overlap;
-
-      // Safety: ensure we always progress at least 10% of chunkSize
-      const minStep = Math.max(1, Math.floor(chunkSize * 0.1));
-      if (start <= (end - chunkSize + minStep)) {
-        start = end;
       }
     }
 
+    if (current.trim()) chunks.push(current.trim());
     return chunks;
   }
 
