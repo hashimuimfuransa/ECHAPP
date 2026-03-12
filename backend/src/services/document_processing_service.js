@@ -32,7 +32,11 @@ class DocumentProcessingService {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
           text += content.items.map(item => item.str).join(' ') + '\n';
+          // Clean up page resources to save memory
+          page.cleanup();
         }
+        // Cleanup document resources
+        await pdf.destroy();
         return text;
       } else if (mimeType.includes('text/plain')) {
         // For text files, we can directly decode the buffer

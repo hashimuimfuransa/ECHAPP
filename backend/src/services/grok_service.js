@@ -181,8 +181,8 @@ class GrokService {
 
     // 6 000 chars/chunk keeps prompt + response safely within token limits. 
     // 500 chars overlap prevents missing questions cut across chunks.
-    const CHUNK_SIZE = 6000;
-    const OVERLAP = 500;
+    const CHUNK_SIZE = 4000; // Reduced from 6000 to save memory
+    const OVERLAP = 300; // Reduced from 500
     const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE, OVERLAP);
     console.log(`Processing ${chunks.length} chunk(s) with model: ${await this.resolveModel()}`);
 
