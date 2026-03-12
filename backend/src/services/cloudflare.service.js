@@ -8,20 +8,25 @@ class CloudflareStreamService {
     this.baseUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/stream`;
   }
 
-  // Generate signed URL for video playback
-  generateSignedUrl(videoId, expirationMinutes = 10) {
+  // Generate signed URL for video playback or download
+  generateSignedUrl(videoId, expirationMinutes = 60, format = 'manifest.mpd') {
     if (!videoId) {
       throw new Error('Video ID is required');
     }
 
+    if (!this.streamKey) {
+      // If no stream key, return unsigned URL as fallback
+      return `https://customer-${this.accountId}.cloudflarestream.com/${videoId}/${format}`;
+    }
+
     const expiration = Math.floor(Date.now() / 1000) + (expirationMinutes * 60);
-    const path = `/${videoId}/manifest.mpd`;
+    const path = `/${videoId}/${format}`;
     const mac = crypto.createHmac('sha256', this.streamKey);
     
     mac.update(`${path}:${expiration}`);
     const signature = mac.digest('hex');
     
-    return `https://customer-${this.accountId}.cloudflarestream.com/${videoId}/manifest.mpd?exp=${expiration}&sig=${signature}`;
+    return `https://customer-${this.accountId}.cloudflarestream.com/${videoId}/${format}?exp=${expiration}&sig=${signature}`;
   }
 
   // Upload video (placeholder - would integrate with Cloudflare API)

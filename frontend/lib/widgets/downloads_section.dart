@@ -46,7 +46,7 @@ class DownloadsSection extends ConsumerWidget {
               ),
             ),
             TextButton(
-              onPressed: () => context.push('/downloads'),
+              onPressed: () => context.go('/downloads'),
               child: const Text(
                 'View All',
                 style: TextStyle(

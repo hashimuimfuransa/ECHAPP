@@ -157,8 +157,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   }
 
   void _startAutoRefresh() {
-    // Check payment status every 10 seconds
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    // Check payment status every 60 seconds
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       _refreshPaymentStatus();
     });
   }
@@ -220,71 +220,136 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         children: [
           RefreshIndicator(
             onRefresh: _refreshDashboard,
-            child: SingleChildScrollView(
-              padding: padding,
-              child: Center(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1300 : double.infinity,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildCategoryFilters(context),
-                      userEnrollmentsAsync.when(
-                        data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
-                        loading: () => _buildWelcomeCard(context, user, []),
-                        error: (_, __) => _buildWelcomeCard(context, user, []),
-                      ),
-                      const SizedBox(height: 24),
-                      const _DashboardDeviceBindingPolicy(),
-                      const SizedBox(height: 32),
-                      if (ref.watch(authProvider.notifier).isAdmin) ...[
-                        _buildAdminAccessButton(context),
-                        const SizedBox(height: 32),
-                      ],
-                      userEnrollmentsAsync.when(
-                        data: (enrollments) =>
-                            _buildLearningAndOnboarding(context, enrollments),
-                        loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                        error: (error, stack) => _buildErrorCard(
-                            context, 'Continue Learning', error.toString()),
-                      ),
-                      const SizedBox(height: 32),
-                      _buildResponsiveQuickActions(context),
-                      const SizedBox(height: 32),
-                      recommendedCoursesAsync.when(
-                        data: (recommendedCourses) => enrolledCoursesAsync.when(
-                          data: (enrolledCourses) => _buildRecommendedCourses(
-                            context, 
-                            recommendedCourses.isNotEmpty 
-                                ? recommendedCourses 
-                                : (popularCoursesAsync.value ?? []), 
-                            enrolledCourses
-                          ),
-                          loading: () => _buildRecommendedCourses(context, recommendedCourses, []),
-                          error: (_, __) => _buildRecommendedCourses(context, recommendedCourses, []),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: padding,
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1300 : double.infinity,
                         ),
-                        loading: () => _buildLoadingCard(context, 'Recommended Courses'),
-                        error: (error, stack) => _buildErrorCard(
-                            context, 'Recommended Courses', error.toString()),
-                      ),
-                      const SizedBox(height: 32),
-                      popularCoursesAsync.when(
-                        data: (popularCourses) => enrolledCoursesAsync.when(
-                          data: (enrolledCourses) => _buildResponsivePopularCourses(context, popularCourses, enrolledCourses),
-                          loading: () => _buildResponsivePopularCourses(context, popularCourses, []),
-                          error: (_, __) => _buildResponsivePopularCourses(context, popularCourses, []),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCategoryFilters(context),
+                            userEnrollmentsAsync.when(
+                              data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
+                              loading: () => _buildWelcomeCard(context, user, []),
+                              error: (_, __) => _buildWelcomeCard(context, user, []),
+                            ),
+                            const SizedBox(height: 24),
+                            const _DashboardDeviceBindingPolicy(),
+                          ],
                         ),
-                        loading: () => _buildLoadingCard(context, 'Popular Courses'),
-                        error: (error, stack) => _buildErrorCard(
-                            context, 'Popular Courses', error.toString()),
                       ),
-                      const SizedBox(height: 40),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                if (ref.watch(authProvider.notifier).isAdmin)
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: padding.left),
+                    sliver: SliverToBoxAdapter(
+                      child: Center(
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: isDesktop ? 1300 : double.infinity,
+                          ),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 32),
+                              _buildAdminAccessButton(context),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding.left, 32, padding.right, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1300 : double.infinity,
+                        ),
+                        child: userEnrollmentsAsync.when(
+                          data: (enrollments) =>
+                              _buildLearningAndOnboarding(context, enrollments),
+                          loading: () => _buildLoadingCard(context, 'Continue Learning'),
+                          error: (error, stack) => _buildErrorCard(
+                              context, 'Continue Learning', error.toString()),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding.left, 32, padding.right, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1300 : double.infinity,
+                        ),
+                        child: _buildResponsiveQuickActions(context),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding.left, 32, padding.right, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1300 : double.infinity,
+                        ),
+                        child: recommendedCoursesAsync.when(
+                          data: (recommendedCourses) => enrolledCoursesAsync.when(
+                            data: (enrolledCourses) => _buildRecommendedCourses(
+                              context, 
+                              recommendedCourses.isNotEmpty 
+                                  ? recommendedCourses 
+                                  : (popularCoursesAsync.value ?? []), 
+                              enrolledCourses
+                            ),
+                            loading: () => _buildRecommendedCourses(context, recommendedCourses, []),
+                            error: (_, __) => _buildRecommendedCourses(context, recommendedCourses, []),
+                          ),
+                          loading: () => _buildLoadingCard(context, 'Recommended Courses'),
+                          error: (error, stack) => _buildErrorCard(
+                              context, 'Recommended Courses', error.toString()),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding.left, 32, padding.right, 40),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1300 : double.infinity,
+                        ),
+                        child: popularCoursesAsync.when(
+                          data: (popularCourses) => enrolledCoursesAsync.when(
+                            data: (enrolledCourses) => _buildResponsivePopularCourses(context, popularCourses, enrolledCourses),
+                            loading: () => _buildResponsivePopularCourses(context, popularCourses, []),
+                            error: (_, __) => _buildResponsivePopularCourses(context, popularCourses, []),
+                          ),
+                          loading: () => _buildLoadingCard(context, 'Popular Courses'),
+                          error: (error, stack) => _buildErrorCard(
+                              context, 'Popular Courses', error.toString()),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -840,7 +905,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         'subtitle': 'Offline videos',
         'icon': Icons.file_download_done_rounded,
         'color': const Color(0xFF3B82F6), // Solid Blue
-        'onTap': () => context.push('/downloads'),
+        'onTap': () => context.go('/downloads'),
       },
       {
         'title': 'Exams History',

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -137,12 +138,12 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (isCompleted ? AppTheme.primaryGreen : AppTheme.accent).withOpacity(0.1),
+                      color: (isCompleted ? AppTheme.primaryGreen : (isFailed ? Colors.red : AppTheme.accent)).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      isCompleted ? Icons.play_circle_fill : Icons.video_file,
-                      color: isCompleted ? AppTheme.primaryGreen : AppTheme.accent,
+                      isCompleted ? Icons.play_circle_fill : (isFailed ? Icons.error_outline : Icons.video_file),
+                      color: isCompleted ? AppTheme.primaryGreen : (isFailed ? Colors.red : AppTheme.accent),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -160,11 +161,15 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
                         Row(
                           children: [
                             _buildStatusBadge(download.status),
-                            if (isDownloading || isPaused) ...[
+                            if (isDownloading || isPaused || isFailed) ...[
                               const SizedBox(width: 8),
                               Text(
-                                '${(download.downloadProgress * 100).toStringAsFixed(1)}%',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.greyColor),
+                                '${(max(0, download.downloadProgress) * 100).toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 12, 
+                                  fontWeight: FontWeight.w600, 
+                                  color: isFailed ? Colors.red : AppTheme.greyColor
+                                ),
                               ),
                             ],
                           ],
@@ -175,15 +180,15 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
                   _buildActions(download, downloadService),
                 ],
               ),
-              if (isDownloading || isPaused) ...[
+              if (isDownloading || isPaused || isFailed) ...[
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: download.downloadProgress,
-                    backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                    value: download.downloadProgress < 0 ? null : download.downloadProgress,
+                    backgroundColor: (isFailed ? Colors.red : AppTheme.primaryGreen).withOpacity(0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      isPaused ? AppTheme.greyColor : AppTheme.primaryGreen,
+                      isPaused ? AppTheme.greyColor : (isFailed ? Colors.red : AppTheme.primaryGreen),
                     ),
                     minHeight: 6,
                   ),
@@ -245,9 +250,12 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           )
         else if (download.status == DownloadStatus.paused || download.status == DownloadStatus.failed)
           IconButton(
-            icon: const Icon(Icons.play_circle_outline, color: Colors.blue),
+            icon: Icon(
+              download.status == DownloadStatus.failed ? Icons.refresh : Icons.play_circle_outline, 
+              color: download.status == DownloadStatus.failed ? Colors.red : Colors.blue
+            ),
             onPressed: () => downloadService.resumeDownload(download.lessonId),
-            tooltip: 'Resume',
+            tooltip: download.status == DownloadStatus.failed ? 'Retry' : 'Resume',
           ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, color: AppTheme.greyColor),

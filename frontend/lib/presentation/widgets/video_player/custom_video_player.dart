@@ -49,6 +49,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   double _playbackSpeed = 1.0;
   bool _isInitialized = false;
   String? _errorMessage;
+  bool _isDataSaver = false;
+  Timer? _bufferingTimer;
+  int _bufferingSeconds = 0;
+  bool _showSlowInternetError = false;
   
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -161,7 +165,43 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _duration = _vpController!.value.duration;
         _isPlaying = _vpController!.value.isPlaying;
         _isBuffering = _vpController!.value.isBuffering;
+        
+        // Start buffering timer if it's buffering and playing
+        if (_isBuffering && _isPlaying) {
+          _startBufferingTimer();
+        } else {
+          _stopBufferingTimer();
+        }
       });
+    }
+  }
+
+  void _startBufferingTimer() {
+    if (_bufferingTimer != null) return;
+    _bufferingSeconds = 0;
+    _bufferingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _bufferingSeconds++;
+      if (_bufferingSeconds > 10) { // More than 10 seconds of buffering
+        if (mounted) {
+          setState(() {
+            _showSlowInternetError = true;
+          });
+        }
+        _stopBufferingTimer();
+      }
+    });
+  }
+
+  void _stopBufferingTimer() {
+    _bufferingTimer?.cancel();
+    _bufferingTimer = null;
+    _bufferingSeconds = 0;
+    if (_showSlowInternetError && !_isBuffering) {
+      if (mounted) {
+        setState(() {
+          _showSlowInternetError = false;
+        });
+      }
     }
   }
 
@@ -176,9 +216,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _mkPlayer = widget.externalPlayer!;
       _isInitialized = true;
     } else {
+      // Increased default buffer size to 64MB (from 8MB) for smoother playback on high-speed connections
+      // If data saver is on, reduce to 16MB (previously 2MB)
+      final int bufferSize = _isDataSaver ? 16 * 1024 * 1024 : 64 * 1024 * 1024;
+      
       _mkPlayer = mk.Player(
-        configuration: const mk.PlayerConfiguration(
-          bufferSize: 32 * 1024 * 1024,
+        configuration: mk.PlayerConfiguration(
+          bufferSize: bufferSize,
         ),
       );
       
@@ -219,11 +263,30 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       s.cancel();
     }
     _subscriptions = [
-      _mkPlayer!.stream.playing.listen((playing) {
-        if (mounted) setState(() => _isPlaying = playing);
-      }),
       _mkPlayer!.stream.buffering.listen((buffering) {
-        if (mounted) setState(() => _isBuffering = buffering);
+        if (mounted) {
+          setState(() {
+            _isBuffering = buffering;
+            // Handle slow internet detection
+            if (_isBuffering && _isPlaying) {
+              _startBufferingTimer();
+            } else {
+              _stopBufferingTimer();
+            }
+          });
+        }
+      }),
+      _mkPlayer!.stream.playing.listen((playing) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = playing;
+            if (_isBuffering && _isPlaying) {
+              _startBufferingTimer();
+            } else {
+              _stopBufferingTimer();
+            }
+          });
+        }
       }),
       _mkPlayer!.stream.position.listen((position) {
         if (mounted) {
@@ -319,7 +382,72 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Chewie(controller: _chewieController!),
+      child: Stack(
+        children: [
+          Chewie(controller: _chewieController!),
+          if (_showSlowInternetError)
+            _buildSlowInternetOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlowInternetOverlay() {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off_outlined, color: Colors.amber, size: 40),
+              const SizedBox(height: 12),
+              const Text(
+                'Slow Connection Detected',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Try lowering quality, using Data Saver, or check your internet. You can also download this lesson for offline viewing.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _showSlowInternetError = false;
+                      });
+                    },
+                    child: const Text('Dismiss', style: TextStyle(color: Colors.white70)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      _stopBufferingTimer();
+                      if (_isMobile || kIsWeb) {
+                        _initMobilePlayer();
+                      } else {
+                        _initMediaKit();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -362,8 +490,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   ],
                 ),
               ),
-            if (_isBuffering && _errorMessage == null)
+            if (_isBuffering && _errorMessage == null && !_showSlowInternetError)
               const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+            if (_showSlowInternetError)
+              _buildSlowInternetOverlay(),
             if (_showControls) _buildMediaKitControls(),
           ],
         ),
@@ -415,19 +545,59 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             ],
           ),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(icon: Icon(Icons.replay_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position - const Duration(seconds: 10))),
-              SizedBox(width: isSmallScreen ? 15 : 30),
-              Container(
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                child: IconButton(
-                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: AppTheme.primaryGreen, size: isSmallScreen ? 30 : 40),
-                  onPressed: () => _mkPlayer!.playOrPause(),
-                ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(_isDataSaver ? Icons.data_usage : Icons.data_usage_outlined, 
+                      color: _isDataSaver ? AppTheme.primaryGreen : Colors.white, 
+                      size: isSmallScreen ? 20 : 24),
+                    onPressed: () {
+                      setState(() {
+                        _isDataSaver = !_isDataSaver;
+                        // Re-initialize player with new buffer size if using media_kit
+                        if (!_isMobile && !kIsWeb && widget.externalPlayer == null) {
+                          _initMediaKit();
+                        }
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(_isDataSaver ? 'Data Saver On (Lower Buffer)' : 'Data Saver Off'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    tooltip: 'Data Saver',
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.speed, color: Colors.white, size: isSmallScreen ? 20 : 24),
+                    onPressed: _showPlaybackSpeedDialog,
+                    tooltip: 'Playback Speed',
+                  ),
+                ],
               ),
-              SizedBox(width: isSmallScreen ? 15 : 30),
-              IconButton(icon: Icon(Icons.forward_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position + const Duration(seconds: 10))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(icon: Icon(Icons.replay_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position - const Duration(seconds: 10))),
+                  SizedBox(width: isSmallScreen ? 15 : 30),
+                  Container(
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                    child: IconButton(
+                      icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: AppTheme.primaryGreen, size: isSmallScreen ? 30 : 40),
+                      onPressed: () => _mkPlayer!.playOrPause(),
+                    ),
+                  ),
+                  SizedBox(width: isSmallScreen ? 15 : 30),
+                  IconButton(icon: Icon(Icons.forward_10, color: Colors.white, size: isSmallScreen ? 24 : 30), onPressed: () => _mkPlayer!.seek(_position + const Duration(seconds: 10))),
+                ],
+              ),
+              IconButton(
+                icon: Icon(Icons.fullscreen, color: Colors.white, size: isSmallScreen ? 20 : 24),
+                onPressed: widget.onFullScreen ?? _toggleFullscreen,
+                tooltip: 'Fullscreen',
+              ),
             ],
           ),
         ],

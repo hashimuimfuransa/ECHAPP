@@ -30,15 +30,15 @@ const getVideoStreamUrl = async (req, res) => {
       return sendForbidden(res, 'You must be enrolled in this course to access the video');
     }
 
-    // Generate signed streaming URL from S3
-    // AWS S3 supports byte-range requests which enables efficient streaming
-    const streamingUrl = await s3Service.generateStreamingUrl(lesson.videoId, 3600); // 1 hour expiration
+    // Generate signed streaming URL from S3 with 24-hour expiration
+    // This handles long downloads on slow connections (24h = 86400 seconds)
+    const streamingUrl = await s3Service.generateStreamingUrl(lesson.videoId, 86400);
 
     sendSuccess(res, {
       streamingUrl,
       lessonId: lesson._id,
       courseId: lesson.courseId,
-      expiration: new Date(Date.now() + 3600 * 1000) // 1 hour from now
+      expiration: new Date(Date.now() + 86400 * 1000) // 24 hours from now
     }, 'Video stream URL generated successfully');
   } catch (error) {
     sendError(res, 'Failed to generate video stream URL', 500, error.message);

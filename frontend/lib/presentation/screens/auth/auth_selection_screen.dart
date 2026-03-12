@@ -321,7 +321,7 @@ class _BrandBackground extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isMobile 
-            ? [const Color(0xFF031422), const Color(0xFF072A3E), const Color(0xFF0C5A6A)]
+            ? [const Color(0xFF02101A), const Color(0xFF041B2D), const Color(0xFF083A49)]
             : [const Color(0xFF010A12), const Color(0xFF031422), const Color(0xFF072A3E)],
           stops: const [0.0, 0.45, 1.0],
         ),
@@ -352,38 +352,38 @@ class _BrandingSection extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _LogoBadge(size: isSmallMobile ? 60 : (isMobile ? 100 : 180)),
-        SizedBox(height: isSmallMobile ? 8 : (isMobile ? 16 : 40)),
+        _LogoBadge(size: isSmallMobile ? 80 : (isMobile ? 110 : 180)),
+        SizedBox(height: isSmallMobile ? 8 : 12),
         Text('Excellence',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: Colors.white,
-                fontSize: isSmallMobile ? 24 : (isMobile ? 32 : 44),
+                fontSize: isSmallMobile ? 22 : (isMobile ? 30 : 40),
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.5,
                 height: 1.0)),
-        SizedBox(height: isSmallMobile ? 2 : (isMobile ? 4 : 8)),
+        const SizedBox(height: 2),
         Text('Coaching Hub',
             style: TextStyle(
-                color: _kAccentLight,
-                fontSize: isSmallMobile ? 12 : (isMobile ? 16 : 22),
+                color: const Color(0xFF10B981),
+                fontSize: isSmallMobile ? 12 : (isMobile ? 15 : 20),
                 fontWeight: FontWeight.w700,
-                letterSpacing: isSmallMobile ? 1.0 : 2.0)),
+                letterSpacing: 1.5)),
         
         if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 4 : (isMobile ? 10 : 16)),
+          const SizedBox(height: 6),
           Text('Learn • Grow • Succeed',
               style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: isSmallMobile ? 11 : (isMobile ? 13 : 16),
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: isSmallMobile ? 10 : (isMobile ? 11 : 14),
                   fontWeight: FontWeight.w500)),
         ],
 
-        SizedBox(height: isSmallMobile ? 12 : (isMobile ? 24 : 40)),
+        SizedBox(height: isSmallMobile ? 10 : 16),
         _ExpertBadge(isMobile: isMobile),
         
         if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 10 : (isMobile ? 18 : 32)),
+          const SizedBox(height: 12),
           const _SkillChipsRow(),
         ],
       ],
@@ -403,18 +403,12 @@ class _ExpertBadge extends StatelessWidget {
         vertical: isSmallMobile ? 6 : (isMobile ? 8 : 12),
       ),
       decoration: BoxDecoration(
-        color: _kAccent.withOpacity(0.12),
+        color: const Color(0xFF06222E),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _kAccentLight.withOpacity(0.35),
-          width: 1.2,
+          color: _kAccent.withOpacity(0.6),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: _kAccentLight.withOpacity(0.1),
-            blurRadius: 10,
-          ),
-        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -446,9 +440,9 @@ class _SkillChipsRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const _SkillChip(icon: Icons.lightbulb_outline, label: 'AI Courses'),
-          SizedBox(width: isSmallMobile ? 10 : 16),
+          SizedBox(width: isSmallMobile ? 14 : 20),
           const _SkillChip(icon: Icons.laptop_rounded, label: 'Programming'),
-          SizedBox(width: isSmallMobile ? 10 : 16),
+          SizedBox(width: isSmallMobile ? 14 : 20),
           const _SkillChip(icon: Icons.trending_up_rounded, label: 'Business Skills'),
         ],
       ),
@@ -465,12 +459,12 @@ class _SkillChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: _kAccentLight, size: 14),
-        const SizedBox(width: 6),
+        Icon(icon, color: _kAccentLight, size: 16),
+        const SizedBox(width: 8),
         Text(label,
             style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
+                color: Colors.white,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600)),
       ],
     );
@@ -526,16 +520,16 @@ class _GoogleButtonState extends State<_GoogleButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isSmallMobile ? 46 : (isMobile ? 50 : 58),
+          height: isSmallMobile ? 52 : 56,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
             ],
           ),
           child: Row(
@@ -543,21 +537,21 @@ class _GoogleButtonState extends State<_GoogleButton>
             children: [
               if (widget.isLoading)
                 SizedBox(
-                  width: isSmallMobile ? 18 : 22, height: isSmallMobile ? 18 : 22,
+                  width: 20, height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
                     valueColor: AlwaysStoppedAnimation(_kAccent),
                   ),
                 )
               else
-                _GoogleGIcon(size: isSmallMobile ? 20 : 24),
-              SizedBox(width: isSmallMobile ? 8 : 12),
+                _GoogleGIcon(size: 20),
+              const SizedBox(width: 12),
               Text(
                 widget.isLoading ? 'Connecting...' : 'Continue with Google',
-                style: TextStyle(
-                    color: const Color(0xFF3C4043),
-                    fontSize: isSmallMobile ? 14 : (isMobile ? 15 : 17),
-                    fontWeight: FontWeight.w700,
+                style: const TextStyle(
+                    color: Color(0xFF374151),
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0.1),
               ),
             ],
@@ -670,47 +664,47 @@ class _PrimaryButtonState extends State<_PrimaryButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isSmallMobile ? 48 : (isMobile ? 54 : 60),
+          height: isSmallMobile ? 52 : 56,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_kAccentLight, _kAccentDark],
+            gradient: const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                  color: _kAccentDark.withOpacity(0.4),
-                  blurRadius: 16,
-                  spreadRadius: -4,
-                  offset: const Offset(0, 6)),
+                  color: const Color(0xFF059669).withOpacity(0.3),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 4)),
             ],
           ),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: isSmallMobile ? 16 : 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (widget.isLoading)
-                  SizedBox(
-                    width: isSmallMobile ? 18 : 20, height: isSmallMobile ? 18 : 20,
-                    child: const CircularProgressIndicator(
+                  const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation(Colors.white)),
                   )
                 else
-                  Icon(widget.icon, color: Colors.white, size: isSmallMobile ? 18 : 22),
-                SizedBox(width: isSmallMobile ? 10 : 14),
+                  const Icon(Icons.mail_outline_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(widget.label,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.white,
-                          fontSize: isSmallMobile ? 15 : (isMobile ? 16 : 18),
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.1)),
                 ),
-                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: isSmallMobile ? 18 : 22),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
               ],
             ),
           ),
@@ -726,43 +720,34 @@ class _DeviceWarningBadge extends StatelessWidget {
   const _DeviceWarningBadge();
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallMobile ? 10 : (isMobile ? 12 : 14), 
-        vertical: isSmallMobile ? 8 : (isMobile ? 10 : 12)
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _kAmberBg,
+        color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kAmberBorder),
+        border: Border.all(color: const Color(0xFFFEF3C7)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline_rounded,
-              color: _kAmber, size: isSmallMobile ? 14 : 16),
-          const SizedBox(width: 8),
+          const Icon(Icons.lock_outline_rounded,
+              color: Color(0xFFF59E0B), size: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: RichText(
-              text: TextSpan(
+              text: const TextSpan(
                 style: TextStyle(
-                    color: _kText1.withOpacity(0.75),
-                    fontSize: isSmallMobile ? 10.5 : (isMobile ? 11.5 : 12.5),
-                    height: 1.3,
+                    color: Color(0xFF4B5563),
+                    fontSize: 12,
                     fontWeight: FontWeight.w500),
                 children: [
-                  const TextSpan(text: 'Binds to first device. '),
+                  TextSpan(text: 'Binds to first device. '),
                   TextSpan(
                     text: 'Contact support',
-                    style: const TextStyle(
-                        color: _kAmber,
-                        fontWeight: FontWeight.w700,
-                        decoration: TextDecoration.underline,
-                        decorationColor: _kAmber),
+                    style: TextStyle(
+                        color: Color(0xFFF59E0B),
+                        fontWeight: FontWeight.w700),
                   ),
-                  const TextSpan(text: ' to switch.'),
+                  TextSpan(text: ' to switch.'),
                 ],
               ),
             ),
@@ -932,18 +917,17 @@ class _TrustBar extends StatelessWidget {
   const _TrustBar();
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.check_circle_outline_rounded, 
-          size: isMobile ? 14 : 16, 
-          color: _kAccentDark.withOpacity(0.8)),
+        const Icon(Icons.check_circle_outline_rounded, 
+          size: 16, 
+          color: Color(0xFF10B981)),
         const SizedBox(width: 6),
-        Text('Secure & Encrypted',
+        const Text('Secure & Encrypted',
             style: TextStyle(
-                color: _kText2.withOpacity(0.8), 
-                fontSize: isMobile ? 12 : 13.5,
+                color: Color(0xFF6B7280), 
+                fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ],
     );
@@ -980,18 +964,18 @@ class _AuthCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(isSmallMobile ? 6 : 10),
+                padding: EdgeInsets.all(isSmallMobile ? 8 : 12),
                 decoration: BoxDecoration(
-                  color: _kAccentLight.withOpacity(0.2),
+                  color: const Color(0xFFD1FAE5),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.vpn_key_rounded, color: _kAccentDark, size: isSmallMobile ? 16 : (isMobile ? 22 : 26)),
+                child: Icon(Icons.vpn_key_rounded, color: const Color(0xFF059669), size: isSmallMobile ? 20 : 26),
               ),
               SizedBox(width: isSmallMobile ? 10 : 14),
               Text('Sign In',
                   style: TextStyle(
                       color: _kText1,
-                      fontSize: isSmallMobile ? 22 : (isMobile ? 28 : 32),
+                      fontSize: isSmallMobile ? 24 : 28,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5)),
             ],
@@ -999,26 +983,26 @@ class _AuthCard extends StatelessWidget {
         ),
         
         if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 6 : 16),
+          SizedBox(height: isSmallMobile ? 8 : 12),
           _FadeInSlide(
             delay: const Duration(milliseconds: 200),
             child: Text('Access your dashboard & courses',
                 style: TextStyle(
                     color: _kText2, 
-                    fontSize: isSmallMobile ? 12 : (isMobile ? 15 : 17),
+                    fontSize: isSmallMobile ? 13 : 14,
                     height: 1.3,
                     fontWeight: FontWeight.w500)),
           ),
         ],
 
-        SizedBox(height: isSmallMobile ? 14 : 32),
+        SizedBox(height: isSmallMobile ? 12 : 18),
 
         if (error != null && error!.isNotEmpty) ...[
           _FadeInSlide(
             delay: const Duration(milliseconds: 300),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallMobile ? 8 : 10),
-              margin: EdgeInsets.only(bottom: isSmallMobile ? 12 : 24),
+              margin: EdgeInsets.only(bottom: isSmallMobile ? 10 : 16),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(10),
@@ -1051,18 +1035,18 @@ class _AuthCard extends StatelessWidget {
         ),
 
         if (!ResponsiveBreakpoints.isDesktop(context) && onGoogle != null && !kIsWeb) ...[
-          SizedBox(height: isSmallMobile ? 12 : 24),
+          SizedBox(height: isSmallMobile ? 10 : 14),
           _FadeInSlide(
             delay: const Duration(milliseconds: 500),
             child: Row(
               children: [
                 Expanded(child: Divider(color: _kBorder, thickness: 1)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Text('OR',
                       style: TextStyle(
                           color: _kText3,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.0)),
                 ),
@@ -1070,7 +1054,7 @@ class _AuthCard extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: isSmallMobile ? 12 : 24),
+          SizedBox(height: isSmallMobile ? 10 : 14),
           _FadeInSlide(
             delay: const Duration(milliseconds: 600),
             child: _GoogleButton(
@@ -1080,14 +1064,14 @@ class _AuthCard extends StatelessWidget {
           ),
         ],
 
-        SizedBox(height: isSmallMobile ? 16 : 32),
+        SizedBox(height: isSmallMobile ? 12 : 20),
         
         if (!isShort || !isSmallMobile) ...[
           _FadeInSlide(
             delay: const Duration(milliseconds: 700),
             child: const _DeviceWarningBadge(),
           ),
-          SizedBox(height: isSmallMobile ? 10 : 16),
+          SizedBox(height: isSmallMobile ? 8 : 12),
         ],
 
         _FadeInSlide(
@@ -1096,7 +1080,7 @@ class _AuthCard extends StatelessWidget {
         ),
 
         if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 8 : 14),
+          SizedBox(height: isSmallMobile ? 6 : 10),
           _FadeInSlide(
             delay: const Duration(milliseconds: 900),
             child: const _TrustBar(),
@@ -1255,58 +1239,61 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
           
           // Content
           SafeArea(
-            child: SingleChildScrollView(
-              physics: isShort ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallMobile ? 16 : 20, 
-                vertical: isSmallMobile ? (isShort ? 10 : 16) : 32
-              ),
-              child: Column(
-                children: [
-                  // Logo & Branding at top
-                  const _BrandingSection(isMobile: true),
-                  
-                  SizedBox(height: isSmallMobile ? (isShort ? 12 : 20) : 32),
-                  
-                  // Glassmorphism Card
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(isSmallMobile ? 24 : 32),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        padding: EdgeInsets.fromLTRB(
-                          isSmallMobile ? 18 : 24, 
-                          isSmallMobile ? (isShort ? 16 : 24) : 32, 
-                          isSmallMobile ? 18 : 24, 
-                          isSmallMobile ? (isShort ? 16 : 20) : 28
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(isSmallMobile ? 24 : 32),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 40,
-                              spreadRadius: 10,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: isShort ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallMobile ? 16 : 20, 
+                    vertical: isSmallMobile ? 10 : 16
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - (isSmallMobile ? 20 : 32)),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Logo & Branding at top
+                        const _BrandingSection(isMobile: true),
+                        
+                        SizedBox(height: isSmallMobile ? 12 : 18),
+                        
+                        // Solid Bottom-Sheet style card
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9), // Very light gray-blue
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(40),
+                              topRight: Radius.circular(40),
+                              bottomLeft: Radius.circular(32),
+                              bottomRight: Radius.circular(32),
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 40,
+                                offset: const Offset(0, -10),
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.fromLTRB(
+                            isSmallMobile ? 20 : 28, 
+                            isSmallMobile ? 24 : 32, 
+                            isSmallMobile ? 20 : 28, 
+                            isSmallMobile ? 20 : 28
+                          ),
+                          child: _AuthCard(
+                            isLoading: authState.isLoading,
+                            error: authState.error,
+                            onEmail: () => context.push('/email-auth-option'),
+                            onGoogle: _handleGoogleSignIn,
+                          ),
                         ),
-                        child: _AuthCard(
-                          isLoading: authState.isLoading,
-                          error: authState.error,
-                          onEmail: () => context.push('/email-auth-option'),
-                          onGoogle: _handleGoogleSignIn,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: isSmallMobile ? 12 : 20),
-                ],
-              ),
+                );
+              }
             ),
           ),
           

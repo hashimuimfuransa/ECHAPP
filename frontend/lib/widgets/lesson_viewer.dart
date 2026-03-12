@@ -670,15 +670,26 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                           ? 'Downloaded' 
                           : status == DownloadStatus.paused 
                               ? 'Download Paused'
-                              : isDownloading 
-                                  ? 'Downloading...' 
-                                  : 'Available for offline viewing',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                              : status == DownloadStatus.failed
+                                  ? 'Download Failed'
+                                  : isDownloading 
+                                      ? 'Downloading...' 
+                                      : 'Available for offline viewing',
+                      style: TextStyle(
+                        fontSize: 13, 
+                        fontWeight: FontWeight.bold, 
+                        color: status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen
+                      ),
                     ),
-                    if (isDownloading || status == DownloadStatus.paused)
+                    if (isDownloading || status == DownloadStatus.paused || status == DownloadStatus.failed)
                       Text(
-                        '${(progress * 100).toStringAsFixed(1)}%',
-                        style: TextStyle(fontSize: 11, color: AppTheme.primaryGreen.withOpacity(0.7)),
+                        status == DownloadStatus.failed 
+                            ? 'Tap to try again' 
+                            : '${(max(0, progress) * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 11, 
+                          color: (status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen).withOpacity(0.7)
+                        ),
                       ),
                   ],
                 ),
@@ -688,7 +699,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextButton.icon(
-                      onPressed: () => context.push('/downloads'),
+                      onPressed: () => context.go('/downloads'),
                       icon: const Icon(Icons.folder_open, size: 18, color: AppTheme.primaryGreen),
                       label: const Text('View in Downloads', style: TextStyle(color: AppTheme.primaryGreen, fontSize: 12)),
                     ),
@@ -705,11 +716,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   icon: const Icon(Icons.pause_circle_outline, color: AppTheme.primaryGreen, size: 24),
                   tooltip: 'Pause',
                 )
-              else if (status == DownloadStatus.paused)
+              else if (status == DownloadStatus.paused || status == DownloadStatus.failed)
                 IconButton(
                   onPressed: () => downloadService.resumeDownload(widget.lesson.id),
-                  icon: const Icon(Icons.play_circle_outline, color: AppTheme.primaryGreen, size: 24),
-                  tooltip: 'Resume',
+                  icon: Icon(
+                    status == DownloadStatus.failed ? Icons.refresh : Icons.play_circle_outline, 
+                    color: status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen, 
+                    size: 24
+                  ),
+                  tooltip: status == DownloadStatus.failed ? 'Retry' : 'Resume',
                 )
               else
                 TextButton.icon(
@@ -720,14 +735,14 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 ),
             ],
           ),
-          if (isDownloading || status == DownloadStatus.paused) ...[
+          if (isDownloading || status == DownloadStatus.paused || status == DownloadStatus.failed) ...[
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                value: progress < 0 ? null : progress,
+                backgroundColor: (status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen).withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen),
                 minHeight: 4,
               ),
             ),

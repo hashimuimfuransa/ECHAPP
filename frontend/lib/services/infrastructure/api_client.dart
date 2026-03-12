@@ -8,7 +8,7 @@ import '../../models/course.dart';
 
 /// Centralized HTTP client with interceptors and error handling
 class ApiClient {
-  static const int _timeoutSeconds = 30;
+  static const int _timeoutSeconds = 60;
   final http.Client _httpClient;
   
   ApiClient({http.Client? httpClient}) 
@@ -196,7 +196,12 @@ class ApiClient {
       } on SocketException catch (e) {
         print('Socket error: $e');
         
-        // Retry logic for socket errors
+        // Handle host lookup failure specifically
+        if (e.osError?.errorCode == 7 || e.message.contains('Failed host lookup')) {
+          throw ApiException.network('Cannot connect to the server. Please check your internet connection or DNS settings.');
+        }
+        
+        // Retry logic for other socket errors
         if (retryCount < maxRetries) {
           retryCount++;
           print('Retrying request... Attempt $retryCount of $maxRetries');
