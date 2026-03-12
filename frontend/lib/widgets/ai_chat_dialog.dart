@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
@@ -289,9 +290,9 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        width: isDesktop ? 500 : screenWidth * 0.95,
-        height: isDesktop ? 700 : screenHeight * 0.8,
-        margin: EdgeInsets.fromLTRB(16, isDesktop ? 60 : 24, 16, 16),
+        width: isDesktop ? 550 : screenWidth * 0.95,
+        height: isDesktop ? math.min(750.0, screenHeight * 0.85) : screenHeight * 0.8,
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: isDesktop ? 40 : 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           color: isDarkMode 

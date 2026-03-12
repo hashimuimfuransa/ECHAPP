@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -136,7 +137,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         });
 
         // Show welcome message from AI coach
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted && _guideKey.currentState != null) {
             _guideKey.currentState!.updateState(
               StudentGuideState.greeting,
@@ -232,15 +233,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   String _getWindowsOptimizedUrl(String url) {
-    if (Platform.isWindows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
       return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
     }
     return url;
   }
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
-    // Better Player on Android handles its own initialization within CustomVideoPlayer
-    if (Platform.isAndroid) {
+    // Better Player on Android/Web handles its own initialization within CustomVideoPlayer
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -277,7 +278,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       if (!mounted) return;
       
       if (localPath != null) {
-        final path = Platform.isWindows ? localPath.replaceAll('/', '\\') : localPath;
+        final path = (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) ? localPath.replaceAll('/', '\\') : localPath;
         _player!.open(Media(path));
       } else {
         _player!.open(Media(optimizedUrl));
@@ -357,7 +358,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 if (_sectionExams != null && _sectionExams!.isNotEmpty)
                   _buildExamsSection(),
                 _buildNextLessonNavigation(),
-                const SizedBox(height: 80), // Space for AI button
+                SizedBox(height: MediaQuery.of(context).size.width < 600 ? 100 : 250), // Space for AI button
               ],
             ),
           ),
@@ -609,7 +610,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))],
               ),
-              child: Platform.isAndroid
+              child: (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: CustomVideoPlayer(

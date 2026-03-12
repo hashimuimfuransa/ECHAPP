@@ -85,7 +85,7 @@ class CertificateService {
       
       String? savePath;
       
-      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
         // Desktop platforms: use file picker for a robust "Save As" experience
         savePath = await FilePicker.platform.saveFile(
           dialogTitle: 'Save Certificate',
@@ -93,7 +93,7 @@ class CertificateService {
           type: FileType.custom,
           allowedExtensions: ['pdf'],
         );
-      } else {
+      } else if (!kIsWeb) {
         // Mobile platforms: save to downloads or documents
         Directory? directory;
         if (Platform.isAndroid) {

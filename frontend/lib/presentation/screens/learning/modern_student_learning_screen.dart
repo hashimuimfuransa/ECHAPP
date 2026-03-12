@@ -201,7 +201,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       });
 
       // Show welcome message from AI coach
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && _guideKey.currentState != null) {
           _guideKey.currentState!.updateState(
             StudentGuideState.greeting,
@@ -706,11 +706,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     }
 
     return ListView.separated(
-      itemCount: _sections!.length + 1,
+      itemCount: _sections!.length + 2,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         if (index == _sections!.length) {
           return _buildRatingSection();
+        }
+        if (index == _sections!.length + 1) {
+          return SizedBox(height: MediaQuery.of(context).size.width < 600 ? 100 : 250);
         }
         final section = _sections![index];
         final isUnlocked = _sectionCompletionStatus[section.id] ?? false;

@@ -1,6 +1,7 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 
 /// Utility class for managing device IDs
@@ -19,12 +20,16 @@ class DeviceIdUtils {
 
   /// Gets the actual device hardware ID (less reliable but more secure for device binding)
   static Future<String> getHardwareDeviceId() async {
+    if (kIsWeb) {
+      return "web_browser";
+    }
+
     final deviceInfo = DeviceInfoPlugin();
 
-    if (Platform.isAndroid) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       final androidInfo = await deviceInfo.androidInfo;
       return androidInfo.id; 
-    } else if (Platform.isIOS) {
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       final iosInfo = await deviceInfo.iosInfo;
       return iosInfo.identifierForVendor ?? "";
     }

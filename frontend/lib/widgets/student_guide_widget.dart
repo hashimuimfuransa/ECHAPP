@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rive/rive.dart' as rive;
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
@@ -656,16 +657,15 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
     final isMobile = MediaQuery.of(context).size.width < 600;
     final primary = meta.gradient[0];
     final border = meta.border;
-    final containerSize = size + (isMobile ? 10 : 40);
+    final containerSize = size + (isMobile ? 10 : 80);
 
     return FadeTransition(
       opacity: _fadeAnim,
       child: ScaleTransition(
         scale: _scaleAnim,
         child: Container(
-          width: containerSize,
           constraints: BoxConstraints(
-            maxWidth: isMobile ? 120 : 250,
+            maxWidth: isMobile ? 120 : 280,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -760,6 +760,9 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
 
   Widget _buildCharacterCard(
       _StateMeta meta, double size, Color primary, Color border) {
+    // Check if we're on Windows where Rive might cause crashes
+    final bool isWindows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
     return GestureDetector(
       onTap: _onTap,
       child: Stack(
@@ -788,28 +791,56 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
           SizedBox(
             width: size,
             height: size,
-            child: rive.RiveWidgetBuilder(
-              fileLoader: rive.FileLoader.fromAsset(_riveUrl,
-                  riveFactory: rive.Factory.rive),
-              onLoaded: _onRiveLoaded,
-              builder: (context, state) {
-                if (state is rive.RiveLoaded) {
-                  return rive.RiveWidget(
-                    controller: state.controller,
-                    fit: rive.Fit.contain,
-                  );
-                } else if (state is rive.RiveFailed) {
-                  return const Center(
-                      child: Icon(Icons.error_outline, color: Colors.red));
-                } else {
-                  return const Center(child: CircularProgressIndicator());
-                }
-              },
-            ),
+            child: isWindows 
+              ? _buildStaticFallback(meta, size, primary)
+              : _buildRiveCharacter(size),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildStaticFallback(_StateMeta meta, double size, Color primary) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          meta.emoji,
+          style: TextStyle(fontSize: size * 0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRiveCharacter(double size) {
+    try {
+      return rive.RiveWidgetBuilder(
+        fileLoader: rive.FileLoader.fromAsset(_riveUrl,
+            riveFactory: rive.Factory.rive),
+        onLoaded: _onRiveLoaded,
+        builder: (context, state) {
+          if (state is rive.RiveLoaded) {
+            return rive.RiveWidget(
+              controller: state.controller,
+              fit: rive.Fit.contain,
+            );
+          } else if (state is rive.RiveFailed) {
+            return const Center(
+                child: Icon(Icons.error_outline, color: Colors.red));
+          } else {
+            return const Center(child: CircularProgressIndicator());
+          }
+        },
+      );
+    } catch (e) {
+      print('Rive loading error caught: $e');
+      return const Center(child: Icon(Icons.error_outline, color: Colors.red));
+    }
   }
 
   void _onRiveLoaded(rive.RiveLoaded loaded) {

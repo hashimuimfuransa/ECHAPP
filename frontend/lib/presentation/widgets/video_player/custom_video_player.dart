@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
@@ -54,17 +55,18 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   List<StreamSubscription> _subscriptions = [];
 
-  bool get _isAndroid => Platform.isAndroid;
+  bool get _isMobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   String _getOptimizedUrl(String url) {
     if (url.startsWith('http')) {
-      if (Platform.isWindows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
         return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
       }
       return url;
     }
     // Handle local files
-    if (Platform.isWindows) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
       return url.replaceAll('/', '\\');
     }
     return url;
@@ -77,7 +79,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _initPlayer() {
-    if (_isAndroid) {
+    if (_isMobile || kIsWeb) {
       _initMobilePlayer();
     } else {
       _initMediaKit();
@@ -86,7 +88,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   void _initMobilePlayer() async {
     final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
-    final isNetwork = optimizedUrl.startsWith('http');
+    final isNetwork = optimizedUrl.startsWith('http') || kIsWeb;
     
     // Retrieve saved progress
     Duration startAt = Duration.zero;
@@ -96,8 +98,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
     if (isNetwork) {
       _vpController = VideoPlayerController.networkUrl(Uri.parse(optimizedUrl));
-    } else {
+    } else if (!kIsWeb) {
       _vpController = VideoPlayerController.file(File(optimizedUrl));
+    } else {
+      _errorMessage = "Local files are not supported on web";
+      if (mounted) setState(() => _isInitialized = true);
+      return;
     }
 
     try {
@@ -258,7 +264,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isAndroid) {
+    if (_isMobile || kIsWeb) {
       return _buildMobilePlayer();
     }
     
