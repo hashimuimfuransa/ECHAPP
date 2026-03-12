@@ -394,7 +394,7 @@ const firebaseLogin = async (req, res) => {
     if (error.code === 'auth/argument-error') {
       return sendError(res, 'Invalid Firebase ID token', 401);
     }
-    sendError(res, 'Authentication failed', 500, error.message);
+    return sendError(res, 'Authentication failed', 500, error.message);
   }
 };
 

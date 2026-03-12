@@ -125,6 +125,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage = 'Oops! It looks like the email or password you entered isn\'t correct. If you\'ve forgotten your password, you can reset it using the "Forgot password?" link below.';
       } else if (msgLower.contains('account is deactivated') || msgLower.contains('user-disabled')) {
         errorMessage = 'Your account has been deactivated. Please contact support.';
+      } else if (msgLower.contains('already registered on another device') || 
+                 msgLower.contains('device binding') ||
+                 msgLower.contains('registered on another device')) {
+        errorMessage = 'This account is already registered on another device. For security, you can only use it on one device at a time. Please contact support if you need to reset your device.';
       } else if (msgLower.contains('network error') || 
                  msgLower.contains('connection failed') || 
                  msgLower.contains('socketexception') ||

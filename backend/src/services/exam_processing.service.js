@@ -37,20 +37,24 @@ class ExamProcessingService {
       if (GrokService.isConfigured()) {
         console.log('Processing document with Grok AI...');
         
-        const fileForAI = {
-          buffer: documentBuffer,
-          mimetype: mimeType,
-          originalName: originalName
-        };
+        // Parallelize question extraction and title generation
+        const aiTasks = [
+          GrokService.extractQuestionsFromDocument(
+            documentContent, // Pass content directly instead of buffer to avoid redundant extraction
+            examData.examType
+          )
+        ];
 
-        processedQuestions = await GrokService.extractQuestionsFromDocument(
-          fileForAI,
-          examData.examType
-        );
-
-        // Generate title if not provided
+        // Only add title generation if not provided
         if (!generatedTitle) {
-          generatedTitle = await GrokService.generateExamTitle(documentContent);
+          aiTasks.push(GrokService.generateExamTitle(documentContent));
+        }
+
+        const aiResults = await Promise.all(aiTasks);
+        processedQuestions = aiResults[0];
+        
+        if (!generatedTitle && aiResults.length > 1) {
+          generatedTitle = aiResults[1];
         }
       } else {
         console.warn('Grok AI not configured, using template questions');

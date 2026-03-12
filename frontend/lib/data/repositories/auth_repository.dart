@@ -178,10 +178,22 @@ class AuthRepository {
             }
           } else {
             // Handle specific status codes
+            print('AuthRepository: Request failed with status code ${response.statusCode}');
+            print('AuthRepository: Response body (first 100 chars): ${response.body.length > 100 ? response.body.substring(0, 100) : response.body}');
+            
             try {
               final errorData = jsonDecode(response.body);
-              throw Exception(errorData['message'] ?? 'Authentication failed');
-            } catch (_) {
+              final message = errorData['message'] ?? 'Authentication failed';
+              print('AuthRepository: Parsed error message: $message');
+              throw Exception(message);
+            } catch (e) {
+              if (e is Exception && !e.toString().contains('FormatException')) {
+                rethrow;
+              }
+              
+              if (response.statusCode == 401) {
+                throw Exception('This account is already registered on another device. For security, we only allow one device per user.');
+              }
               throw Exception('Authentication failed with status code ${response.statusCode}');
             }
           }

@@ -143,40 +143,51 @@ class GrokService {
    * Auto-update to the best available model
    */
   async autoUpdateModel() {
+    // Avoid multiple concurrent update checks
+    if (this._modelUpdatePromise) {
+      return this._modelUpdatePromise;
+    }
+
     // Only check periodically to avoid excessive API calls
     if (!this.shouldCheckModel()) {
       return this.currentModel;
     }
 
-    console.log("Checking for model updates...");
-    this.lastModelCheck = Date.now();
+    this._modelUpdatePromise = (async () => {
+      console.log("Checking for model updates...");
+      this.lastModelCheck = Date.now();
 
-    try {
-      // Test current model first
-      const currentModelWorks = await this.testModelAvailability(this.currentModel);
-      
-      if (currentModelWorks) {
-        console.log(`Current model ${this.currentModel} is still working`);
-        return this.currentModel;
-      }
+      try {
+        // Test current model first
+        const currentModelWorks = await this.testModelAvailability(this.currentModel);
+        
+        if (currentModelWorks) {
+          console.log(`Current model ${this.currentModel} is still working`);
+          return this.currentModel;
+        }
 
-      // Current model failed, find a replacement
-      console.log(`Current model ${this.currentModel} is not available, searching for alternatives...`);
-      const availableModels = await this.getAvailableModels();
-      
-      if (availableModels.length > 0) {
-        const newModel = availableModels[0]; // Use the first available model
-        this.setCurrentModel(newModel);
-        console.log(`✅ Auto-updated to new model: ${newModel}`);
-        return newModel;
-      } else {
-        console.error("No available models found!");
-        return this.currentModel; // Keep current model
+        // Current model failed, find a replacement
+        console.log(`Current model ${this.currentModel} is not available, searching for alternatives...`);
+        const availableModels = await this.getAvailableModels();
+        
+        if (availableModels.length > 0) {
+          const newModel = availableModels[0]; // Use the first available model
+          this.setCurrentModel(newModel);
+          console.log(`✅ Auto-updated to new model: ${newModel}`);
+          return newModel;
+        } else {
+          console.error("No available models found!");
+          return this.currentModel; // Keep current model
+        }
+      } catch (error) {
+        console.error("Error during model auto-update:", error);
+        return this.currentModel; // Keep current model on error
+      } finally {
+        this._modelUpdatePromise = null;
       }
-    } catch (error) {
-      console.error("Error during model auto-update:", error);
-      return this.currentModel; // Keep current model on error
-    }
+    })();
+
+    return this._modelUpdatePromise;
   }
 
   /**
@@ -278,21 +289,21 @@ class GrokService {
       let allQuestions = [];
       
       console.log(`Document text extracted (first 200 chars): ${documentText.substring(0, 200)}...`);
-      console.log(`Processing document in ${chunks.length} chunks with Grok...`);
+      console.log(`Processing document in ${chunks.length} chunks with Grok (Parallelized)...`);
       
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        console.log(`Processing chunk ${i + 1}/${chunks.length}...`);
-        
+      const chunkPromises = chunks.map(async (chunk, i) => {
         try {
           const chunkQuestions = await this.processChunkWithGrok(chunk, examType, fileName, i + 1, chunks.length);
           console.log(`Chunk ${i + 1}: Generated ${chunkQuestions.length} questions`);
-          allQuestions = [...allQuestions, ...chunkQuestions];
+          return chunkQuestions;
         } catch (chunkError) {
           console.error(`Error processing chunk ${i + 1}:`, chunkError.message);
-          // Continue with other chunks
+          return [];
         }
-      }
+      });
+
+      const chunkResults = await Promise.all(chunkPromises);
+      allQuestions = chunkResults.flat();
       
       // Deduplicate questions and return
       let uniqueQuestions = this.deduplicateQuestions(allQuestions);
@@ -309,7 +320,7 @@ class GrokService {
       // Determine correct answers using separate RAG logic in batches for performance
       console.log(`Determining correct answers for ${filteredQuestions.length} questions in batches...`);
       
-      const batchSize = 10;
+      const batchSize = 20;
       const questionBatches = [];
       for (let i = 0; i < filteredQuestions.length; i += batchSize) {
         questionBatches.push(filteredQuestions.slice(i, i + batchSize));
