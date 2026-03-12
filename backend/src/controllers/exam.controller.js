@@ -264,6 +264,21 @@ const submitExam = async (req, res) => {
               earnedPoints = question.points;
               score += earnedPoints;
             }
+          } else if (question.type === 'fill_blank') {
+            const studentAnswer = String(userAnswer.answerText || userAnswer.selectedOption || "").toLowerCase().trim();
+            const correctAnswer = String(question.correctAnswer || "").toLowerCase().trim();
+            if (studentAnswer === correctAnswer) {
+              earnedPoints = question.points;
+              score += earnedPoints;
+            }
+          } else if (question.type === 'open') {
+            // Simplified fallback grading for open questions
+            const similarity = calculateTextSimilarity(
+              String(question.correctAnswer || ""),
+              String(userAnswer.answerText || userAnswer.selectedOption || "")
+            );
+            earnedPoints = Math.round(similarity * question.points);
+            score += earnedPoints;
           }
           
           gradedAnswers.push({
@@ -459,7 +474,7 @@ const getUserExamHistory = async (req, res) => {
       if (result.examId) {
         // Get questions for this exam
         questions = await Question.find({ examId: result.examId._id })
-          .select('question options correctAnswer points');
+          .select('question type options correctAnswer points');
         
         // Process each answer to determine if it was correct
         questionResults = result.answers.map(userAnswer => {

@@ -519,18 +519,18 @@ ${contentPreview}`;
 
     // Format data for the prompt to minimize tokens
     const gradingData = userAnswers.map((ua) => {
-      const q = questions.find((quest) => quest._id.toString() === ua.questionId);
+      const q = questions.find((quest) => quest._id.toString() === ua.questionId.toString());
       if (!q) return null;
 
       return {
-        id: ua.questionId,
+        id: ua.questionId.toString(),
         type: q.type,
         question: q.question,
         options: q.options,
         correctAnswer: q.correctAnswer,
         studentAnswer: q.type === "mcq" || q.type === "true_false" 
           ? (q.options[ua.selectedOption] || ua.selectedOption)
-          : (ua.answerText || ua.selectedOption),
+          : (ua.answerText || ua.selectedOption || ""),
         points: q.points || 1,
       };
     }).filter(Boolean);
@@ -574,8 +574,8 @@ ${JSON.stringify(gradingData, null, 2)}`;
 
       // Map results back to the original userAnswers format
       return userAnswers.map((ua) => {
-        const graded = gradedResults.find((g) => g.id === ua.questionId);
-        const q = questions.find((quest) => quest._id.toString() === ua.questionId);
+        const graded = gradedResults.find((g) => g.id && g.id.toString() === ua.questionId.toString());
+        const q = questions.find((quest) => quest._id.toString() === ua.questionId.toString());
         
         if (graded) {
           return {
@@ -626,8 +626,21 @@ ${JSON.stringify(gradingData, null, 2)}`;
     if (question.type === "mcq" || question.type === "true_false") {
       isCorrect = question.correctAnswer === userAnswer.selectedOption;
     } else if (question.type === "fill_blank") {
-      isCorrect = String(question.correctAnswer).toLowerCase().trim() === 
-                  String(userAnswer.answerText || "").toLowerCase().trim();
+      const studentAnswer = String(userAnswer.answerText || userAnswer.selectedOption || "").toLowerCase().trim();
+      const correctAnswer = String(question.correctAnswer || "").toLowerCase().trim();
+      isCorrect = studentAnswer === correctAnswer;
+    } else if (question.type === "open") {
+      // Basic similarity check for open questions
+      const similarity = this.calculateBasicSimilarity(
+        String(question.correctAnswer || ""),
+        String(userAnswer.answerText || userAnswer.selectedOption || "")
+      );
+      return {
+        ...userAnswer,
+        earnedPoints: Math.round(similarity * (question.points || 1)),
+        isCorrect: similarity > 0.7,
+        feedback: similarity > 0.7 ? "Good answer." : "Partially correct or needs review.",
+      };
     }
 
     return {
@@ -636,6 +649,19 @@ ${JSON.stringify(gradingData, null, 2)}`;
       isCorrect,
       feedback: isCorrect ? "Correct." : "Incorrect.",
     };
+  }
+
+  calculateBasicSimilarity(str1, str2) {
+    if (!str1 || !str2) return 0;
+    str1 = str1.toLowerCase().trim();
+    str2 = str2.toLowerCase().trim();
+    if (str1 === str2) return 1.0;
+    
+    const words1 = new Set(str1.split(/\s+/));
+    const words2 = new Set(str2.split(/\s+/));
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    return union.size > 0 ? intersection.size / union.size : 0;
   }
 
   // ─── Internal Helpers ────────────────────────────────────────────────────────
