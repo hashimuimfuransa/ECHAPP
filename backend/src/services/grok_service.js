@@ -279,14 +279,24 @@ class GrokService {
       console.log(`Total unique questions extracted: ${uniqueQuestions.length}`);
       console.log(`Questions after filtering: ${filteredQuestions.length} (all types allowed)`);
 
-      // Determine correct answers using separate Step 2 logic
-      console.log(`Determining correct answers for ${filteredQuestions.length} questions...`);
-      for (let q of filteredQuestions) {
-        // Only grade MCQ and True/False questions
-        if (q.type === 'mcq' || q.type === 'true_false') {
-          q.correctAnswer = await this.findCorrectAnswer(documentText, q);
-        }
+      // Determine correct answers using separate Step 2 logic in batches for performance
+      console.log(`Determining correct answers for ${filteredQuestions.length} questions in batches...`);
+      
+      const batchSize = 10;
+      const questionBatches = [];
+      for (let i = 0; i < filteredQuestions.length; i += batchSize) {
+        questionBatches.push(filteredQuestions.slice(i, i + batchSize));
       }
+
+      await Promise.all(questionBatches.map(async (batch, batchIdx) => {
+        const batchResults = await this.findCorrectAnswersBatch(documentText, batch);
+        
+        batchResults.forEach(res => {
+          if (res.questionIndex !== undefined && res.questionIndex < batch.length) {
+            batch[res.questionIndex].correctAnswer = res.correctAnswer;
+          }
+        });
+      }));
       
       return filteredQuestions;
     } catch (error) {
@@ -349,25 +359,14 @@ ${chunk}
     // Parse JSON response
     try {
       console.log("Attempting to parse raw response as JSON...");
-      const jsonResponse = JSON.parse(response);
-      console.log(`Successfully parsed JSON, found ${jsonResponse.questions?.length || 0} questions`);
-      return jsonResponse.questions || [];
+      const jsonResponse = this.parseJSONResponse(response);
+      if (jsonResponse) {
+        console.log(`Successfully parsed JSON, found ${jsonResponse.questions?.length || 0} questions`);
+        return jsonResponse.questions || [];
+      }
+      throw new Error("JSON parsing resulted in null");
     } catch (parseError) {
       console.error("Failed to parse raw Grok response as JSON:", parseError.message);
-      console.log("Raw response content:", response.substring(0, 500) + (response.length > 500 ? "..." : ""));
-      
-      // Try to extract JSON from the response text
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        console.log("Found JSON-like content in response, attempting to parse...");
-        try {
-          const jsonResponse = JSON.parse(jsonMatch[0]);
-          console.log(`Successfully parsed extracted JSON, found ${jsonResponse.questions?.length || 0} questions`);
-          return jsonResponse.questions || [];
-        } catch (secondParseError) {
-          console.error("Failed to parse extracted JSON:", secondParseError.message);
-        }
-      }
       
       // Try to extract questions using regex as fallback
       console.log("Falling back to regex-based question extraction...");
@@ -418,13 +417,82 @@ Response format (JSON ONLY):
       });
 
       const content = response.choices[0]?.message?.content || "";
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]).correctAnswer;
-      }
-      return JSON.parse(content).correctAnswer;
+      const parsed = this.parseJSONResponse(content);
+      return parsed?.correctAnswer ?? null;
     } catch (error) {
       console.error("Error finding correct answer:", error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Determine correct answers for a batch of questions
+   * @param {string} documentText - The document text
+   * @param {Array} questions - Array of question objects
+   * @returns {Promise<Array>} - Array of results with correctAnswer
+   */
+  async findCorrectAnswersBatch(documentText, questions) {
+    if (!this.isConfigured() || questions.length === 0) return [];
+
+    const prompt = `
+Use the document below to determine the correct answers for the following questions.
+
+DOCUMENT (CONTEXT):
+---
+${documentText.substring(0, 10000)}
+---
+
+QUESTIONS:
+${questions.map((q, idx) => `${idx + 1}. ${q.question}\nOptions: ${q.options.join(", ")}`).join("\n\n")}
+
+Rules:
+- The answers must come from the document.
+- If not found, return null for that question.
+- Return results in JSON format.
+
+Response Format (JSON ONLY):
+{
+ "results": [
+   { "questionIndex": 0, "correctAnswer": 0 },
+   { "questionIndex": 1, "correctAnswer": 2 }
+ ]
+}
+`;
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: await this.getModel(),
+        temperature: 0
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      const parsed = this.parseJSONResponse(content);
+      return parsed?.results || [];
+    } catch (error) {
+      console.error("Error in batch grading:", error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Parse and clean JSON responses from AI
+   */
+  parseJSONResponse(content) {
+    if (!content) return null;
+    try {
+      // Remove potential markdown blocks
+      const cleaned = content.replace(/```json\s?|```/g, "").trim();
+      return JSON.parse(cleaned);
+    } catch (e) {
+      const match = content.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          return JSON.parse(match[0]);
+        } catch (inner) {
+          return null;
+        }
+      }
       return null;
     }
   }
