@@ -181,9 +181,34 @@ class GrokService {
   }
 
   /**
-   * Get model with auto-update capability
+   * Wrapper for Groq calls with automatic retry for rate limits
    */
-  async getModel() {
+  async callGroqWithRetry(apiCall, retries = 3, delay = 60000) {
+    try {
+      return await apiCall();
+    } catch (err) {
+      const isRateLimit = err.message?.includes("rate_limit") || 
+                        err.message?.includes("too many requests") || 
+                        err.status === 429;
+      
+      if (isRateLimit && retries > 0) {
+        console.warn(`Rate limit hit. Waiting ${delay / 1000}s before retry (${retries} left)...`);
+        await new Promise(r => setTimeout(r, delay));
+        return this.callGroqWithRetry(apiCall, retries - 1, delay * 1.5); // Exponential backoff
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Get model with auto-update capability
+   * @param {boolean} cheap - Whether to request a cheaper/faster model
+   */
+  async getModel(cheap = false) {
+    if (cheap) {
+      // Return a faster, cheaper model for simple tasks like grading
+      return "llama3-8b-8192";
+    }
     await this.autoUpdateModel();
     return this.currentModel;
   }
@@ -342,18 +367,21 @@ ${chunk}
 ---
 `;
 
-    const chatCompletion = await this.groq.chat.completions.create({
+    const model = await this.getModel(); // Extraction needs strong model
+    
+    const apiCall = () => this.groq.chat.completions.create({
       messages: [
         {
           role: "user",
           content: prompt,
         },
       ],
-      model: await this.getModel(),
+      model: model,
       temperature: 0.3,
-      max_tokens: 8192, // Increase to allow more questions in the response
+      max_tokens: 8192,
     });
 
+    const chatCompletion = await this.callGroqWithRetry(apiCall);
     const response = chatCompletion.choices[0]?.message?.content;
     
     if (!response) {
@@ -418,12 +446,15 @@ Response format (JSON ONLY):
 `;
 
     try {
-      const response = await this.groq.chat.completions.create({
+      const model = await this.getModel(true); // Use cheaper model for grading
+      
+      const apiCall = () => this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: await this.getModel(),
+        model: model,
         temperature: 0
       });
 
+      const response = await this.callGroqWithRetry(apiCall);
       const content = response.choices[0]?.message?.content || "";
       const parsed = this.parseJSONResponse(content);
       return parsed?.correctAnswer ?? null;
@@ -443,39 +474,33 @@ Response format (JSON ONLY):
     if (!this.isConfigured() || questions.length === 0) return [];
 
     const prompt = `
-Use the CONTEXT below to determine the correct answers for the following questions.
-
 CONTEXT:
----
 ${contextText}
----
 
 QUESTIONS:
-${questions.map((q, idx) => `${idx + 1}. ${q.question}\nOptions: ${q.options.join(", ")}`).join("\n\n")}
+${questions.map((q, idx) => `${idx + 1}. ${q.question}\nOptions: ${q.options.join(" | ")}`).join("\n\n")}
 
 Rules:
-- The answers MUST come explicitly from the provided CONTEXT.
-- If the context does not contain the answer, return null for that question.
-- Do NOT guess or use outside knowledge.
-- Never guess.
-- Return results in JSON format.
-
-Response Format (JSON ONLY):
+- Answer ONLY using the context.
+- Return null if not found.
+- Return results in JSON:
 {
  "results": [
-   { "questionIndex": 0, "correctAnswer": 0 },
-   { "questionIndex": 1, "correctAnswer": 2 }
+   { "questionIndex": 0, "correctAnswer": number or null }
  ]
 }
 `;
 
     try {
-      const response = await this.groq.chat.completions.create({
+      const model = await this.getModel(true); // Use cheaper model for grading
+      
+      const apiCall = () => this.groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: await this.getModel(),
+        model: model,
         temperature: 0
       });
 
+      const response = await this.callGroqWithRetry(apiCall);
       const content = response.choices[0]?.message?.content || "";
       const parsed = this.parseJSONResponse(content);
       return parsed?.results || [];
