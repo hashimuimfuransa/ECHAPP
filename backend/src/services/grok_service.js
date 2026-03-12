@@ -179,9 +179,11 @@ class GrokService {
 
     console.log(`Document preview: ${documentText.substring(0, 200)}...`);
 
-    // 6 000 chars/chunk keeps prompt + response safely within the 8 192-token limit
+    // 6 000 chars/chunk keeps prompt + response safely within token limits. 
+    // 500 chars overlap prevents missing questions cut across chunks.
     const CHUNK_SIZE = 6000;
-    const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE);
+    const OVERLAP = 500;
+    const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE, OVERLAP);
     console.log(`Processing ${chunks.length} chunk(s) with model: ${await this.resolveModel()}`);
 
     const allQuestions = [];
@@ -239,13 +241,15 @@ CHUNK: ${chunkNum} of ${totalChunks}
 
 RULES:
 1. Extract ONLY questions that literally appear in the text below.
-2. Do NOT invent or paraphrase questions.
-3. Some questions may have sub-questions labeled a, b, c, etc. Include them as "subQuestions" with their own type, options, and correctAnswer.
-4. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
-5. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
-6. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
-7. If no questions are found, return {"questions":[]}.
-8. Respond with ONLY valid JSON — no markdown fences, no explanation.
+2. Do NOT invent, paraphrase, or summarize questions. If it's not in the text, skip it.
+3. VERBATIM: Copy question text exactly as it appears, including punctuation.
+4. Some questions may have sub-questions labeled a, b, c, etc. Include them as "subQuestions" with their own type, options, and correctAnswer.
+5. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
+6. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
+7. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
+8. If no questions are found, return {"questions":[]}.
+9. Respond with ONLY valid JSON — no markdown fences, no explanation.
+10. VERIFY: Double-check each extracted question against the text to ensure it matches exactly. Skip it if you are unsure.
 
 QUESTION SCHEMA:
 {
@@ -663,53 +667,45 @@ ${JSON.stringify(gradingData, null, 2)}`;
   }
 
   /**
-   * Split text into chunks that respect paragraph boundaries.
-   * Avoids cutting a question in half.
+   * Split text into chunks with optional overlap to prevent missing questions
+   * that fall exactly on a chunk boundary.
    */
-  splitTextIntoChunks(text, chunkSize) {
+  splitTextIntoChunks(text, chunkSize, overlap = 0) {
     if (!text) return [];
     if (text.length <= chunkSize) return [text];
 
-    // Prefer splitting on double-newlines (paragraph breaks)
-    const paragraphs = text.split(/\n{2,}/);
     const chunks = [];
-    let current = "";
+    let start = 0;
 
-    for (const para of paragraphs) {
-      const addition = current ? "\n\n" + para : para;
+    while (start < text.length) {
+      let end = Math.min(start + chunkSize, text.length);
 
-      if (current.length + addition.length <= chunkSize) {
-        current += addition;
-      } else {
-        if (current) chunks.push(current.trim());
-
-        // Paragraph itself exceeds chunk size — split by sentences
-        if (para.length > chunkSize) {
-          const sentences = para.split(/(?<=[.!?])\s+/);
-          current = "";
-          for (const sentence of sentences) {
-            if (current.length + sentence.length + 1 <= chunkSize) {
-              current += (current ? " " : "") + sentence;
-            } else {
-              if (current) chunks.push(current.trim());
-              // Single sentence too long — hard split
-              if (sentence.length > chunkSize) {
-                for (let i = 0; i < sentence.length; i += chunkSize) {
-                  chunks.push(sentence.substring(i, i + chunkSize));
-                }
-                current = "";
-              } else {
-                current = sentence;
-              }
-            }
-          }
+      // If we're not at the very end, try to find a natural break (double newline or single newline)
+      if (end < text.length) {
+        const lastDoubleNewline = text.lastIndexOf("\n\n", end);
+        if (lastDoubleNewline > start + chunkSize * 0.7) {
+          end = lastDoubleNewline + 2; // Split at paragraph
         } else {
-          current = para;
+          const lastNewline = text.lastIndexOf("\n", end);
+          if (lastNewline > start + chunkSize * 0.7) {
+            end = lastNewline + 1; // Split at line break
+          }
         }
+      }
+
+      const chunk = text.substring(start, end).trim();
+      if (chunk) chunks.push(chunk);
+
+      // Move start back by overlap for the next chunk
+      start = end - overlap;
+
+      // Safety: ensure we always progress at least 10% of chunkSize
+      const minStep = Math.max(1, Math.floor(chunkSize * 0.1));
+      if (start <= (end - chunkSize + minStep)) {
+        start = end;
       }
     }
 
-    if (current.trim()) chunks.push(current.trim());
     return chunks;
   }
 
