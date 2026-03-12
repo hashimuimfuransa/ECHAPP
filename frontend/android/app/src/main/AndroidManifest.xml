@@ -13,7 +13,8 @@
         android:label="excellencecoachinghub"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="true">
         <activity
             android:name="com.example.excellenceCoachingHub.MainActivity"
             android:exported="true"

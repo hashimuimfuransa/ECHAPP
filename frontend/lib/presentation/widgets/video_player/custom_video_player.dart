@@ -62,7 +62,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   bool get _isMobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
   bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
-  String _getOptimizedUrl(String url) {
+  String _getOptimizedUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    
     if (url.startsWith('http')) {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
         return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
@@ -83,6 +85,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _initPlayer() {
+    if (widget.videoUrl == null && widget.externalPlayer == null) {
+      setState(() {
+        _errorMessage = "Video source is missing (URL is null)";
+        _isInitialized = true;
+      });
+      return;
+    }
+
     if (_isMobile || kIsWeb) {
       _initMobilePlayer();
     } else {
@@ -91,7 +101,27 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _initMobilePlayer() async {
-    final optimizedUrl = _getOptimizedUrl(widget.videoUrl!);
+    if (widget.videoUrl == null) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Video URL is null";
+          _isInitialized = true;
+        });
+      }
+      return;
+    }
+
+    final optimizedUrl = _getOptimizedUrl(widget.videoUrl);
+    if (optimizedUrl.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Video URL is empty";
+          _isInitialized = true;
+        });
+      }
+      return;
+    }
+
     final isNetwork = optimizedUrl.startsWith('http') || kIsWeb;
     
     // Retrieve saved progress
@@ -151,6 +181,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   void _mobilePlayerListener() {
     if (_vpController == null) return;
+    
+    if (_vpController!.value.hasError) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Playback Error: ${_vpController!.value.errorDescription}";
+        });
+      }
+      return;
+    }
     
     final position = _vpController!.value.position;
     
