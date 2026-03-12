@@ -2,746 +2,586 @@ const Groq = require("groq-sdk");
 
 class GrokService {
   constructor() {
-    // Get API key from environment variables
     this.apiKey = process.env.GROQ_API_KEY;
     if (!this.apiKey) {
-      console.warn("GROQ_API_KEY not found in environment variables. AI features will be disabled.");
+      console.warn("GROQ_API_KEY not found. AI features will be disabled.");
     }
-    
+
     this.groq = this.apiKey ? new Groq({ apiKey: this.apiKey }) : null;
-    
-    // Model management system
+
     this.currentModel = "llama-3.3-70b-versatile";
-    this.modelCache = new Map(); // Cache for model availability
+    this.modelCache = new Map();
     this.lastModelCheck = null;
     this.modelCheckInterval = 24 * 60 * 60 * 1000; // 24 hours
-    
-    console.log("Grok Service initialized:", this.isConfigured() ? "Ready" : "Not configured");
+
+    // Resolved once per extraction run — avoids mid-run model switches
+    this._activeModel = null;
+
+    console.log("GrokService initialized:", this.isConfigured() ? "Ready" : "Not configured");
     console.log("Current AI model:", this.currentModel);
   }
 
-  /**
-   * Check if Grok service is properly configured
-   */
+  // ─── Configuration ───────────────────────────────────────────────────────────
+
   isConfigured() {
     return !!this.apiKey && !!this.groq;
   }
 
-  /**
-   * Get the current active model
-   */
   getCurrentModel() {
     return this.currentModel;
   }
 
-  /**
-   * Set a new model
-   */
   setCurrentModel(modelName) {
-    console.log(`Updating AI model from ${this.currentModel} to ${modelName}`);
+    console.log(`Updating model: ${this.currentModel} → ${modelName}`);
     this.currentModel = modelName;
   }
 
-  /**
-   * Check if it's time to verify model status
-   */
+  // ─── Model Management ────────────────────────────────────────────────────────
+
   shouldCheckModel() {
     if (!this.lastModelCheck) return true;
-    const timeSinceLastCheck = Date.now() - this.lastModelCheck;
-    return timeSinceLastCheck > this.modelCheckInterval;
+    return Date.now() - this.lastModelCheck > this.modelCheckInterval;
   }
 
-  /**
-   * Test if a model is available by making a small API call
-   */
   async testModelAvailability(modelName) {
-    // Check cache first
-    if (this.modelCache.has(modelName)) {
-      const cached = this.modelCache.get(modelName);
-      if (Date.now() - cached.timestamp < this.modelCheckInterval) {
-        return cached.available;
-      }
+    const cached = this.modelCache.get(modelName);
+    if (cached && Date.now() - cached.timestamp < this.modelCheckInterval) {
+      return cached.available;
     }
 
     try {
-      // Make a simple test call
       await this.groq.chat.completions.create({
-        messages: [{ role: "user", content: "test" }],
+        messages: [{ role: "user", content: "ping" }],
         model: modelName,
         max_tokens: 1,
-        temperature: 0
+        temperature: 0,
       });
-      
-      // Cache successful result
-      this.modelCache.set(modelName, { 
-        available: true, 
-        timestamp: Date.now() 
-      });
+      this.modelCache.set(modelName, { available: true, timestamp: Date.now() });
       return true;
     } catch (error) {
-      // Cache failed result
-      this.modelCache.set(modelName, { 
-        available: false, 
+      this.modelCache.set(modelName, {
+        available: false,
         timestamp: Date.now(),
-        error: error.message 
+        error: error.message,
       });
-      
-      // If model is decommissioned, log it
-      if (error.message.includes('decommissioned') || error.message.includes('not found')) {
+      if (error.message.includes("decommissioned") || error.message.includes("not found")) {
         console.warn(`Model ${modelName} is no longer available: ${error.message}`);
       }
       return false;
     }
   }
 
-  /**
-   * Get list of available models from Groq API
-   */
-  async getAvailableModels() {
-    try {
-      // Note: Groq doesn't have a public models endpoint
-      // We'll maintain a list of known good models
-      const knownModels = [
-        "llama-3.3-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768",
-        "gemma-7b-it"
-      ];
-      
-      const availableModels = [];
-      
-      for (const model of knownModels) {
-        const isAvailable = await this.testModelAvailability(model);
-        if (isAvailable) {
-          availableModels.push(model);
-        }
-      }
-      
-      return availableModels;
-    } catch (error) {
-      console.error("Error fetching available models:", error);
-      return [this.currentModel]; // Return current model as fallback
-    }
-  }
-
-  /**
-   * Auto-update to the best available model
-   */
   async autoUpdateModel() {
-    // Only check periodically to avoid excessive API calls
-    if (!this.shouldCheckModel()) {
-      return this.currentModel;
-    }
+    if (!this.shouldCheckModel()) return this.currentModel;
 
-    console.log("Checking for model updates...");
+    console.log("Checking model availability...");
     this.lastModelCheck = Date.now();
 
-    try {
-      // Test current model first
-      const currentModelWorks = await this.testModelAvailability(this.currentModel);
-      
-      if (currentModelWorks) {
-        console.log(`Current model ${this.currentModel} is still working`);
-        return this.currentModel;
-      }
+    const currentWorks = await this.testModelAvailability(this.currentModel);
+    if (currentWorks) return this.currentModel;
 
-      // Current model failed, find a replacement
-      console.log(`Current model ${this.currentModel} is not available, searching for alternatives...`);
-      const availableModels = await this.getAvailableModels();
-      
-      if (availableModels.length > 0) {
-        const newModel = availableModels[0]; // Use the first available model
-        this.setCurrentModel(newModel);
-        console.log(`✅ Auto-updated to new model: ${newModel}`);
-        return newModel;
-      } else {
-        console.error("No available models found!");
-        return this.currentModel; // Keep current model
+    console.log(`${this.currentModel} unavailable — searching for fallback...`);
+
+    const candidates = [
+      "llama-3.3-70b-versatile",
+      "llama3-70b-8192",
+      "llama3-8b-8192",
+      "mixtral-8x7b-32768",
+      "gemma-7b-it",
+    ];
+
+    for (const model of candidates) {
+      if (model === this.currentModel) continue;
+      if (await this.testModelAvailability(model)) {
+        this.setCurrentModel(model);
+        console.log(`✅ Auto-updated to: ${model}`);
+        return model;
       }
-    } catch (error) {
-      console.error("Error during model auto-update:", error);
-      return this.currentModel; // Keep current model on error
     }
-  }
 
-  /**
-   * Get model with auto-update capability
-   */
-  async getModel() {
-    await this.autoUpdateModel();
+    console.error("No available fallback models found.");
     return this.currentModel;
   }
 
-  /**
-   * Force immediate model check and update
-   */
-  async forceModelUpdate() {
-    console.log("Force model update triggered");
-    this.lastModelCheck = 0; // Reset to force check
-    return await this.autoUpdateModel();
+  /** Resolve model once and cache for the duration of an extraction run */
+  async resolveModel() {
+    if (!this._activeModel) {
+      this._activeModel = await this.autoUpdateModel();
+    }
+    return this._activeModel;
   }
 
-  /**
-   * Get model status information
-   */
+  async forceModelUpdate() {
+    this.lastModelCheck = 0;
+    this._activeModel = null;
+    return this.autoUpdateModel();
+  }
+
   getModelStatus() {
     return {
       currentModel: this.currentModel,
       lastCheck: this.lastModelCheck ? new Date(this.lastModelCheck).toISOString() : null,
-      nextCheck: this.lastModelCheck ? new Date(this.lastModelCheck + this.modelCheckInterval).toISOString() : null,
+      nextCheck: this.lastModelCheck
+        ? new Date(this.lastModelCheck + this.modelCheckInterval).toISOString()
+        : null,
       cachedModels: Array.from(this.modelCache.entries()).map(([model, data]) => ({
         model,
         available: data.available,
         lastChecked: new Date(data.timestamp).toISOString(),
-        error: data.error
-      }))
+        error: data.error,
+      })),
     };
   }
 
+  // ─── Question Extraction ─────────────────────────────────────────────────────
+
   /**
-   * Extract and organize questions from a document using Grok AI
-   * @param {string|Object} documentInput - Either document text (string) or file object with path
-   * @param {string} examType - The type of exam (quiz, pastpaper, final)
-   * @returns {Promise<Array>} - Array of questions with options and answers
+   * Extract and organize questions from a document using Groq AI.
+   * @param {string|Object} documentInput - Text string, buffer object, or file-path object
+   * @param {string} examType - "quiz" | "pastpaper" | "final"
+   * @returns {Promise<Array>} Validated question objects
    */
   async extractQuestionsFromDocument(documentInput, examType) {
     if (!this.isConfigured()) {
-      throw new Error("Grok is not configured. Please set GROQ_API_KEY in environment variables.");
+      throw new Error("GrokService not configured — set GROQ_API_KEY.");
     }
 
-    try {
-      let documentText;
-      let fileName = 'document';
-      
-      // Extract text content first
-      if (typeof documentInput === 'string') {
-        // Text input
-        documentText = documentInput;
-        fileName = 'text document';
-      } else if (documentInput.buffer) {
-        // Buffer input - extract text content
-        documentText = await this.extractTextFromBuffer(documentInput.buffer, documentInput.mimetype);
-        fileName = documentInput.originalName || 'uploaded document';
-      } else if (documentInput.path && require('fs').existsSync(documentInput.path)) {
-        // File path input - read and extract text
-        const fs = require('fs');
-        const fileBuffer = fs.readFileSync(documentInput.path);
-        documentText = await this.extractTextFromBuffer(fileBuffer, documentInput.mimetype);
-        fileName = documentInput.originalName || 'document file';
-      } else {
-        throw new Error("Invalid document input. Must be text string, buffer, or file object with valid path.");
-      }
+    // Reset per-run model cache so we use one model throughout
+    this._activeModel = null;
 
-      // Process document in chunks to avoid context limits
-      const chunks = this.splitTextIntoChunks(documentText, 10000); // Increase chunk size to capture more questions per chunk
-      let allQuestions = [];
-      
-      console.log(`Document text extracted (first 200 chars): ${documentText.substring(0, 200)}...`);
-      console.log(`Processing document in ${chunks.length} chunks with Grok...`);
-      
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        console.log(`Processing chunk ${i + 1}/${chunks.length}...`);
-        
-        try {
-          const chunkQuestions = await this.processChunkWithGrok(chunk, examType, fileName, i + 1, chunks.length);
-          console.log(`Chunk ${i + 1}: Generated ${chunkQuestions.length} questions`);
-          allQuestions = [...allQuestions, ...chunkQuestions];
-        } catch (chunkError) {
-          console.error(`Error processing chunk ${i + 1}:`, chunkError.message);
-          // Continue with other chunks
-        }
+    let documentText;
+    let fileName = "document";
+
+    if (typeof documentInput === "string") {
+      documentText = documentInput;
+      fileName = "text document";
+    } else if (documentInput.buffer) {
+      documentText = await this.extractTextFromBuffer(
+        documentInput.buffer,
+        documentInput.mimetype
+      );
+      fileName = documentInput.originalName || "uploaded document";
+    } else if (documentInput.path) {
+      const fs = require("fs");
+      if (!fs.existsSync(documentInput.path)) {
+        throw new Error(`File not found: ${documentInput.path}`);
       }
-      
-      // Deduplicate questions and return
-      let uniqueQuestions = this.deduplicateQuestions(allQuestions);
-      
-      // Filter out open-ended and fill-in-blank questions
-      let filteredQuestions = this.filterQuestionTypes(uniqueQuestions);
-      
-      console.log(`Total unique questions extracted: ${uniqueQuestions.length}`);
-      console.log(`Questions after filtering: ${filteredQuestions.length} (all types allowed)`);
-      
-      return filteredQuestions;
-    } catch (error) {
-      console.error("Error extracting questions from document with Grok:", error);
-      throw error;
+      const fileBuffer = fs.readFileSync(documentInput.path);
+      documentText = await this.extractTextFromBuffer(fileBuffer, documentInput.mimetype);
+      fileName = documentInput.originalName || "document file";
+    } else {
+      throw new Error("Invalid documentInput — must be string, buffer object, or file object.");
     }
+
+    if (!documentText || documentText.trim().length === 0) {
+      throw new Error("Could not extract any text from the provided document.");
+    }
+
+    console.log(`Document preview: ${documentText.substring(0, 200)}...`);
+
+    // 6 000 chars/chunk keeps prompt + response safely within the 8 192-token limit
+    const CHUNK_SIZE = 6000;
+    const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE);
+    console.log(`Processing ${chunks.length} chunk(s) with model: ${await this.resolveModel()}`);
+
+    const allQuestions = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`→ Chunk ${i + 1}/${chunks.length}`);
+      try {
+        const questions = await this.processChunkWithRetry(
+          chunks[i],
+          examType,
+          fileName,
+          i + 1,
+          chunks.length
+        );
+        console.log(`  ✓ ${questions.length} question(s) extracted`);
+        allQuestions.push(...questions);
+      } catch (err) {
+        console.error(`  ✗ Chunk ${i + 1} failed: ${err.message}`);
+      }
+    }
+
+    const unique = this.deduplicateQuestions(allQuestions);
+    const valid = this.validateAndNormalizeQuestions(unique);
+    console.log(`Extraction complete: ${valid.length} valid question(s) from ${allQuestions.length} raw`);
+    return valid;
   }
 
   /**
-   * Process a single chunk of text with Grok AI
+   * Process a chunk with up to 2 retries on parse failure.
    */
-  async processChunkWithGrok(chunk, examType, fileName, chunkNumber, totalChunks) {
-    const prompt = `
-You are an expert educational content analyzer. Your task is to extract ALL questions that actually exist in the provided educational document content.
+  async processChunkWithRetry(chunk, examType, fileName, chunkNum, totalChunks, maxRetries = 2) {
+    let lastError;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.processChunk(chunk, examType, fileName, chunkNum, totalChunks);
+      } catch (err) {
+        lastError = err;
+        console.warn(`  Attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+        if (attempt < maxRetries) await this.sleep(500 * attempt);
+      }
+    }
+    throw lastError;
+  }
 
-DOCUMENT TYPE: ${examType.toUpperCase()}
-FILE NAME: ${fileName}
-CHUNK: ${chunkNumber}/${totalChunks}
+  /**
+   * Send one chunk to the Groq API and return parsed questions.
+   */
+  async processChunk(chunk, examType, fileName, chunkNum, totalChunks) {
+    // Deliberately compact prompt — less ambiguity, fewer hallucinations
+    const prompt = `You are extracting exam questions from an educational document.
 
-DOCUMENT CONTENT (CHUNK):
----
-${chunk}
----
+EXAM TYPE: ${examType}
+FILE: ${fileName}
+CHUNK: ${chunkNum} of ${totalChunks}
 
-IMPORTANT INSTRUCTIONS:
-1. Extract EVERY question that actually appears in the DOCUMENT CONTENT (CHUNK) above.
-2. DO NOT generate new questions. ONLY extract what is literally present in the document.
-3. If no questions are found in this chunk, return an empty array for "questions".
-4. Maintain the exact question text, options, and formatting as found in the document.
-5. Identify the correct answer and points from the document context. If not explicitly stated, use your best judgment based ONLY on the content provided.
-6. Look for questions in all formats: numbered (1., 2.), bulleted, or plain text.
-7. Return ONLY valid JSON format - no extra text, markdown code blocks, or explanations.
+RULES:
+1. Extract ONLY questions that literally appear in the text below.
+2. Do NOT invent or paraphrase questions.
+3. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
+4. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
+5. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
+6. If no questions are found, return {"questions":[]}.
+7. Respond with ONLY valid JSON — no markdown fences, no explanation.
 
-REQUIRED RESPONSE FORMAT (JSON ONLY):
+QUESTION SCHEMA:
 {
   "questions": [
     {
-      "question": "Exact question text from document",
-      "type": "mcq",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "correctAnswer": "Index of correct option (0, 1, 2...)",
+      "question": "<exact question text>",
+      "type": "mcq | true_false | fill_blank | open",
+      "options": ["A","B","C","D"],   // MCQ and true_false only
+      "correctAnswer": 0,             // integer index for MCQ/true_false; string for others
       "points": 1
     }
   ]
 }
 
-SUPPORTED QUESTION TYPES:
-- mcq: Multiple choice questions with options
-- true_false: True/False statements
-- fill_blank: Fill-in-the-blank questions
-- open: Open-ended/descriptive questions
+DOCUMENT TEXT:
+---
+${chunk}
+---`;
 
-CRITICAL REQUIREMENTS:
-- NO HALLUCINATION: Do not create questions that are not in the document.
-- EXHAUSTIVE EXTRACTION: Extract all questions found in the chunk, regardless of quantity.
-- EXACT TEXT: Preserve the original wording of questions and options.
-- Return ONLY the JSON object. No markdown, no "Here is the JSON", no "I found X questions".
-`;
-
-    const chatCompletion = await this.groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: await this.getModel(),
-      temperature: 0.3,
-      max_tokens: 8192, // Increase to allow more questions in the response
+    const model = await this.resolveModel();
+    const completion = await this.groq.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,   // near-deterministic for extraction
+      max_tokens: 4096,
     });
 
-    const response = chatCompletion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error("Empty response from Grok AI");
-    }
+    const raw = completion.choices[0]?.message?.content ?? "";
+    if (!raw.trim()) throw new Error("Empty response from Groq API");
 
-    // Parse JSON response
-    try {
-      console.log("Attempting to parse raw response as JSON...");
-      const jsonResponse = JSON.parse(response);
-      console.log(`Successfully parsed JSON, found ${jsonResponse.questions?.length || 0} questions`);
-      return jsonResponse.questions || [];
-    } catch (parseError) {
-      console.error("Failed to parse raw Grok response as JSON:", parseError.message);
-      console.log("Raw response content:", response.substring(0, 500) + (response.length > 500 ? "..." : ""));
-      
-      // Try to extract JSON from the response text
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        console.log("Found JSON-like content in response, attempting to parse...");
-        try {
-          const jsonResponse = JSON.parse(jsonMatch[0]);
-          console.log(`Successfully parsed extracted JSON, found ${jsonResponse.questions?.length || 0} questions`);
-          return jsonResponse.questions || [];
-        } catch (secondParseError) {
-          console.error("Failed to parse extracted JSON:", secondParseError.message);
-        }
-      }
-      
-      // Try to extract questions using regex as fallback
-      console.log("Falling back to regex-based question extraction...");
-      return this.extractQuestionsFallback(response, examType);
-    }
+    return this.parseQuestionsFromResponse(raw);
   }
 
   /**
-   * Organize lesson notes using Grok AI
-   * @param {Object} file - File object with buffer, mimetype, and originalname
-   * @param {string} mimeType - MIME type of the document
-   * @returns {Promise<string>} - Organized notes content
+   * Robustly parse a JSON response that may be wrapped in markdown fences
+   * or contain leading/trailing prose.
    */
-  async organizeNotes(file, mimeType) {
-    if (!this.isConfigured()) {
-      throw new Error("Grok is not configured. Please set GROQ_API_KEY in environment variables.");
-    }
-
+  parseQuestionsFromResponse(raw) {
+    // 1. Try direct parse
     try {
-      // Extract text content from the file
-      const documentText = await this.extractTextFromBuffer(file.buffer, mimeType);
-      
-      if (!documentText || documentText.trim().length === 0) {
-        throw new Error("No text content found in document");
-      }
+      const parsed = JSON.parse(raw);
+      return parsed.questions ?? [];
+    } catch (_) { /* fall through */ }
 
-      const prompt = `
-You are an expert educational content organizer. Your task is to organize the following lesson notes into a clear, structured format suitable for student learning.
-
-DOCUMENT CONTENT:
-${documentText.substring(0, 8000)} // Limit content to prevent token overflow
-
-Please organize these notes by:
-1. Identifying main topics and subtopics
-2. Creating clear headings and sections
-3. Adding bullet points for key concepts
-4. Including examples where relevant
-5. Making the content easy to understand and study
-
-Return the organized notes in a clean, readable format with proper structure.
-`;
-
-      const chatCompletion = await this.groq.chat.completions.create({
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        model: await this.getModel(),
-        temperature: 0.4,
-        max_tokens: 4096,
-      });
-
-      const organizedNotes = chatCompletion.choices[0]?.message?.content;
-      
-      if (!organizedNotes) {
-        throw new Error("Empty response from Grok AI for notes organization");
-      }
-
-      return organizedNotes;
-    } catch (error) {
-      console.error("Error organizing notes with Grok:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate exam title using Grok AI
-   * @param {string} documentText - The document content
-   * @returns {Promise<string>} - Generated exam title
-   */
-  async generateExamTitle(documentText) {
-    if (!this.isConfigured()) {
-      throw new Error("Grok is not configured. Please set GROQ_API_KEY in environment variables.");
-    }
-
+    // 2. Strip markdown code fences and retry
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
     try {
-      const prompt = `
-Based on the following educational content, generate a concise and descriptive exam title:
+      const parsed = JSON.parse(stripped);
+      return parsed.questions ?? [];
+    } catch (_) { /* fall through */ }
 
-CONTENT:
-${documentText.substring(0, 2000)}
-
-Generate a professional exam title that reflects the main topic covered. Keep it under 50 characters.
-`;
-
-      const chatCompletion = await this.groq.chat.completions.create({
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        model: await this.getModel(),
-        temperature: 0.3,
-        max_tokens: 100,
-      });
-
-      let title = chatCompletion.choices[0]?.message?.content || '';
-      
-      // Clean up the title
-      title = title.replace(/["'\n\r]/g, '').substring(0, 50);
-      
-      return title || this.generateTemplateExamTitle(documentText);
-    } catch (error) {
-      console.error("Error generating exam title with Grok:", error);
-      // Fallback to template title generation
-      return this.generateTemplateExamTitle(documentText);
-    }
-  }
-
-  /**
-   * Generate a chat response using Grok AI
-   * @param {Array} messages - Chat message history
-   * @param {Object} context - Learning context
-   * @returns {Promise<string>} - AI generated response
-   */
-  async generateChatResponse(messages, context) {
-    if (!this.isConfigured()) {
-      return "I'm sorry, my AI brain is not currently connected. Please contact support.";
-    }
-
-    try {
-      const chatCompletion = await this.groq.chat.completions.create({
-        messages: messages,
-        model: await this.getModel(),
-        temperature: 0.7,
-        max_tokens: 2048,
-      });
-
-      return chatCompletion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
-    } catch (error) {
-      console.error("Error generating chat response with Grok:", error);
-      return "I encountered an error while processing your request. Please try again.";
-    }
-  }
-
-  // Helper methods
-  
-  async extractTextFromBuffer(buffer, mimeType) {
-    if (mimeType.includes('text')) {
-      return buffer.toString('utf8');
-    } else {
-      // For PDF and other document types, use the document processing service
+    // 3. Extract the first {...} block
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (match) {
       try {
-        const DocumentProcessingService = require('./document_processing_service');
-        const text = await DocumentProcessingService.extractTextFromDocument(buffer, mimeType);
-        if (!text || text.trim().length < 5) {
-          console.warn(`Extracted text is empty or too short for ${mimeType}`);
-          return '';
-        }
-        return text;
-      } catch (error) {
-        console.warn('Failed to extract text from document buffer:', error.message);
-        return '';
-      }
-    }
-  }
-
-  splitTextIntoChunks(text, chunkSize) {
-    if (!text || text.length <= chunkSize) {
-      return [text || ''];
+        const parsed = JSON.parse(match[0]);
+        return parsed.questions ?? [];
+      } catch (_) { /* fall through */ }
     }
 
-    // Try to split by double newlines but preserve question structure
-    const paragraphs = text.split(/\n\s*\n/);
-    
-    // If no paragraphs, split by single newlines
-    const units = paragraphs.length <= 1 ? text.split(/\n/) : paragraphs;
-    
-    const chunks = [];
-    let currentChunk = '';
-    
-    for (const unit of units) {
-      if (currentChunk.length + unit.length <= chunkSize) {
-        currentChunk += unit + (paragraphs.length <= 1 ? '\n' : '\n\n');
-      } else {
-        if (currentChunk.length > 0) {
-          chunks.push(currentChunk.trim());
-        }
-        
-        // If a single unit is too large, split it by characters as last resort
-        if (unit.length > chunkSize) {
-          for (let i = 0; i < unit.length; i += chunkSize) {
-            chunks.push(unit.substring(i, i + chunkSize));
-          }
-          currentChunk = '';
-        } else {
-          currentChunk = unit + (paragraphs.length <= 1 ? '\n' : '\n\n');
-        }
-      }
+    // 4. Last resort — extract individual question objects from the text
+    const questionBlocks = [];
+    const objRegex = /\{[^{}]*"question"\s*:[^{}]*\}/g;
+    let m;
+    while ((m = objRegex.exec(stripped)) !== null) {
+      try {
+        questionBlocks.push(JSON.parse(m[0]));
+      } catch (_) { /* skip malformed block */ }
     }
-    
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
+
+    if (questionBlocks.length > 0) {
+      console.warn(`Partial parse: recovered ${questionBlocks.length} question object(s)`);
+      return questionBlocks;
     }
-    
-    return chunks;
+
+    throw new Error("Could not parse any questions from Groq response");
   }
-  
+
+  // ─── Validation & Normalisation ──────────────────────────────────────────────
+
   /**
-   * Split a large paragraph into smaller chunks
+   * Validate structure and normalise correctAnswer so downstream code
+   * always receives consistent types.
    */
-  splitLargeParagraph(paragraph, chunkSize) {
-    // Split by sentences to preserve meaning
-    const sentences = paragraph.split(/(?<=[.!?])\s+/);
-    const chunks = [];
-    let currentChunk = '';
-    
-    for (const sentence of sentences) {
-      if (currentChunk.length + sentence.length <= chunkSize) {
-        currentChunk += sentence + ' ';
-      } else {
-        if (currentChunk.length > 0) {
-          chunks.push(currentChunk.trim());
-        }
-        
-        // If a single sentence is too long, fall back to character-based splitting
-        if (sentence.length > chunkSize) {
-          const sentenceChunks = [];
-          for (let i = 0; i < sentence.length; i += chunkSize) {
-            sentenceChunks.push(sentence.substring(i, i + chunkSize));
-          }
-          chunks.push(...sentenceChunks);
-          currentChunk = '';
-        } else {
-          currentChunk = sentence + ' ';
-        }
+  validateAndNormalizeQuestions(questions) {
+    const validTypes = new Set(["mcq", "true_false", "fill_blank", "open"]);
+
+    return questions.reduce((acc, q) => {
+      if (!q.question || typeof q.question !== "string" || !q.question.trim()) {
+        console.log("Skipped: missing question text");
+        return acc;
       }
-    }
-    
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
-    }
-    
-    return chunks;
+
+      const type = (q.type || "").toLowerCase();
+      if (!validTypes.has(type)) {
+        console.log(`Skipped: unknown type "${q.type}"`);
+        return acc;
+      }
+
+      // ── MCQ ──────────────────────────────────────────────────────────────────
+      if (type === "mcq") {
+        if (!Array.isArray(q.options) || q.options.length < 2) {
+          console.log(`Skipped MCQ (too few options): ${q.question.substring(0, 60)}`);
+          return acc;
+        }
+        // Normalise correctAnswer to an integer index
+        let idx = parseInt(q.correctAnswer, 10);
+        if (isNaN(idx)) {
+          // Model may have returned the option text instead of the index
+          idx = q.options.findIndex(
+            (o) => o.toLowerCase().trim() === String(q.correctAnswer).toLowerCase().trim()
+          );
+        }
+        if (idx < 0 || idx >= q.options.length) idx = 0; // safe fallback
+
+        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1 });
+        return acc;
+      }
+
+      // ── True / False ─────────────────────────────────────────────────────────
+      if (type === "true_false") {
+        const options = Array.isArray(q.options) && q.options.length >= 2
+          ? q.options
+          : ["True", "False"];
+
+        let idx = parseInt(q.correctAnswer, 10);
+        if (isNaN(idx)) {
+          const ans = String(q.correctAnswer).toLowerCase().trim();
+          idx = ans === "true" || ans === "0" ? 0 : 1;
+        }
+        if (idx < 0 || idx > 1) idx = 0;
+
+        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1 });
+        return acc;
+      }
+
+      // ── Fill-blank / Open ────────────────────────────────────────────────────
+      acc.push({
+        ...q,
+        type,
+        correctAnswer: String(q.correctAnswer ?? ""),
+        points: q.points ?? 1,
+      });
+      return acc;
+    }, []);
   }
+
+  // ─── Deduplication ───────────────────────────────────────────────────────────
 
   deduplicateQuestions(questions) {
     const seen = new Set();
-    const result = questions.filter(question => {
-      // More robust question identification
-      const questionText = question.question || '';
-      if (!questionText.trim()) return false; // Skip empty questions
-      
-      // Create a more unique key that's less likely to cause false duplicates
-      // Use more characters and include options to distinguish between similar questions
-      let key = questionText.toLowerCase().trim().substring(0, 250); 
-      
-      // Add options to the key to distinguish questions with same start but different options
-      if (Array.isArray(question.options)) {
-        key += '|opts:' + question.options.join('|').toLowerCase().substring(0, 100);
-      }
-      
-      if (question.type) {
-        key += '|type:' + question.type.toLowerCase();
-      }
-      
+    const result = [];
+
+    for (const q of questions) {
+      const text = (q.question || "").toLowerCase().trim();
+      if (!text) continue;
+
+      // Key = first 200 chars of question + first option (if any)
+      const key =
+        text.substring(0, 200) +
+        "|" +
+        (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
+
       if (seen.has(key)) {
-        console.log(`Skipping duplicate question: ${questionText.substring(0, 50)}...`);
-        return false;
+        console.log(`Duplicate skipped: ${text.substring(0, 50)}…`);
+        continue;
       }
-      
       seen.add(key);
-      return true;
-    });
-    
-    console.log(`Deduplication result: ${questions.length} -> ${result.length} questions`);
+      result.push(q);
+    }
+
+    console.log(`Deduplication: ${questions.length} → ${result.length}`);
     return result;
   }
 
-  extractQuestionsFallback(response, examType) {
-    // Simple regex-based fallback for question extraction
-    const questions = [];
-    
-    console.log("Using fallback question extraction method");
-    
-    // Try to extract JSON-like structure first
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const jsonResponse = JSON.parse(jsonMatch[0]);
-        if (jsonResponse.questions && Array.isArray(jsonResponse.questions)) {
-          console.log(`Found ${jsonResponse.questions.length} questions in JSON structure`);
-          return jsonResponse.questions;
-        }
-      } catch (e) {
-        console.log("JSON parsing failed in fallback, trying regex method");
-      }
+  // ─── Notes & Utilities ───────────────────────────────────────────────────────
+
+  async organizeNotes(file, mimeType) {
+    if (!this.isConfigured()) {
+      throw new Error("GrokService not configured — set GROQ_API_KEY.");
     }
-    
-    // Look for numbered questions as backup - only generate MCQ questions
-    const questionRegex = /(\d+)\.\s*(.+?)(?=\n\d+\.|\n{2}|$)/gs;
-    let match;
-    let questionCount = 0;
-    
-    while ((match = questionRegex.exec(response)) !== null) {
-      const questionText = match[2].trim();
-      if (questionText.length > 10) {
-        questionCount++;
-        questions.push({
-          question: questionText,
-          type: 'mcq',
-          options: [`Option A for: ${questionText.substring(0, 30)}...`, 'Option B', 'Option C', 'Option D'],
-          correctAnswer: 'Option A',
-          points: 1
-        });
-      }
-    }
-    
-    console.log(`Extracted ${questionCount} questions using regex method`);
-    
-    return questions;
-  }
 
-  generateTemplateQuestions(documentText, examType, fileName) {
-    const templates = [
-      {
-        question: `Based on the content of "${fileName}", what is the main topic discussed?`,
-        type: 'mcq',
-        options: ["Topic A", "Topic B", "Topic C", "Topic D"],
-        correctAnswer: "Topic A",
-        points: 1,
-      }
-    ];
-    
-    return templates;
-  }
+    const documentText = await this.extractTextFromBuffer(file.buffer, mimeType);
+    if (!documentText?.trim()) throw new Error("No text content found in document");
 
-  filterQuestionTypes(questions) {
-    // Allow all question types supported by the model
-    
-    const filtered = questions.filter(question => {
-      // Validate basic question structure
-      if (!question.question || typeof question.question !== 'string') {
-        console.log(`Filtering out question with invalid question text`);
-        return false;
-      }
-      
-      // Supported question types in our system
-      const validTypes = ['mcq', 'true_false', 'fill_blank', 'open'];
-      
-      const questionType = (question.type || '').toLowerCase();
-      const isValidType = validTypes.includes(questionType);
-      
-      if (!isValidType) {
-        console.log(`Filtering out unsupported question type: ${question.type}`);
-        return false;
-      }
-      
-      // MCQ questions need options
-      if (questionType === 'mcq') {
-        if (!Array.isArray(question.options) || question.options.length < 2) {
-          console.log(`Filtering MCQ with insufficient options:`, question.question.substring(0, 50));
-          return false;
-        }
-      }
+    // Hard-limit to avoid token overflow — no inline comment leaking into prompt
+    const contentPreview = documentText.substring(0, 8000);
 
-      // True/False questions need exactly 2 options if provided, or we can default them
-      if (questionType === 'true_false') {
-        if (!Array.isArray(question.options) || question.options.length < 2) {
-          question.options = ['True', 'False'];
-        }
-      }
-      
-      return true;
+    const prompt = `You are an expert educational content organizer. Organize the lesson notes below into a clear, structured format for student study.
+
+Instructions:
+- Identify main topics and subtopics with clear headings
+- Use bullet points for key concepts
+- Include examples where present in the source
+- Keep language clear and accessible
+
+NOTES:
+${contentPreview}`;
+
+    const completion = await this.groq.chat.completions.create({
+      model: await this.resolveModel(),
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+      max_tokens: 4096,
     });
-    
-    console.log(`Filtered questions: ${filtered.length} valid questions from ${questions.length} total`);
-    return filtered;
+
+    const result = completion.choices[0]?.message?.content;
+    if (!result) throw new Error("Empty response from Groq AI");
+    return result;
   }
 
-  generateTemplateExamTitle(documentText) {
-    const topics = ['Mathematics', 'Science', 'History', 'Literature', 'Programming', 'Business'];
-    const types = ['Quiz', 'Test', 'Assessment', 'Review', 'Practice'];
-    
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    
-    return `${randomTopic} ${randomType}`;
+  async generateExamTitle(documentText) {
+    if (!this.isConfigured()) {
+      return this.generateFallbackExamTitle();
+    }
+
+    try {
+      const preview = documentText.substring(0, 1500);
+      const prompt = `Generate a concise, professional exam title (maximum 50 characters) based on this content. Return ONLY the title — no quotes, no explanation.\n\nCONTENT:\n${preview}`;
+
+      const completion = await this.groq.chat.completions.create({
+        model: await this.resolveModel(),
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 60,
+      });
+
+      const title = (completion.choices[0]?.message?.content || "")
+        .replace(/["'\n\r]/g, "")
+        .trim()
+        .substring(0, 50);
+
+      return title || this.generateFallbackExamTitle();
+    } catch (error) {
+      console.error("generateExamTitle error:", error.message);
+      return this.generateFallbackExamTitle();
+    }
+  }
+
+  async generateChatResponse(messages, _context) {
+    if (!this.isConfigured()) {
+      return "AI is not currently available. Please contact support.";
+    }
+
+    try {
+      const completion = await this.groq.chat.completions.create({
+        model: await this.resolveModel(),
+        messages,
+        temperature: 0.7,
+        max_tokens: 2048,
+      });
+      return completion.choices[0]?.message?.content ?? "I'm not sure how to respond to that.";
+    } catch (error) {
+      console.error("generateChatResponse error:", error.message);
+      return "I encountered an error. Please try again.";
+    }
+  }
+
+  // ─── Internal Helpers ────────────────────────────────────────────────────────
+
+  async extractTextFromBuffer(buffer, mimeType) {
+    if (mimeType && mimeType.includes("text")) {
+      return buffer.toString("utf8");
+    }
+    try {
+      const DocumentProcessingService = require("./document_processing_service");
+      const text = await DocumentProcessingService.extractTextFromDocument(buffer, mimeType);
+      if (!text || text.trim().length < 5) {
+        console.warn(`Extracted text too short for ${mimeType}`);
+        return "";
+      }
+      return text;
+    } catch (error) {
+      console.warn("extractTextFromBuffer failed:", error.message);
+      return "";
+    }
+  }
+
+  /**
+   * Split text into chunks that respect paragraph boundaries.
+   * Avoids cutting a question in half.
+   */
+  splitTextIntoChunks(text, chunkSize) {
+    if (!text) return [];
+    if (text.length <= chunkSize) return [text];
+
+    // Prefer splitting on double-newlines (paragraph breaks)
+    const paragraphs = text.split(/\n{2,}/);
+    const chunks = [];
+    let current = "";
+
+    for (const para of paragraphs) {
+      const addition = current ? "\n\n" + para : para;
+
+      if (current.length + addition.length <= chunkSize) {
+        current += addition;
+      } else {
+        if (current) chunks.push(current.trim());
+
+        // Paragraph itself exceeds chunk size — split by sentences
+        if (para.length > chunkSize) {
+          const sentences = para.split(/(?<=[.!?])\s+/);
+          current = "";
+          for (const sentence of sentences) {
+            if (current.length + sentence.length + 1 <= chunkSize) {
+              current += (current ? " " : "") + sentence;
+            } else {
+              if (current) chunks.push(current.trim());
+              // Single sentence too long — hard split
+              if (sentence.length > chunkSize) {
+                for (let i = 0; i < sentence.length; i += chunkSize) {
+                  chunks.push(sentence.substring(i, i + chunkSize));
+                }
+                current = "";
+              } else {
+                current = sentence;
+              }
+            }
+          }
+        } else {
+          current = para;
+        }
+      }
+    }
+
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+  }
+
+  generateFallbackExamTitle() {
+    const topics = ["Mathematics", "Science", "History", "Literature", "Programming", "Business"];
+    const types = ["Quiz", "Test", "Assessment", "Review", "Practice"];
+    return `${topics[Math.floor(Math.random() * topics.length)]} ${types[Math.floor(Math.random() * types.length)]}`;
+  }
+
+  sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
