@@ -116,13 +116,12 @@ class GrokService {
     try {
       // Note: Groq doesn't have a public models endpoint
       // We'll maintain a list of known good models
-      const knownModels = [
-        "llama-3.3-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768",
-        "gemma-7b-it"
-      ];
+    const knownModels = [
+      "llama-3.3-70b-versatile",
+      "mixtral-8x7b-32768",
+      "gemma2-9b-it",
+      "deepseek-r1-distill-llama-70b"
+    ];
       
       const availableModels = [];
       
@@ -207,7 +206,7 @@ class GrokService {
   async getModel(cheap = false) {
     if (cheap) {
       // Return a faster, cheaper model for simple tasks like grading
-      return "llama3-8b-8192";
+      return "gemma2-9b-it";
     }
     await this.autoUpdateModel();
     return this.currentModel;
