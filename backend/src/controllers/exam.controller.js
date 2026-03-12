@@ -488,7 +488,9 @@ const getUserExamHistory = async (req, res) => {
           
           // Determine if the answer was correct
           let isCorrect = false;
-          if (question.type === 'mcq' || question.type === 'true_false') {
+          if (userAnswer.isCorrect !== undefined) {
+            isCorrect = userAnswer.isCorrect;
+          } else if (question.type === 'mcq' || question.type === 'true_false') {
             // Mirror the same logic as in submitExam
             if (question.correctAnswer === userAnswer.selectedOption) {
               isCorrect = true;
@@ -500,7 +502,9 @@ const getUserExamHistory = async (req, res) => {
           
           // Calculate earned points based on the grading result
           let earnedPoints = 0;
-          if (question.type === 'mcq' || question.type === 'true_false') {
+          if (userAnswer.earnedPoints !== undefined) {
+            earnedPoints = userAnswer.earnedPoints;
+          } else if (question.type === 'mcq' || question.type === 'true_false') {
             earnedPoints = isCorrect ? question.points : 0;
           } else {
             earnedPoints = isCorrect ? question.points : 0;
@@ -813,7 +817,9 @@ const getAdminExamResults = async (req, res) => {
           if (!question) return null;
           
           let isCorrect = false;
-          if (question.type === 'mcq' || question.type === 'true_false') {
+          if (userAnswer.isCorrect !== undefined) {
+            isCorrect = userAnswer.isCorrect;
+          } else if (question.type === 'mcq' || question.type === 'true_false') {
             if (question.correctAnswer === userAnswer.selectedOption) {
               isCorrect = true;
             }
@@ -888,14 +894,27 @@ const getAdminExamResults = async (req, res) => {
 const regradeExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const { score: manualScore, adminResponse, useAI = false } = req.body;
+    // Support both formats (backend 'score'/'adminResponse' and frontend 'newScore'/'adminComment')
+    const { 
+      score, 
+      newScore, 
+      adminResponse, 
+      adminComment, 
+      useAI = false 
+    } = req.body;
+    
+    const manualScore = score !== undefined ? score : newScore;
+    const responseText = adminResponse || adminComment;
     
     const result = await Result.findById(id).populate('examId');
     if (!result) {
       return sendNotFound(res, 'Exam result not found');
     }
     
-    const questions = await Question.find({ examId: result.examId._id });
+    const wasPassed = result.passed;
+    const exam = result.examId;
+    
+    const questions = await Question.find({ examId: exam._id });
     
     if (useAI && GrokService.isConfigured()) {
       console.log(`Using Grok AI to regrade exam result ${id}`);
@@ -904,19 +923,77 @@ const regradeExam = async (req, res) => {
       result.answers = gradedAnswers;
       result.score = gradedAnswers.reduce((sum, a) => sum + (a.earnedPoints || 0), 0);
     } else if (manualScore !== undefined) {
-      result.score = manualScore;
+      result.score = Number(manualScore);
+      
+      // If we are manually setting the total score, we should also update individual answers
+      // to reflect this if it's a simple one-question exam or just to keep it somewhat consistent.
+      // However, without knowing which question changed, we just update the total score.
+      // To ensure individual answers show up correctly in history, we'll mark them as regraded.
+      if (result.answers && result.answers.length === 1) {
+        result.answers[0].earnedPoints = result.score;
+        result.answers[0].isCorrect = result.score >= (questions[0]?.points || 0) * 0.5; // Simple heuristic
+      }
     }
     
     result.percentage = result.totalPoints > 0 ? (result.score / result.totalPoints) * 100 : 0;
     
-    if (result.examId) {
-      result.passed = result.percentage >= result.examId.passingScore;
+    if (exam) {
+      result.passed = result.percentage >= exam.passingScore;
     }
     
-    result.adminResponse = adminResponse || (useAI ? 'Regraded by AI' : result.adminResponse);
+    result.adminResponse = responseText || (useAI ? 'Regraded by AI' : result.adminResponse);
     result.regraded = true;
     
     await result.save();
+    
+    // Check if status changed from failed to passed on a final exam
+    if (!wasPassed && result.passed && exam && exam.type === 'final') {
+      try {
+        // Generate certificate
+        const userId = result.userId;
+        const user = await User.findById(userId).select('fullName email');
+        const course = await Course.findById(exam.courseId).select('title description');
+        
+        // Check if certificate already exists
+        const existingCert = await Certificate.findOne({ userId, courseId: exam.courseId });
+        
+        if (!existingCert) {
+          const serialNumber = `CERT-${userId.toString().slice(-4)}-${exam._id.toString().slice(-4)}-${Date.now()}`;
+          
+          const pdfPath = await CertificatePDFService.generateCertificatePDF({
+            studentName: user.fullName,
+            userFullName: user.fullName,
+            courseTitle: course.title,
+            courseDescription: course.description,
+            score: result.score,
+            totalPoints: result.totalPoints,
+            percentage: result.percentage,
+            issuedDate: new Date(),
+            serialNumber
+          });
+          
+          await Certificate.create({
+            userId,
+            courseId: exam.courseId,
+            examId: exam._id,
+            score: result.score,
+            percentage: result.percentage,
+            certificatePdfPath: pdfPath,
+            serialNumber,
+            isValid: true
+          });
+          
+          await Enrollment.findOneAndUpdate(
+            { userId, courseId: exam.courseId },
+            { certificateEligible: true, completionStatus: 'completed' }
+          );
+          
+          console.log(`Certificate generated for user ${userId} after regrading`);
+        }
+      } catch (certError) {
+        console.error('Error generating certificate after regrading:', certError);
+      }
+    }
     
     sendSuccess(res, result, 'Exam result regraded successfully');
   } catch (error) {
