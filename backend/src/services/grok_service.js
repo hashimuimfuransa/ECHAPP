@@ -278,6 +278,15 @@ class GrokService {
       
       console.log(`Total unique questions extracted: ${uniqueQuestions.length}`);
       console.log(`Questions after filtering: ${filteredQuestions.length} (all types allowed)`);
+
+      // Determine correct answers using separate Step 2 logic
+      console.log(`Determining correct answers for ${filteredQuestions.length} questions...`);
+      for (let q of filteredQuestions) {
+        // Only grade MCQ and True/False questions
+        if (q.type === 'mcq' || q.type === 'true_false') {
+          q.correctAnswer = await this.findCorrectAnswer(documentText, q);
+        }
+      }
       
       return filteredQuestions;
     } catch (error) {
@@ -291,50 +300,32 @@ class GrokService {
    */
   async processChunkWithGrok(chunk, examType, fileName, chunkNumber, totalChunks) {
     const prompt = `
-You are an expert educational content analyzer. Your task is to extract ALL questions that actually exist in the provided educational document content.
+Extract all questions from the provided document content.
 
-DOCUMENT TYPE: ${examType.toUpperCase()}
-FILE NAME: ${fileName}
-CHUNK: ${chunkNumber}/${totalChunks}
+Rules:
+- Do NOT answer the questions.
+- Do NOT guess answers.
+- Preserve the exact question and options.
+- Identify the question type: mcq, true_false, fill_blank, open.
+- Default to "mcq" if options are present.
+- Return ONLY valid JSON.
 
-DOCUMENT CONTENT (CHUNK):
+Format:
+{
+ "questions": [
+   {
+     "question": "...",
+     "type": "mcq",
+     "options": ["Option A", "Option B", "Option C", "Option D"],
+     "points": 1
+   }
+ ]
+}
+
+DOCUMENT CONTENT (CHUNK ${chunkNumber}/${totalChunks}):
 ---
 ${chunk}
 ---
-
-IMPORTANT INSTRUCTIONS:
-1. Extract EVERY question that actually appears in the DOCUMENT CONTENT (CHUNK) above.
-2. DO NOT generate new questions. ONLY extract what is literally present in the document.
-3. If no questions are found in this chunk, return an empty array for "questions".
-4. Maintain the exact question text, options, and formatting as found in the document.
-5. Identify the correct answer and points from the document context. If not explicitly stated, use your best judgment based ONLY on the content provided.
-6. Look for questions in all formats: numbered (1., 2.), bulleted, or plain text.
-7. Return ONLY valid JSON format - no extra text, markdown code blocks, or explanations.
-
-REQUIRED RESPONSE FORMAT (JSON ONLY):
-{
-  "questions": [
-    {
-      "question": "Exact question text from document",
-      "type": "mcq",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "correctAnswer": "Index of correct option (0, 1, 2...)",
-      "points": 1
-    }
-  ]
-}
-
-SUPPORTED QUESTION TYPES:
-- mcq: Multiple choice questions with options
-- true_false: True/False statements
-- fill_blank: Fill-in-the-blank questions
-- open: Open-ended/descriptive questions
-
-CRITICAL REQUIREMENTS:
-- NO HALLUCINATION: Do not create questions that are not in the document.
-- EXHAUSTIVE EXTRACTION: Extract all questions found in the chunk, regardless of quantity.
-- EXACT TEXT: Preserve the original wording of questions and options.
-- Return ONLY the JSON object. No markdown, no "Here is the JSON", no "I found X questions".
 `;
 
     const chatCompletion = await this.groq.chat.completions.create({
@@ -381,6 +372,60 @@ CRITICAL REQUIREMENTS:
       // Try to extract questions using regex as fallback
       console.log("Falling back to regex-based question extraction...");
       return this.extractQuestionsFallback(response, examType);
+    }
+  }
+
+  /**
+   * Determine the correct answer for a question using the document content
+   * @param {string} documentText - The full document content
+   * @param {Object} question - The question object
+   * @returns {Promise<number|null>} - Index of the correct answer or null
+   */
+  async findCorrectAnswer(documentText, question) {
+    if (!this.isConfigured() || !question.options || question.options.length === 0) {
+      return null;
+    }
+
+    const prompt = `
+Use the document below to determine the correct answer.
+
+DOCUMENT:
+${documentText.substring(0, 8000)}
+
+QUESTION:
+${question.question}
+
+OPTIONS:
+${question.options.join("\n")}
+
+Rules:
+- The correct answer must come from the document.
+- If the document does not contain the answer return null.
+- Return ONLY the index of the correct option.
+- Indexing starts at 0.
+
+Response format (JSON ONLY):
+{
+ "correctAnswer": number
+}
+`;
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: await this.getModel(),
+        temperature: 0
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]).correctAnswer;
+      }
+      return JSON.parse(content).correctAnswer;
+    } catch (error) {
+      console.error("Error finding correct answer:", error.message);
+      return null;
     }
   }
 
