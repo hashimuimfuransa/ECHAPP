@@ -503,6 +503,141 @@ ${contentPreview}`;
     }
   }
 
+  // ─── Grading & Evaluation ────────────────────────────────────────────────────
+
+  /**
+   * Grade a batch of exam answers using Groq AI.
+   * Handles MCQ, true_false, fill_blank, and open-ended questions.
+   * @param {Array} questions - Original question objects from database
+   * @param {Array} userAnswers - Student's submitted answers
+   * @returns {Promise<Array>} Graded answers with earnedPoints and feedback
+   */
+  async gradeAnswers(questions, userAnswers) {
+    if (!this.isConfigured()) {
+      throw new Error("GrokService not configured for grading.");
+    }
+
+    // Format data for the prompt to minimize tokens
+    const gradingData = userAnswers.map((ua) => {
+      const q = questions.find((quest) => quest._id.toString() === ua.questionId);
+      if (!q) return null;
+
+      return {
+        id: ua.questionId,
+        type: q.type,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        studentAnswer: q.type === "mcq" || q.type === "true_false" 
+          ? (q.options[ua.selectedOption] || ua.selectedOption)
+          : (ua.answerText || ua.selectedOption),
+        points: q.points || 1,
+      };
+    }).filter(Boolean);
+
+    if (gradingData.length === 0) return [];
+
+    const prompt = `You are an expert examiner grading a student's exam.
+Grade the following answers objectively based on the correct answer provided.
+
+RULES:
+1. For MCQ and true_false: The answer must match the correct answer exactly (index or text).
+2. For fill_blank: Allow minor spelling errors or case differences if the meaning is identical.
+3. For open: Grade based on conceptual correctness and completeness. Give partial points if partially correct.
+4. Provide a brief "feedback" string for each answer (max 15 words).
+5. Respond ONLY with a JSON array of objects.
+
+SCHEMA:
+[
+  {
+    "id": "question_id",
+    "earnedPoints": number,
+    "feedback": "string",
+    "isCorrect": boolean
+  }
+]
+
+DATA TO GRADE:
+${JSON.stringify(gradingData, null, 2)}`;
+
+    try {
+      const model = await this.resolveModel();
+      const completion = await this.groq.chat.completions.create({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1,
+        max_tokens: 4096,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "";
+      const gradedResults = this.parseGradingResponse(raw);
+
+      // Map results back to the original userAnswers format
+      return userAnswers.map((ua) => {
+        const graded = gradedResults.find((g) => g.id === ua.questionId);
+        const q = questions.find((quest) => quest._id.toString() === ua.questionId);
+        
+        if (graded) {
+          return {
+            ...ua,
+            earnedPoints: graded.earnedPoints,
+            feedback: graded.feedback,
+            isCorrect: graded.isCorrect,
+          };
+        }
+
+        // Fallback grading if AI missed a question
+        return this.fallbackGrade(q, ua);
+      });
+    } catch (error) {
+      console.error("AI Grading failed, using fallback:", error.message);
+      return userAnswers.map((ua) => {
+        const q = questions.find((quest) => quest._id.toString() === ua.questionId);
+        return this.fallbackGrade(q, ua);
+      });
+    }
+  }
+
+  /**
+   * Parse the JSON response from the grading prompt.
+   */
+  parseGradingResponse(raw) {
+    try {
+      // Clean markdown fences if present
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      const match = cleaned.match(/\[[\s\S]*\]/);
+      if (match) {
+        return JSON.parse(match[0]);
+      }
+      return JSON.parse(cleaned);
+    } catch (e) {
+      console.error("Failed to parse grading response:", e.message);
+      return [];
+    }
+  }
+
+  /**
+   * Deterministic fallback grading for simple question types.
+   */
+  fallbackGrade(question, userAnswer) {
+    if (!question) return { ...userAnswer, earnedPoints: 0, isCorrect: false };
+
+    let isCorrect = false;
+    if (question.type === "mcq" || question.type === "true_false") {
+      isCorrect = question.correctAnswer === userAnswer.selectedOption;
+    } else if (question.type === "fill_blank") {
+      isCorrect = String(question.correctAnswer).toLowerCase().trim() === 
+                  String(userAnswer.answerText || "").toLowerCase().trim();
+    }
+
+    return {
+      ...userAnswer,
+      earnedPoints: isCorrect ? (question.points || 1) : 0,
+      isCorrect,
+      feedback: isCorrect ? "Correct." : "Incorrect.",
+    };
+  }
+
   // ─── Internal Helpers ────────────────────────────────────────────────────────
 
   async extractTextFromBuffer(buffer, mimeType) {

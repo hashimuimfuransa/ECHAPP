@@ -238,27 +238,39 @@ const submitExam = async (req, res) => {
     // Get all questions for this exam
     const questions = await Question.find({ examId });
     
+    let gradedAnswers = [];
     let score = 0;
     let totalPoints = 0;
 
-    // Calculate score
-    for (const userAnswer of answers) {
-      const question = questions.find(q => q._id.toString() === userAnswer.questionId);
-      if (question) {
-        totalPoints += question.points;
-        
-        // Handle different question types for grading
-        switch (question.type) {
-          case 'mcq':
-          case 'true_false':
-            // Compare against correct answer index (Number)
+    // Use Grok AI for grading if available
+    if (GrokService.isConfigured()) {
+      console.log(`Using Grok AI to grade exam ${examId} for user ${userId}`);
+      gradedAnswers = await GrokService.gradeAnswers(questions, answers);
+      
+      // Calculate totals from AI results
+      score = gradedAnswers.reduce((sum, a) => sum + (a.earnedPoints || 0), 0);
+      totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
+    } else {
+      // Fallback manual grading (MCQ/TF only)
+      console.log(`Grok AI not configured, using fallback grading for exam ${examId}`);
+      for (const userAnswer of answers) {
+        const question = questions.find(q => q._id.toString() === userAnswer.questionId);
+        if (question) {
+          totalPoints += question.points;
+          let earnedPoints = 0;
+          
+          if (question.type === 'mcq' || question.type === 'true_false') {
             if (question.correctAnswer === userAnswer.selectedOption) {
-              score += question.points;
+              earnedPoints = question.points;
+              score += earnedPoints;
             }
-            break;
-            
-          default:
-            console.warn(`Unknown question type: ${question.type}`);
+          }
+          
+          gradedAnswers.push({
+            ...userAnswer,
+            earnedPoints,
+            isCorrect: earnedPoints > 0
+          });
         }
       }
     }
@@ -270,29 +282,7 @@ const submitExam = async (req, res) => {
     const result = await Result.create({
       userId,
       examId,
-      answers: answers.map(answer => {
-        const question = questions.find(q => q._id.toString() === answer.questionId);
-        let earnedPoints = 0;
-        
-        if (question) {
-          // Calculate earned points based on grading logic
-          switch (question.type) {
-            case 'mcq':
-            case 'true_false':
-              if (question.correctAnswer === answer.selectedOption) {
-                earnedPoints = question.points;
-              }
-              break;
-          }
-        }
-        
-        return {
-          questionId: answer.questionId,
-          selectedOption: answer.selectedOption,
-          answerText: answer.answerText,
-          earnedPoints: earnedPoints
-        };
-      }),
+      answers: gradedAnswers,
       score,
       totalPoints,
       percentage,
@@ -883,22 +873,32 @@ const getAdminExamResults = async (req, res) => {
 const regradeExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const { score, adminResponse } = req.body;
+    const { score: manualScore, adminResponse, useAI = false } = req.body;
     
     const result = await Result.findById(id).populate('examId');
     if (!result) {
       return sendNotFound(res, 'Exam result not found');
     }
     
-    // Update score and calculate new percentage/pass status
-    result.score = score;
-    result.percentage = (score / result.totalPoints) * 100;
+    const questions = await Question.find({ examId: result.examId._id });
+    
+    if (useAI && GrokService.isConfigured()) {
+      console.log(`Using Grok AI to regrade exam result ${id}`);
+      const gradedAnswers = await GrokService.gradeAnswers(questions, result.answers);
+      
+      result.answers = gradedAnswers;
+      result.score = gradedAnswers.reduce((sum, a) => sum + (a.earnedPoints || 0), 0);
+    } else if (manualScore !== undefined) {
+      result.score = manualScore;
+    }
+    
+    result.percentage = result.totalPoints > 0 ? (result.score / result.totalPoints) * 100 : 0;
     
     if (result.examId) {
       result.passed = result.percentage >= result.examId.passingScore;
     }
     
-    result.adminResponse = adminResponse;
+    result.adminResponse = adminResponse || (useAI ? 'Regraded by AI' : result.adminResponse);
     result.regraded = true;
     
     await result.save();

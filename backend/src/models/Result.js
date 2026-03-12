@@ -28,6 +28,14 @@ const resultSchema = new mongoose.Schema({
     earnedPoints: {
       type: Number, // Points earned for this question
       required: false
+    },
+    feedback: {
+      type: String, // Feedback from AI grader
+      required: false
+    },
+    isCorrect: {
+      type: Boolean, // Whether the answer was considered correct
+      required: false
     }
   }],
   score: {
