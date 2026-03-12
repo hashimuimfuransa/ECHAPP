@@ -186,6 +186,10 @@ class GrokService {
     const chunks = this.splitTextIntoChunks(documentText, CHUNK_SIZE, OVERLAP);
     console.log(`Processing ${chunks.length} chunk(s) with model: ${await this.resolveModel()}`);
 
+    // Free up documentText memory as chunks are now stored
+    documentText = null;
+    documentInput = null;
+
     const allQuestions = [];
 
     for (let i = 0; i < chunks.length; i++) {
@@ -200,6 +204,12 @@ class GrokService {
         );
         console.log(`  ✓ ${questions.length} question(s) extracted`);
         allQuestions.push(...questions);
+        
+        // Clear chunk from memory after processing if document is large
+        chunks[i] = null;
+        
+        // Small pause to allow GC to breathe on memory-constrained environments
+        if (i % 2 === 0) await this.sleep(100);
       } catch (err) {
         console.error(`  ✗ Chunk ${i + 1} failed: ${err.message}`);
       }

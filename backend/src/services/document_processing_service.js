@@ -27,17 +27,17 @@ class DocumentProcessingService {
         const loadingTask = getDocument({ data: uint8Array });
         const pdf = await loadingTask.promise;
 
-        let text = '';
+        const pages = [];
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map(item => item.str).join(' ') + '\n';
+          pages.push(content.items.map(item => item.str).join(' '));
           // Clean up page resources to save memory
           page.cleanup();
         }
         // Cleanup document resources
         await pdf.destroy();
-        return text;
+        return pages.join('\n');
       } else if (mimeType.includes('text/plain')) {
         // For text files, we can directly decode the buffer
         return buffer.toString('utf8');
