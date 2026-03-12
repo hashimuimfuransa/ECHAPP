@@ -85,7 +85,7 @@ class GrokService {
     const candidates = [
       "llama-3.3-70b-versatile",
       "llama3-70b-8192",
-      "llama3-8b-8192",
+      "llama3-8b-8192", 
       "mixtral-8x7b-32768",
       "gemma-7b-it",
     ];
@@ -230,32 +230,27 @@ class GrokService {
    * Send one chunk to the Groq API and return parsed questions.
    */
   async processChunk(chunk, examType, fileName, chunkNum, totalChunks) {
-    // Enhanced prompt to handle case-based questions and prevent summarization
+    // Deliberately compact prompt — less ambiguity, fewer hallucinations
     const prompt = `You are extracting exam questions from an educational document.
 
 EXAM TYPE: ${examType}
 FILE: ${fileName}
 CHUNK: ${chunkNum} of ${totalChunks}
 
-RULES FOR PROCESSING EXAM QUESTIONS:
-1. NEVER summarize or shorten the question text. Preserve the full wording exactly as in the document.
-2. Detect CASE-BASED questions (e.g., "The following information is provided...", "Use the information above...", "Based on the table below...").
-3. If multiple questions share the same paragraph, case study, or context, treat that paragraph as shared context.
-4. ATTACH the shared context to EACH question that follows it until a new context appears.
-5. Do NOT remove numerical values, tables, or descriptions.
-6. Extract ONLY questions that literally appear in the text below. Do NOT invent or paraphrase questions.
-7. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
-8. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
-9. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
-10. If no questions are found, return {"questions":[]}.
-11. Respond with ONLY valid JSON — no markdown fences, no explanation.
+RULES:
+1. Extract ONLY questions that literally appear in the text below.
+2. Do NOT invent or paraphrase questions.
+3. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
+4. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
+5. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
+6. If no questions are found, return {"questions":[]}.
+7. Respond with ONLY valid JSON — no markdown fences, no explanation.
 
 QUESTION SCHEMA:
 {
   "questions": [
     {
       "question": "<exact question text>",
-      "context": "<shared context or case study if applicable, else null>",
       "type": "mcq | true_false | fill_blank | open",
       "options": ["A","B","C","D"],   // MCQ and true_false only
       "correctAnswer": 0,             // integer index for MCQ/true_false; string for others
@@ -365,13 +360,7 @@ ${chunk}
         }
         if (idx < 0 || idx >= q.options.length) idx = 0; // safe fallback
 
-        acc.push({ 
-          ...q, 
-          type, 
-          correctAnswer: idx, 
-          points: q.points ?? 1,
-          context: q.context || null 
-        });
+        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1 });
         return acc;
       }
 
@@ -388,14 +377,7 @@ ${chunk}
         }
         if (idx < 0 || idx > 1) idx = 0;
 
-        acc.push({ 
-          ...q, 
-          type, 
-          options, 
-          correctAnswer: idx, 
-          points: q.points ?? 1,
-          context: q.context || null 
-        });
+        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1 });
         return acc;
       }
 
@@ -405,7 +387,6 @@ ${chunk}
         type,
         correctAnswer: String(q.correctAnswer ?? ""),
         points: q.points ?? 1,
-        context: q.context || null
       });
       return acc;
     }, []);
@@ -421,10 +402,8 @@ ${chunk}
       const text = (q.question || "").toLowerCase().trim();
       if (!text) continue;
 
-      // Key = context (first 100) + question (first 200) + first option (if any)
+      // Key = first 200 chars of question + first option (if any)
       const key =
-        ((q.context || "").substring(0, 100)) +
-        "|" +
         text.substring(0, 200) +
         "|" +
         (Array.isArray(q.options) ? q.options[0]?.toLowerCase().trim() ?? "" : "");
