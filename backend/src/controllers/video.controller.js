@@ -2,6 +2,7 @@ const s3Service = require('../services/s3.service');
 const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../utils/response.utils');
+const { transformUrls } = require('../utils/url.utils');
 
 // Get signed URL for video playback
 const getVideoStreamUrl = async (req, res) => {
@@ -36,12 +37,12 @@ const getVideoStreamUrl = async (req, res) => {
     // This handles long downloads on slow connections (24h = 86400 seconds)
     const streamingUrl = await s3Service.generateStreamingUrl(lesson.videoId, 86400);
 
-    sendSuccess(res, {
+    sendSuccess(res, transformUrls({
       streamingUrl,
       lessonId: lesson._id,
       courseId: lesson.courseId,
       expiration: new Date(Date.now() + 86400 * 1000) // 24 hours from now
-    }, 'Video stream URL generated successfully');
+    }), 'Video stream URL generated successfully');
   } catch (error) {
     sendError(res, 'Failed to generate video stream URL', 500, error.message);
   }

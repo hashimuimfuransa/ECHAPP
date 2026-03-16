@@ -13,8 +13,18 @@ const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_URL ? process.env.CLOUDFRONT_UR
 const toCloudFront = (url) => {
   if (!url || typeof url !== 'string') return url;
   
-  if (url.includes(S3_DOMAIN)) {
-    return url.replace(S3_DOMAIN, CLOUDFRONT_DOMAIN);
+  // If it's a signed URL (has S3 auth params), DON'T transform it
+  // as CloudFront requires a different signing method.
+  if (url.includes('X-Amz-Algorithm') || url.includes('X-Amz-Signature')) {
+    return url;
+  }
+  
+  // More robust S3 domain matching (handles region-specific URLs)
+  // Pattern matches: bucket.s3.region.amazonaws.com OR bucket.s3.amazonaws.com
+  const s3Pattern = new RegExp(`echcoahing\\.s3[.-][a-z0-9-]+\\.amazonaws\\.com|${S3_DOMAIN.replace(/\./g, '\\.')}`, 'i');
+  
+  if (s3Pattern.test(url)) {
+    return url.replace(s3Pattern, CLOUDFRONT_DOMAIN);
   }
   
   return url;

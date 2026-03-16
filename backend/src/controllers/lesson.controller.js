@@ -1,6 +1,7 @@
 const Lesson = require('../models/Lesson');
 const Section = require('../models/Section');
 const Course = require('../models/Course');
+const s3Service = require('../services/s3.service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 const { transformUrls } = require('../utils/url.utils');
 
@@ -18,7 +19,17 @@ const getLessonsBySection = async (req, res) => {
     const lessons = await Lesson.find({ sectionId })
       .sort({ order: 1 });
     
-    sendSuccess(res, transformUrls(lessons), 'Lessons retrieved successfully');
+    const lessonsWithUrls = lessons.map(lesson => {
+      const lessonObj = lesson.toObject();
+      if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+        lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+      } else if (lessonObj.videoId) {
+        lessonObj.videoUrl = lessonObj.videoId;
+      }
+      return lessonObj;
+    });
+    
+    sendSuccess(res, transformUrls(lessonsWithUrls), 'Lessons retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lessons', 500, error.message);
   }
@@ -35,7 +46,14 @@ const getLessonById = async (req, res) => {
       return sendNotFound(res, 'Lesson not found');
     }
     
-    sendSuccess(res, transformUrls(lesson), 'Lesson retrieved successfully');
+    const lessonObj = lesson.toObject();
+    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+    } else if (lessonObj.videoId) {
+      lessonObj.videoUrl = lessonObj.videoId;
+    }
+    
+    sendSuccess(res, transformUrls(lessonObj), 'Lesson retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lesson', 500, error.message);
   }
@@ -104,7 +122,14 @@ const createLesson = async (req, res) => {
       duration
     });
     
-    sendSuccess(res, lesson, 'Lesson created successfully', 201);
+    const lessonObj = lesson.toObject();
+    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+    } else if (lessonObj.videoId) {
+      lessonObj.videoUrl = lessonObj.videoId;
+    }
+    
+    sendSuccess(res, transformUrls(lessonObj), 'Lesson created successfully', 201);
   } catch (error) {
     sendError(res, 'Failed to create lesson', 500, error.message);
   }
@@ -126,7 +151,14 @@ const updateLesson = async (req, res) => {
       return sendNotFound(res, 'Lesson not found');
     }
     
-    sendSuccess(res, lesson, 'Lesson updated successfully');
+    const lessonObj = lesson.toObject();
+    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+    } else if (lessonObj.videoId) {
+      lessonObj.videoUrl = lessonObj.videoId;
+    }
+    
+    sendSuccess(res, transformUrls(lessonObj), 'Lesson updated successfully');
   } catch (error) {
     sendError(res, 'Failed to update lesson', 500, error.message);
   }
@@ -170,7 +202,17 @@ const reorderLessons = async (req, res) => {
     
     const updatedLessons = await Lesson.find({ sectionId }).sort({ order: 1 });
     
-    sendSuccess(res, updatedLessons, 'Lessons reordered successfully');
+    const lessonsWithUrls = updatedLessons.map(lesson => {
+      const lessonObj = lesson.toObject();
+      if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+        lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+      } else if (lessonObj.videoId) {
+        lessonObj.videoUrl = lessonObj.videoId;
+      }
+      return lessonObj;
+    });
+    
+    sendSuccess(res, transformUrls(lessonsWithUrls), 'Lessons reordered successfully');
   } catch (error) {
     sendError(res, 'Failed to reorder lessons', 500, error.message);
   }
@@ -197,9 +239,19 @@ const getCourseContent = async (req, res) => {
         const lessons = await Lesson.find({ sectionId: section._id })
           .sort({ order: 1 });
         
+        const lessonsWithUrls = lessons.map(lesson => {
+          const lessonObj = lesson.toObject();
+          if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+            lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+          } else if (lessonObj.videoId) {
+            lessonObj.videoUrl = lessonObj.videoId;
+          }
+          return lessonObj;
+        });
+        
         return {
           ...section.toObject(),
-          lessons
+          lessons: lessonsWithUrls
         };
       })
     );
