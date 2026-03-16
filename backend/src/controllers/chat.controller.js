@@ -225,7 +225,8 @@ class ChatController {
           role: 'system',
           content: ChatController.createContextAwareSystemPrompt({
             ...conversation.getContext(),
-            ...performanceContext
+            ...performanceContext,
+            ...context
           })
         },
         ...recentMessages.map(msg => ({
