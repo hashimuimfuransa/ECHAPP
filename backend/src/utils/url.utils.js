@@ -29,25 +29,32 @@ const toCloudFront = (url) => {
 const transformUrls = (data, fields = ['thumbnail', 'videoUrl', 'url']) => {
   if (!data) return data;
   
+  // Handle Mongoose documents
+  if (data.toObject && typeof data.toObject === 'function') {
+    data = data.toObject();
+  }
+  
   if (Array.isArray(data)) {
     return data.map(item => transformUrls(item, fields));
   }
   
-  if (typeof data === 'object') {
+  if (typeof data === 'object' && data !== null) {
+    // Avoid processing BSON types like ObjectId or Buffers
+    if (data._bsontype || data.constructor.name === 'ObjectID' || data.constructor.name === 'Buffer') {
+      return data;
+    }
+
     const newData = { ...data };
     
-    // If it's a Mongoose document, we might need to handle it differently
-    // but usually calling toObject() before is better.
-    // However, for plain objects:
     fields.forEach(field => {
-      if (newData[field]) {
+      if (newData[field] && typeof newData[field] === 'string') {
         newData[field] = toCloudFront(newData[field]);
       }
     });
     
     // Recursively check for nested objects (like courseId in enrollment)
     for (const key in newData) {
-      if (newData[key] && typeof newData[key] === 'object') {
+      if (newData[key] && typeof newData[key] === 'object' && key !== '_id' && !key.endsWith('Id')) {
         newData[key] = transformUrls(newData[key], fields);
       }
     }

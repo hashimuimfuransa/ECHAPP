@@ -134,7 +134,8 @@ const getMyCourses = async (req, res) => {
           select: 'fullName'
         }
       })
-      .sort({ enrollmentDate: -1 });
+      .sort({ enrollmentDate: -1 })
+      .lean();
 
     // Filter out expired enrollments, but keep completed courses even if access has expired
     const activeEnrollments = enrollments.filter(enrollment => {
