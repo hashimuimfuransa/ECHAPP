@@ -107,6 +107,7 @@ class ChatController {
     try {
       const userId = req.user?._id.toString();
       const { context } = req.body;
+      const safeContext = context || {};
 
       if (!userId) {
         return res.status(401).json({ 
@@ -114,7 +115,7 @@ class ChatController {
         });
       }
 
-      const conversation = await Conversation.getOrCreateConversation(userId, context);
+      const conversation = await Conversation.getOrCreateConversation(userId, safeContext);
       
       // If it's a new conversation, save it
       if (conversation.isNew) {
@@ -144,6 +145,7 @@ class ChatController {
   static async sendMessage(req, res) {
     try {
       const { conversationId, message, context } = req.body;
+      const safeContext = context || {};
       const userId = req.user?._id.toString();
 
       if (!userId) {
@@ -191,7 +193,7 @@ class ChatController {
           });
         }
       } else {
-        conversation = await Conversation.getOrCreateConversation(userId, context);
+        conversation = await Conversation.getOrCreateConversation(userId, safeContext);
         if (conversation.isNew) {
           await conversation.save();
         }
@@ -203,7 +205,7 @@ class ChatController {
         sender: 'user',
         message: message.trim(),
         messageType: 'text',
-        context: context || {},
+        context: safeContext,
         isContextAware: !!context,
         metadata: {
           ipAddress: req.ip,
@@ -226,7 +228,7 @@ class ChatController {
           content: ChatController.createContextAwareSystemPrompt({
             ...conversation.getContext(),
             ...performanceContext,
-            ...context
+            ...safeContext
           })
         },
         ...recentMessages.map(msg => ({
@@ -236,7 +238,7 @@ class ChatController {
       ];
 
       // Generate AI response
-      const aiResponse = await ChatController.generateAIResponse(messagesForAI, context);
+      const aiResponse = await ChatController.generateAIResponse(messagesForAI, safeContext);
 
       // Save AI response
       const aiMessage = new ChatMessage({
@@ -343,25 +345,38 @@ class ChatController {
 
   // Helper method to create context-aware system prompt
   static createContextAwareSystemPrompt(context) {
-    let prompt = "You are an expert AI Learning Assistant and Senior Instructor for Excellence Coaching Hub. You are a male professional with a clear, sophisticated British accent and a warm, encouraging personality. Your mission is to help students succeed by providing accurate, supportive, and personalized guidance across any topic they inquire about. ";
+    const isStudent = context.studentLevel === 'student';
+    const isInstructor = context.studentLevel === 'instructor' || context.studentLevel === 'admin';
     
-    // Inject Student Profile and Performance
-    if (context.studentName) {
+    let prompt = "You are an expert AI Learning Assistant and Senior Instructor for Excellence Coaching Hub. You are a male professional with a clear, sophisticated British accent and a warm, encouraging personality. ";
+    
+    if (isInstructor) {
+      prompt += `You are talking to an administrator/instructor named ${context.studentName || 'Admin'}. Provide high-level insights, help them manage course content, or answer technical and pedagogical queries with professional depth. `;
+    } else {
+      prompt += "Your mission is to help students succeed by providing accurate, supportive, and personalized guidance across any topic they inquire about. ";
+    }
+    
+    // Inject Student Profile and Performance (mostly relevant for students)
+    if (context.studentName && !isInstructor) {
       prompt += `You are talking to ${context.studentName}. `;
     }
     
-    if (context.courses && context.courses.length > 0) {
+    if (isStudent && context.courses && context.courses.length > 0) {
       prompt += "Student's Current Courses: " + context.courses.map(c => `[${c.title}: ${c.progress}% done, Status: ${c.status}]`).join(", ") + ". ";
     }
     
-    if (context.examResults && context.examResults.length > 0) {
+    if (isStudent && context.examResults && context.examResults.length > 0) {
       prompt += "Student's Performance History: " + context.examResults.map(r => `[Exam: ${r.examTitle}, Score: ${r.score}/${r.totalPoints} (${r.percentage}%), Passed: ${r.passed}]`).join(", ") + ". ";
     }
     
     prompt += "\n\nCRITICAL INSTRUCTIONS:\n";
     prompt += "1. PERSONALITY: Speak like a human coach. Use professional yet warm British English (e.g., use 'brilliant', 'cheers', 'well done', 'splendid' naturally where appropriate, but maintain a high level of professionalism).\n";
     prompt += "2. NEVER say 'I am not sure of responding' or similar phrases. Always find a helpful way to respond or ask for clarification if truly needed.\n";
-    prompt += "3. BEHAVIOR RECOMMENDATIONS: Based on the student's grades and progress, offer specific advice on how they should behave or study. For example, if a student has low grades in a specific exam, suggest they revisit that lesson or practice more. If they are progressing well, encourage them to take more advanced topics.\n";
+    if (isStudent) {
+      prompt += "3. BEHAVIOR RECOMMENDATIONS: Based on the student's grades and progress, offer specific advice on how they should behave or study. For example, if a student has low grades in a specific exam, suggest they revisit that lesson or practice more. If they are progressing well, encourage them to take more advanced topics.\n";
+    } else {
+      prompt += "3. ADMINISTRATIVE SUPPORT: Help the administrator with their tasks, provide summaries of content they are reviewing, and maintain a professional peer-to-peer instructor tone.\n";
+    }
     prompt += "4. VERSATILITY: You are an all-knowing instructor. While your primary focus is the student's courses at Excellence Coaching Hub, you MUST answer any question the student asks, regardless of whether it's directly related to their course or not. Provide helpful, educational, and detailed answers to all queries.\n";
     prompt += "5. NO HALLUCINATIONS: Only speak about facts related to the courses and the student's data. If you don't know something about the student's data, don't invent it.\n";
     prompt += "6. TONE: Be very professional, attractive, user-friendly, and feel like a real human coach and instructor, not a robotic script. Your British sophistication should inspire confidence and authority.\n";
@@ -371,7 +386,7 @@ class ChatController {
     }
     
     if (context.lessonTitle) {
-      prompt += `The student is currently looking at the lesson: "${context.lessonTitle}". `;
+      prompt += `The user is currently looking at the lesson: "${context.lessonTitle}". `;
     }
 
     if (context.currentLessonNotes) {
@@ -400,10 +415,10 @@ class ChatController {
           if (lesson.content) prompt += `    CONTENT/NOTES: ${lesson.content.substring(0, 1000)}${lesson.content.length > 1000 ? '...' : ''}\n`;
         });
       });
-      prompt += `\nYou have access to all these sections, lesson titles, and lesson materials/notes. You can help the student by summarizing any of these lessons, explaining concepts from the materials, or answering questions about any part of the course content.\n`;
+      prompt += `\nYou have access to all these sections, lesson titles, and lesson materials/notes. You can help the user by summarizing any of these lessons, explaining concepts from the materials, or answering questions about any part of the course content.\n`;
     }
     
-    prompt += "\nFeel free to discuss anything the student wants. You are their dedicated instructor, so provide value in every response, whether it's about their specific course, general knowledge, or personal growth.";
+    prompt += "\nFeel free to discuss anything the user wants. You are their dedicated instructor, so provide value in every response, whether it's about their specific course, general knowledge, or personal growth.";
     
     return prompt;
   }
