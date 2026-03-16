@@ -5,6 +5,7 @@ const Section = require('../models/Section');
 const Lesson = require('../models/Lesson');
 const Notification = require('../models/Notification');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const { transformUrls } = require('../utils/url.utils');
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
 
@@ -142,7 +143,7 @@ const getCourses = async (req, res) => {
     console.log('Courses found:', courses.map(c => ({ id: c._id, title: c.title, isPublished: c.isPublished })));
     
     sendSuccess(res, {
-      courses,
+      courses: transformUrls(courses),
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
       total
@@ -207,7 +208,7 @@ const getCourseById = async (req, res) => {
       }
     }
     
-    sendSuccess(res, course, 'Course retrieved successfully');
+    sendSuccess(res, transformUrls(course), 'Course retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve course', 500, error.message);
   }
@@ -308,7 +309,7 @@ const createCourse = async (req, res) => {
       await sendCourseNotifications(populatedCourse);
     }
 
-    sendSuccess(res, populatedCourse, 'Course created successfully', 201);
+    sendSuccess(res, transformUrls(populatedCourse), 'Course created successfully', 201);
   } catch (error) {
     console.error('Error creating course:', error);
     sendError(res, 'Failed to create course', 500, error.message);
@@ -374,7 +375,7 @@ const updateCourse = async (req, res) => {
       await sendCourseNotifications(course);
     }
     
-    sendSuccess(res, course, 'Course updated successfully');
+    sendSuccess(res, transformUrls(course), 'Course updated successfully');
   } catch (error) {
     sendError(res, 'Failed to update course', 500, error.message);
   }
@@ -494,7 +495,7 @@ const getRecommendedCourses = async (req, res) => {
       { path: 'category', select: 'name' }
     ]);
 
-    sendSuccess(res, recommendedCourses, 'Recommended courses retrieved successfully');
+    sendSuccess(res, transformUrls(recommendedCourses), 'Recommended courses retrieved successfully');
   } catch (error) {
     console.error('Error in getRecommendedCourses:', error);
     sendError(res, 'Failed to retrieve recommended courses', 500, error.message);

@@ -8,6 +8,7 @@ const Certificate = require('../models/Certificate');
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const { transformUrls } = require('../utils/url.utils');
 
 // Helper function to check if enrollment access has expired
 const isEnrollmentExpired = (enrollment) => {
@@ -113,7 +114,7 @@ const enrollInCourse = async (req, res) => {
       console.error('Error creating enrollment notification:', notificationError);
     }
 
-    sendSuccess(res, enrollment, 'Successfully enrolled in course', 201);
+    sendSuccess(res, transformUrls(enrollment), 'Successfully enrolled in course', 201);
   } catch (error) {
     sendError(res, 'Failed to enroll in course', 500, error.message);
   }
@@ -144,7 +145,7 @@ const getMyCourses = async (req, res) => {
       return enrollment.completionStatus === 'completed';
     });
 
-    sendSuccess(res, activeEnrollments, 'Enrolled courses retrieved successfully');
+    sendSuccess(res, transformUrls(activeEnrollments), 'Enrolled courses retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve enrolled courses', 500, error.message);
   }
@@ -181,7 +182,7 @@ const submitCourseFeedback = async (req, res) => {
       await Course.findByIdAndUpdate(courseId, { averageRating: stats[0].averageRating });
     }
 
-    sendSuccess(res, enrollment, 'Feedback submitted successfully');
+    sendSuccess(res, transformUrls(enrollment), 'Feedback submitted successfully');
   } catch (error) {
     sendError(res, 'Failed to submit feedback', 500, error.message);
   }
@@ -206,7 +207,7 @@ const getEnrollmentProgress = async (req, res) => {
       return sendError(res, 'Access to this course has expired', 403);
     }
 
-    sendSuccess(res, enrollment, 'Enrollment progress retrieved successfully');
+    sendSuccess(res, transformUrls(enrollment), 'Enrollment progress retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve enrollment progress', 500, error.message);
   }
@@ -265,7 +266,7 @@ const updateEnrollmentProgress = async (req, res) => {
     // Update last active status for user
     await User.findByIdAndUpdate(userId, { lastActive: new Date() });
     
-    sendSuccess(res, enrollment, 'Enrollment progress updated successfully');
+    sendSuccess(res, transformUrls(enrollment), 'Enrollment progress updated successfully');
   } catch (error) {
     sendError(res, 'Failed to update enrollment progress', 500, error.message);
   }
@@ -321,7 +322,7 @@ const completeSection = async (req, res) => {
       await enrollment.save();
     }
     
-    sendSuccess(res, enrollment, 'Section marked as completed');
+    sendSuccess(res, transformUrls(enrollment), 'Section marked as completed');
   } catch (error) {
     sendError(res, 'Failed to complete section', 500, error.message);
   }

@@ -2,6 +2,7 @@ const Lesson = require('../models/Lesson');
 const Section = require('../models/Section');
 const Course = require('../models/Course');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const { transformUrls } = require('../utils/url.utils');
 
 // Get all lessons for a section
 const getLessonsBySection = async (req, res) => {
@@ -17,7 +18,7 @@ const getLessonsBySection = async (req, res) => {
     const lessons = await Lesson.find({ sectionId })
       .sort({ order: 1 });
     
-    sendSuccess(res, lessons, 'Lessons retrieved successfully');
+    sendSuccess(res, transformUrls(lessons), 'Lessons retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lessons', 500, error.message);
   }
@@ -34,7 +35,7 @@ const getLessonById = async (req, res) => {
       return sendNotFound(res, 'Lesson not found');
     }
     
-    sendSuccess(res, lesson, 'Lesson retrieved successfully');
+    sendSuccess(res, transformUrls(lesson), 'Lesson retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lesson', 500, error.message);
   }
@@ -203,10 +204,10 @@ const getCourseContent = async (req, res) => {
       })
     );
     
-    sendSuccess(res, {
+    sendSuccess(res, transformUrls({
       course,
       sections: sectionsWithLessons
-    }, 'Course content retrieved successfully');
+    }), 'Course content retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve course content', 500, error.message);
   }
