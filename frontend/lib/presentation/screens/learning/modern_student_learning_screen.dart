@@ -17,6 +17,7 @@ import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_scr
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -76,15 +77,21 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     try {
       print('Loading course data for course ID: ${widget.courseId}');
       
-      // Load course
-      final courseRepo = CourseRepository();
-      _course = await courseRepo.getCourseById(widget.courseId);
+      // Parallelize data loading for faster performance
+      final results = await Future.wait<dynamic>([
+        ref.read(courseProvider(widget.courseId).future),
+        ref.read(courseContentProvider(widget.courseId).future),
+        ref.read(enrollmentRepositoryProvider).checkCourseAccess(widget.courseId),
+        CertificateRepository().getCertificatesByCourse(widget.courseId),
+      ]);
+
+      _course = results[0] as Course;
+      final courseContent = results[1] as Map<String, dynamic>;
+      _courseAccessData = results[2] as Map<String, dynamic>?;
+      _courseCertificates = results[3] as List<Certificate>?;
+
       print('Course loaded: ${_course?.title}');
 
-      // Load course content (sections and lessons) in one call
-      final sectionRepo = section_repo.SectionRepository();
-      final courseContent = await sectionRepo.getCourseContent(widget.courseId);
-      
       if (courseContent['sections'] != null) {
         final sectionsData = courseContent['sections'] as List;
         _sections = sectionsData.map((s) => Section.fromJson(s as Map<String, dynamic>)).toList();
@@ -116,85 +123,73 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       // Initialize section completion status
       _initializeSectionCompletionStatus();
       
-      // Load course access information
-      try {
-        final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
-        _courseAccessData = await enrollmentRepo.checkCourseAccess(widget.courseId);
+      // Initialize lesson completion status from backend data
+      if (_courseAccessData != null && _courseAccessData!['completedLessons'] != null) {
+        final completedList = _courseAccessData!['completedLessons'] as List;
+        _completedLessonsCount = completedList.length;
+        _completedDurationMinutes = 0;
         
-        // Initialize lesson completion status from backend data
-        if (_courseAccessData != null && _courseAccessData!['completedLessons'] != null) {
-          final completedList = _courseAccessData!['completedLessons'] as List;
-          _completedLessonsCount = completedList.length;
-          _completedDurationMinutes = 0;
-          
-          final completedSet = completedList.map((e) => e.toString()).toSet();
-          
-          for (var lessonId in completedList) {
-            _lessonCompletionStatus[lessonId.toString()] = true;
-          }
-          print('Loaded ${_lessonCompletionStatus.length} completed lessons from backend');
-          
-          // Calculate completed duration from actual lesson data
-          if (courseContent['sections'] != null) {
-            final sectionsData = courseContent['sections'] as List;
-            for (var sectionData in sectionsData) {
-              final lessonsData = (sectionData as Map<String, dynamic>)['lessons'] as List?;
-              if (lessonsData != null) {
-                for (var lessonData in lessonsData) {
-                  if (completedSet.contains(lessonData['_id'].toString())) {
-                    _completedDurationMinutes += (lessonData['duration'] as num?)?.toInt() ?? 0;
-                  }
+        final completedSet = completedList.map((e) => e.toString()).toSet();
+        
+        for (var lessonId in completedList) {
+          _lessonCompletionStatus[lessonId.toString()] = true;
+        }
+        print('Loaded ${_lessonCompletionStatus.length} completed lessons from backend');
+        
+        // Calculate completed duration from actual lesson data
+        if (courseContent['sections'] != null) {
+          final sectionsData = courseContent['sections'] as List;
+          for (var sectionData in sectionsData) {
+            final lessonsData = (sectionData as Map<String, dynamic>)['lessons'] as List?;
+            if (lessonsData != null) {
+              for (var lessonData in lessonsData) {
+                if (completedSet.contains(lessonData['_id'].toString())) {
+                  _completedDurationMinutes += (lessonData['duration'] as num?)?.toInt() ?? 0;
                 }
               }
             }
           }
         }
-        
-        // Initialize section completion status from backend data
-        if (_courseAccessData != null && _courseAccessData!['completedSections'] != null) {
-          final completedSectionsList = _courseAccessData!['completedSections'] as List;
-          final completedSet = completedSectionsList.map((e) => e.toString()).toSet();
-          
-          for (var sectionId in completedSectionsList) {
-            _sectionCompletionStatus[sectionId.toString()] = true;
-          }
-          print('Loaded ${completedSectionsList.length} completed sections from backend');
-          
-          // If a section is completed, the NEXT one should be unlocked
-          if (_sections != null) {
-            for (int i = 0; i < _sections!.length; i++) {
-              if (completedSet.contains(_sections![i].id)) {
-                if (i + 1 < _sections!.length) {
-                  _sectionCompletionStatus[_sections![i+1].id] = true;
-                }
-              }
-            }
-            
-            // Set current section index based on the first incomplete section
-            for (int i = 0; i < _sections!.length; i++) {
-              if (!completedSet.contains(_sections![i].id)) {
-                _currentSectionIndex = i;
-                break;
-              }
-              // If all sections are completed, set to the last one
-              _currentSectionIndex = _sections!.length - 1;
-            }
-          }
-        }
-        
-        // Load feedback if exists
-        if (_courseAccessData != null && _courseAccessData!['rating'] != null) {
-          _userRating = (_courseAccessData!['rating'] as num).toDouble();
-          _feedbackController.text = _courseAccessData!['feedback'] ?? '';
-          _hasSubmittedFeedback = true;
-        }
-      } catch (e) {
-        print('Error loading course access data: $e');
-        _courseAccessData = null;
       }
-
-      // Load certificates for this course
-      await _loadCourseCertificates();
+      
+      // Initialize section completion status from backend data
+      if (_courseAccessData != null && _courseAccessData!['completedSections'] != null) {
+        final completedSectionsList = _courseAccessData!['completedSections'] as List;
+        final completedSet = completedSectionsList.map((e) => e.toString()).toSet();
+        
+        for (var sectionId in completedSectionsList) {
+          _sectionCompletionStatus[sectionId.toString()] = true;
+        }
+        print('Loaded ${completedSectionsList.length} completed sections from backend');
+        
+        // If a section is completed, the NEXT one should be unlocked
+        if (_sections != null) {
+          for (int i = 0; i < _sections!.length; i++) {
+            if (completedSet.contains(_sections![i].id)) {
+              if (i + 1 < _sections!.length) {
+                _sectionCompletionStatus[_sections![i+1].id] = true;
+              }
+            }
+          }
+          
+          // Set current section index based on the first incomplete section
+          for (int i = 0; i < _sections!.length; i++) {
+            if (!completedSet.contains(_sections![i].id)) {
+              _currentSectionIndex = i;
+              break;
+            }
+            // If all sections are completed, set to the last one
+            _currentSectionIndex = _sections!.length - 1;
+          }
+        }
+      }
+      
+      // Load feedback if exists
+      if (_courseAccessData != null && _courseAccessData!['rating'] != null) {
+        _userRating = (_courseAccessData!['rating'] as num).toDouble();
+        _feedbackController.text = _courseAccessData!['feedback'] ?? '';
+        _hasSubmittedFeedback = true;
+      }
 
       setState(() {
         _isLoading = false;
@@ -213,22 +208,6 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
       print('Error loading course data: $e');
       setState(() {
         _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadCourseCertificates() async {
-    try {
-      final certificateRepo = CertificateRepository();
-      final certificates = await certificateRepo.getCertificatesByCourse(widget.courseId);
-      
-      setState(() {
-        _courseCertificates = certificates;
-      });
-    } catch (e) {
-      print('Error loading certificates: $e');
-      setState(() {
-        _courseCertificates = [];
       });
     }
   }
@@ -1129,6 +1108,14 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             if (previousCompleted) isNext = true;
           }
           
+          // PRE-FETCH: If this is the next lesson, start pre-fetching it in the background
+          if (isNext) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(lessonContentProvider(lesson.id).future);
+              ref.read(lessonExamsProvider(lesson.sectionId).future);
+            });
+          }
+          
           return _buildLessonItem(lesson, isNext);
         }),
         // Add exam button after lessons
@@ -1862,6 +1849,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
   }
 
   void _viewLesson(Lesson lesson) async {
+    // PRE-FETCH: Start pre-fetching lesson content immediately
+    ref.read(lessonContentProvider(lesson.id).future);
+    ref.read(lessonExamsProvider(lesson.sectionId).future);
+    
     // Navigate to the lesson viewer
     if (mounted) {
       Navigator.of(context).push(

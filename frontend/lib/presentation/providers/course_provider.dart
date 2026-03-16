@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/section_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
@@ -7,13 +8,16 @@ import 'package:excellencecoachinghub/data/repositories/category_repository.dart
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
 });
 
-final enrollmentRepositoryProvider = Provider<EnrollmentRepository>((ref) {
-  return EnrollmentRepository();
+final sectionRepositoryProvider = Provider<SectionRepository>((ref) {
+  return SectionRepository();
 });
 
 final categoriesServiceProvider = Provider<CategoriesService>((ref) {
@@ -24,6 +28,34 @@ final categoriesServiceProvider = Provider<CategoriesService>((ref) {
 final coursesProvider = FutureProvider<List<Course>>((ref) async {
   final repository = ref.read(courseRepositoryProvider);
   return await repository.getCourses();
+});
+
+final courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
+  final repository = ref.read(courseRepositoryProvider);
+  return await repository.getCourseById(courseId);
+});
+
+final videoApiServiceProvider = Provider<VideoApiService>((ref) {
+  return VideoApiService();
+});
+
+final examApiServiceProvider = Provider<ExamService>((ref) {
+  return ExamService();
+});
+
+final lessonContentProvider = FutureProvider.family<LessonContent, String>((ref, lessonId) async {
+  final service = ref.read(videoApiServiceProvider);
+  return await service.getLessonContent(lessonId);
+});
+
+final lessonExamsProvider = FutureProvider.family<List<exam_model.Exam>, String>((ref, sectionId) async {
+  final service = ref.read(examApiServiceProvider);
+  return await service.getExamsBySection(sectionId);
+});
+
+final courseContentProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, courseId) async {
+  final repository = ref.read(sectionRepositoryProvider);
+  return await repository.getCourseContent(courseId);
 });
 
 final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {

@@ -40,6 +40,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_payment_s
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_general_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
@@ -236,6 +237,10 @@ class AppRouter {
           GoRoute(
             path: '/admin/students',
             builder: (context, state) => const AdminStudentsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/admins',
+            builder: (context, state) => const AdminManagementScreen(),
           ),
           GoRoute(
             path: '/admin/students/:studentId',

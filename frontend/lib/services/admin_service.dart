@@ -186,6 +186,53 @@ class AdminService {
     }
   }
 
+  /// Get admins with pagination and search
+  Future<AdminListResponse> getAdmins({int page = 1, int limit = 10, String? search, String? source}) async {
+    try {
+      final queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (source != null) 'source': source,
+      };
+      
+      final response = await _apiClient.get('${ApiConfig.admin}/admins', queryParams: queryParams);
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      
+      final admins = (data['admins'] as List)
+          .map((item) => User.fromJson(item as Map<String, dynamic>))
+          .toList();
+      
+      return AdminListResponse(
+        admins: admins,
+        totalPages: _toInt(data['totalPages']) > 0 ? _toInt(data['totalPages']) : 1,
+        currentPage: _toInt(data['currentPage']) > 0 ? _toInt(data['currentPage']) : 1,
+        total: _toInt(data['total']),
+        source: data['source'] as String? ?? 'unknown',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch admins: $e');
+    }
+  }
+
+  /// Update user role
+  Future<void> updateUserRole(String userId, String role) async {
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/users/$userId/role',
+        body: {'role': role},
+      );
+      response.validateStatus();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update user role: $e');
+    }
+  }
+
   static DateTime _parseDateTime(dynamic dateValue) {
     if (dateValue == null) return DateTime.now();
     
@@ -568,6 +615,22 @@ class StudentListResponse {
 
   StudentListResponse({
     required this.students,
+    required this.totalPages,
+    required this.currentPage,
+    required this.total,
+    required this.source,
+  });
+}
+
+class AdminListResponse {
+  final List<User> admins;
+  final int totalPages;
+  final int currentPage;
+  final int total;
+  final String source;
+
+  AdminListResponse({
+    required this.admins,
     required this.totalPages,
     required this.currentPage,
     required this.total,

@@ -9,6 +9,7 @@ import '../../../models/platform_settings.dart';
 import '../../providers/payment_riverpod_provider.dart';
 import '../../providers/course_payment_providers.dart'; // Import the hasPendingPaymentProvider
 import '../../providers/platform_settings_provider.dart';
+import '../../providers/course_provider.dart';
 
 class PaymentPendingScreen extends ConsumerStatefulWidget {
   final Course course;
@@ -43,6 +44,10 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     // Initial load of user payments
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(paymentProvider.notifier).loadUserPayments();
+      
+      // PRE-FETCH: Start pre-fetching course content while waiting for approval
+      // This makes the transition instant once approved
+      ref.read(courseContentProvider(widget.course.id).future);
     });
   }
 

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
@@ -243,10 +244,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: _imageFile != null
                         ? Image.file(_imageFile!, fit: BoxFit.cover)
                         : user?.profilePicture != null && user!.profilePicture!.isNotEmpty
-                            ? Image.network(
-                                user.profilePicture!,
+                            ? NetworkImageWidget(
+                                imageUrl: user.profilePicture!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(user, avatarSize),
+                                errorWidget: _buildInitialsAvatar(user, avatarSize),
                               )
                             : _buildInitialsAvatar(user, avatarSize),
                   ),

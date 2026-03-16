@@ -20,6 +20,7 @@ import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'dart:io';
 
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 
@@ -94,81 +95,43 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   @override
   void initState() {
     super.initState();
-    _loadLessonContent();
-    _loadCourseContent();
+    _loadData();
   }
 
   @override
   void didUpdateWidget(LessonViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.lesson.id != oldWidget.lesson.id) {
-      _loadLessonContent();
-      _loadCourseContent();
+      _loadData();
     }
   }
 
-  @override
-  void dispose() {
-    _player?.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadLessonContent() async {
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _hasError = false;
-    });
-
-    try {
-      _lessonContent = await _videoService.getLessonContent(widget.lesson.id);
-      
-      if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty) {
-        try {
-          await _initializeVideoPlayer(_lessonContent!.videoUrl!).timeout(const Duration(seconds: 15));
-        } catch (e) {
-          print('Warning: Video player initialization timed out or failed: $e');
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Show welcome message from AI coach
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted && _guideKey.currentState != null) {
-            _guideKey.currentState!.updateState(
-              StudentGuideState.greeting,
-              message: "I'm here to help with this lesson on ${widget.lesson.title}! Need a summary or explanation? Just ask! 👋",
-            );
-          }
-        });
-      }
-
-      _loadSectionExams().timeout(const Duration(seconds: 5)).catchError((e) {
-        return null;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  Future<void> _loadCourseContent() async {
-    setState(() {
       _sectionsLoading = true;
+      _examsLoading = true;
     });
 
     try {
-      _courseSections = await _sectionService.getSectionsByCourse(widget.courseId);
-      final courseContent = await _sectionService.getCourseContent(widget.courseId);
+      // Load all data in parallel for maximum speed
+      final results = await Future.wait([
+        ref.read(lessonContentProvider(widget.lesson.id).future),
+        ref.read(courseContentProvider(widget.courseId).future),
+        ref.read(lessonExamsProvider(widget.lesson.sectionId).future),
+        _sectionService.getSectionsByCourse(widget.courseId),
+      ]);
+
+      _lessonContent = results[0] as LessonContent;
+      final courseContent = results[1] as Map<String, dynamic>;
+      _sectionExams = results[2] as List<exam_model.Exam>;
+      _courseSections = results[3] as List<Section>;
+
+      // Process course lessons from course content
       final sectionsData = courseContent['sections'] as List? ?? [];
-      
       _courseLessons = [];
       for (var sectionData in sectionsData) {
         if (sectionData is Map<String, dynamic>) {
@@ -182,53 +145,51 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       }
       
       _selectedSectionId = widget.lesson.sectionId;
-      
-      setState(() {
-        _sectionsLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _sectionsLoading = false;
-      });
-    }
-  }
 
-  void _parseNotesSections(String notesContent) {
-    _notesSections = [];
-    _sectionPositions = {};
-    
-    if (notesContent.isEmpty) return;
-    
-    List<String> lines = notesContent.split('\n');
-    NotesSection? currentSection;
-    
-    for (int i = 0; i < lines.length; i++) {
-      String line = lines[i].trim();
-      
-      if (line.startsWith('# ')) {
-        String sectionTitle = line.substring(2).trim();
-        if (currentSection != null) _notesSections.add(currentSection);
-        currentSection = NotesSection(id: 'section_$i', title: sectionTitle, level: 1, lineNumber: i);
-      } else if (line.startsWith('## ')) {
-        String sectionTitle = line.substring(3).trim();
-        if (currentSection != null) _notesSections.add(currentSection);
-        currentSection = NotesSection(id: 'subsection_$i', title: sectionTitle, level: 2, lineNumber: i);
+      // PRE-FETCH: Start pre-fetching next lesson content for instant switching
+      final nextLesson = _getNextLesson();
+      if (nextLesson != null) {
+        ref.read(lessonContentProvider(nextLesson.id).future);
+        ref.read(lessonExamsProvider(nextLesson.sectionId).future);
       }
-    }
-    
-    if (currentSection != null) _notesSections.add(currentSection);
-  }
 
-  Future<void> _loadSectionExams() async {
-    try {
-      _sectionExams = await _examService.getExamsBySection(widget.lesson.sectionId);
-      setState(() {
-        _examsLoading = false;
-      });
+      // Initialize video player if needed
+      if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty) {
+        try {
+          await _initializeVideoPlayer(_lessonContent!.videoUrl!).timeout(const Duration(seconds: 15));
+        } catch (e) {
+          print('Warning: Video player initialization timed out or failed: $e');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _sectionsLoading = false;
+          _examsLoading = false;
+        });
+
+        // Show welcome message from AI coach
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted && _guideKey.currentState != null) {
+            _guideKey.currentState!.updateState(
+              StudentGuideState.greeting,
+              message: "I'm here to help with this lesson on ${widget.lesson.title}! Need a summary or explanation? Just ask! 👋",
+            );
+          }
+        });
+      }
     } catch (e) {
-      setState(() {
-        _examsLoading = false;
-      });
+      print('Error loading lesson data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _sectionsLoading = false;
+          _examsLoading = false;
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
 
@@ -325,7 +286,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 const SizedBox(height: 8),
                 Text(_errorMessage, style: const TextStyle(color: AppTheme.greyColor, fontSize: 14), textAlign: TextAlign.center),
                 const SizedBox(height: 24),
-                ElevatedButton(onPressed: _loadLessonContent, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white), child: const Text('Retry')),
+                ElevatedButton(onPressed: _loadData, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white), child: const Text('Retry')),
               ],
             ),
           ),
@@ -770,6 +731,37 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         ],
       ),
     );
+  }
+
+  void _parseNotesSections(String notes) {
+    if (notes.isEmpty) {
+      _notesSections = [];
+      return;
+    }
+    
+    final sections = <NotesSection>[];
+    final lines = notes.split('\n');
+    
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line.startsWith('## ')) {
+        sections.add(NotesSection(
+          id: 'section_$i',
+          title: line.substring(3).trim(),
+          level: 2,
+          lineNumber: i,
+        ));
+      } else if (line.startsWith('# ')) {
+        sections.add(NotesSection(
+          id: 'section_$i',
+          title: line.substring(2).trim(),
+          level: 1,
+          lineNumber: i,
+        ));
+      }
+    }
+    
+    _notesSections = sections;
   }
 
   Widget _buildNotesContent() {

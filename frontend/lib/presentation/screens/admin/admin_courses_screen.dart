@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 
 class AdminCoursesScreen extends ConsumerStatefulWidget {
   const AdminCoursesScreen({super.key});
@@ -386,43 +387,24 @@ class _AdminCoursesScreenState extends ConsumerState<AdminCoursesScreen> {
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                course.thumbnail!,
+                              child: NetworkImageWidget(
+                                imageUrl: course.thumbnail!,
                                 fit: BoxFit.cover,
                                 width: isSmallScreen ? 60 : 80,
                                 height: isSmallScreen ? 60 : 80,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    width: isSmallScreen ? 60 : 80,
-                                    height: isSmallScreen ? 60 : 80,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryGreen.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        value: null,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: isSmallScreen ? 60 : 80,
-                                    height: isSmallScreen ? 60 : 80,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryGreen.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.school,
-                                      color: AppTheme.primaryGreen,
-                                      size: isSmallScreen ? 30 : 40,
-                                    ),
-                                  );
-                                },
+                                errorWidget: Container(
+                                  width: isSmallScreen ? 60 : 80,
+                                  height: isSmallScreen ? 60 : 80,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.school,
+                                    color: AppTheme.primaryGreen,
+                                    size: isSmallScreen ? 30 : 40,
+                                  ),
+                                ),
                               ),
                             )
                           : Container(

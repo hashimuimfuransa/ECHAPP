@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { 
   getStudents,
+  getAdmins,
+  updateUserRole,
   getStudentDetail,
   deleteStudent,
   getCourseStats,
@@ -32,6 +34,8 @@ router.post('/manual-sync-users', protect, authorize('admin'), manualSyncAllUser
 
 // Protected admin routes
 router.get('/students', protect, authorize('admin'), getStudents);
+router.get('/admins', protect, authorize('admin'), getAdmins);
+router.put('/users/:id/role', protect, authorize('admin'), updateUserRole);
 router.get('/students/:id/detail', protect, authorize('admin'), getStudentDetail);
 router.delete('/students/:id', protect, authorize('admin'), deleteStudent);
 router.get('/course-stats', protect, authorize('admin'), getCourseStats);

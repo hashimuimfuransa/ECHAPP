@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -247,10 +248,10 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                     child: course.thumbnail != null && course.thumbnail!.isNotEmpty
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              course.thumbnail!,
+                            child: NetworkImageWidget(
+                              imageUrl: course.thumbnail!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Icon(
+                              errorWidget: Icon(
                                 Icons.play_lesson,
                                 color: AppTheme.primaryGreen,
                                 size: 40,

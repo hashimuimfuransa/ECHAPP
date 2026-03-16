@@ -77,14 +77,51 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
 
   // Method to handle enrollment
   void _handleEnrollment(WidgetRef ref, String courseId) async {
+    // PRE-FETCH: Start pre-fetching course content immediately
+    ref.read(courseContentProvider(courseId).future);
+    
     final enrollmentNotifier = ref.read(enrollmentNotifierProvider.notifier);
-    await enrollmentNotifier.enrollInCourse(courseId);
+    
+    // Optimistic UI: We don't wait for the enrollment to complete before showing a message
+    // or even navigating if we're confident
+    ScaffoldMessenger.of(ref.context).showSnackBar(
+      const SnackBar(
+        content: Text('Enrolling you in the course...'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      await enrollmentNotifier.enrollInCourse(courseId);
+      
+      // If successful, the auto-redirect in build() will take over
+      // or we can force it here for even faster experience
+      if (ref.context.mounted && !_hasRedirected) {
+        setState(() {
+          _hasRedirected = true;
+        });
+        ref.context.push('/learning/$courseId');
+      }
+    } catch (e) {
+      if (ref.context.mounted) {
+        ScaffoldMessenger.of(ref.context).showSnackBar(
+          SnackBar(
+            content: Text('Enrollment failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // Method to handle payment
   void _handlePayment(WidgetRef ref, Course course) async {
     print('Initiating payment for course: \${course.title} (ID: \${course.id})');
     print('Course price: ${course.price}');
+    
+    // PRE-FETCH: Start pre-fetching course content while payment is being processed
+    ref.read(courseContentProvider(course.id).future);
     
     final paymentNotifier = ref.read(paymentProvider.notifier);
     print('Payment notifier obtained');
@@ -200,6 +237,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     final courseAsync = ref.watch(_courseProvider(widget.courseId));
     final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(widget.courseId));
     
+    // Pre-fetch course content if user is already enrolled for instant loading
+    isEnrolledAsync.whenData((isEnrolled) {
+      if (isEnrolled) {
+        ref.read(courseContentProvider(widget.courseId).future);
+      }
+    });
+
     // Automatic redirect to learning screen if already enrolled
     isEnrolledAsync.when(
       data: (isEnrolled) {

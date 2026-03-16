@@ -7,7 +7,7 @@ import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
-import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
@@ -128,82 +128,40 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: ResponsiveBreakpoints.getPadding(context),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Categories Section
-                    _buildCategoriesSection(context),
-                    
-                    const SizedBox(height: 25),
-                    
-                    // All Courses
-                    _isLoading
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(40.0),
-                            child: CircularProgressIndicator(
-                              color: AppTheme.primaryGreen,
+              child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                  )
+                : _errorMessage != null
+                  ? _buildErrorWidget()
+                  : CustomScrollView(
+                      slivers: [
+                        SliverPadding(
+                          padding: ResponsiveBreakpoints.getPadding(context),
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Categories Section
+                                _buildCategoriesSection(context),
+                                const SizedBox(height: 25),
+                              ],
                             ),
                           ),
-                        )
-                      : _errorMessage != null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(40.0),
-                              child: Column(
-                                children: [
-                                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Failed to load courses',
-                                    style: TextStyle(
-                                      color: AppTheme.getTextColor(context),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _errorMessage!,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: AppTheme.greyColor),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isLoading = true;
-                                        _errorMessage = null;
-                                      });
-                                      initState();
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryGreen,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Try Again'),
-                                  ),
-                                ],
-                              ),
+                        ),
+                        SliverPadding(
+                          padding: ResponsiveBreakpoints.getPadding(context),
+                          sliver: enrolledCoursesAsync.when(
+                            data: (enrolledCourses) => _buildSliverAllCourses(context, _filteredCourses, enrolledCourses),
+                            loading: () => const SliverToBoxAdapter(
+                              child: Center(child: CircularProgressIndicator()),
                             ),
-                          )
-                        : enrolledCoursesAsync.when(
-                            data: (enrolledCourses) => _buildResponsiveAllCourses(context, _filteredCourses, enrolledCourses),
-                            loading: () => const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(40.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                            ),
-                            error: (err, stack) => _buildResponsiveAllCourses(context, _filteredCourses, []),
+                            error: (err, stack) => _buildSliverAllCourses(context, _filteredCourses, []),
                           ),
-                    
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -786,153 +744,161 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     );
   }
 
-  Widget _buildResponsiveAllCourses(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load courses',
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.greyColor),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                initState();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliverAllCourses(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     if (courses.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Courses',
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '${courses.length} courses',
-                style: TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: isDesktop ? 16 : 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 25),
-          Container(
-            padding: EdgeInsets.all(isDesktop ? 60 : 40),
-            alignment: Alignment.center,
-            child: Column(
-              children: [
-                Icon(
-                  Icons.search_off,
-                  size: isDesktop ? 80 : 64,
-                  color: AppTheme.greyColor,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No courses found',
-                  style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Try adjusting your search or filter criteria',
-                  style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      return SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCoursesHeader(context, courses.length),
+            const SizedBox(height: 25),
+            _buildNoCoursesFound(context),
+          ],
+        ),
       );
     }
     
     if (isDesktop) {
-      // Grid layout for desktop
       final gridCount = ResponsiveGridCount(context);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Courses',
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '${courses.length} courses',
-                style: const TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 25),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+      return SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(child: _buildCoursesHeader(context, courses.length)),
+          const SliverToBoxAdapter(child: SizedBox(height: 25)),
+          SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: gridCount.crossAxisCount,
               crossAxisSpacing: 20,
               mainAxisSpacing: 20,
               childAspectRatio: gridCount.childAspectRatio,
             ),
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              final course = courses[index];
-              return _buildResponsiveCourseCard(context, course, enrolledCourses);
-            },
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _buildResponsiveCourseCard(context, courses[index], enrolledCourses),
+              childCount: courses.length,
+            ),
           ),
         ],
       );
     } else {
-      // List layout for mobile/tablet (same as original)
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Courses',
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '${courses.length} courses',
-                style: const TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              final course = courses[index];
-              return Container(
+      return SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(child: _buildCoursesHeader(context, courses.length)),
+          const SliverToBoxAdapter(child: SizedBox(height: 15)),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => Container(
                 margin: const EdgeInsets.only(bottom: 15),
-                child: _buildCourseListItem(context, course, enrolledCourses),
-              );
-            },
+                child: _buildCourseListItem(context, courses[index], enrolledCourses),
+              ),
+              childCount: courses.length,
+            ),
           ),
         ],
       );
     }
+  }
+
+  Widget _buildCoursesHeader(BuildContext context, int count) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Courses',
+          style: TextStyle(
+            color: AppTheme.getTextColor(context),
+            fontSize: isDesktop ? 24 : 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          '$count courses',
+          style: TextStyle(
+            color: AppTheme.greyColor,
+            fontSize: isDesktop ? 16 : 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoCoursesFound(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    return Container(
+      padding: EdgeInsets.all(isDesktop ? 60 : 40),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(
+            Icons.search_off,
+            size: isDesktop ? 80 : 64,
+            color: AppTheme.greyColor,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No courses found',
+            style: TextStyle(
+              color: AppTheme.greyColor,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Try adjusting your search or filter criteria',
+            style: TextStyle(
+              color: AppTheme.greyColor,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildResponsiveCourseCard(BuildContext context, Course course, List<Course> enrolledCourses) {
@@ -981,30 +947,19 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         color: AppTheme.greyColor.withOpacity(0.1),
                       ),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? Image.network(
-                              course.thumbnail!,
+                          ? NetworkImageWidget(
+                              imageUrl: course.thumbnail!,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: AppTheme.greyColor.withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.play_circle_outline,
-                                    color: AppTheme.greyColor,
-                                    size: isDesktop ? 36.0 : 30.0,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: AppTheme.greyColor.withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: AppTheme.greyColor,
-                                    size: isDesktop ? 36.0 : 30.0,
-                                  ),
-                                );
-                              },
+                              width: double.infinity,
+                              height: isDesktop ? 130.0 : 90.0,
+                              placeholder: Container(
+                                color: AppTheme.greyColor.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.play_circle_outline,
+                                  color: AppTheme.greyColor,
+                                  size: isDesktop ? 36.0 : 30.0,
+                                ),
+                              ),
                             )
                           : Container(
                               color: AppTheme.greyColor.withOpacity(0.1),
@@ -1284,30 +1239,19 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         color: AppTheme.greyColor.withOpacity(0.1),
                       ),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? Image.network(
-                              course.thumbnail!,
+                          ? NetworkImageWidget(
+                              imageUrl: course.thumbnail!,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: AppTheme.greyColor.withOpacity(0.1),
-                                  child: const Icon(
-                                    Icons.play_circle_outline,
-                                    color: AppTheme.greyColor,
-                                    size: 35,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: AppTheme.greyColor.withOpacity(0.1),
-                                  child: const Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: AppTheme.greyColor,
-                                    size: 35,
-                                  ),
-                                );
-                              },
+                              width: 80,
+                              height: 80,
+                              placeholder: Container(
+                                color: AppTheme.greyColor.withOpacity(0.1),
+                                child: const Icon(
+                                  Icons.play_circle_outline,
+                                  color: AppTheme.greyColor,
+                                  size: 35,
+                                ),
+                              ),
                             )
                           : Container(
                               color: AppTheme.greyColor.withOpacity(0.1),

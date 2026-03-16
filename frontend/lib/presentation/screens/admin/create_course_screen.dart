@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
@@ -552,64 +553,23 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  _thumbnailUrl!,
+                child: NetworkImageWidget(
+                  imageUrl: _thumbnailUrl!,
                   key: _thumbnailKey,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading thumbnail image: $error, stack: $stackTrace'); // Debug log
-                    return Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.broken_image,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Failed to load image',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _thumbnailUrl != null 
-                              ? (_thumbnailUrl!.length > 50 
-                                  ? '${_thumbnailUrl!.substring(0, 50)}...' 
-                                  : _thumbnailUrl!)
-                              : 'No URL',
-                            style: const TextStyle(color: Colors.grey, fontSize: 10),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Try uploading again',
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  width: double.infinity,
+                  height: 200,
+                  placeholder: Container(
+                    width: double.infinity,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ),
               ),
             ),

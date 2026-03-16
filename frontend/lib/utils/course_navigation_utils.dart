@@ -6,6 +6,8 @@ import 'package:excellencecoachinghub/presentation/providers/course_payment_prov
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+
 /// Utility class for handling smart course navigation
 /// 
 /// This utility automatically determines the correct destination when a user
@@ -40,6 +42,10 @@ class CourseNavigationUtils {
       if (isEnrolled) {
         // If already enrolled, go directly to modern learning screen
         print('✅ User already enrolled in course ${course.id} - navigating to modern learning screen');
+        
+        // PRE-FETCH: Start pre-fetching course content for instant loading
+        ref.read(courseContentProvider(course.id).future);
+        
         if (context.mounted) {
           context.push('/learning/${course.id}');
         }
@@ -147,6 +153,10 @@ class CourseNavigationUtils {
       if (isEnrolled) {
         // If already enrolled, go directly to modern learning screen
         print('✅ User already enrolled - navigating to modern learning screen');
+        
+        // PRE-FETCH: Start pre-fetching course content for instant loading
+        ref.read(courseContentProvider(course.id).future);
+        
         if (context.mounted) {
           context.push('/learning/${course.id}');
         }

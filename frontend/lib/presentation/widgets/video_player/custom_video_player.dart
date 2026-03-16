@@ -65,17 +65,23 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String _getOptimizedUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     
-    if (url.startsWith('http')) {
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
-        return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+    // Convert S3 URL to CloudFront URL
+    String processedUrl = url;
+    if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
+      processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
+    }
+
+    if (processedUrl.startsWith('http')) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !processedUrl.contains('type=.mp4') && !processedUrl.toLowerCase().contains('.mp4')) {
+        return processedUrl.contains('?') ? '$processedUrl&type=.mp4' : '$processedUrl?type=.mp4';
       }
-      return url;
+      return processedUrl;
     }
     // Handle local files
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-      return url.replaceAll('/', '\\');
+      return processedUrl.replaceAll('/', '\\');
     }
-    return url;
+    return processedUrl;
   }
 
   @override
@@ -404,7 +410,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 50),
               const SizedBox(height: 10),
-              Text('Playback Error: $_errorMessage', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+              Text('Playback Error: $_errorMessage\nCheck your internet make sure it loads faster', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -525,7 +531,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   children: [
                     const Icon(Icons.error_outline, color: Colors.red, size: 50),
                     const SizedBox(height: 10),
-                    Text('Playback Error: $_errorMessage', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+                    Text('Playback Error: $_errorMessage\nCheck your internet make sure it loads faster', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
                   ],
                 ),
               ),

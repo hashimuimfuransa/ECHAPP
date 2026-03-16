@@ -21,6 +21,7 @@ class S3Service {
     
     this.bucketName = process.env.S3_BUCKET_NAME;
     this.bucketUrl = process.env.S3_BUCKET_URL;
+    this.cloudfrontUrl = process.env.CLOUDFRONT_URL || process.env.S3_BUCKET_URL;
   }
 
   // Generate unique key for file storage
@@ -53,7 +54,7 @@ class S3Service {
       
       return {
         key: key,
-        url: `${this.bucketUrl}/${key}`,
+        url: `${this.cloudfrontUrl}/${key}`,
         bucket: this.bucketName,
         etag: response.ETag
       };
@@ -163,8 +164,8 @@ class S3Service {
 
   // Get public URL (for publicly accessible files)
   getPublicUrl(key) {
-    // For public files, we can use the direct S3 URL
-    return `${this.bucketUrl}/${key}`;
+    // For public files, we can use the direct CloudFront URL
+    return `${this.cloudfrontUrl}/${key}`;
   }
   
   // Generate presigned URL for direct client upload (PUT method)
@@ -188,7 +189,7 @@ class S3Service {
       return {
         uploadUrl: uploadUrl,
         key: key,
-        publicUrl: `${this.bucketUrl}/${key}`
+        publicUrl: `${this.cloudfrontUrl}/${key}`
       };
     } catch (error) {
       console.error('S3 Presigned URL Generation Error Details:', {

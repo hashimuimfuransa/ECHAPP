@@ -20,6 +20,7 @@ import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
@@ -1390,11 +1391,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     width: double.infinity,
                     color: isDark ? AppTheme.primary.withOpacity(0.1) : AppTheme.primary.withOpacity(0.05),
                     child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                        ? Image.network(
-                            course.thumbnail!, 
+                        ? NetworkImageWidget(
+                            imageUrl: course.thumbnail!, 
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => 
-                              const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
+                            errorWidget: const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
                           )
                         : const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
                   ),
@@ -1582,7 +1582,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                          ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
                           : Icon(Icons.image_outlined, size: 40, color: isDark ? Colors.white38 : const Color(0xFF9CA3AF)),
                     ),
                   ),
@@ -1879,7 +1879,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       width: double.infinity,
                       color: AppTheme.primary.withOpacity(0.1),
                       child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? Image.network(course.thumbnail!, fit: BoxFit.cover)
+                          ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
                           : Icon(Icons.image_outlined, color: isDark ? Colors.white38 : AppTheme.primary, size: 40),
                     ),
                     if ((course.price ?? 0) > 0)

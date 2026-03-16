@@ -231,6 +231,157 @@ const getStudents = async (req, res) => {
   }
 };
 
+// Get all admins from Firebase with MongoDB backup
+const getAdmins = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, source = 'firebase' } = req.query;
+    
+    if (source === 'firebase') {
+      try {
+        const userList = await admin.auth().listUsers();
+        let filteredUsers = userList.users.filter(user => 
+          user.customClaims?.role === 'admin'
+        );
+        
+        if (search) {
+          filteredUsers = filteredUsers.filter(user => 
+            (user.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+             user.email?.toLowerCase().includes(search.toLowerCase()))
+          );
+        }
+        
+        const total = filteredUsers.length;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + parseInt(limit);
+        const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+        
+        const firebaseAdmins = paginatedUsers.map(user => ({
+          id: user.uid,
+          firebaseUid: user.uid,
+          fullName: user.displayName || 'Unknown Admin',
+          email: user.email || 'No email',
+          phone: user.phoneNumber,
+          role: user.customClaims?.role || 'admin',
+          createdAt: user.metadata.creationTime ? new Date(user.metadata.creationTime) : new Date(),
+          lastLogin: user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime) : null,
+          disabled: user.disabled
+        }));
+        
+        sendSuccess(res, {
+          admins: firebaseAdmins,
+          totalPages: Math.ceil(total / limit),
+          currentPage: Number(page),
+          total,
+          source: 'firebase'
+        }, 'Admins retrieved from Firebase successfully');
+        
+      } catch (firebaseError) {
+        console.error('Firebase error fetching admins:', firebaseError.message);
+        // Fallback to MongoDB
+        const filter = { role: 'admin' };
+        if (search) {
+          filter.$or = [
+            { fullName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } }
+          ];
+        }
+        
+        const admins = await User.find(filter)
+          .select('-password')
+          .limit(limit * 1)
+          .skip((page - 1) * limit)
+          .sort({ createdAt: -1 });
+        
+        const total = await User.countDocuments(filter);
+        
+        sendSuccess(res, {
+          admins: admins.map(u => ({ ...u.toObject(), id: u._id, disabled: u.isActive === false })),
+          totalPages: Math.ceil(total / limit),
+          currentPage: Number(page),
+          total,
+          source: 'mongodb-fallback'
+        }, 'Admins retrieved from MongoDB (fallback)');
+      }
+    } else {
+      const filter = { role: 'admin' };
+      if (search) {
+        filter.$or = [
+          { fullName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      const admins = await User.find(filter)
+        .select('-password')
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 });
+      
+      const total = await User.countDocuments(filter);
+      
+      sendSuccess(res, {
+        admins: admins.map(u => ({ ...u.toObject(), id: u._id, disabled: u.isActive === false })),
+        totalPages: Math.ceil(total / limit),
+        currentPage: Number(page),
+        total,
+        source: 'mongodb'
+      }, 'Admins retrieved from MongoDB');
+    }
+  } catch (error) {
+    sendError(res, 'Failed to retrieve admins', 500, error.message);
+  }
+};
+
+// Update user role (e.g., student to admin)
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params; // Can be firebaseUid or mongoId
+    const { role } = req.body;
+    
+    if (!['admin', 'student', 'instructor'].includes(role)) {
+      return sendError(res, 'Invalid role', 400);
+    }
+    
+    // Find user in MongoDB first to get firebaseUid if id is mongoId
+    let user = await User.findById(id);
+    if (!user) {
+      user = await User.findOne({ firebaseUid: id });
+    }
+    
+    if (!user) {
+      return sendError(res, 'User not found in MongoDB', 404);
+    }
+    
+    const firebaseUid = user.firebaseUid || id;
+    
+    // Update in Firebase
+    let firebaseUpdated = false;
+    try {
+      await admin.auth().setCustomUserClaims(firebaseUid, { role });
+      firebaseUpdated = true;
+      console.log(`Firebase user ${firebaseUid} role updated to ${role}`);
+    } catch (firebaseError) {
+      console.error(`Firebase role update failed for ${firebaseUid}:`, firebaseError.message);
+    }
+    
+    // Update in MongoDB
+    user.role = role;
+    await user.save();
+    console.log(`MongoDB user ${user._id} role updated to ${role}`);
+    
+    sendSuccess(res, {
+      id: user._id,
+      firebaseUid: user.firebaseUid,
+      role,
+      firebaseUpdated,
+      mongoUpdated: true
+    }, `User role updated to ${role} successfully`);
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    sendError(res, 'Failed to update user role', 500, error.message);
+  }
+};
+
 // Get course statistics
 const getCourseStats = async (req, res) => {
   try {
@@ -1244,6 +1395,8 @@ const deleteStudent = async (req, res) => {
 
 module.exports = {
   getStudents,
+  getAdmins,
+  updateUserRole,
   getStudentDetail,
   deleteStudent,
   getCourseStats,
