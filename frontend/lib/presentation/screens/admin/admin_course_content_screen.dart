@@ -24,6 +24,7 @@ import 'package:path/path.dart' as path;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:excellencecoachinghub/config/api_config.dart';
+import 'package:excellencecoachinghub/widgets/lesson_viewer.dart';
 
 class AdminCourseContentScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -590,7 +591,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                           final index = entry.key;
                           final lesson = entry.value;
                           final isLast = index == lessons.length - 1;
-                          return _buildLessonItem(lesson.toJson(), isLast);
+                          return _buildLessonItem(lesson, isLast);
                         }).toList();
                       }()),
                     ],
@@ -721,12 +722,12 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  Widget _buildLessonItem(Map<String, dynamic> lesson, bool isLast) {
+  Widget _buildLessonItem(Lesson lesson, bool isLast) {
     // Determine lesson type based on available content
     String getLessonType() {
-      if (lesson['videoId'] != null && lesson['videoId'] != '') {
+      if (lesson.videoId != null && lesson.videoId != '') {
         return 'video';
-      } else if (lesson['notes'] != null && lesson['notes'] != '') {
+      } else if (lesson.notes != null && lesson.notes != '') {
         return 'notes';
       } else {
         return 'lesson'; // default type
@@ -755,87 +756,92 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
 
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.borderGrey),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: getColorForType(lessonType).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => _handleLessonAction('preview', lesson),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.borderGrey),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: getColorForType(lessonType).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  getIconForType(lessonType),
+                  color: getColorForType(lessonType),
+                  size: 20,
+                ),
               ),
-              child: Icon(
-                getIconForType(lessonType),
-                color: getColorForType(lessonType),
-                size: 20,
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.blackColor,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${lesson.duration} mins • ${lessonType.capitalize()} • Tap to view',
+                      style: const TextStyle(
+                        color: AppTheme.greyColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lesson['title'],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.blackColor,
+              const Icon(Icons.visibility_outlined, size: 20, color: AppTheme.greyColor),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) => _handleLessonAction(value, lesson),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20),
+                        SizedBox(width: 10),
+                        Text('Edit Lesson'),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${lesson['duration']} mins • ${lessonType.capitalize()}',
-                    style: const TextStyle(
-                      color: AppTheme.greyColor,
-                      fontSize: 12,
+                  const PopupMenuItem(
+                    value: 'preview',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 20),
+                        SizedBox(width: 10),
+                        Text('Preview'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 10),
+                        Text('Delete Lesson', style: TextStyle(color: Colors.red)),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) => _handleLessonAction(value, lesson),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 10),
-                      Text('Edit Lesson'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'preview',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, size: 20),
-                      SizedBox(width: 10),
-                      Text('Preview'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text('Delete Lesson', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1222,95 +1228,27 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     }
   }
 
-  void _handleLessonAction(String action, Map<String, dynamic> lesson) {
+  void _handleLessonAction(String action, Lesson lesson) {
     switch (action) {
       case 'edit':
         _showEditLessonDialog(context, lesson);
         break;
       case 'preview':
-        _showLessonPreviewDialog(context, lesson);
+        _showLessonViewer(context, lesson);
         break;
       case 'delete':
-        _showDeleteConfirmation(context, 'lesson', lesson['title'], lesson: lesson);
+        _showDeleteConfirmation(context, 'lesson', lesson.title, lesson: lesson);
         break;
     }
   }
 
-  void _showLessonPreviewDialog(BuildContext context, Map<String, dynamic> lesson) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Lesson Preview'),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lesson['title'] ?? 'Untitled Lesson',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (lesson['description'] != null && lesson['description'].toString().isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Description:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(lesson['description'].toString()),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                if (lesson['videoId'] != null && lesson['videoId'].toString().isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Video:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(lesson['videoId'].toString()),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                if (lesson['notes'] != null && lesson['notes'].toString().isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Notes:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(lesson['notes'].toString()),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                Text(
-                  'Duration: ${(lesson['duration'] ?? 0)} minutes',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Order: ${(lesson['order'] ?? 0)}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
+  void _showLessonViewer(BuildContext context, Lesson lesson) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => LessonViewer(
+          lesson: lesson,
+          courseId: widget.courseId,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
@@ -1467,17 +1405,17 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  Future<void> _showEditLessonDialog(BuildContext context, Map<String, dynamic> lesson) async {
-    final titleController = TextEditingController(text: lesson['title']);
-    final descriptionController = TextEditingController(text: lesson['description'] ?? '');
-    final notesController = TextEditingController(text: lesson['notes'] ?? '');
-    int duration = lesson['duration'] ?? 0;
+  Future<void> _showEditLessonDialog(BuildContext context, Lesson lesson) async {
+    final titleController = TextEditingController(text: lesson.title);
+    final descriptionController = TextEditingController(text: lesson.description ?? '');
+    final notesController = TextEditingController(text: lesson.notes ?? '');
+    int duration = lesson.duration;
     
     // Get the selected video ID from the lesson
-    String? selectedVideoId = lesson['videoId'];
+    String? selectedVideoId = lesson.videoId;
     
     // Track document upload state
-    String? documentPath = lesson['notes']; // If notes contain document path
+    String? documentPath = lesson.notes; // If notes contain document path
     bool isUploadingDocument = false;
     
     // Load videos for dropdown first before showing dialog
@@ -1488,7 +1426,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     try {
       final videoRepo = VideoRepository();
       // Use course-specific videos instead of all videos to avoid potential issues
-      final loadedVideos = await videoRepo.getVideosByCourse(lesson['courseId']);
+      final loadedVideos = await videoRepo.getVideosByCourse(lesson.courseId);
       // Ensure loadedVideos is indeed a List<Video> and not something else
       videos = loadedVideos;
       isLoadingVideos = false;
@@ -1712,8 +1650,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                               final lessonDocumentService = LessonDocumentService();
                                               uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
                                                 file: file,
-                                                courseId: lesson['courseId'],
-                                                sectionId: lesson['sectionId'] ?? '',
+                                                courseId: lesson.courseId,
+                                                sectionId: lesson.sectionId,
                                               );
                                             } catch (e) {
                                               print('=== WEB UPLOAD ERROR ===');
@@ -1906,12 +1844,12 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                         'videoId': selectedVideoId,
                         'notes': documentPath ?? notesController.text.trim(),
                         'duration': duration,
-                        'sectionId': lesson['sectionId'], // Pass sectionId for local state update
+                        'sectionId': lesson.sectionId, // Pass sectionId for local state update
                       };
                       
                       // Use the optimized updateLesson method from provider
                       await ref.read(contentManagementProvider.notifier).updateLesson(
-                        lesson['id'],
+                        lesson.id,
                         updateData,
                       );
                       
@@ -1945,7 +1883,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Map<String, dynamic>? lesson}) {
+  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Lesson? lesson}) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1980,11 +1918,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                     );
                   }
                 }
-              } else if (type == 'lesson') {
+              } else if (type == 'lesson' && lesson != null) {
                 // Delete lesson
                 try {
                   final lessonRepo = LessonRepository();
-                  await lessonRepo.deleteLesson(lesson!['id']);
+                  await lessonRepo.deleteLesson(lesson.id);
                   // Reload sections to update the UI
                   await ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
                   if (mounted) {

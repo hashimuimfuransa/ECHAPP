@@ -20,14 +20,16 @@ const getVideoStreamUrl = async (req, res) => {
       return sendNotFound(res, 'No video available for this lesson');
     }
 
-    // Check if user is enrolled in the course
-    const enrollment = await Enrollment.findOne({ 
-      userId, 
-      courseId: lesson.courseId 
-    });
-    
-    if (!enrollment) {
-      return sendForbidden(res, 'You must be enrolled in this course to access the video');
+    // Check if user is enrolled in the course or is an admin
+    if (req.user.role !== 'admin') {
+      const enrollment = await Enrollment.findOne({ 
+        userId, 
+        courseId: lesson.courseId 
+      });
+      
+      if (!enrollment) {
+        return sendForbidden(res, 'You must be enrolled in this course to access the video');
+      }
     }
 
     // Generate signed streaming URL from S3 with 24-hour expiration
