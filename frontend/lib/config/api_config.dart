@@ -55,6 +55,9 @@ class ApiConfig {
   
   // Platform settings endpoints
   static String get platformSettings => '$baseUrl/platform-settings';
+
+  // Feedback endpoints
+  static String get feedback => '$baseUrl/feedback';
 }
 
 class StorageKeys {

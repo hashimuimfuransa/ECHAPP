@@ -215,18 +215,19 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Thumbnail
-              Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/${course['thumbnail']}'),
-                    fit: BoxFit.cover,
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/${course['thumbnail']}'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                child: Stack(
-                  children: [
+                  child: Stack(
+                    children: [
                     if (course['isEnrolled'])
                       Positioned(
                         top: 8,
@@ -286,6 +287,7 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
                       ),
                   ],
                 ),
+              ),
               ),
               const SizedBox(height: 10),
               

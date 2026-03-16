@@ -127,6 +127,24 @@ class ApiClient {
     ));
   }
 
+  /// Make HTTP PATCH request
+  Future<http.Response> patch(
+    String url, {
+    Object? body,
+    Map<String, String>? headers,
+    bool authenticate = true,
+  }) async {
+    final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
+    final mergedHeaders = {...authHeaders, ...?headers};
+    final encodedBody = body is Map ? jsonEncode(body) : body?.toString();
+    
+    return _makeRequest(() => _httpClient.patch(
+      Uri.parse(url),
+      headers: mergedHeaders,
+      body: encodedBody,
+    ));
+  }
+
   /// Make HTTP DELETE request
   Future<http.Response> delete(
     String url, {

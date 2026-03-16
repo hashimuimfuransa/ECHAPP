@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/feedback_provider.dart';
 
 // Providers for settings
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -590,58 +591,90 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Dialog methods
   void _showFeedbackDialog(BuildContext context) {
     final feedbackController = TextEditingController();
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !isSubmitting,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF1E1E1E) 
-            : AppTheme.whiteColor,
-          title: Text('Send Feedback', 
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor)),
-          content: SizedBox(
-            height: 150, // Set a fixed height to prevent overflow
-            child: TextField(
-              controller: feedbackController,
-              maxLines: 4,
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                  ? AppTheme.whiteColor 
-                  : AppTheme.blackColor),
-              decoration: InputDecoration(
-                hintText: 'Tell us how we can improve...',
-                hintStyle: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.white60 
-                    : AppTheme.greyColor),
-                border: const OutlineInputBorder(),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-              },
-              child: Text('Cancel', 
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                ? const Color(0xFF1E1E1E) 
+                : AppTheme.whiteColor,
+              title: Text('Send Feedback', 
                 style: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.white70 
-                    : AppTheme.greyColor)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-                _showSnackbar(context, 'Thank you for your feedback!');
-              },
-              child: const Text('Send', 
-                style: TextStyle(color: AppTheme.primaryGreen)),
-            ),
-          ],
+                    ? AppTheme.whiteColor 
+                    : AppTheme.blackColor)),
+              content: SizedBox(
+                height: 150, // Set a fixed height to prevent overflow
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSubmitting)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      TextField(
+                        controller: feedbackController,
+                        maxLines: 4,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.whiteColor 
+                            : AppTheme.blackColor),
+                        decoration: InputDecoration(
+                          hintText: 'Tell us how we can improve...',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                              ? AppTheme.white60 
+                              : AppTheme.greyColor),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () {
+                    if (context.canPop()) context.pop();
+                  },
+                  child: Text('Cancel', 
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.white70 
+                        : AppTheme.greyColor)),
+                ),
+                TextButton(
+                  onPressed: isSubmitting ? null : () async {
+                    final content = feedbackController.text.trim();
+                    if (content.isEmpty) {
+                      _showSnackbar(context, 'Please enter some feedback');
+                      return;
+                    }
+
+                    setDialogState(() {
+                      isSubmitting = true;
+                    });
+
+                    final success = await ref.read(feedbackNotifierProvider.notifier).submitFeedback(content);
+
+                    if (mounted) {
+                      if (context.canPop()) context.pop();
+                      if (success) {
+                        _showSnackbar(context, 'Thank you for your feedback!');
+                      } else {
+                        _showSnackbar(context, 'Failed to send feedback. Please try again.');
+                      }
+                    }
+                  },
+                  child: const Text('Send', 
+                    style: TextStyle(color: AppTheme.primaryGreen)),
+                ),
+              ],
+            );
+          }
         );
       },
     );

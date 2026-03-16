@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
 import 'dart:io';
@@ -53,6 +54,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Timer? _bufferingTimer;
   int _bufferingSeconds = 0;
   bool _showSlowInternetError = false;
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySubscription;
   
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -87,7 +90,43 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   @override
   void initState() {
     super.initState();
+    _initConnectivityListener();
     _initPlayer();
+  }
+
+  void _initConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      final isNowOffline = results.isEmpty || results.contains(ConnectivityResult.none);
+      
+      if (!isNowOffline && _isOffline) {
+        // We were offline, now back online. Automatically try to resume if we have an error
+        if (_errorMessage != null || _showSlowInternetError) {
+          _retryPlayback();
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _isOffline = isNowOffline;
+        });
+      }
+    });
+  }
+
+  void _retryPlayback() {
+    setState(() {
+      _errorMessage = null;
+      _showSlowInternetError = false;
+      _isInitialized = false;
+    });
+    
+    _stopBufferingTimer();
+    
+    if (_isMobile || kIsWeb) {
+      _initMobilePlayer();
+    } else {
+      _initMediaKit();
+    }
   }
 
   void _initPlayer() {
@@ -358,6 +397,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     for (final s in _subscriptions) {
       s.cancel();
     }
@@ -400,20 +440,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Widget _buildMobilePlayer() {
+    if (_isOffline) {
+      return _buildErrorPlaceholder(
+        icon: Icons.wifi_off_outlined,
+        title: 'No Internet Connection',
+        message: 'Please check your network settings and try again.',
+        onRetry: _retryPlayback,
+      );
+    }
+
     if (_errorMessage != null) {
-      return Container(
-        color: Colors.black,
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 50),
-              const SizedBox(height: 10),
-              Text('Playback Error: $_errorMessage\nCheck your internet make sure it loads faster', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
-            ],
-          ),
-        ),
+      return _buildErrorPlaceholder(
+        icon: Icons.error_outline,
+        title: 'Playback Error',
+        message: 'Something went wrong while playing this video.\n$_errorMessage',
+        onRetry: _retryPlayback,
       );
     }
 
@@ -433,6 +474,59 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           if (_showSlowInternetError)
             _buildSlowInternetOverlay(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorPlaceholder({
+    required IconData icon,
+    required String title,
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    return Container(
+      color: Colors.black,
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white70, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -524,16 +618,19 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 fill: Colors.black,
               ),
             ),
-            if (_errorMessage != null)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                    const SizedBox(height: 10),
-                    Text('Playback Error: $_errorMessage\nCheck your internet make sure it loads faster', style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
-                  ],
-                ),
+            if (_isOffline)
+              _buildErrorPlaceholder(
+                icon: Icons.wifi_off_outlined,
+                title: 'No Internet Connection',
+                message: 'Please check your network settings and try again.',
+                onRetry: _retryPlayback,
+              ),
+            if (_errorMessage != null && !_isOffline)
+              _buildErrorPlaceholder(
+                icon: Icons.error_outline,
+                title: 'Playback Error',
+                message: 'Something went wrong while playing this video.\n$_errorMessage',
+                onRetry: _retryPlayback,
               ),
             if (_isBuffering && _errorMessage == null && !_showSlowInternetError)
               const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),

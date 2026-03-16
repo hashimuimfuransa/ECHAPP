@@ -583,20 +583,30 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           decoration: BoxDecoration(
                             color: AppTheme.greyColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
-                            image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage(course.thumbnail!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
                           ),
-                          child: course.thumbnail == null || course.thumbnail!.isEmpty
-                              ? const Icon(
-                                  Icons.play_circle_outline,
-                                  color: AppTheme.greyColor,
-                                  size: 35,
-                                )
-                              : null,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                                ? NetworkImageWidget(
+                                    imageUrl: course.thumbnail!,
+                                    fit: BoxFit.cover,
+                                    width: 80,
+                                    height: 80,
+                                    placeholder: Container(
+                                      color: AppTheme.greyColor.withOpacity(0.1),
+                                      child: const Icon(
+                                        Icons.play_circle_outline,
+                                        color: AppTheme.greyColor,
+                                        size: 35,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.play_circle_outline,
+                                    color: AppTheme.greyColor,
+                                    size: 35,
+                                  ),
+                          ),
                         ),
                         const SizedBox(width: 15),
                         
@@ -941,18 +951,26 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 child: Stack(
                   children: [
                     Container(
-                      height: isDesktop ? 130.0 : 90.0,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: AppTheme.greyColor.withOpacity(0.1),
                       ),
-                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? NetworkImageWidget(
-                              imageUrl: course.thumbnail!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: isDesktop ? 130.0 : 90.0,
-                              placeholder: Container(
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                            ? NetworkImageWidget(
+                                imageUrl: course.thumbnail!,
+                                fit: BoxFit.cover,
+                                placeholder: Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: AppTheme.greyColor,
+                                    size: isDesktop ? 36.0 : 30.0,
+                                  ),
+                                ),
+                              )
+                            : Container(
                                 color: AppTheme.greyColor.withOpacity(0.1),
                                 child: Icon(
                                   Icons.play_circle_outline,
@@ -960,15 +978,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                   size: isDesktop ? 36.0 : 30.0,
                                 ),
                               ),
-                            )
-                          : Container(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              child: Icon(
-                                Icons.play_circle_outline,
-                                color: AppTheme.greyColor,
-                                size: isDesktop ? 36.0 : 30.0,
-                              ),
-                            ),
+                      ),
                     ),
                     if (isEnrolled)
                       Positioned(
@@ -1253,13 +1263,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                                 ),
                               ),
                             )
-                          : Container(
-                              color: AppTheme.greyColor.withOpacity(0.1),
-                              child: const Icon(
-                                Icons.play_circle_outline,
-                                color: AppTheme.greyColor,
-                                size: 35,
-                              ),
+                          : const Icon(
+                              Icons.play_circle_outline,
+                              color: AppTheme.greyColor,
+                              size: 35,
                             ),
                     ),
                     if (isEnrolled)

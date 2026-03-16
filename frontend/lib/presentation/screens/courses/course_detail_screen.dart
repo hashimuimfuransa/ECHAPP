@@ -8,6 +8,7 @@ import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.d
 import 'package:excellencecoachinghub/presentation/providers/course_stats_provider.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -400,17 +401,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                       children: [
                         // Enhanced Course Image with better loading
                         Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            image: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage(course.thumbnail!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: course.thumbnail == null || course.thumbnail!.isEmpty
-                              ? Center(
+                          color: Colors.black.withOpacity(0.2), // Dark background for better contrast
+                          child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                              ? NetworkImageWidget(
+                                  imageUrl: course.thumbnail!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                )
+                              : Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -429,8 +428,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                       ),
                                     ],
                                   ),
-                                )
-                              : null,
+                                ),
                         ),
                         // Enhanced gradient overlay
                         Container(

@@ -1574,16 +1574,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   ClipRRect(
                     borderRadius: const BorderRadius.all(Radius.circular(20)),
                     child: Container(
-                      height: 140,
                       width: double.infinity,
                       margin: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
-                          : Icon(Icons.image_outlined, size: 40, color: isDark ? Colors.white38 : const Color(0xFF9CA3AF)),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                            ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
+                            : Icon(Icons.image_outlined, size: 40, color: isDark ? Colors.white38 : const Color(0xFF9CA3AF)),
+                      ),
                     ),
                   ),
                   if (isEnrolled)
@@ -1875,12 +1877,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 child: Stack(
                   children: [
                     Container(
-                      height: 110,
                       width: double.infinity,
                       color: AppTheme.primary.withOpacity(0.1),
-                      child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                          ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
-                          : Icon(Icons.image_outlined, color: isDark ? Colors.white38 : AppTheme.primary, size: 40),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                            ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
+                            : Icon(Icons.image_outlined, color: isDark ? Colors.white38 : AppTheme.primary, size: 40),
+                      ),
                     ),
                     if ((course.price ?? 0) > 0)
                       Positioned(
