@@ -343,7 +343,17 @@ const updateUserRole = async (req, res) => {
     }
     
     // Find user in MongoDB first to get firebaseUid if id is mongoId
-    let user = await User.findById(id);
+    let user;
+    
+    // Check if id is a valid MongoDB ObjectId
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      try {
+        user = await User.findById(id);
+      } catch (e) {
+        console.log("Not a valid MongoDB ID, will try as Firebase UID");
+      }
+    }
+    
     if (!user) {
       user = await User.findOne({ firebaseUid: id });
     }
@@ -650,7 +660,21 @@ const getStudentDetail = async (req, res) => {
     } catch (firebaseError) {
       console.log(`Firebase user ${id} not found, falling back to MongoDB:`, firebaseError.message);
       // Fallback to MongoDB
-      const mongoUser = await User.findById(id).select('-password');
+      let mongoUser;
+      
+      // Check if id is a valid MongoDB ObjectId
+      if (id.match(/^[0-9a-fA-F]{24}$/)) {
+        try {
+          mongoUser = await User.findById(id).select('-password');
+        } catch (e) {
+          console.log("Not a valid MongoDB ID in getStudentDetail");
+        }
+      }
+      
+      if (!mongoUser) {
+        mongoUser = await User.findOne({ firebaseUid: id }).select('-password');
+      }
+      
       if (!mongoUser) {
         return sendError(res, 'Student not found', 404);
       }
@@ -1149,7 +1173,20 @@ const resetUserDevice = async (req, res) => {
     const { deviceId } = req.body;
     
     // Find user in MongoDB
-    const user = await User.findById(id);
+    let user;
+    
+    // Check if id is a valid MongoDB ObjectId
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      try {
+        user = await User.findById(id);
+      } catch (e) {
+        console.log("Not a valid MongoDB ID in resetUserDevice");
+      }
+    }
+    
+    if (!user) {
+      user = await User.findOne({ firebaseUid: id });
+    }
     
     if (!user) {
       return sendError(res, 'User not found', 404);
@@ -1248,20 +1285,22 @@ const unenrollStudent = async (req, res) => {
     let mongoUserId;
     
     // First try to find by MongoDB ObjectId
-    try {
-      const user = await User.findById(studentId);
-      if (user) {
-        mongoUserId = user._id;
+    if (studentId.match(/^[0-9a-fA-F]{24}$/)) {
+      try {
+        const user = await User.findById(studentId);
+        if (user) {
+          mongoUserId = user._id;
+        }
+      } catch (idError) {
+        // Ignore and continue to find by firebaseUid
       }
-    } catch (idError) {
-      // If it's not a valid ObjectId, ignore this error and try firebaseUid
     }
     
     // If not found by ObjectId, try finding by firebaseUid
     if (!mongoUserId) {
-      const firebaseUser = await User.findOne({ firebaseUid: studentId });
-      if (firebaseUser) {
-        mongoUserId = firebaseUser._id;
+      const mongoUser = await User.findOne({ firebaseUid: studentId });
+      if (mongoUser) {
+        mongoUserId = mongoUser._id;
       }
     }
     

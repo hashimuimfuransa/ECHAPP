@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
@@ -92,10 +93,41 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   final RealAIChatService _aiChatService = RealAIChatService();
   final String _conversationId = 'conversation_${DateTime.now().millisecondsSinceEpoch}';
 
+  // Summarization and TTS state
+  bool _isSummarizing = false;
+  String? _notesSummary;
+  bool _showSummary = false;
+  bool _isReading = false;
+  final FlutterTts _flutterTts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
+    
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) setState(() => _isReading = false);
+    });
+    
+    _flutterTts.setErrorHandler((msg) {
+      if (mounted) setState(() => _isReading = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop();
+    _player?.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -114,6 +146,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       _hasError = false;
       _sectionsLoading = true;
       _examsLoading = true;
+      _notesSummary = null;
+      _showSummary = false;
     });
 
     try {
@@ -190,6 +224,75 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           _errorMessage = e.toString();
         });
       }
+    }
+  }
+
+  Future<void> _summarizeNotes() async {
+    if (_lessonContent?.notes == null || _lessonContent!.notes!.isEmpty) return;
+    
+    if (_notesSummary != null) {
+      setState(() => _showSummary = !_showSummary);
+      return;
+    }
+
+    setState(() => _isSummarizing = true);
+
+    try {
+      final contextObj = AIChatContext(
+        currentLesson: widget.lesson.copyWith(notes: _lessonContent!.notes),
+        allSections: widget.allSections ?? _courseSections,
+        sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
+      );
+
+      final response = await _aiChatService.sendMessage(
+        _conversationId,
+        "Please provide a concise and clear summary of these lesson notes. Focus on the key takeaways and main concepts. Use bullet points for readability. DO NOT include any introductory or concluding remarks, just the summary itself.",
+        contextObj,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isSummarizing = false;
+          _notesSummary = response.message;
+          _showSummary = true;
+        });
+        
+        // Also show a brief notification that it's ready
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('AI Summary generated!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: AppTheme.primaryGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSummarizing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate summary: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleVoiceReader() async {
+    if (_lessonContent?.notes == null || _lessonContent!.notes!.isEmpty) return;
+
+    if (_isReading) {
+      await _flutterTts.stop();
+      setState(() => _isReading = false);
+    } else {
+      setState(() => _isReading = true);
+      
+      // Clean up markdown characters for better reading
+      String cleanText = _lessonContent!.notes!
+          .replaceAll('#', '')
+          .replaceAll('*', '')
+          .replaceAll('-', '•')
+          .trim();
+          
+      await _flutterTts.speak(cleanText);
     }
   }
 
@@ -772,7 +875,11 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       return Container(
         margin: const EdgeInsets.only(top: 24),
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: AppTheme.getCardColor(context), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1))),
+        decoration: BoxDecoration(
+          color: AppTheme.getCardColor(context), 
+          borderRadius: BorderRadius.circular(20), 
+          border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+        ),
         child: Column(
           children: [
             const Icon(Icons.hourglass_empty, color: AppTheme.primaryGreen, size: 32),
@@ -790,19 +897,170 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       children: [
         Row(
           children: [
-            Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppTheme.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.description_outlined, color: AppTheme.accent, size: 20)),
+            Container(
+              padding: const EdgeInsets.all(8), 
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withOpacity(0.1), 
+                borderRadius: BorderRadius.circular(10),
+              ), 
+              child: const Icon(Icons.description_outlined, color: AppTheme.accent, size: 20),
+            ),
             const SizedBox(width: 12),
-            Text('Lesson Notes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.getTextColor(context), letterSpacing: -0.5)),
+            Text(
+              'Lesson Notes', 
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.w800, 
+                color: AppTheme.getTextColor(context), 
+                letterSpacing: -0.5,
+              ),
+            ),
+            const Spacer(),
+            // AI Summary Button
+            _buildActionButton(
+              onPressed: _summarizeNotes,
+              icon: Icons.auto_awesome,
+              label: _notesSummary != null ? (_showSummary ? 'Hide Summary' : 'View Summary') : 'Summarize',
+              color: AppTheme.primaryGreen,
+              isLoading: _isSummarizing,
+            ),
+            const SizedBox(width: 8),
+            // Voice Reader Button
+            _buildActionButton(
+              onPressed: _toggleVoiceReader,
+              icon: _isReading ? Icons.stop_circle : Icons.volume_up,
+              label: _isReading ? 'Stop' : 'Read',
+              color: Colors.orange,
+              isSecondary: true,
+            ),
           ],
         ),
         const SizedBox(height: 20),
+        
+        // AI Summary Section
+        if (_showSummary && _notesSummary != null) ...[
+          _buildSummaryCard(_notesSummary!),
+          const SizedBox(height: 24),
+        ],
+        
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: AppTheme.getCardColor(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]),
-          child: _buildFormattedNotes(notesContent),
+          decoration: BoxDecoration(
+            color: AppTheme.getCardColor(context), 
+            borderRadius: BorderRadius.circular(24), 
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04), 
+                blurRadius: 20, 
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.05)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_isReading) 
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.record_voice_over, color: Colors.orange, size: 16),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Reading aloud...', 
+                        style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              _buildFormattedNotes(notesContent),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSummaryCard(String summary) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.auto_awesome, color: AppTheme.primaryGreen, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'AI Summary',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryGreen,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => setState(() => _showSummary = false),
+                icon: const Icon(Icons.close, size: 20),
+                color: AppTheme.primaryGreen.withOpacity(0.5),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen.withOpacity(0.05),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildFormattedNotes(summary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required Color color,
+    bool isLoading = false,
+    bool isSecondary = false,
+  }) {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
+    return ElevatedButton.icon(
+      onPressed: isLoading ? null : onPressed,
+      icon: isLoading 
+          ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: isSecondary ? color : Colors.white))
+          : Icon(icon, size: 18),
+      label: isSmallScreen ? const SizedBox.shrink() : Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSecondary ? color.withOpacity(0.1) : color,
+        foregroundColor: isSecondary ? color : Colors.white,
+        elevation: isSecondary ? 0 : 2,
+        padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 
@@ -819,15 +1077,88 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     for (var line in lines) {
       String trimmed = line.trim();
       if (trimmed.startsWith('## ')) {
-        children.add(Padding(padding: const EdgeInsets.only(top: 16, bottom: 8), child: Text(trimmed.substring(3), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.getTextColor(context)))));
+        children.add(Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 8), 
+          child: Text(
+            trimmed.substring(3), 
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.w700, 
+              color: AppTheme.getTextColor(context),
+              letterSpacing: -0.2,
+            ),
+          ),
+        ));
       } else if (trimmed.startsWith('# ')) {
-        children.add(Padding(padding: const EdgeInsets.only(top: 20, bottom: 12), child: Text(trimmed.substring(2), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen))));
+        children.add(Padding(
+          padding: const EdgeInsets.only(top: 24, bottom: 12), 
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                trimmed.substring(2), 
+                style: const TextStyle(
+                  fontSize: 22, 
+                  fontWeight: FontWeight.w800, 
+                  color: AppTheme.primaryGreen,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 40,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
+          ),
+        ));
       } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        children.add(Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('• ', style: TextStyle(fontSize: 16, color: AppTheme.primaryGreen)), const SizedBox(width: 8), Expanded(child: Text(trimmed.substring(2), style: TextStyle(fontSize: 16, height: 1.6, color: AppTheme.getTextColor(context).withOpacity(0.85))))])));
+        children.add(Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6), 
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start, 
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12), 
+              Expanded(
+                child: Text(
+                  trimmed.substring(2), 
+                  style: TextStyle(
+                    fontSize: 16, 
+                    height: 1.6, 
+                    color: AppTheme.getTextColor(context).withOpacity(0.85),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ));
       } else if (trimmed.isNotEmpty) {
-        children.add(Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(trimmed, style: TextStyle(fontSize: 16, height: 1.6, color: AppTheme.getTextColor(context).withOpacity(0.85)))));
+        children.add(Padding(
+          padding: const EdgeInsets.only(bottom: 12), 
+          child: Text(
+            trimmed, 
+            style: TextStyle(
+              fontSize: 16, 
+              height: 1.7, 
+              color: AppTheme.getTextColor(context).withOpacity(0.85),
+            ),
+          ),
+        ));
       } else {
-        children.add(const SizedBox(height: 8));
+        children.add(const SizedBox(height: 12));
       }
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);

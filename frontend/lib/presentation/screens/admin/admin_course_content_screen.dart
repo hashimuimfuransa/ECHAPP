@@ -1668,8 +1668,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                               try {
                                                 uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
                                                   file: file,
-                                                  courseId: lesson['courseId'],
-                                                  sectionId: lesson['sectionId'] ?? '',
+                                                  courseId: lesson.courseId,
+                                                  sectionId: lesson.sectionId,
                                                 );
                                               } catch (e) {
                                                 print('=== MOBILE UPLOAD ERROR ===');
