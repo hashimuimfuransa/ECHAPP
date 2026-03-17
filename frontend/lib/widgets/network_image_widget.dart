@@ -25,7 +25,7 @@ class NetworkImageWidget extends StatelessWidget {
   String _getOptimizedUrl(String url) {
     String processedUrl = url;
     
-    // Convert S3 URL to CloudFront URL
+    // Convert S3 URL to CloudFront URL and ensure HTTPS
     if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
       processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
     }

@@ -68,13 +68,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String _getOptimizedUrl(String? url) {
     if (url == null || url.isEmpty) return '';
     
-    // Convert S3 URL to CloudFront URL
+    // Convert S3 URL to CloudFront URL and ensure HTTPS
     String processedUrl = url;
     if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
       processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
     }
 
-    // Ensure it always uses HTTPS for network URLs
     if (processedUrl.startsWith('http://')) {
       processedUrl = processedUrl.replaceFirst('http://', 'https://');
     }

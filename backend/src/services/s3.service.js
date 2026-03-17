@@ -91,9 +91,27 @@ class S3Service {
 
   // Generate streaming URL for video content
   async generateStreamingUrl(key, expiresIn = 3600) {
-    // For video streaming, we can use the same signed URL approach
-    // AWS S3 supports byte-range requests which enables efficient streaming
-    return await this.generateSignedUrl(key, expiresIn);
+    // Return CloudFront URL instead of signed S3 URL for better compatibility with all devices
+    // CloudFront handles byte-range requests efficiently for video streaming
+    return this.getPublicUrl(key);
+  }
+
+  // Explicitly generate signed S3 URL if needed
+  async generateSignedS3Url(key, expiresIn = 3600) {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key
+      });
+
+      const signedUrl = await getSignedUrl(this.client, command, {
+        expiresIn: expiresIn
+      });
+
+      return signedUrl;
+    } catch (error) {
+      throw new Error(`Failed to generate signed S3 URL: ${error.message}`);
+    }
   }
 
   // Get file metadata
