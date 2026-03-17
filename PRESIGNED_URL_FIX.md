@@ -179,9 +179,9 @@ fetch(uploadUrl, {
   "success": true,
   "message": "Presigned URL generated successfully",
   "data": {
-    "uploadUrl": "https://your-bucket.s3.amazonaws.com/path/to/file?X-Amz-Algorithm=...",
+    "uploadUrl": "https://echcoahing.s3.amazonaws.com/path/to/file?X-Amz-Algorithm=...",
     "key": "course-videos/filename-timestamp-random.ext",
-    "publicUrl": "https://your-bucket.s3.amazonaws.com/course-videos/filename-timestamp-random.ext",
+    "publicUrl": "https://d3ofk5ujo941v.cloudfront.net/course-videos/filename-timestamp-random.ext",
     "expiresIn": 300
   }
 }
@@ -202,8 +202,22 @@ fetch(uploadUrl, {
 - **Solution**: Increase expiration time or upload faster
 
 **Error: "Access Denied"**
-- **Cause**: Bucket policy doesn't allow the operation
-- **Solution**: Check S3 bucket policy allows PutObject for your credentials
+- **Cause**: Bucket policy or CORS misconfiguration
+- **Solution**: Check S3 bucket policy and CORS settings. For mobile/web compatibility, ensure this CORS config is applied to the bucket:
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": []
+  }
+]
+```
+
+**Error: Mixed Content (HTTP vs HTTPS)**
+- **Cause**: Browser blocking HTTP media on HTTPS site
+- **Solution**: The system automatically uses CloudFront HTTPS URLs (`https://d3ofk5ujo941v.cloudfront.net`). Ensure your `.env` has `CLOUDFRONT_URL` set to `https`.
 
 ### 5. Testing the Fix
 

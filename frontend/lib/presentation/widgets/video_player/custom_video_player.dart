@@ -74,7 +74,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
     }
 
-    if (processedUrl.startsWith('http')) {
+    // Ensure it always uses HTTPS for network URLs
+    if (processedUrl.startsWith('http://')) {
+      processedUrl = processedUrl.replaceFirst('http://', 'https://');
+    }
+
+    if (processedUrl.startsWith('https')) {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !processedUrl.contains('type=.mp4') && !processedUrl.toLowerCase().contains('.mp4')) {
         return processedUrl.contains('?') ? '$processedUrl&type=.mp4' : '$processedUrl?type=.mp4';
       }

@@ -111,7 +111,7 @@ class NotificationController {
   // Create a notification (admin/internal use)
   async createNotification(req, res) {
     try {
-      const { title, message, type, data, sendPush = false } = req.body;
+      const { title, message, type, data, sendPush = false, bypassLimit = false } = req.body;
       
       // Validate required fields
       if (!title || !message) {
@@ -134,7 +134,7 @@ class NotificationController {
       
       // Send push notification if requested
       if (sendPush) {
-        await this.sendPushNotification(userId, title, message, data);
+        await this.sendPushNotification(userId, title, message, data, bypassLimit);
       }
       
       res.status(201).json({
@@ -384,7 +384,7 @@ class NotificationController {
     }
   }
 
-  // Check if user has exceeded daily notification limit (e.g. 2 per day)
+  // Check if user has exceeded daily notification limit (e.g. 10 per day)
   async checkDailyLimit(userId) {
     try {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -392,7 +392,7 @@ class NotificationController {
         userId,
         createdAt: { $gte: oneDayAgo }
       });
-      return count < 2; // Limit to 2 per 24 hours
+      return count < 10; // Increased limit to 10 per 24 hours
     } catch (error) {
       console.error('Error checking daily limit:', error);
       return true; // Default to true on error to allow notification
@@ -411,39 +411,47 @@ class NotificationController {
         }
       }
 
-      // Professional way: Get user's FCM token from Firestore
+      // Professional way: Get user's FCM token from Firestore or MongoDB
       const db = admin.firestore();
-      
       let firebaseUid = userId;
+      let user = null;
+      let fcmToken = null;
       
       // If userId looks like a MongoDB ObjectId, find the user to get their firebaseUid
       if (userId.toString().length === 24 && /^[0-9a-fA-F]+$/.test(userId)) {
-        const user = await User.findById(userId);
-        if (user && user.firebaseUid) {
-          firebaseUid = user.firebaseUid;
-        } else if (!user) {
+        user = await User.findById(userId);
+        if (user) {
+          if (user.firebaseUid) {
+            firebaseUid = user.firebaseUid;
+          }
+          if (user.fcmToken) {
+            fcmToken = user.fcmToken;
+          }
+        } else {
           console.log(`User ${userId} not found in MongoDB`);
           return;
         }
+      } else {
+        // If it doesn't look like MongoDB ID, maybe it's a Firebase UID
+        user = await User.findOne({ firebaseUid: userId });
+        if (user && user.fcmToken) {
+          fcmToken = user.fcmToken;
+        }
       }
       
-      const userDoc = await db.collection('users').doc(firebaseUid).get();
-      
-      if (!userDoc.exists) {
-        console.log(`User document ${firebaseUid} not found in Firestore`);
-        // Fallback to MongoDB if Firestore doc doesn't exist yet
-        const user = await User.findOne({ $or: [{ _id: userId }, { firebaseUid: userId }] });
-        if (!user || !user.fcmToken) {
-          console.log('User FCM token not found in MongoDB fallback either');
-          return;
+      // Always try Firestore first for the most up-to-date token
+      try {
+        const userDoc = await db.collection('users').doc(firebaseUid).get();
+        if (userDoc.exists && userDoc.data().fcmToken) {
+          fcmToken = userDoc.data().fcmToken;
+          console.log(`Found up-to-date FCM token in Firestore for user ${firebaseUid}`);
         }
-        var fcmToken = user.fcmToken;
-      } else {
-        var fcmToken = userDoc.data().fcmToken;
+      } catch (firestoreError) {
+        console.log(`Error fetching from Firestore, will use MongoDB fallback: ${firestoreError.message}`);
       }
       
       if (!fcmToken) {
-        console.log('User FCM token is empty');
+        console.log(`User FCM token not found for user ${userId} in either Firestore or MongoDB`);
         return;
       }
 
@@ -460,12 +468,71 @@ class NotificationController {
         token: fcmToken,
       };
 
-      const response = await admin.messaging().send(payload);
-      console.log('Push notification sent successfully:', response);
-      return response;
+      // Send with automatic retry logic for transient errors
+      let retryCount = 0;
+      const maxRetries = 2;
+      let lastError = null;
+
+      while (retryCount <= maxRetries) {
+        try {
+          const response = await admin.messaging().send(payload);
+          console.log(`Push notification sent successfully (Attempt ${retryCount + 1}):`, response);
+          return response;
+        } catch (error) {
+          lastError = error;
+          
+          // Check for specific FCM errors that indicate invalid/expired tokens
+          const errorCode = error.code;
+          const isInvalidToken = 
+            errorCode === 'messaging/registration-token-not-registered' || 
+            errorCode === 'messaging/invalid-registration-token' ||
+            errorCode === 'messaging/mismatched-credential';
+            
+          if (isInvalidToken) {
+            console.log(`Invalid FCM token detected for user ${userId}. Removing from database.`);
+            
+            // Remove from MongoDB
+            if (user) {
+              await User.findByIdAndUpdate(user._id, { $unset: { fcmToken: "" } });
+            }
+            
+            // Remove from Firestore
+            try {
+              await db.collection('users').doc(firebaseUid).update({
+                fcmToken: admin.firestore.FieldValue.delete(),
+                lastTokenError: admin.firestore.FieldValue.serverTimestamp(),
+                tokenErrorCode: errorCode
+              });
+            } catch (fsErr) {
+              console.error('Error removing token from Firestore:', fsErr.message);
+            }
+            
+            return null; // Stop retrying for invalid tokens
+          }
+          
+          // Check for transient errors that are worth retrying
+          const isTransientError = 
+            errorCode === 'messaging/internal-error' || 
+            errorCode === 'messaging/server-unavailable' ||
+            errorCode === 'messaging/mismatched-credential'; // Sometimes transient?
+
+          if (isTransientError && retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Transient FCM error ${errorCode}, retrying in ${retryCount}s...`);
+            await new Promise(resolve => setTimeout(resolve, retryCount * 1000));
+            continue;
+          }
+          
+          // For other errors or max retries reached, break
+          break;
+        }
+      }
+      
+      console.error(`Failed to send push notification after ${retryCount + 1} attempts:`, lastError?.message);
+      return null;
     } catch (error) {
-      console.error('Error sending push notification:', error);
-      // Don't throw to prevent breaking the caller flow (e.g. payment processing)
+      console.error('Error in sendPushNotification wrapper:', error);
+      // Don't throw to prevent breaking the caller flow
     }
   }
 

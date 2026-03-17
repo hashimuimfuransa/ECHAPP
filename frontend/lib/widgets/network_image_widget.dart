@@ -23,10 +23,19 @@ class NetworkImageWidget extends StatelessWidget {
   });
 
   String _getOptimizedUrl(String url) {
-    if (url.contains('echcoahing.s3.amazonaws.com')) {
-      return url.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
+    String processedUrl = url;
+    
+    // Convert S3 URL to CloudFront URL
+    if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
+      processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
     }
-    return url;
+
+    // Ensure it always uses HTTPS for network URLs
+    if (processedUrl.startsWith('http://')) {
+      processedUrl = processedUrl.replaceFirst('http://', 'https://');
+    }
+    
+    return processedUrl;
   }
 
   @override

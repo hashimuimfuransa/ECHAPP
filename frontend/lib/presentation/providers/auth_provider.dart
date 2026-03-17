@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
+import 'package:excellencecoachinghub/services/fcm_token_service.dart';
 import 'package:excellencecoachinghub/data/repositories/auth_repository.dart';
 import 'package:excellencecoachinghub/utils/device_id_utils.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
@@ -105,6 +106,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Set the user state and ensure navigation triggers
         state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Welcome back! Login successful.');
         
+        // Step 5: Initialize and sync FCM token for push notifications
+        FCMTokenService.initializeAndSyncToken();
+        
         // Small delay to ensure state is properly propagated
         await Future.delayed(const Duration(milliseconds: 50));
       } else {
@@ -198,6 +202,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveRefreshToken(authResponse.refreshToken);
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
+        
+        // Step 5: Initialize and sync FCM token for push notifications
+        FCMTokenService.initializeAndSyncToken();
         
         debugPrint('AuthProvider: Registration completed successfully');
         state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Registration successful! Welcome to ExcellenceCoachingHub.');
@@ -442,6 +449,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
         
+        // Step 5: Initialize and sync FCM token for push notifications
+        FCMTokenService.initializeAndSyncToken();
+        
         debugPrint('AuthProvider: Setting success state');
         state = state.copyWith(
           isLoading: false, 
@@ -583,6 +593,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
             role: storedUserRole,
             createdAt: DateTime.fromMillisecondsSinceEpoch(firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch),
           );
+          
+          // Initialize and sync FCM token
+          FCMTokenService.initializeAndSyncToken();
+          
           state = state.copyWith(user: user);
         } else {
           debugPrint('AuthProvider: Incomplete session data. storedUserId: $storedUserId, storedUserRole: $storedUserRole, storedToken: ${storedToken != null}');

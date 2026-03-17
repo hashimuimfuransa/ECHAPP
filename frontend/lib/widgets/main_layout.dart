@@ -348,28 +348,125 @@ class MainLayout extends ConsumerWidget {
 
   Widget _buildBottomNavBar(BuildContext context, String currentRoute) {
     int currentIndex = 0;
-    if (currentRoute.contains('/dashboard')) currentIndex = 0;
-    else if (currentRoute.contains('/courses')) currentIndex = 1;
-    else if (currentRoute.contains('/my-courses')) currentIndex = 2;
-    else if (currentRoute.contains('/profile')) currentIndex = 3;
+    if (currentRoute.contains('/dashboard')) {
+      currentIndex = 0;
+    } else if (currentRoute.contains('/courses')) {
+      currentIndex = 1;
+    } else if (currentRoute.contains('/my-courses')) {
+      currentIndex = 2;
+    } else if (currentRoute.contains('/downloads')) {
+      currentIndex = 3;
+    } else if (currentRoute.contains('/profile')) {
+      currentIndex = 4;
+    }
 
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: (index) {
-        switch (index) {
-          case 0: context.go('/dashboard'); break;
-          case 1: context.go('/courses'); break;
-          case 2: context.go('/my-courses'); break;
-          case 3: context.go('/profile'); break;
-        }
-      },
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.school_outlined), label: 'Courses'),
-        BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Learning'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        color: Colors.transparent,
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.01),
+              width: 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BottomNavigationBar(
+              currentIndex: currentIndex,
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    context.go('/dashboard');
+                    break;
+                  case 1:
+                    context.go('/courses');
+                    break;
+                  case 2:
+                    context.go('/my-courses');
+                    break;
+                  case 3:
+                    context.go('/downloads');
+                    break;
+                  case 4:
+                    context.go('/profile');
+                    break;
+                }
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: AppTheme.primaryGreen,
+              unselectedItemColor: isDark ? Colors.white30 : Colors.black26,
+              selectedFontSize: 10,
+              unselectedFontSize: 10,
+              showUnselectedLabels: false,
+              showSelectedLabels: false,
+              items: [
+                _buildBottomNavItem(
+                  icon: currentIndex == 0 ? Icons.grid_view_rounded : Icons.grid_view_outlined,
+                  label: 'Home',
+                  isSelected: currentIndex == 0,
+                ),
+                _buildBottomNavItem(
+                  icon: currentIndex == 1 ? Icons.school_rounded : Icons.school_outlined,
+                  label: 'Courses',
+                  isSelected: currentIndex == 1,
+                ),
+                _buildBottomNavItem(
+                  icon: currentIndex == 2 ? Icons.play_circle_filled_rounded : Icons.play_circle_outline_rounded,
+                  label: 'Learning',
+                  isSelected: currentIndex == 2,
+                ),
+                _buildBottomNavItem(
+                  icon: currentIndex == 3 ? Icons.download_done_rounded : Icons.download_for_offline_outlined,
+                  label: 'Downloads',
+                  isSelected: currentIndex == 3,
+                ),
+                _buildBottomNavItem(
+                  icon: currentIndex == 4 ? Icons.person_rounded : Icons.person_outline_rounded,
+                  label: 'Profile',
+                  isSelected: currentIndex == 4,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  BottomNavigationBarItem _buildBottomNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+  }) {
+    return BottomNavigationBarItem(
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        margin: const EdgeInsets.only(bottom: 0),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryGreen.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 22),
+      ),
+      label: label,
     );
   }
 }

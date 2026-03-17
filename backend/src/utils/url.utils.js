@@ -6,7 +6,7 @@ const S3_DOMAIN = process.env.S3_BUCKET_URL ? process.env.S3_BUCKET_URL.replace(
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_URL ? process.env.CLOUDFRONT_URL.replace(/^https?:\/\//, '') : 'd3ofk5ujo941v.cloudfront.net';
 
 /**
- * Transforms an S3 URL to a CloudFront URL
+ * Transforms an S3 URL to a CloudFront URL and ensures HTTPS
  * @param {string} url - The original URL
  * @returns {string} - The transformed URL
  */
@@ -15,7 +15,11 @@ const toCloudFront = (url) => {
   
   // If it's a signed URL (has S3 auth params), DON'T transform it
   // as CloudFront requires a different signing method.
+  // HOWEVER, we still want to ensure it uses HTTPS
   if (url.includes('X-Amz-Algorithm') || url.includes('X-Amz-Signature')) {
+    if (url.startsWith('http://')) {
+      return url.replace('http://', 'https://');
+    }
     return url;
   }
   
@@ -23,11 +27,20 @@ const toCloudFront = (url) => {
   // Pattern matches: bucket.s3.region.amazonaws.com OR bucket.s3.amazonaws.com
   const s3Pattern = new RegExp(`echcoahing\\.s3[.-][a-z0-9-]+\\.amazonaws\\.com|${S3_DOMAIN.replace(/\./g, '\\.')}`, 'i');
   
+  let processedUrl = url;
   if (s3Pattern.test(url)) {
-    return url.replace(s3Pattern, CLOUDFRONT_DOMAIN);
+    processedUrl = url.replace(s3Pattern, CLOUDFRONT_DOMAIN);
   }
   
-  return url;
+  // Ensure the URL always uses HTTPS
+  if (processedUrl.startsWith('http://')) {
+    processedUrl = processedUrl.replace('http://', 'https://');
+  } else if (!processedUrl.startsWith('https://') && processedUrl.includes('cloudfront.net')) {
+    // If it's a relative URL or missing protocol but is a cloudfront URL
+    processedUrl = `https://${processedUrl.replace(/^\/+/, '')}`;
+  }
+  
+  return processedUrl;
 };
 
 /**

@@ -301,6 +301,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
     return Drawer(
       backgroundColor: isDark ? AppTheme.darkBg : Colors.white,
+      width: MediaQuery.of(context).size.width * 0.85,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
       child: Column(
         children: [
           _buildMobileHeader(context, user),
@@ -309,30 +316,27 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.darkBg : Colors.white,
-                image: !isDark ? DecorationImage(
-                  image: const AssetImage('assets/logo.png'),
-                  opacity: 0.02,
-                  scale: 8,
-                  repeat: ImageRepeat.repeat,
-                ) : null,
               ),
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                children: items.map((item) => _buildNavItem(
-                  context,
-                  item['title'] as String,
-                  item['icon'] as IconData,
-                  item['route'] as String,
-                  item['key'] as String,
-                  currentPage == item['key'],
-                  false, // Mobile is never collapsed
-                )).toList(),
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  ...items.map((item) => _buildNavItem(
+                    context,
+                    item['title'] as String,
+                    item['icon'] as IconData,
+                    item['route'] as String,
+                    item['key'] as String,
+                    currentPage == item['key'],
+                    false, // Mobile is never collapsed
+                  )).toList(),
+                ],
               ),
             ),
           ),
           
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
             child: _buildLogoutButton(context, ref, false), // Mobile is never collapsed
           ),
         ],
@@ -341,61 +345,59 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildMobileHeader(BuildContext context, user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 70, 24, 32),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: AppTheme.primaryGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
-                ),
-                child: Image.asset(
-                  'assets/logo.png',
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
+              Hero(
+                tag: 'app_logo_drawer',
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
-              Column(
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Excellence Hub',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                     ),
                   ),
                   Text(
                     'LEARNING PLATFORM',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryGreen,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -405,62 +407,84 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           ),
           if (user != null) ...[
             const SizedBox(height: 32),
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-                    image: user.profilePicture != null && user.profilePicture!.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(user.profilePicture!),
-                          fit: BoxFit.cover,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.03) : AppTheme.primaryGreen.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark ? Colors.white.withOpacity(0.05) : AppTheme.primaryGreen.withOpacity(0.1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      image: user.profilePicture != null && user.profilePicture!.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(user.profilePicture!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    ),
+                    child: user.profilePicture == null || user.profilePicture!.isEmpty
+                      ? Container(
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              user.fullName[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         )
                       : null,
                   ),
-                  child: user.profilePicture == null || user.profilePicture!.isEmpty
-                    ? Center(
-                        child: Text(
-                          user.fullName[0].toUpperCase(),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      )
-                    : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.fullName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                        const SizedBox(height: 2),
+                        Text(
+                          user.email,
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black54,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        user.email,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ],
@@ -548,60 +572,65 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppTheme.primaryGreen.withOpacity(0.12)
-                  : (isDark ? Colors.white.withOpacity(0.05) : AppTheme.greyColor.withOpacity(0.08)),
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected 
-                  ? Border.all(color: AppTheme.primaryGreen.withOpacity(0.2), width: 1)
-                  : null,
-            ),
-            child: Icon(
-              icon,
-              color: isSelected ? AppTheme.primaryGreen : (isDark ? Colors.white70 : AppTheme.greyColor),
-              size: 22,
-            ),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: isSelected 
-                  ? AppTheme.primaryGreen 
-                  : (isDark ? Colors.white.withOpacity(0.9) : AppTheme.getTextColor(context)),
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 15,
-              letterSpacing: 0.2,
-            ),
-          ),
-          trailing: isSelected 
-              ? Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    shape: BoxShape.circle,
-                  ),
-                )
-              : Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: isDark ? Colors.white24 : Colors.black12,
-                ),
-          selected: isSelected,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: InkWell(
           onTap: () {
             if (!isSelected) {
               context.go(route);
             }
             Navigator.of(context).pop();
           },
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppTheme.primaryGreen.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+              border: isSelected 
+                  ? Border.all(color: AppTheme.primaryGreen.withOpacity(0.2), width: 1)
+                  : Border.all(color: Colors.transparent, width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryGreen
+                        : (isDark ? Colors.white.withOpacity(0.05) : AppTheme.greyColor.withOpacity(0.08)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppTheme.greyColor),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: isSelected 
+                          ? AppTheme.primaryGreen 
+                          : (isDark ? Colors.white.withOpacity(0.9) : AppTheme.getTextColor(context)),
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: AppTheme.primaryGreen,
+                  ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -658,46 +687,58 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       
       return Container(
         decoration: BoxDecoration(
-          color: isDark ? Colors.red.withOpacity(0.05) : Colors.red.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(16),
+          color: isDark ? Colors.red.withOpacity(0.08) : Colors.red.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.red.withOpacity(isDark ? 0.15 : 0.08),
+            color: Colors.red.withOpacity(isDark ? 0.2 : 0.1),
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () => _showLogoutDialog(context, ref),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: Colors.red.shade600,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.power_settings_new_rounded,
+                  size: 18,
+                  color: Colors.red.withOpacity(0.4),
+                ),
+              ],
             ),
-            child: Icon(
-              Icons.logout_rounded,
-              color: Colors.red.shade600,
-              size: 20,
-            ),
           ),
-          title: Text(
-            'Logout',
-            style: TextStyle(
-              color: Colors.red.shade600,
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              letterSpacing: 0.3,
-            ),
-          ),
-          trailing: Icon(
-            Icons.power_settings_new_rounded,
-            size: 18,
-            color: Colors.red.withOpacity(0.4),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          onTap: () {
-            _showLogoutDialog(context, ref);
-          },
         ),
       );
     }

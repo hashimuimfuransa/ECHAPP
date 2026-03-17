@@ -283,12 +283,12 @@ class AppRouter {
             builder: (context, state) => const AdminExamsReviewScreen(),
           ),
           GoRoute(
-            path: '/admin/notifications',
-            builder: (context, state) => const AdminNotificationsScreen(),
+            path: '/admin/user-feedback',
+            builder: (context, state) => const AdminFeedbackScreen(),
           ),
           GoRoute(
-            path: '/admin/feedback',
-            builder: (context, state) => const AdminFeedbackScreen(),
+            path: '/admin/notifications',
+            builder: (context, state) => const AdminNotificationsScreen(),
           ),
 
           // Learning Routes - Outside MainLayout for full-screen focus

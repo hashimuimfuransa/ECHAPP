@@ -427,6 +427,27 @@ class AuthRepository {
     }
   }
 
+  Future<void> updateFCMToken(String token, String fcmToken) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('${ApiConfig.baseUrl}/notifications/fcm-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to update FCM token');
+      }
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
+
   Future<void> deleteAccount(String token) async {
     try {
       final response = await _client.delete(

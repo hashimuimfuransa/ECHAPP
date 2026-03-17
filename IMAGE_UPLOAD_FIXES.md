@@ -70,8 +70,21 @@ if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
 ### Issue: "Connection refused" on mobile
 **Solution:** Update `api_config.dart` with your machine's IP address instead of 'localhost'
 
-### Issue: Image not displaying after upload
-**Solution:** Check that the returned URL is valid and publicly accessible
+### Issue: Image not displaying after upload (CORS)
+**Solution:** Some devices (WebView/older Flutter) fail if CORS is misconfigured. Ensure S3 bucket has the following CORS policy:
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": []
+  }
+]
+```
+
+### Issue: Mixed Content (Blocked by browser)
+**Solution:** Always use HTTPS for media URLs. The system is configured to automatically transform S3 URLs to CloudFront HTTPS URLs.
 
 ## Backend Endpoint Details
 
@@ -85,7 +98,7 @@ if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
 {
   "success": true,
   "data": {
-    "imageUrl": "https://echcoahing.s3.amazonaws.com/images/filename.png",
+    "imageUrl": "https://d3ofk5ujo941v.cloudfront.net/images/filename.png",
     "s3Key": "images/filename.png",
     "bucket": "echcoahing"
   },

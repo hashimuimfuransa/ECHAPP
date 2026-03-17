@@ -39,31 +39,35 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20, 
+        vertical: isMobile ? 10 : 16
+      ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF431407).withOpacity(0.3) : const Color(0xFFFFF7ED), // Very light orange/cream
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF431407).withOpacity(0.2) : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? const Color(0xFF7C2D12).withOpacity(0.4) : const Color(0xFFFFEDD5), // Light orange border
+          color: isDark ? const Color(0xFF7C2D12).withOpacity(0.3) : const Color(0xFFFFEDD5),
           width: 1,
         ),
       ),
       child: Row(
         children: [
           Icon(
-            Icons.error_outline_rounded,
-            color: isDark ? const Color(0xFFFB923C) : const Color(0xFFF97316), // Orange icon
-            size: 22,
+            Icons.security_rounded,
+            color: isDark ? const Color(0xFFFB923C) : const Color(0xFFF97316),
+            size: isMobile ? 18 : 22,
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isMobile ? 10 : 16),
           Expanded(
             child: Text(
-              'Device Security: Your account is secured to this device for your protection. Contact support to change devices.',
+              'Account secured to this device. Contact support to change.',
               style: TextStyle(
-                color: isDark ? const Color(0xFFFFEDD5).withOpacity(0.9) : const Color(0xFF92400E), // Brownish orange text
-                fontSize: 14,
+                color: isDark ? const Color(0xFFFFEDD5).withOpacity(0.8) : const Color(0xFF92400E),
+                fontSize: isMobile ? 12 : 14,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.2,
               ),
@@ -243,6 +247,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             ),
                             const SizedBox(height: 24),
                             const _DashboardDeviceBindingPolicy(),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
@@ -269,7 +274,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     ),
                   ),
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(padding.left, 32, padding.right, 0),
+                  padding: EdgeInsets.fromLTRB(padding.left, isDesktop ? 32 : 16, padding.right, 0),
                   sliver: SliverToBoxAdapter(
                     child: Center(
                       child: Container(
@@ -355,14 +360,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showContactInfoDialog(context),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
-        elevation: 8,
-        icon: const Icon(Icons.contact_support, size: 24),
-        label: const Text('Contact Us',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 6,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.chat_bubble_outline_rounded, size: 28),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -434,40 +438,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   Widget _buildCategoryFilters(BuildContext context) {
     final categoriesAsync = ref.watch(backendCategoriesProvider);
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     return Container(
-      height: 44,
-      margin: const EdgeInsets.only(bottom: 20),
+      height: isMobile ? 40 : 44,
+      margin: EdgeInsets.only(bottom: isMobile ? 16 : 24),
       child: categoriesAsync.when(
         data: (categories) => ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: categories.length + 1,
           padding: EdgeInsets.zero,
+          physics: const BouncingScrollPhysics(),
           itemBuilder: (context, index) {
             final isFirst = index == 0;
             final category = isFirst ? null : categories[index - 1];
             final categoryId = isFirst ? 'all' : category!.id;
             final color = CategoryUtils.getCategoryColor(categoryId, name: isFirst ? 'all' : category?.name);
-            final name = isFirst ? 'All Courses' : category!.name;
+            final name = isFirst ? 'All' : category!.name;
             final icon = CategoryUtils.getCategoryIcon(categoryId, name: isFirst ? 'all' : category?.name);
 
             return Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.only(right: 8),
               child: InkWell(
                 onTap: () {
                   context.push('/courses', extra: {
                     'categoryId': categoryId,
-                    'categoryName': name,
+                    'categoryName': isFirst ? 'All Courses' : name,
                   });
                 },
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: color.withOpacity(0.15),
+                      color: color.withOpacity(0.12),
                       width: 1,
                     ),
                   ),
@@ -476,16 +482,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     children: [
                       Icon(
                         icon,
-                        size: 18,
-                        color: color.withOpacity(0.9),
+                        size: isMobile ? 16 : 18,
+                        color: color,
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: isMobile ? 6 : 8),
                       Text(
                         name,
                         style: TextStyle(
-                          color: color.withOpacity(0.9),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                          fontSize: isMobile ? 12 : 13,
                         ),
                       ),
                     ],
@@ -495,7 +501,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             );
           },
         ),
-        loading: () => const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        loading: () => const SizedBox.shrink(),
         error: (err, stack) => const SizedBox.shrink(),
       ),
     );
@@ -519,241 +525,225 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF10B981), // Emerald
-            Color(0xFF0EA5E9), // Sky Blue
-          ],
+        gradient: LinearGradient(
+          colors: isDark 
+              ? [const Color(0xFF065F46), const Color(0xFF075985)]
+              : [const Color(0xFF10B981), const Color(0xFF0EA5E9)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+        borderRadius: BorderRadius.circular(isMobile ? 24 : 28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF10B981).withOpacity(isDark ? 0.3 : 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: const Color(0xFF10B981).withOpacity(isDark ? 0.2 : 0.15),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Stack(
         children: [
-          // Decorative shapes
           Positioned(
-            right: -20,
-            top: -20,
+            right: -30,
+            top: -30,
             child: Container(
-              width: isMobile ? 100 : 150,
-              height: isMobile ? 100 : 150,
+              width: isMobile ? 120 : 180,
+              height: isMobile ? 120 : 180,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: -20,
+            bottom: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.03),
                 shape: BoxShape.circle,
               ),
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(isDesktop ? 24 : (isSmallMobile ? 16 : 20)),
-            child: Row(
+            padding: EdgeInsets.all(isDesktop ? 32 : (isSmallMobile ? 20 : 24)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: isDesktop ? 2 : 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: EdgeInsets.all(isSmallMobile ? 8 : 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(isSmallMobile ? 12 : 16),
-                            ),
-                            child: Icon(
-                              Icons.school_rounded, 
-                              color: Colors.white, 
-                              size: isSmallMobile ? 22 : 28
+                          Text(
+                            'Hello, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isSmallMobile ? 22 : (isMobile ? 26 : 32),
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
                             ),
                           ),
-                          SizedBox(width: isSmallMobile ? 12 : 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hello, ${user?.fullName?.split(" ")[0].toLowerCase() ?? 'student'}!',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: isSmallMobile ? 20 : (isMobile ? 24 : 28),
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.5,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  'Ready to continue your learning journey?',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: isSmallMobile ? 12 : 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'Ready to continue your learning?',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: isSmallMobile ? 13 : 15,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      // Expiration Countdown for current course
-                      if (lastEnrollment != null && lastEnrollment.accessExpirationDate != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: CountdownTimer(
-                            expirationDate: lastEnrollment.accessExpirationDate,
-                            textColor: Colors.white,
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            showSeconds: true,
-                          ),
-                        ),
-                      // Last Lesson Widget
-                      if (lastCourse != null)
-                        InkWell(
-                          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, lastCourse),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.play_circle_fill, color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    'Last lesson: ${lastCourse.title}',
-                                    style: const TextStyle(
-                                      color: Colors.white, 
-                                      fontSize: 13, 
-                                      fontWeight: FontWeight.w600
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.7), size: 18),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lightbulb_rounded, color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Start a new course today!',
-                                  style: const TextStyle(
-                                    color: Colors.white, 
-                                    fontSize: 13, 
-                                    fontWeight: FontWeight.w600
-                                  ),
-                                  maxLines: 2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(height: 24),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => context.push('/my-courses'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF0F766E),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('My Courses', style: TextStyle(fontWeight: FontWeight.w800)),
-                          ),
-                          TextButton(
-                            onPressed: () => context.push('/courses'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Browse All', style: TextStyle(fontWeight: FontWeight.w700)),
-                                SizedBox(width: 4),
-                                Icon(Icons.chevron_right_rounded, size: 20),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                    if (isMobile) 
+                      _buildCircularProgress(context, averageProgress, mini: true),
+                  ],
                 ),
-                if (isDesktop) ...[
-                  const SizedBox(width: 24),
-                  Container(
-                    width: 280,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05), blurRadius: 10),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${averageProgress.toInt()}% Completed',
-                                style: TextStyle(
-                                  fontSize: 15, 
-                                  fontWeight: FontWeight.w700, 
-                                  color: isDark ? Colors.white : const Color(0xFF333333),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildWelcomeStatItem(context, Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
-                              const SizedBox(height: 12),
-                              _buildWelcomeStatItem(context, Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
-                            ],
+                const SizedBox(height: 24),
+                
+                if (lastCourse != null)
+                  _buildCompactContinueButton(context, lastCourse),
+                
+                const SizedBox(height: 24),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => context.push('/my-courses'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF10B981),
+                          elevation: 0,
+                          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          'My Courses', 
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: isMobile ? 12 : 14,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        _buildCircularProgress(context, averageProgress),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => context.push('/courses'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white, width: 1.5),
+                          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          'Browse All', 
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: isMobile ? 12 : 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (!isMobile && isDesktop) ...[
+                  const SizedBox(height: 24),
+                  _buildDesktopStatsOverlay(context, enrollments, averageProgress),
                 ],
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactContinueButton(BuildContext context, Course lastCourse) {
+    return InkWell(
+      onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, lastCourse),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF10B981), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'CONTINUE LEARNING',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Text(
+                    lastCourse.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopStatsOverlay(BuildContext context, List<Enrollment> enrollments, double averageProgress) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeStatItem(context, Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
+                const SizedBox(height: 12),
+                _buildWelcomeStatItem(context, Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
+              ],
+            ),
+          ),
+          _buildCircularProgress(context, averageProgress),
         ],
       ),
     );
@@ -791,19 +781,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCircularProgress(BuildContext context, double progress) {
+  Widget _buildCircularProgress(BuildContext context, double progress, {bool mini = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = mini ? 54.0 : 70.0;
+    
     return Stack(
       alignment: Alignment.center,
       children: [
         SizedBox(
-          width: 70,
-          height: 70,
+          width: size,
+          height: size,
           child: CircularProgressIndicator(
             value: progress / 100,
-            strokeWidth: 8,
-            backgroundColor: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFF3F4F6),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+            strokeWidth: mini ? 5 : 8,
+            backgroundColor: Colors.white.withOpacity(0.15),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              mini ? Colors.white : const Color(0xFF10B981)
+            ),
             strokeCap: StrokeCap.round,
           ),
         ),
@@ -811,14 +805,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${progress.toInt()}%', style: TextStyle(
-              fontSize: 16, 
-              fontWeight: FontWeight.w800, 
-              color: isDark ? Colors.white : const Color(0xFF333333),
+              fontSize: mini ? 12 : 16, 
+              fontWeight: FontWeight.w900, 
+              color: Colors.white,
             )),
-            Text('Completed', style: TextStyle(
-              fontSize: 8, 
-              color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
-            )),
+            if (!mini)
+              Text('Completed', style: TextStyle(
+                fontSize: 8, 
+                color: Colors.white70,
+              )),
           ],
         ),
       ],
@@ -896,109 +891,77 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final actions = [
       {
         'title': 'My Learning',
-        'subtitle': 'Continue learning',
+        'subtitle': 'Continue',
         'icon': Icons.play_lesson_rounded,
-        'color': const Color(0xFF10B981), // Solid Emerald
+        'color': const Color(0xFF10B981),
         'onTap': () => context.push('/my-courses'),
       },
       {
-        'title': 'Downloaded',
-        'subtitle': 'Offline videos',
+        'title': 'Downloads',
+        'subtitle': 'Offline',
         'icon': Icons.file_download_done_rounded,
-        'color': const Color(0xFF3B82F6), // Solid Blue
+        'color': const Color(0xFF3B82F6),
         'onTap': () => context.go('/downloads'),
       },
       {
-        'title': 'Exams History',
-        'subtitle': 'View results',
+        'title': 'Exams',
+        'subtitle': 'History',
         'icon': Icons.assignment_turned_in_rounded,
-        'color': const Color(0xFF8B5CF6), // Solid Purple
+        'color': const Color(0xFF8B5CF6),
         'onTap': () => context.push('/exams/history'),
       },
       {
         'title': 'Certificates',
-        'subtitle': 'Your awards',
+        'subtitle': 'Awards',
         'icon': Icons.verified_rounded,
-        'color': const Color(0xFFF59E0B), // Solid Amber
+        'color': const Color(0xFFF59E0B),
         'onTap': () => context.push('/certificates'),
       },
     ];
 
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final isTablet = ResponsiveBreakpoints.isTablet(context);
-    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 2);
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final crossAxisCount = isDesktop ? 4 : (isMobile ? 4 : 2); // 4 in a row for mobile too to be COMPACT
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
               'Quick Access',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'New',
-                style: TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
+            TextButton(
+              onPressed: () {}, // Optional: more actions
+              child: const Text('See All', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: isDesktop ? 20 : 16,
-            mainAxisSpacing: isDesktop ? 20 : 16,
-            childAspectRatio: isDesktop ? 1.6 : 1.4,
+            crossAxisSpacing: isMobile ? 8 : 20,
+            mainAxisSpacing: isMobile ? 8 : 20,
+            childAspectRatio: isMobile ? 0.85 : 1.6,
           ),
           itemCount: actions.length,
           itemBuilder: (context, index) {
             final action = actions[index];
-            
-            // Staggered entrance animation with safe controller access
-            final animation = _animationController != null 
-              ? CurvedAnimation(
-                  parent: _animationController!,
-                  curve: Interval(
-                    (index / actions.length) * 0.5,
-                    0.5 + (index / actions.length) * 0.5,
-                    curve: Curves.easeOutBack,
-                  ),
-                )
-              : const AlwaysStoppedAnimation(1.0);
-
-            return ScaleTransition(
-              scale: animation,
-              child: FadeTransition(
-                opacity: animation,
-                child: _buildResponsiveActionCard(
-                  context,
-                  action['title'] as String,
-                  action['subtitle'] as String,
-                  action['icon'] as IconData,
-                  action['color'] as Color,
-                  action['onTap'] as Function,
-                ),
-              ),
+            return _QuickAccessCard(
+              title: action['title'] as String,
+              subtitle: action['subtitle'] as String,
+              icon: action['icon'] as IconData,
+              color: action['color'] as Color,
+              onTap: action['onTap'] as Function,
             );
           },
         ),
@@ -1325,13 +1288,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             )
           else
             SizedBox(
-              height: 280, // Slightly increased height for mobile scrolling list
+              height: 300, // Fixed height for consistency
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: enrollments.length,
                 itemBuilder: (context, index) {
                   return Container(
-                    width: 280,
+                    width: 260,
                     margin: const EdgeInsets.only(right: 16),
                     child: _buildEnrolledCourseCard(context, enrollments[index]),
                   );
@@ -1357,6 +1320,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final titleSize = isDesktop ? 15.0 : 14.0;
     
     return Container(
+      height: 300, // Fixed height for uniform sizing
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
@@ -1399,79 +1363,85 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         : const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
                   ),
                 ),
-                SizedBox(height: isMobile ? 8 : 12),
-                Text(
-                  course.title,
-                  style: TextStyle(
-                    fontSize: titleSize, 
-                    fontWeight: FontWeight.w700, 
-                    letterSpacing: -0.2,
-                    height: 1.2,
-                    color: AppTheme.getTextColor(context),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'By ${course.displayInstructor}',
-                  style: TextStyle(
-                    color: AppTheme.getSecondaryTextColor(context), 
-                    fontSize: isMobile ? 10 : 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                if (enrollment.accessExpirationDate != null) ...[
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: CountdownTimer(
-                      expirationDate: enrollment.accessExpirationDate,
-                      showSeconds: true,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                const Spacer(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Progress',
-                          style: TextStyle(
-                            fontSize: isMobile ? 9 : 10,
-                            color: AppTheme.getSecondaryTextColor(context),
-                            fontWeight: FontWeight.w500,
-                          ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course.title,
+                        style: TextStyle(
+                          fontSize: titleSize, 
+                          fontWeight: FontWeight.w700, 
+                          letterSpacing: -0.2,
+                          height: 1.2,
+                          color: AppTheme.getTextColor(context),
                         ),
-                        Text(
-                          '${enrollment.progress.toInt()}%',
-                          style: TextStyle(
-                            fontSize: isMobile ? 9 : 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: enrollment.progress / 100,
-                        backgroundColor: isDark 
-                            ? AppTheme.primary.withOpacity(0.15) 
-                            : AppTheme.primary.withOpacity(0.1),
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                        minHeight: isMobile ? 3 : 5,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'By ${course.displayInstructor}',
+                        style: TextStyle(
+                          color: AppTheme.getSecondaryTextColor(context), 
+                          fontSize: isMobile ? 10 : 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      if (enrollment.accessExpirationDate != null) ...[
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: CountdownTimer(
+                            expirationDate: enrollment.accessExpirationDate,
+                            showSeconds: true,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Progress',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 9 : 10,
+                                  color: AppTheme.getSecondaryTextColor(context),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                '${enrollment.progress.toInt()}%',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 9 : 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: enrollment.progress / 100,
+                              backgroundColor: isDark 
+                                  ? AppTheme.primary.withOpacity(0.15) 
+                                  : AppTheme.primary.withOpacity(0.1),
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                              minHeight: isMobile ? 3 : 5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1848,204 +1818,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCourseCard(BuildContext context, Course course) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: AppTheme.borderGrey.withOpacity(0.2)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
-          borderRadius: BorderRadius.circular(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                child: Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      color: AppTheme.primary.withOpacity(0.1),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                            ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
-                            : Icon(Icons.image_outlined, color: isDark ? Colors.white38 : AppTheme.primary, size: 40),
-                      ),
-                    ),
-                    if ((course.price ?? 0) > 0)
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            '20% OFF',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.title,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.2),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'By ${course.displayInstructor}',
-                      style: TextStyle(color: AppTheme.greyColor, fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if ((course.price ?? 0) > 0)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  decoration: TextDecoration.lineThrough,
-                                  color: AppTheme.greyColor.withOpacity(0.6),
-                                ),
-                              ),
-                              Text(
-                                'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primary),
-                              ),
-                            ],
-                          )
-                        else
-                          Text(
-                            'FREE',
-                            style: TextStyle(
-                              fontSize: 15, 
-                              fontWeight: FontWeight.w800, 
-                              color: isDark ? const Color(0xFF10B981) : Colors.green,
-                            ),
-                          ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-
-                            color: Colors.amber.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                              SizedBox(width: 2),
-                              Text('4.8', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavBar(BuildContext context) {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
-            AppTheme.getCardColor(context),
-        border: Border(
-          top: BorderSide(
-              color: AppTheme.greyColor.withValues(alpha: 0.2),
-              width: 1), // FIX #8
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // FIX #7: 'Home' nav item now scrolls to top via ScrollController
-          // or simply stays put (already on dashboard) — replaced empty onTap.
-          _buildNavItem(context, Icons.home_filled, 'Home', true, () {
-            // Already on dashboard; no navigation needed.
-            // Optionally scroll to top if a ScrollController is wired up.
-          }),
-          _buildNavItem(context, Icons.search_outlined, 'Search', false,
-              () => context.push('/courses')),
-          _buildNavItem(context, Icons.bookmark_border_outlined, 'My Courses',
-              false, () => context.push('/my-courses')),
-          _buildNavItem(context, Icons.person_outline, 'Profile', false,
-              () => context.push('/profile')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(BuildContext context, IconData icon, String label,
-      bool isSelected, Function onTap) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: () => onTap(),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon,
-              color: isSelected
-                  ? (theme.bottomNavigationBarTheme.selectedItemColor ??
-                      AppTheme.primaryGreen)
-                  : (theme.bottomNavigationBarTheme.unselectedItemColor ??
-                      AppTheme.getSecondaryTextColor(context)),
-              size: 28),
-          const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                color: isSelected
-                    ? (theme.bottomNavigationBarTheme.selectedItemColor ??
-                        AppTheme.primaryGreen)
-                    : (theme.bottomNavigationBarTheme.unselectedItemColor ??
-                        AppTheme.getSecondaryTextColor(context)),
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              )),
-        ],
-      ),
-    );
-  }
-
-  // FIX #1: Removed duplicate _showLogoutDialog that existed as a stub outside
-  // the class at the bottom of the file. Only this single definition is kept.
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2812,7 +2584,8 @@ class _QuickAccessCardState extends State<_QuickAccessCard> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final scale = _isPressed ? 0.92 : (_isHovered ? 1.05 : 1.0);
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final scale = _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0);
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -2829,54 +2602,68 @@ class _QuickAccessCardState extends State<_QuickAccessCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
-              color: widget.color,
-              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: [
+                  widget.color,
+                  widget.color.withOpacity(0.8),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
               boxShadow: [
                 BoxShadow(
-                  color: widget.color.withOpacity(_isHovered ? 0.4 : 0.3),
-                  blurRadius: _isHovered ? 16 : 12,
-                  offset: Offset(0, _isHovered ? 8 : 6),
+                  color: widget.color.withOpacity(_isHovered ? 0.4 : 0.25),
+                  blurRadius: _isHovered ? 16 : 10,
+                  offset: Offset(0, _isHovered ? 8 : 4),
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(isMobile ? 8.0 : 16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(10),
+                  Container(
+                    padding: EdgeInsets.all(isMobile ? 8 : 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(_isHovered ? 0.3 : 0.2),
-                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(isMobile ? 10 : 14),
                     ),
                     child: Icon(
                       widget.icon,
                       color: Colors.white,
-                      size: isDesktop ? 24 : 22,
+                      size: isMobile ? 20 : 24,
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
+                  SizedBox(height: isMobile ? 8 : 12),
+                  if (!isMobile) const Spacer(),
+                  Flexible(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: isMobile ? 10 : 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      ),
+                      textAlign: isMobile ? TextAlign.center : TextAlign.start,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
+                  if (!isMobile) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

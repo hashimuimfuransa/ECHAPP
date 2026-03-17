@@ -335,6 +335,12 @@ class _NotificationItem extends StatelessWidget {
     } else if (notification.type == 'exam' && notification.data.containsKey('userId')) {
       // Could navigate to student results or exam management
       context.push('/admin/students/${notification.data['userId']}');
+    } else if (notification.type == 'enrollment') {
+      if (notification.data.containsKey('userId')) {
+        context.push('/admin/students/${notification.data['userId']}');
+      } else {
+        context.push('/admin/payments');
+      }
     }
   }
 }

@@ -3,9 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/push_notification_service.dart';
 
+import '../data/repositories/auth_repository.dart';
+import '../config/storage_manager.dart';
+
 class FCMTokenService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final AuthRepository _authRepository = AuthRepository();
+  static final StorageManager _storageManager = StorageManager();
   
   // Update FCM token on backend and Firestore
   static Future<bool> updateFCMToken(String token) async {
@@ -24,6 +29,19 @@ class FCMTokenService {
       }, SetOptions(merge: true));
       
       print('FCM token updated successfully in Firestore');
+
+      // 2. Also update in MongoDB via backend API for reliability
+      final accessToken = await _storageManager.getAccessToken();
+      if (accessToken != null) {
+        try {
+          await _authRepository.updateFCMToken(accessToken, token);
+          print('FCM token updated successfully in MongoDB');
+        } catch (apiError) {
+          print('Error updating FCM token in MongoDB: $apiError');
+          // Don't fail the whole operation if MongoDB update fails
+        }
+      }
+      
       return true;
     } catch (e) {
       print('Error updating FCM token: $e');

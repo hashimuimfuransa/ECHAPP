@@ -297,10 +297,22 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   String _getWindowsOptimizedUrl(String url) {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !url.contains('type=.mp4') && !url.toLowerCase().contains('.mp4')) {
-      return url.contains('?') ? '$url&type=.mp4' : '$url?type=.mp4';
+    String processedUrl = url;
+    
+    // Convert S3 URL to CloudFront URL
+    if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
+      processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
     }
-    return url;
+
+    // Ensure it always uses HTTPS for network URLs
+    if (processedUrl.startsWith('http://')) {
+      processedUrl = processedUrl.replaceFirst('http://', 'https://');
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows && !processedUrl.contains('type=.mp4') && !processedUrl.toLowerCase().contains('.mp4')) {
+      return processedUrl.contains('?') ? '$processedUrl&type=.mp4' : '$processedUrl?type=.mp4';
+    }
+    return processedUrl;
   }
 
   Future<void> _initializeVideoPlayer(String videoUrl) async {
