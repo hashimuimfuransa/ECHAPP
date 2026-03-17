@@ -509,6 +509,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   Widget _buildWelcomeCard(BuildContext context, user, List<Enrollment> enrollments) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
@@ -569,13 +570,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           ),
           Padding(
             padding: EdgeInsets.all(isDesktop ? 32 : (isSmallMobile ? 20 : 24)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            child: !isMobile 
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
+                      flex: 6,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -583,83 +583,164 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             'Hello, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: isSmallMobile ? 22 : (isMobile ? 26 : 32),
+                              fontSize: isDesktop ? 36 : 30,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
+                              letterSpacing: -1.2,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           Text(
-                            'Ready to continue your learning?',
+                            'Ready to continue your learning journey today?',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.85),
-                              fontSize: isSmallMobile ? 13 : 15,
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: isDesktop ? 16 : 14,
                               fontWeight: FontWeight.w500,
                             ),
+                          ),
+                          SizedBox(height: isDesktop ? 32 : 24),
+                          if (lastCourse != null)
+                            _buildCompactContinueButton(context, lastCourse),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: isDesktop ? 180 : 150,
+                                child: ElevatedButton(
+                                  onPressed: () => context.push('/my-courses'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: const Color(0xFF10B981),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                  child: Text(
+                                    'My Courses', 
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800, 
+                                      fontSize: isDesktop ? 14 : 13
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              SizedBox(
+                                width: isDesktop ? 180 : 150,
+                                child: OutlinedButton(
+                                  onPressed: () => context.push('/courses'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: const BorderSide(color: Colors.white, width: 2),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                  child: Text(
+                                    'Browse All', 
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800, 
+                                      fontSize: isDesktop ? 14 : 13
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    if (isMobile) 
-                      _buildCircularProgress(context, averageProgress, mini: true),
+                    const SizedBox(width: 32),
+                    Expanded(
+                      flex: 4,
+                      child: _buildDesktopStatsOverlay(context, enrollments, averageProgress),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 24),
-                
-                if (lastCourse != null)
-                  _buildCompactContinueButton(context, lastCourse),
-                
-                const SizedBox(height: 24),
-                
-                Row(
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => context.push('/my-courses'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF10B981),
-                          elevation: 0,
-                          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Text(
-                          'My Courses', 
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: isMobile ? 12 : 14,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hello, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isSmallMobile ? 22 : (isMobile ? 26 : 32),
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ready to continue your learning?',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.85),
+                                  fontSize: isSmallMobile ? 13 : 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                        if (isMobile) 
+                          _buildCircularProgress(context, averageProgress, mini: true),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => context.push('/courses'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Text(
-                          'Browse All', 
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: isMobile ? 12 : 14,
+                    const SizedBox(height: 24),
+                    
+                    if (lastCourse != null)
+                      _buildCompactContinueButton(context, lastCourse),
+                    
+                    const SizedBox(height: 24),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => context.push('/my-courses'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF10B981),
+                              elevation: 0,
+                              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'My Courses', 
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: isMobile ? 12 : 14,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => context.push('/courses'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white, width: 1.5),
+                              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              'Browse All', 
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: isMobile ? 12 : 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-
-                if (!isMobile && isDesktop) ...[
-                  const SizedBox(height: 24),
-                  _buildDesktopStatsOverlay(context, enrollments, averageProgress),
-                ],
-              ],
-            ),
           ),
         ],
       ),
@@ -722,12 +803,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   Widget _buildDesktopStatsOverlay(BuildContext context, List<Enrollment> enrollments, double averageProgress) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDesktop ? 24 : 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        color: !isMobile(context) ? Colors.white.withOpacity(0.12) : (isDark ? const Color(0xFF1E293B) : Colors.white),
+        borderRadius: BorderRadius.circular(24),
+        border: !isMobile(context) ? Border.all(color: Colors.white.withOpacity(0.2), width: 1.5) : null,
+        boxShadow: !isMobile(context) ? [] : [
           BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
         ],
       ),
@@ -735,44 +819,70 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         children: [
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildWelcomeStatItem(context, Icons.school, '${enrollments.length} Courses', 'Enrolled', const Color(0xFF10B981)),
-                const SizedBox(height: 12),
-                _buildWelcomeStatItem(context, Icons.access_time_filled, '0h 00m', 'Hours Learned', const Color(0xFF06B6D4)),
+                _buildWelcomeStatItem(
+                  context, 
+                  Icons.school_rounded, 
+                  '${enrollments.length} Courses', 
+                  'Enrolled', 
+                  !isMobile(context) ? Colors.white : const Color(0xFF10B981),
+                  isDesktop: !isMobile(context)
+                ),
+                SizedBox(height: isDesktop ? 16 : 12),
+                _buildWelcomeStatItem(
+                  context, 
+                  Icons.auto_graph_rounded, 
+                  '${averageProgress.toInt()}%', 
+                  'Avg. Progress', 
+                  !isMobile(context) ? Colors.white : const Color(0xFF06B6D4),
+                  isDesktop: !isMobile(context)
+                ),
               ],
             ),
           ),
-          _buildCircularProgress(context, averageProgress),
+          SizedBox(width: isDesktop ? 16 : 12),
+          _buildCircularProgress(
+            context, 
+            averageProgress, 
+            mini: isMobile(context) || !isDesktop, 
+            color: !isMobile(context) ? Colors.white : null
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeStatItem(BuildContext context, IconData icon, String value, String label, Color color) {
+  bool isMobile(BuildContext context) => ResponsiveBreakpoints.isMobile(context);
+
+  Widget _buildWelcomeStatItem(BuildContext context, IconData icon, String value, String label, Color color, {bool isDesktop = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: color, size: 16),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDesktop ? Colors.white.withOpacity(0.2) : color.withOpacity(0.1), 
+            borderRadius: BorderRadius.circular(10)
+          ),
+          child: Icon(icon, color: isDesktop ? Colors.white : color, size: 18),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(value, style: TextStyle(
-                fontSize: 13, 
+                fontSize: 15, 
                 fontWeight: FontWeight.w800, 
-                color: isDark ? Colors.white : const Color(0xFF333333), 
-                height: 1.1,
+                color: isDesktop ? Colors.white : (isDark ? Colors.white : const Color(0xFF333333)), 
+                height: 1.2,
               )),
               Text(label, style: TextStyle(
-                fontSize: 11, 
-                color: isDark ? Colors.white70 : const Color(0xFF9CA3AF), 
-                height: 1.1,
+                fontSize: 12, 
+                color: isDesktop ? Colors.white.withOpacity(0.8) : (isDark ? Colors.white70 : const Color(0xFF9CA3AF)), 
+                height: 1.2,
               )),
             ],
           ),
@@ -781,7 +891,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCircularProgress(BuildContext context, double progress, {bool mini = false}) {
+  Widget _buildCircularProgress(BuildContext context, double progress, {bool mini = false, Color? color}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = mini ? 54.0 : 70.0;
     
@@ -796,7 +906,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             strokeWidth: mini ? 5 : 8,
             backgroundColor: Colors.white.withOpacity(0.15),
             valueColor: AlwaysStoppedAnimation<Color>(
-              mini ? Colors.white : const Color(0xFF10B981)
+              color ?? (mini ? Colors.white : const Color(0xFF10B981))
             ),
             strokeCap: StrokeCap.round,
           ),
@@ -1837,7 +1947,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               onPressed: () {
                 Navigator.of(context).pop();
                 ref.read(authProvider.notifier).logout();
-                context.go('/login');
               },
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
             ),

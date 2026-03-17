@@ -32,6 +32,32 @@ class MainLayout extends ConsumerWidget {
     PushNotificationService.setContext(context);
     
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    // Global listener for authentication state changes
+    ref.listen(authProvider, (previous, next) {
+      if (next.user == null && !next.isLoading) {
+        final currentRoute = GoRouterState.of(context).uri.path;
+        final bool isAuthRoute = currentRoute == '/login' || 
+                                 currentRoute == '/register' || 
+                                 currentRoute == '/auth-selection' ||
+                                 currentRoute == '/forgot-password' ||
+                                 currentRoute == '/email-auth-option' ||
+                                 currentRoute == '/enter-reset-code' ||
+                                 currentRoute == '/reset-password' ||
+                                 currentRoute == '/landing' ||
+                                 currentRoute == '/';
+        
+        if (!isAuthRoute) {
+          debugPrint('MainLayout: User logged out, redirecting to auth screen');
+          if (isDesktop) {
+            context.go('/email-auth-option');
+          } else {
+            context.go('/auth-selection');
+          }
+        }
+      }
+    });
+    
     final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
     
     // We want the sidebar layout for large screens OR for any desktop platform window that is wide enough

@@ -760,7 +760,6 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
               onPressed: () {
                 Navigator.of(context).pop();
                 ref.read(authProvider.notifier).logout();
-                context.go('/login');
               },
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
             ),

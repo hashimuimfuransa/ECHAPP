@@ -9,6 +9,25 @@ import 'package:flutter/material.dart';
 class FirebaseAuthService {
   static firebase_auth.FirebaseAuth get _auth => firebase_auth.FirebaseAuth.instance;
 
+  static GoogleSignIn? _googleSignIn;
+
+  static GoogleSignIn get googleSignInInstance {
+    if (_googleSignIn == null) {
+      if (kIsWeb) {
+        _googleSignIn = GoogleSignIn(
+          clientId: '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com',
+          scopes: ['email', 'profile'],
+        );
+      } else {
+        _googleSignIn = GoogleSignIn(
+          clientId: '216678536759-d4onuunfvjsv27lvb70urfogcltqr2c0.apps.googleusercontent.com',
+          scopes: ['email', 'profile'],
+        );
+      }
+    }
+    return _googleSignIn!;
+  }
+
   // Initialize Firebase
   static Future<void> initializeFirebase() async {
     try {
@@ -181,6 +200,12 @@ class FirebaseAuthService {
   static Future<void> signOut() async {
     try {
       await _auth.signOut();
+      if (_googleSignIn != null) {
+        await _googleSignIn!.signOut();
+      } else {
+        // Just in case it wasn't initialized but we're signed in with Google
+        await GoogleSignIn().signOut();
+      }
     } catch (e) {
       debugPrint('Sign Out Error: $e');
       throw Exception('Failed to sign out. Please try again.');
@@ -264,44 +289,19 @@ class FirebaseAuthService {
   // Google Sign-In
   static Future<firebase_auth.UserCredential?> signInWithGoogle() async {
     debugPrint('Starting Google Sign-In process...');
-    debugPrint('Platform: ${kIsWeb ? 'Web' : 'Native'}, TargetPlatform: $defaultTargetPlatform');
     
     try {
       // Handle Windows desktop separately
       if (defaultTargetPlatform == TargetPlatform.windows) {
         debugPrint('Using desktop Google Sign-In for Windows...');
-        // Import is at the top, but we need to use it conditionally
-        // Import GoogleSignInDesktopService at top first
         return await _signInWithGoogleDesktop();
       }
 
-      GoogleSignIn googleSignIn;
-      
-      // Configure GoogleSignIn differently for web vs mobile
-      if (kIsWeb) {
-        // For web, we need to specify the client ID explicitly
-        // Use the web client ID from Firebase config
-        googleSignIn = GoogleSignIn(
-          clientId: '216678536759-0ac2284f1b0657b32b91b2.apps.googleusercontent.com',
-          scopes: [
-            'email',
-            'profile',
-          ],
-        );
-      } else {
-        // For mobile platforms, use the Android client ID from Firebase config
-        googleSignIn = GoogleSignIn(
-          clientId: '216678536759-d4onuunfvjsv27lvb70urfogcltqr2c0.apps.googleusercontent.com',
-          scopes: [
-            'email',
-            'profile',
-          ],
-        );
-      }
+      final gSignIn = googleSignInInstance;
       
       // Trigger the authentication flow
       debugPrint('Showing Google Sign-In dialog...');
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser = await gSignIn.signIn();
       
       if (googleUser == null) {
         // User canceled the sign-in

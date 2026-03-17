@@ -756,7 +756,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 ref.read(authProvider.notifier).logout();
-                context.go('/login');
               },
               child: const Text(
                 'Logout',

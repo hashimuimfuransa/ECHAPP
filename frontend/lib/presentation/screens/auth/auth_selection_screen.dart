@@ -938,12 +938,16 @@ class _TrustBar extends StatelessWidget {
 
 class _AuthCard extends StatelessWidget {
   final bool isLoading;
+  final bool isEmailLoading;
+  final bool isGoogleLoading;
   final String? error;
   final VoidCallback onEmail;
   final VoidCallback? onGoogle;
 
   const _AuthCard({
     required this.isLoading,
+    required this.isEmailLoading,
+    required this.isGoogleLoading,
     required this.error,
     required this.onEmail,
     this.onGoogle,
@@ -1029,7 +1033,7 @@ class _AuthCard extends StatelessWidget {
           child: _PrimaryButton(
             icon: Icons.mail_outline_rounded,
             label: 'Continue with Email',
-            isLoading: isLoading,
+            isLoading: isEmailLoading,
             onPressed: isLoading ? null : onEmail,
           ),
         ),
@@ -1058,7 +1062,7 @@ class _AuthCard extends StatelessWidget {
           _FadeInSlide(
             delay: const Duration(milliseconds: 600),
             child: _GoogleButton(
-              isLoading: isLoading,
+              isLoading: isGoogleLoading,
               onPressed: !isLoading ? onGoogle : null,
             ),
           ),
@@ -1211,6 +1215,8 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                       horizontal: 44, vertical: 52),
                   child: _AuthCard(
                     isLoading: authState.isLoading,
+                    isEmailLoading: authState.isEmailLoading,
+                    isGoogleLoading: authState.isGoogleLoading,
                     error: authState.error,
                     onEmail: () => context.push('/email-auth-option'),
                     onGoogle: null,
@@ -1284,6 +1290,8 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                           ),
                           child: _AuthCard(
                             isLoading: authState.isLoading,
+                            isEmailLoading: authState.isEmailLoading,
+                            isGoogleLoading: authState.isGoogleLoading,
                             error: authState.error,
                             onEmail: () => context.push('/email-auth-option'),
                             onGoogle: _handleGoogleSignIn,

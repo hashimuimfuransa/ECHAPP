@@ -15,22 +15,32 @@ final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager(
 
 class AuthState {
   final bool isLoading;
+  final bool isEmailLoading;
+  final bool isGoogleLoading;
   final User? user;
   final String? error;
 
   AuthState({
-    this.isLoading = false,
+    bool? isLoading,
+    bool? isEmailLoading,
+    bool? isGoogleLoading,
     this.user,
     this.error,
-  });
+  })  : isLoading = isLoading ?? false,
+        isEmailLoading = isEmailLoading ?? false,
+        isGoogleLoading = isGoogleLoading ?? false;
 
   AuthState copyWith({
     bool? isLoading,
+    bool? isEmailLoading,
+    bool? isGoogleLoading,
     User? user,
     String? error,
   }) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
+      isEmailLoading: isEmailLoading ?? this.isEmailLoading,
+      isGoogleLoading: isGoogleLoading ?? this.isGoogleLoading,
       user: user ?? this.user,
       error: error ?? this.error,
     );
@@ -48,7 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> login(String email, String password) async {
     debugPrint('AuthProvider: Starting email/password login');
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: true, error: null);
     
     try {
       // Get device ID for device binding
@@ -104,7 +114,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: Login completed successfully');
         
         // Set the user state and ensure navigation triggers
-        state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Welcome back! Login successful.');
+        state = state.copyWith(
+          isLoading: false, 
+          isEmailLoading: false,
+          user: authResponse.user, 
+          error: 'Welcome back! Login successful.'
+        );
         
         // Step 5: Initialize and sync FCM token for push notifications
         FCMTokenService.initializeAndSyncToken();
@@ -112,7 +127,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Small delay to ensure state is properly propagated
         await Future.delayed(const Duration(milliseconds: 50));
       } else {
-        state = state.copyWith(isLoading: false, error: 'Login failed. Please try again.');
+        state = state.copyWith(isLoading: false, isEmailLoading: false, error: 'Login failed. Please try again.');
       }
     } catch (e) {
       debugPrint('Login Provider Error: $e');
@@ -146,13 +161,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       }
       
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }
 
   Future<void> register(String fullName, String email, String password, String? phone) async {
     debugPrint('AuthProvider: Starting registration process');
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: true, error: null);
     
     try {
       // Get device ID for device binding
@@ -207,9 +222,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         FCMTokenService.initializeAndSyncToken();
         
         debugPrint('AuthProvider: Registration completed successfully');
-        state = state.copyWith(isLoading: false, user: authResponse.user, error: 'Registration successful! Welcome to ExcellenceCoachingHub.');
+        state = state.copyWith(
+          isLoading: false, 
+          isEmailLoading: false,
+          user: authResponse.user, 
+          error: 'Registration successful! Welcome to ExcellenceCoachingHub.'
+        );
       } else {
-        state = state.copyWith(isLoading: false, error: 'Registration failed. Please try again.');
+        state = state.copyWith(isLoading: false, isEmailLoading: false, error: 'Registration failed. Please try again.');
       }
     } catch (e) {
       debugPrint('Registration Provider Error: $e');
@@ -238,7 +258,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       }
       
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }
 
@@ -274,7 +294,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> updateProfile({String? fullName, String? phone, File? imageFile}) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     try {
       String token = await _getOrRefreshAccessToken();
 
@@ -303,7 +323,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           phone: phone,
           avatar: avatarUrl,
         );
-        state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+        state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
       } catch (updateError) {
         // If profile update fails with auth error, try to refresh token once
         if (updateError.toString().contains('Not authorized') || 
@@ -316,35 +336,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
             phone: phone,
             avatar: avatarUrl,
           );
-          state = state.copyWith(isLoading: false, user: updatedUser, error: 'Profile updated successfully!');
+          state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
         } else {
           rethrow;
         }
       }
     } catch (e) {
       debugPrint('AuthProvider Update Profile Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
       rethrow;
     }
   }
 
   Future<void> updatePassword(String currentPassword, String newPassword) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     try {
       await FirebaseAuthService.updatePassword(
         currentPassword: currentPassword,
         newPassword: newPassword,
       );
-      state = state.copyWith(isLoading: false, error: 'Password updated successfully!');
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: 'Password updated successfully!');
     } catch (e) {
       debugPrint('AuthProvider Update Password Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
       rethrow;
     }
   }
 
   Future<void> deleteAccount(String currentPassword) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     try {
       final token = await _getOrRefreshAccessToken();
 
@@ -371,14 +391,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('AuthProvider: Account deletion completed successfully');
     } catch (e) {
       debugPrint('AuthProvider Delete Account Error: $e');
-      state = state.copyWith(isLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: e.toString().replaceFirst('Exception: ', ''));
       rethrow;
     }
   }
 
   Future<void> logout() async {
     debugPrint('AuthProvider: Starting logout process');
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     
     try {
       // Sign out from Firebase
@@ -404,7 +424,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> signInWithGoogle() async {
     debugPrint('AuthProvider: Starting Google Sign-In');
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isGoogleLoading: true, isEmailLoading: false, error: null);
     
     try {
       // Get device ID for device binding
@@ -422,7 +442,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       if (userCredential?.user == null) {
         debugPrint('AuthProvider: Google Sign-In returned null - user cancelled');
-        state = state.copyWith(isLoading: false, error: 'Google Sign-In was cancelled. Please try again if you wish to proceed.');
+        state = state.copyWith(isLoading: false, isGoogleLoading: false, isEmailLoading: false, error: 'Google Sign-In was cancelled. Please try again if you wish to proceed.');
         return;
       }
 
@@ -455,6 +475,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: Setting success state');
         state = state.copyWith(
           isLoading: false, 
+          isGoogleLoading: false,
+          isEmailLoading: false,
           user: authResponse.user,
           error: null
         );
@@ -474,7 +496,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           errorMessage = 'Server authentication failed. Please try again.';
         }
         
-        state = state.copyWith(isLoading: false, error: errorMessage);
+        state = state.copyWith(isLoading: false, isGoogleLoading: false, isEmailLoading: false, error: errorMessage);
       }
     } catch (e) {
       debugPrint('AuthProvider Google Sign-In Error: $e');
@@ -499,12 +521,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
       }
       
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      state = state.copyWith(isLoading: false, isGoogleLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     
     try {
       debugPrint('AuthProvider: Sending password reset email to $email via backend API');
@@ -515,6 +537,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Success - show confirmation message
       state = state.copyWith(
         isLoading: false, 
+        isEmailLoading: false,
+        isGoogleLoading: false,
         error: response.message ?? 'Password reset email sent successfully! Please check your inbox (including spam folder) and follow the instructions to reset your password.'
       );
           
@@ -535,7 +559,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       
       // Check if the state is still valid before updating
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: errorMessage);
     }
   }
 
@@ -556,12 +580,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> verifyResetToken(String token) async {
     try {
-      state = state.copyWith(isLoading: true, error: null);
+      state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
       final result = await _authRepository.verifyResetToken(token);
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false);
       return result;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, error: e.toString());
       rethrow;
     }
   }
@@ -597,7 +621,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // Initialize and sync FCM token
           FCMTokenService.initializeAndSyncToken();
           
-          state = state.copyWith(user: user);
+          state = state.copyWith(user: user, isEmailLoading: false, isGoogleLoading: false);
         } else {
           debugPrint('AuthProvider: Incomplete session data. storedUserId: $storedUserId, storedUserRole: $storedUserRole, storedToken: ${storedToken != null}');
           // User is signed in to Firebase but we don't have complete backend tokens
