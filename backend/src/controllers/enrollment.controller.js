@@ -5,6 +5,7 @@ const Lesson = require('../models/Lesson');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Certificate = require('../models/Certificate');
+const mongoose = require('mongoose');
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
@@ -291,8 +292,6 @@ const completeSection = async (req, res) => {
       return sendError(res, 'Access to this course has expired', 403);
     }
 
-    const mongoose = require('mongoose');
-    
     // Find all lessons in this section
     const sectionLessons = await Lesson.find({ sectionId: new mongoose.Types.ObjectId(sectionId) });
     if (!sectionLessons || sectionLessons.length === 0) {

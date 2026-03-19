@@ -967,45 +967,77 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isCurrent && !isSmallMobile) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10, 
-                    vertical: 4
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: AppTheme.primaryGradient,
+              if (!isSmallMobile) ...[
+                if (_sectionCompletionStatus[section.id] == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10, 
+                      vertical: 4
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.play_circle,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Active',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.green.withOpacity(0.3), width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 14,
                         ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Completed',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (isCurrent)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10, 
+                      vertical: 4
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: AppTheme.primaryGradient,
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.play_circle,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Active',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 const SizedBox(width: 8),
               ],
               Icon(
@@ -1597,10 +1629,10 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     final bool isVideoLesson = lesson.videoId != null && lesson.videoId!.isNotEmpty;
     final Color lessonTypeColor = isVideoLesson ? AppTheme.primaryGreen : AppTheme.accent;
     final Color lessonBgColor = isCompleted
-        ? (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1))
+        ? (isDark ? Colors.white.withOpacity(0.03) : Colors.grey.withOpacity(0.05))
         : (isVideoLesson 
-            ? AppTheme.primaryGreen.withOpacity(isDark ? 0.12 : 0.08) 
-            : AppTheme.accent.withOpacity(isDark ? 0.12 : 0.08));
+            ? AppTheme.primaryGreen.withOpacity(isDark ? 0.15 : 0.1) 
+            : AppTheme.accent.withOpacity(isDark ? 0.15 : 0.1));
     final IconData lessonIcon = isVideoLesson ? Icons.play_circle_fill : Icons.article;
     final String lessonTypeLabel = isVideoLesson ? 'Video' : 'Notes';
     
@@ -1655,8 +1687,8 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
               ),
               child: Center(
                 child: Icon(
-                  isCompleted ? Icons.check : lessonIcon,
-                  color: isCompleted ? (isDark ? Colors.white60 : Colors.grey) : lessonTypeColor,
+                  isCompleted ? Icons.check_circle : lessonIcon,
+                  color: isCompleted ? Colors.green : lessonTypeColor,
                   size: isSmallMobile ? 18 : 22,
                 ),
               ),

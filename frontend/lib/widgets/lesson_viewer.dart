@@ -174,8 +174,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         setState(() {
           _timerFinished = true;
         });
-        print('User spent 1 minute on lesson ${widget.lesson.title}, marking as complete');
-        widget.onComplete?.call();
+        print('User spent 1 minute on lesson ${widget.lesson.title}, button now available');
       }
     });
   }
@@ -542,32 +541,64 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 if (_sectionExams != null && _sectionExams!.isNotEmpty)
                   _buildExamsSection(),
                 const SizedBox(height: 32),
-                // Mark as Complete button
+                // Mark as Complete section
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: widget.isCompleted ? null : _markAsCompleteManually,
-                    icon: Icon(widget.isCompleted ? Icons.check_circle : Icons.check_circle_outline),
-                    label: Text(
-                      widget.isCompleted ? 'Completed' : 'Mark Lesson as Complete', 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.isCompleted 
-                          ? Colors.green.withOpacity(0.1)
-                          : AppTheme.primaryGreen.withOpacity(0.1),
-                      foregroundColor: widget.isCompleted ? Colors.green : AppTheme.primaryGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: widget.isCompleted ? Colors.green : AppTheme.primaryGreen, 
-                          width: 1.5
-                        ),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
+                  child: widget.isCompleted
+                      ? ElevatedButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text('Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.withOpacity(0.1),
+                            foregroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: const BorderSide(color: Colors.green, width: 1.5),
+                            ),
+                            elevation: 0,
+                          ),
+                        )
+                      : _timerFinished
+                          ? ElevatedButton.icon(
+                              onPressed: _markAsCompleteManually,
+                              icon: const Icon(Icons.check_circle_outline),
+                              label: const Text('Mark Lesson as Complete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                                foregroundColor: AppTheme.primaryGreen,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: const BorderSide(color: AppTheme.primaryGreen, width: 1.5),
+                                ),
+                                elevation: 0,
+                              ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.grey)),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Finish lesson content (1 min) to mark complete',
+                                    style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
                 ),
                 _buildNextLessonNavigation(),
                 SizedBox(height: MediaQuery.of(context).size.width < 600 ? 100 : 250), // Space for AI button
@@ -658,7 +689,14 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             ElevatedButton(
               onPressed: () {
                 if (!_timerFinished) {
-                  _timerFinished = true;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please spend at least 1 minute on this lesson to mark it as complete.'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: AppTheme.accent,
+                    ),
+                  );
+                  return;
                 }
                 if (widget.onComplete != null) widget.onComplete!();
                 Navigator.pop(context);
@@ -727,9 +765,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   void _navigateToNextLesson(Lesson nextLesson) {
-    // Mark as complete manually if timer hasn't finished
     if (!_timerFinished) {
-      _timerFinished = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please spend at least 1 minute on this lesson to mark it as complete.'),
+          duration: Duration(seconds: 2),
+          backgroundColor: AppTheme.accent,
+        ),
+      );
+      return;
     }
     
     if (widget.onComplete != null) widget.onComplete!();
