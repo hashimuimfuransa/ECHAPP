@@ -1416,7 +1416,9 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     
     // Track document upload state
     String? documentPath = lesson.notes; // If notes contain document path
+    String? notesPdfUrl = lesson.notesPdfUrl; // If direct PDF is attached
     bool isUploadingDocument = false;
+    bool isUploadingPdf = false;
     
     // Load videos for dropdown first before showing dialog
     List<Video> videos = [];
@@ -1812,6 +1814,106 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                     foregroundColor: Colors.white,
                                   ),
                                 ),
+                                const SizedBox(height: 15),
+                                
+                                // Direct PDF Upload Section
+                                const Text(
+                                  'Direct PDF (Unorganized)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 5),
+                                if (notesPdfUrl != null && notesPdfUrl!.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryGreen.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.picture_as_pdf, color: AppTheme.primaryGreen),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'PDF Attached: ${notesPdfUrl!.split('/').last}',
+                                            style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.w500),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                          onPressed: () {
+                                            setDialogState(() {
+                                              notesPdfUrl = null;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                
+                                ElevatedButton.icon(
+                                  onPressed: isUploadingPdf ? null : () async {
+                                    try {
+                                      final result = await FilePicker.platform.pickFiles(
+                                        type: FileType.custom,
+                                        allowedExtensions: ['pdf'],
+                                      );
+                                      
+                                      if (result == null) return;
+                                      
+                                      setDialogState(() {
+                                        isUploadingPdf = true;
+                                      });
+                                      
+                                      final file = result.files.single;
+                                      final lessonDocumentService = LessonDocumentService();
+                                      final uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
+                                        file: file,
+                                        courseId: lesson.courseId,
+                                        sectionId: lesson.sectionId,
+                                      );
+                                      
+                                      String? pdfKey;
+                                      if (uploadResult['success'] == true) {
+                                        pdfKey = uploadResult['data']['s3Key'];
+                                      }
+                                      
+                                      if (pdfKey != null) {
+                                        setDialogState(() {
+                                          notesPdfUrl = pdfKey;
+                                          isUploadingPdf = false;
+                                        });
+                                        
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Notes PDF uploaded successfully!'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        setDialogState(() {
+                                          isUploadingPdf = false;
+                                        });
+                                      }
+                                    } catch (e) {
+                                      setDialogState(() {
+                                        isUploadingPdf = false;
+                                      });
+                                    }
+                                  },
+                                  icon: isUploadingPdf 
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.picture_as_pdf),
+                                  label: Text(isUploadingPdf ? 'Uploading...' : 'Upload Direct PDF'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryGreen,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1843,6 +1945,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                         'description': descriptionController.text.trim(),
                         'videoId': selectedVideoId,
                         'notes': documentPath ?? notesController.text.trim(),
+                        'notesPdfUrl': notesPdfUrl,
                         'duration': duration,
                         'sectionId': lesson.sectionId, // Pass sectionId for local state update
                       };

@@ -24,6 +24,7 @@ import 'dart:io';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Model for notes sections
 class NotesSection {
@@ -99,6 +100,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   bool _showSummary = false;
   bool _isReading = false;
   final FlutterTts _flutterTts = FlutterTts();
+  bool _showPdfNotes = false; // Toggle between organized and PDF notes
 
   @override
   void initState() {
@@ -108,18 +110,36 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Future<void> _initTts() async {
-    await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setSpeechRate(0.5);
-    await _flutterTts.setVolume(1.0);
-    await _flutterTts.setPitch(1.0);
-    
-    _flutterTts.setCompletionHandler(() {
-      if (mounted) setState(() => _isReading = false);
-    });
-    
-    _flutterTts.setErrorHandler((msg) {
-      if (mounted) setState(() => _isReading = false);
-    });
+    try {
+      await _flutterTts.setLanguage("en-US");
+      await _flutterTts.setSpeechRate(0.5);
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.setPitch(1.0);
+      
+      // Platform optimizations for mobile speed and reliability
+      if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android)) {
+        await _flutterTts.setSharedInstance(true);
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          await _flutterTts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker
+          ]);
+        }
+      }
+      
+      _flutterTts.setCompletionHandler(() {
+        if (mounted) setState(() => _isReading = false);
+      });
+      
+      _flutterTts.setErrorHandler((msg) {
+        print('TTS Error: $msg');
+        if (mounted) setState(() => _isReading = false);
+      });
+    } catch (e) {
+      print('TTS Init Error: $e');
+    }
   }
 
   @override
@@ -134,6 +154,10 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   void didUpdateWidget(LessonViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.lesson.id != oldWidget.lesson.id) {
+      if (_isReading) {
+        _flutterTts.stop();
+        _isReading = false;
+      }
       _loadData();
     }
   }
@@ -151,18 +175,26 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     });
 
     try {
-      // Load all data in parallel for maximum speed
+      // 1. PRIORITIZE: Load lesson content (notes) FIRST for instant display
+      // This is the most important content for the user
+      _lessonContent = await ref.read(lessonContentProvider(widget.lesson.id).future);
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Show notes immediately!
+        });
+      }
+
+      // 2. Load all other data in parallel in the background
       final results = await Future.wait([
-        ref.read(lessonContentProvider(widget.lesson.id).future),
         ref.read(courseContentProvider(widget.courseId).future),
         ref.read(lessonExamsProvider(widget.lesson.sectionId).future),
         _sectionService.getSectionsByCourse(widget.courseId),
       ]);
 
-      _lessonContent = results[0] as LessonContent;
-      final courseContent = results[1] as Map<String, dynamic>;
-      _sectionExams = results[2] as List<exam_model.Exam>;
-      _courseSections = results[3] as List<Section>;
+      final courseContent = results[0] as Map<String, dynamic>;
+      _sectionExams = results[1] as List<exam_model.Exam>;
+      _courseSections = results[2] as List<Section>;
 
       // Process course lessons from course content
       final sectionsData = courseContent['sections'] as List? ?? [];
@@ -180,31 +212,28 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       
       _selectedSectionId = widget.lesson.sectionId;
 
-      // PRE-FETCH: Start pre-fetching next lesson content for instant switching
+      // PRE-FETCH: Now that we have courseLessons, pre-fetch next lesson
       final nextLesson = _getNextLesson();
       if (nextLesson != null) {
         ref.read(lessonContentProvider(nextLesson.id).future);
         ref.read(lessonExamsProvider(nextLesson.sectionId).future);
       }
 
-      // Initialize video player if needed
+      // Initialize video player if needed (already in background)
       if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty) {
-        try {
-          await _initializeVideoPlayer(_lessonContent!.videoUrl!).timeout(const Duration(seconds: 15));
-        } catch (e) {
-          print('Warning: Video player initialization timed out or failed: $e');
-        }
+        _initializeVideoPlayer(_lessonContent!.videoUrl!).catchError((e) {
+          print('Warning: Video player initialization failed: $e');
+        });
       }
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
           _sectionsLoading = false;
           _examsLoading = false;
         });
 
         // Show welcome message from AI coach
-        Future.delayed(const Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted && _guideKey.currentState != null) {
             _guideKey.currentState!.updateState(
               StudentGuideState.greeting,
@@ -220,7 +249,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           _isLoading = false;
           _sectionsLoading = false;
           _examsLoading = false;
-          _hasError = true;
+          _hasError = _lessonContent == null; // Only show error if we couldn't even load notes
           _errorMessage = e.toString();
         });
       }
@@ -281,18 +310,29 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
     if (_isReading) {
       await _flutterTts.stop();
-      setState(() => _isReading = false);
+      if (mounted) setState(() => _isReading = false);
     } else {
+      // Clean up markdown efficiently for faster TTS start
+      final String rawNotes = _lessonContent!.notes!;
+      
+      // Use efficient cleaning to avoid blocking UI
+      String cleanText = rawNotes
+          .replaceAll(RegExp(r'#+\s*'), '') 
+          .replaceAll(RegExp(r'[\*\-_]'), '') 
+          .replaceAll(RegExp(r'!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)') , '') 
+          .trim();
+
+      if (cleanText.isEmpty) return;
+
       setState(() => _isReading = true);
       
-      // Clean up markdown characters for better reading
-      String cleanText = _lessonContent!.notes!
-          .replaceAll('#', '')
-          .replaceAll('*', '')
-          .replaceAll('-', '•')
-          .trim();
-          
-      await _flutterTts.speak(cleanText);
+      // Execute speak without awaiting to keep the button responsive
+      _flutterTts.speak(cleanText).then((_) {
+        // Started successfully
+      }).catchError((e) {
+        if (mounted) setState(() => _isReading = false);
+        print("TTS Speak Error: $e");
+      });
     }
   }
 
@@ -429,7 +469,8 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 const SizedBox(height: 32),
                 if (_lessonContent?.videoUrl != null && _lessonContent!.videoUrl!.isNotEmpty)
                   _buildVideoContent(),
-                if (_lessonContent?.notes != null && _lessonContent!.notes!.isNotEmpty)
+                if ((_lessonContent?.notes != null && _lessonContent!.notes!.isNotEmpty) || 
+                    (_lessonContent?.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty))
                   _buildNotesContent(),
                 if (_sectionExams != null && _sectionExams!.isNotEmpty)
                   _buildExamsSection(),
@@ -729,13 +770,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       decoration: BoxDecoration(
         color: AppTheme.primaryGreen.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+        border: Border.all(color: (status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen).withOpacity(0.1)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Icon(Icons.download_for_offline_outlined, color: AppTheme.primaryGreen, size: 20),
+              Icon(
+                status == DownloadStatus.completed ? Icons.check_circle : Icons.cloud_download, 
+                color: status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen, 
+                size: 20
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -743,19 +788,15 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   children: [
                     Text(
                       status == DownloadStatus.completed 
-                          ? 'Downloaded' 
-                          : status == DownloadStatus.paused 
-                              ? 'Download Paused'
-                              : status == DownloadStatus.failed
-                                  ? 'Download Failed'
-                                  : isDownloading 
-                                      ? 'Downloading...' 
-                                      : 'Available for offline viewing',
-                      style: TextStyle(
-                        fontSize: 13, 
-                        fontWeight: FontWeight.bold, 
-                        color: status == DownloadStatus.failed ? Colors.red : AppTheme.primaryGreen
-                      ),
+                          ? 'Available Offline' 
+                          : status == DownloadStatus.failed 
+                              ? 'Download Failed' 
+                              : isDownloading 
+                                  ? 'Downloading...' 
+                                  : status == DownloadStatus.paused 
+                                      ? 'Download Paused' 
+                                      : 'Download for Offline Study',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     if (isDownloading || status == DownloadStatus.paused || status == DownloadStatus.failed)
                       Text(
@@ -880,30 +921,17 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   Widget _buildNotesContent() {
-    String notesContent = _lessonContent!.notes ?? '';
-    _parseNotesSections(notesContent);
+    if (_lessonContent == null) return const SizedBox.shrink();
     
-    if (notesContent.contains('documents/') || notesContent.contains('.pdf') || notesContent.contains('.doc')) {
-      return Container(
-        margin: const EdgeInsets.only(top: 24),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppTheme.getCardColor(context), 
-          borderRadius: BorderRadius.circular(20), 
-          border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.hourglass_empty, color: AppTheme.primaryGreen, size: 32),
-            const SizedBox(height: 16),
-            const Text('Notes Processing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            const Text('The notes for this lesson are currently being processed. Please check back later.', style: TextStyle(fontSize: 16, color: AppTheme.greyColor), textAlign: TextAlign.center),
-          ],
-        ),
-      );
+    bool hasOrganized = _lessonContent!.notes != null && _lessonContent!.notes!.isNotEmpty && 
+                       !(_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf'));
+    bool hasPdf = _lessonContent!.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty;
+    
+    // If we only have PDF, force PDF view
+    if (!hasOrganized && hasPdf) {
+      _showPdfNotes = true;
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -928,27 +956,195 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
               ),
             ),
             const Spacer(),
-            // AI Summary Button
-            _buildActionButton(
-              onPressed: _summarizeNotes,
-              icon: Icons.auto_awesome,
-              label: _notesSummary != null ? (_showSummary ? 'Hide Summary' : 'View Summary') : 'Summarize',
-              color: AppTheme.primaryGreen,
-              isLoading: _isSummarizing,
-            ),
-            const SizedBox(width: 8),
-            // Voice Reader Button
-            _buildActionButton(
-              onPressed: _toggleVoiceReader,
-              icon: _isReading ? Icons.stop_circle : Icons.volume_up,
-              label: _isReading ? 'Stop' : 'Read',
-              color: Colors.orange,
-              isSecondary: true,
-            ),
+            if (hasOrganized && !_showPdfNotes) ...[
+              // AI Summary Button
+              _buildActionButton(
+                onPressed: _summarizeNotes,
+                icon: Icons.auto_awesome,
+                label: _notesSummary != null ? (_showSummary ? 'Hide Summary' : 'View Summary') : 'Summarize',
+                color: AppTheme.primaryGreen,
+                isLoading: _isSummarizing,
+              ),
+              const SizedBox(width: 8),
+              // Voice Reader Button
+              _buildActionButton(
+                onPressed: _toggleVoiceReader,
+                icon: _isReading ? Icons.stop_circle : Icons.volume_up,
+                label: _isReading ? 'Stop' : 'Read',
+                color: Colors.orange,
+                isSecondary: true,
+              ),
+            ],
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 15),
         
+        // Toggle between Organized and PDF if both exist
+        if (hasOrganized && hasPdf)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              children: [
+                _buildToggleButton(
+                  isSelected: !_showPdfNotes,
+                  onPressed: () => setState(() => _showPdfNotes = false),
+                  icon: Icons.format_align_left,
+                  label: 'Organized Notes',
+                ),
+                const SizedBox(width: 12),
+                _buildToggleButton(
+                  isSelected: _showPdfNotes,
+                  onPressed: () => setState(() => _showPdfNotes = true),
+                  icon: Icons.picture_as_pdf,
+                  label: 'Unorganized (PDF)',
+                ),
+              ],
+            ),
+          ),
+
+        if (_showPdfNotes && hasPdf)
+          _buildPdfNotesView()
+        else if (hasOrganized)
+          _buildOrganizedNotesView()
+        else if (_lessonContent!.notes != null && (_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf')))
+          _buildProcessingView()
+        else
+          const SizedBox.shrink(),
+      ],
+    );
+  }
+
+  Widget _buildToggleButton({
+    required bool isSelected,
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primaryGreen : AppTheme.getCardColor(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryGreen : AppTheme.borderGrey,
+              width: 1.5,
+            ),
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: AppTheme.primaryGreen.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              )
+            ] : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? Colors.white : AppTheme.greyColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppTheme.greyColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPdfNotesView() {
+    final pdfUrl = _lessonContent!.notesPdfUrl!;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: AppTheme.getCardColor(context), 
+        borderRadius: BorderRadius.circular(24), 
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), 
+            blurRadius: 20, 
+            offset: const Offset(0, 10),
+          ),
+        ],
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.picture_as_pdf, color: AppTheme.primaryGreen, size: 64),
+          const SizedBox(height: 20),
+          const Text(
+            'PDF Notes Available',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'This lesson contains the original unorganized notes in PDF format.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.greyColor, fontSize: 15),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final uri = Uri.parse(pdfUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Open PDF Viewer'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessingView() {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.getCardColor(context), 
+        borderRadius: BorderRadius.circular(20), 
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.hourglass_empty, color: AppTheme.primaryGreen, size: 32),
+          SizedBox(height: 16),
+          Text('Notes Processing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 12),
+          Text('The notes for this lesson are currently being processed. Please check back later.', style: TextStyle(fontSize: 16, color: AppTheme.greyColor), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrganizedNotesView() {
+    String notesContent = _lessonContent!.notes ?? '';
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         // AI Summary Section
         if (_showSummary && _notesSummary != null) ...[
           _buildSummaryCard(_notesSummary!),

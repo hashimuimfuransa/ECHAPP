@@ -19,17 +19,9 @@ const getLessonsBySection = async (req, res) => {
     const lessons = await Lesson.find({ sectionId })
       .sort({ order: 1 });
     
-    const lessonsWithUrls = lessons.map(lesson => {
-      const lessonObj = lesson.toObject();
-      if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-        lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-      } else if (lessonObj.videoId) {
-        lessonObj.videoUrl = lessonObj.videoId;
-      }
-      return lessonObj;
-    });
+    const lessonsWithUrls = lessons.map(lesson => formatLessonUrls(lesson, s3Service));
     
-    sendSuccess(res, transformUrls(lessonsWithUrls), 'Lessons retrieved successfully');
+    sendSuccess(res, transformUrls(lessonsWithUrls, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lessons retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lessons', 500, error.message);
   }
@@ -46,14 +38,9 @@ const getLessonById = async (req, res) => {
       return sendNotFound(res, 'Lesson not found');
     }
     
-    const lessonObj = lesson.toObject();
-    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-    } else if (lessonObj.videoId) {
-      lessonObj.videoUrl = lessonObj.videoId;
-    }
+    const lessonObj = formatLessonUrls(lesson, s3Service);
     
-    sendSuccess(res, transformUrls(lessonObj), 'Lesson retrieved successfully');
+    sendSuccess(res, transformUrls(lessonObj, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lesson retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve lesson', 500, error.message);
   }
@@ -63,7 +50,7 @@ const getLessonById = async (req, res) => {
 const createLesson = async (req, res) => {
   try {
     const { sectionId } = req.params;
-    const { title, description, videoId, notes, order, duration } = req.body;
+    const { title, description, videoId, notes, notesPdfUrl, order, duration } = req.body;
     
     // Verify section exists
     const section = await Section.findById(sectionId);
@@ -73,24 +60,26 @@ const createLesson = async (req, res) => {
     
     // If notes field looks like a document path, process it with AI to organize notes
     let processedNotes = notes;
-    if (notes && (notes.includes('documents/') || notes.includes('.pdf') || notes.includes('.doc') || notes.includes('.docx'))) {
+    const documentPath = notesPdfUrl || notes; // Prioritize notesPdfUrl for processing
+    
+    if (documentPath && (documentPath.includes('documents/') || documentPath.includes('.pdf') || documentPath.includes('.doc') || documentPath.includes('.docx'))) {
       try {
-        const S3Service = require('../services/s3_service');
+        const S3Service = require('../services/s3.service');
         const DocumentProcessingService = require('../services/document_processing_service');
         const GrokService = require('../services/grok_service');
         
         if (GrokService.isConfigured()) {
           // Fetch the document from S3
-          const documentBuffer = await S3Service.getFileBuffer(notes);
+          const documentBuffer = await S3Service.getFileBuffer(documentPath);
           
           if (documentBuffer) {
             // Determine MIME type based on file extension
             let mimeType = 'application/pdf'; // default
-            if (notes.toLowerCase().includes('.docx')) {
+            if (documentPath.toLowerCase().includes('.docx')) {
               mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            } else if (notes.toLowerCase().includes('.doc')) {
+            } else if (documentPath.toLowerCase().includes('.doc')) {
               mimeType = 'application/msword';
-            } else if (notes.toLowerCase().includes('.txt')) {
+            } else if (documentPath.toLowerCase().includes('.txt')) {
               mimeType = 'text/plain';
             }
             
@@ -98,7 +87,7 @@ const createLesson = async (req, res) => {
             processedNotes = await GrokService.organizeNotes({
               buffer: documentBuffer,
               mimetype: mimeType,
-              originalname: notes.split('/').pop()
+              originalname: documentPath.split('/').pop()
             }, mimeType);
             
             console.log('Successfully organized notes using Groq AI for lesson');
@@ -118,21 +107,34 @@ const createLesson = async (req, res) => {
       description,
       videoId,
       notes: processedNotes, // Use processed notes instead of original
+      notesPdfUrl,
       order,
       duration
     });
     
-    const lessonObj = lesson.toObject();
-    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-    } else if (lessonObj.videoId) {
-      lessonObj.videoUrl = lessonObj.videoId;
-    }
+    const lessonObj = formatLessonUrls(lesson, s3Service);
     
-    sendSuccess(res, transformUrls(lessonObj), 'Lesson created successfully', 201);
+    sendSuccess(res, transformUrls(lessonObj, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lesson created successfully', 201);
   } catch (error) {
     sendError(res, 'Failed to create lesson', 500, error.message);
   }
+};
+
+// Helper function to format lesson URLs
+const formatLessonUrls = (lesson, s3Service) => {
+  const lessonObj = lesson.toObject();
+  
+  if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
+    lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
+  } else if (lessonObj.videoId) {
+    lessonObj.videoUrl = lessonObj.videoId;
+  }
+  
+  if (lessonObj.notesPdfUrl && !lessonObj.notesPdfUrl.startsWith('http')) {
+    lessonObj.notesPdfUrl = s3Service.getPublicUrl(lessonObj.notesPdfUrl);
+  }
+  
+  return lessonObj;
 };
 
 // Update lesson (admin only)
@@ -141,6 +143,32 @@ const updateLesson = async (req, res) => {
     const { lessonId } = req.params;
     const updateData = req.body;
     
+    // If notesPdfUrl is provided but notes is not, try to organize notes
+    if (updateData.notesPdfUrl && !updateData.notes) {
+      try {
+        const S3Service = require('../services/s3.service');
+        const GrokService = require('../services/grok_service');
+        
+        if (GrokService.isConfigured()) {
+          const documentBuffer = await S3Service.getFileBuffer(updateData.notesPdfUrl);
+          if (documentBuffer) {
+            let mimeType = 'application/pdf';
+            if (updateData.notesPdfUrl.toLowerCase().includes('.docx')) {
+              mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            }
+            
+            updateData.notes = await GrokService.organizeNotes({
+              buffer: documentBuffer,
+              mimetype: mimeType,
+              originalname: updateData.notesPdfUrl.split('/').pop()
+            }, mimeType);
+          }
+        }
+      } catch (aiError) {
+        console.error('Error auto-organizing notes during update:', aiError);
+      }
+    }
+
     const lesson = await Lesson.findByIdAndUpdate(
       lessonId,
       updateData,
@@ -151,14 +179,9 @@ const updateLesson = async (req, res) => {
       return sendNotFound(res, 'Lesson not found');
     }
     
-    const lessonObj = lesson.toObject();
-    if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-      lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-    } else if (lessonObj.videoId) {
-      lessonObj.videoUrl = lessonObj.videoId;
-    }
+    const lessonObj = formatLessonUrls(lesson, s3Service);
     
-    sendSuccess(res, transformUrls(lessonObj), 'Lesson updated successfully');
+    sendSuccess(res, transformUrls(lessonObj, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lesson updated successfully');
   } catch (error) {
     sendError(res, 'Failed to update lesson', 500, error.message);
   }
@@ -202,17 +225,9 @@ const reorderLessons = async (req, res) => {
     
     const updatedLessons = await Lesson.find({ sectionId }).sort({ order: 1 });
     
-    const lessonsWithUrls = updatedLessons.map(lesson => {
-      const lessonObj = lesson.toObject();
-      if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-        lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-      } else if (lessonObj.videoId) {
-        lessonObj.videoUrl = lessonObj.videoId;
-      }
-      return lessonObj;
-    });
+    const lessonsWithUrls = updatedLessons.map(lesson => formatLessonUrls(lesson, s3Service));
     
-    sendSuccess(res, transformUrls(lessonsWithUrls), 'Lessons reordered successfully');
+    sendSuccess(res, transformUrls(lessonsWithUrls, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lessons reordered successfully');
   } catch (error) {
     sendError(res, 'Failed to reorder lessons', 500, error.message);
   }
@@ -239,19 +254,11 @@ const getCourseContent = async (req, res) => {
         const lessons = await Lesson.find({ sectionId: section._id })
           .sort({ order: 1 });
         
-        const lessonsWithUrls = lessons.map(lesson => {
-          const lessonObj = lesson.toObject();
-          if (lessonObj.videoId && !lessonObj.videoId.startsWith('http')) {
-            lessonObj.videoUrl = s3Service.getPublicUrl(lessonObj.videoId);
-          } else if (lessonObj.videoId) {
-            lessonObj.videoUrl = lessonObj.videoId;
-          }
-          return lessonObj;
-        });
+        const lessonsWithUrls = lessons.map(lesson => formatLessonUrls(lesson, s3Service));
         
         return {
           ...section.toObject(),
-          lessons: lessonsWithUrls
+          lessons: transformUrls(lessonsWithUrls, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl'])
         };
       })
     );

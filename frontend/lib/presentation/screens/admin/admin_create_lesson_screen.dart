@@ -34,11 +34,13 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
   final _descriptionController = TextEditingController();
   
   String? _selectedVideoId;
-  String? _documentPath; // Store document path from S3
+  String? _documentPath; // Store document path from S3 for AI notes
+  String? _notesPdfUrl; // Store direct PDF path from S3
   int _duration = 0;
   bool _isLoading = false;
   bool _isUploadingVideo = false;
-  bool _isUploadingDocument = false; // Track document upload status
+  bool _isUploadingDocument = false; // Track document upload status (for AI notes)
+  bool _isUploadingPdf = false; // Track direct PDF upload status
   String? _errorMessage;
   List<Video> _videos = [];
   final ImagePicker _picker = ImagePicker();
@@ -100,7 +102,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             sectionId: widget.sectionId,
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
-            documentPath: _documentPath, // Use document path instead of text notes
+            documentPath: _documentPath, // This will be processed for AI notes
+            notesPdfUrl: _notesPdfUrl, // This is the direct PDF file
             order: nextOrder, // Set order to next available
             duration: _duration,
           );
@@ -112,6 +115,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             description: _descriptionController.text.trim(),
             videoId: _selectedVideoId,
             notes: null, // No notes if no document
+            notesPdfUrl: _notesPdfUrl, // Direct PDF file
             order: nextOrder, // Set order to next available
             duration: _duration,
           );
@@ -313,6 +317,85 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     }
   }
 
+  Future<void> _handleNotesPdfUpload() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      
+      if (result == null) return;
+
+      final file = result.files.single;
+      setState(() {
+        _isUploadingPdf = true;
+        _errorMessage = null;
+      });
+
+      Map<String, dynamic> responseData;
+      
+      if (kIsWeb) {
+        final lessonDocumentService = LessonDocumentService();
+        responseData = await lessonDocumentService.uploadDocumentForLessonNotes(
+          file: file,
+          courseId: widget.courseId,
+          sectionId: widget.sectionId,
+          title: _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
+          description: _descriptionController.text.trim(),
+        );
+      } else {
+        final response = await _apiClient.postFile(
+          '${ApiConfig.baseUrl.replaceFirst('/api', '')}/api/documents/upload',
+          filePath: file.path!,
+          fieldName: 'document',
+          additionalFields: {
+            'courseId': widget.courseId,
+            'sectionId': widget.sectionId,
+            'title': _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
+          },
+        );
+        responseData = jsonDecode(response.body);
+      }
+
+      if (responseData['success'] == true) {
+        final s3Key = responseData['data']['s3Key'];
+        final lessonData = responseData['data']['lesson'];
+        
+        setState(() {
+          _notesPdfUrl = s3Key;
+          // If a lesson was automatically created, we might want to store it, 
+          // but here we are in the Create Lesson screen, so we just store the key
+          _isUploadingPdf = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notes PDF uploaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to upload PDF');
+      }
+    } catch (e) {
+      setState(() {
+        _isUploadingPdf = false;
+        _errorMessage = e.toString();
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -350,6 +433,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                     _buildFormFields(isSmallScreen),
                     const SizedBox(height: 20),
                     _buildVideoSelectionSection(isSmallScreen),
+                    const SizedBox(height: 20),
+                    _buildNotesSection(isSmallScreen),
                     const SizedBox(height: 20),
                     _buildErrorMessage(),
                     const SizedBox(height: 20),
@@ -691,11 +776,165 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     );
   }
 
+  Widget _buildNotesSection(bool isSmallScreen) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppTheme.borderGrey),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryGreen,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.note_add,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Lesson Notes',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.blackColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            'Add notes to your lesson. You can upload a document to be processed by AI into organized notes, and/or upload a PDF for direct viewing.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.greyColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // AI Organized Notes Section
+          const Text(
+            'Option 1: AI Organized Notes',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _documentPath != null 
+                        ? 'Document attached for AI processing' 
+                        : 'No document for AI processing yet',
+                      style: TextStyle(
+                        color: _documentPath != null ? AppTheme.primaryGreen : AppTheme.greyColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _isUploadingDocument ? null : _handleDocumentUpload,
+                icon: _isUploadingDocument 
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.psychology, size: 18),
+                label: Text(_isUploadingDocument ? 'Processing...' : 'Upload & Organize'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accent,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          
+          const Divider(height: 30),
+          
+          // Direct PDF Section
+          const Text(
+            'Option 2: Direct PDF (Unorganized)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _notesPdfUrl != null 
+                        ? 'PDF attached for direct viewing' 
+                        : 'No PDF attached yet',
+                      style: TextStyle(
+                        color: _notesPdfUrl != null ? AppTheme.primaryGreen : AppTheme.greyColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _isUploadingPdf ? null : _handleNotesPdfUpload,
+                icon: _isUploadingPdf 
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.picture_as_pdf, size: 18),
+                label: Text(_isUploadingPdf ? 'Uploading...' : 'Upload PDF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          
+          if (_documentPath != null || _notesPdfUrl != null)
+            Padding(
+              padding: const EdgeInsets.top(15),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: AppTheme.primaryGreen, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Notes will be added when you save the lesson.',
+                        style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSubmitButton(bool isSmallScreen) {
+    bool isAnyUploading = _isLoading || _isUploadingVideo || _isUploadingDocument || _isUploadingPdf;
+    
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: (_isLoading || _isUploadingVideo) ? null : _createLesson,
+        onPressed: isAnyUploading ? null : _createLesson,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryGreen,
           foregroundColor: Colors.white,
@@ -704,7 +943,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: (_isLoading || _isUploadingVideo)
+        child: isAnyUploading
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -714,7 +953,9 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   ),
                   const SizedBox(width: 10),
-                  Text(_isUploadingVideo ? 'Uploading Video...' : 'Creating Lesson...'),
+                  Text(_isUploadingVideo 
+                    ? 'Uploading Video...' 
+                    : (_isUploadingDocument ? 'Processing Document...' : (_isUploadingPdf ? 'Uploading PDF...' : 'Creating Lesson...'))),
                 ],
               )
             : const Text(

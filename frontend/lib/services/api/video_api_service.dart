@@ -35,19 +35,15 @@ class VideoApiService {
   /// Get lesson content (video URL and notes)
   Future<LessonContent> getLessonContent(String lessonId) async {
     try {
-      // Parallelize lesson details and video URL fetch to reduce wait time
-      // The video URL fetch is started immediately but only used if lessonData['videoId'] is present
-      final results = await Future.wait([
-        _apiClient.get('${ApiConfig.baseUrl}/lessons/$lessonId'),
-        _apiClient.get('${ApiConfig.baseUrl}/videos/$lessonId/stream-url').catchError((e) {
-          // If video URL fetch fails, return a mock error response
-          return http.Response(jsonEncode({'success': false, 'message': 'Video fetch failed'}), 404);
-        }),
-      ]);
+      // START BOTH in parallel
+      final lessonResponseFuture = _apiClient.get('${ApiConfig.baseUrl}/lessons/$lessonId');
+      final videoResponseFuture = _apiClient.get('${ApiConfig.baseUrl}/videos/$lessonId/stream-url').catchError((e) {
+        // If video URL fetch fails, return a mock error response
+        return http.Response(jsonEncode({'success': false, 'message': 'Video fetch failed'}), 404);
+      });
 
-      final lessonResponse = results[0];
-      final videoResponse = results[1];
-
+      // AWAIT lesson details FIRST as they contain the notes (priority)
+      final lessonResponse = await lessonResponseFuture;
       lessonResponse.validateStatus();
       final lessonJson = jsonDecode(lessonResponse.body) as Map<String, dynamic>;
       
@@ -57,27 +53,30 @@ class VideoApiService {
       
       final lessonData = lessonJson['data'] as Map<String, dynamic>;
       
-      // If lesson has video content, extract the streaming URL from the parallelized request
+      // Now check if we need video. If so, await the video future which was already running
       String? videoUrl;
-      if (lessonData['videoId'] != null && videoResponse.statusCode == 200) {
-        try {
-          final videoJson = jsonDecode(videoResponse.body) as Map<String, dynamic>;
-          if (videoJson['success'] == true) {
-            final videoData = videoJson['data'] as Map<String, dynamic>;
-            videoUrl = videoData['streamingUrl'] as String?;
+      if (lessonData['videoId'] != null) {
+        final videoResponse = await videoResponseFuture;
+        if (videoResponse.statusCode == 200) {
+          try {
+            final videoJson = jsonDecode(videoResponse.body) as Map<String, dynamic>;
+            if (videoJson['success'] == true) {
+              final videoData = videoJson['data'] as Map<String, dynamic>;
+              videoUrl = videoData['streamingUrl'] as String?;
+            }
+          } catch (e) {
+            print('Warning: Failed to parse video URL response: $e');
           }
-        } catch (e) {
-          // If video URL parsing fails, continue with just notes
-          print('Warning: Failed to parse video URL response: $e');
         }
       }
       
       return LessonContent(
         videoUrl: videoUrl,
         notes: lessonData['notes'] as String?,
+        notesPdfUrl: lessonData['notesPdfUrl'] as String?,
         title: lessonData['title'] as String?,
         description: lessonData['description'] as String?,
-        duration: lessonData['duration'] as int? ?? 0,
+        duration: (lessonData['duration'] as num?)?.toInt() ?? 0,
       );
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -90,6 +89,7 @@ class VideoApiService {
 class LessonContent {
   final String? videoUrl;
   final String? notes;
+  final String? notesPdfUrl;
   final String? title;
   final String? description;
   final int duration;
@@ -97,6 +97,7 @@ class LessonContent {
   LessonContent({
     this.videoUrl,
     this.notes,
+    this.notesPdfUrl,
     this.title,
     this.description,
     required this.duration,
@@ -106,6 +107,7 @@ class LessonContent {
     return LessonContent(
       videoUrl: json['videoUrl'] as String?,
       notes: json['notes'] as String?,
+      notesPdfUrl: json['notesPdfUrl'] as String?,
       title: json['title'] as String?,
       description: json['description'] as String?,
       duration: json['duration'] as int? ?? 0,
@@ -116,6 +118,7 @@ class LessonContent {
     return {
       'videoUrl': videoUrl,
       'notes': notes,
+      'notesPdfUrl': notesPdfUrl,
       'title': title,
       'description': description,
       'duration': duration,

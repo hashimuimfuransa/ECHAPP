@@ -109,6 +109,7 @@ class ContentManagementNotifier extends StateNotifier<ContentManagementState> {
                   description: lessonData['description']?.toString(),
                   videoId: lessonData['videoId']?.toString(),
                   notes: lessonData['notes'] as String?,
+                  notesPdfUrl: lessonData['notesPdfUrl'] as String?,
                   order: lessonData['order'] as int? ?? 0,
                   duration: lessonData['duration'] as int? ?? 0,
                 );
@@ -236,6 +237,7 @@ class ContentManagementNotifier extends StateNotifier<ContentManagementState> {
         description: updateData['description'],
         videoId: updateData['videoId'],
         notes: updateData['notes'],
+        notesPdfUrl: updateData['notesPdfUrl'],
         duration: updateData['duration'],
       );
       

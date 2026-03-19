@@ -6,6 +6,7 @@ class Lesson {
   final String? description;
   final String? videoId;
   final String? notes;
+  final String? notesPdfUrl;
   final String? status;
   final int order;
   final int duration;
@@ -18,6 +19,7 @@ class Lesson {
     this.description,
     this.videoId,
     this.notes,
+    this.notesPdfUrl,
     this.status,
     required this.order,
     required this.duration,
@@ -32,6 +34,7 @@ class Lesson {
       description: json['description'] as String?,
       videoId: json['videoId'] as String?,
       notes: json['notes'] as String?,
+      notesPdfUrl: json['notesPdfUrl'] as String?,
       status: json['status'] as String?,
       order: json['order'] ?? 0,
       duration: json['duration'] ?? 0,
@@ -47,6 +50,7 @@ class Lesson {
       'description': description,
       'videoId': videoId,
       'notes': notes,
+      'notesPdfUrl': notesPdfUrl,
       'status': status,
       'order': order,
       'duration': duration,
@@ -61,6 +65,7 @@ class Lesson {
     String? description,
     String? videoId,
     String? notes,
+    String? notesPdfUrl,
     String? status,
     int? order,
     int? duration,
@@ -73,6 +78,7 @@ class Lesson {
       description: description ?? this.description,
       videoId: videoId ?? this.videoId,
       notes: notes ?? this.notes,
+      notesPdfUrl: notesPdfUrl ?? this.notesPdfUrl,
       status: status ?? this.status,
       order: order ?? this.order,
       duration: duration ?? this.duration,

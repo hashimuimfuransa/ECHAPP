@@ -70,7 +70,7 @@ const createLessonFromDocument = async (req, res) => {
         console.log('Using extracted text content as fallback');
       }
 
-      // Step 3: Create lesson with organized notes
+      // Step 3: Create lesson with organized notes and reference to original PDF
       const order = await Lesson.countDocuments({ sectionId: sectionId }) + 1;
       
       const lesson = await Lesson.create({
@@ -80,6 +80,7 @@ const createLessonFromDocument = async (req, res) => {
         description: description,
         videoId: null,
         notes: organizedNotes,
+        notesPdfUrl: uploadResult.key, // Store the original document path
         status: 'completed',
         order: order,
         duration: parseInt(duration) || 0

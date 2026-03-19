@@ -29,6 +29,10 @@ const lessonSchema = new mongoose.Schema({
     type: String, // Can store PDF path or text content
     default: null
   },
+  notesPdfUrl: {
+    type: String,
+    default: null
+  },
   order: {
     type: Number,
     required: [true, 'Order is required'],
