@@ -516,6 +516,8 @@ const uploadDocument = async (req, res) => {
       // If courseId and sectionId are provided but createExamFromDocument is not set to 'true',
       // AND createLesson is true, create a lesson with the document as notes
       const createLesson = req.body.createLesson === 'true' || req.body.createLesson === true;
+      const processNotes = req.body.processNotes === 'true' || req.body.processNotes === true;
+      
       if (createLesson && req.body.courseId && req.body.sectionId && req.body.createExamFromDocument !== 'true') {
         try {
           const Lesson = require('../models/Lesson');
@@ -537,8 +539,9 @@ const uploadDocument = async (req, res) => {
               title: req.body.title || result.originalname.split('.')[0], // Use provided title or filename without extension
               description: req.body.description,
               videoId: null, // No video for document-based lesson
-              notes: uploadResult.key, // Store the S3 key initially
-              status: 'processing', // Mark as processing
+              notes: processNotes ? 'Processing notes...' : null, // Set placeholder only if processing
+              notesPdfUrl: uploadResult.key, // Store the S3 key as the document source
+              status: processNotes ? 'processing' : 'completed', // Status depends on processing
               order: order,
               duration: parseInt(req.body.duration) || 0
             };
@@ -546,66 +549,59 @@ const uploadDocument = async (req, res) => {
             // Create the lesson with initial data
             const lesson = await Lesson.create(lessonData);
             
-            // Process document with AI in background (don't wait for it)
-            // Use setImmediate to ensure it runs after the current event loop cycle
-            setImmediate(() => {
-              // Create a separate async IIFE to handle background processing
-              (async () => {
-                try {
-                  const GrokService = require('../services/grok_service');
-                  const S3Service = require('../services/s3.service');
-                  
-                  if (GrokService.isConfigured()) {
-                    // Fetch the document from S3
-                    const documentBuffer = await S3Service.getFileBuffer(uploadResult.key);
+            // Process document with AI only if requested
+            if (processNotes) {
+              // Process document with AI in background (don't wait for it)
+              // Use setImmediate to ensure it runs after the current event loop cycle
+              setImmediate(() => {
+                // Create a separate async IIFE to handle background processing
+                (async () => {
+                  try {
+                    const GrokService = require('../services/grok_service');
                     
-                    if (documentBuffer) {
-                      // Determine MIME type based on file extension
-                      let mimeType = 'application/pdf'; // default
-                      const lowerName = uploadResult.key.toLowerCase();
-                      if (lowerName.includes('.docx')) {
-                        mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                      } else if (lowerName.includes('.doc')) {
-                        mimeType = 'application/msword';
-                      } else if (lowerName.includes('.txt')) {
-                        mimeType = 'text/plain';
+                    if (GrokService.isConfigured()) {
+                      // Use the existing buffer from the uploaded file instead of fetching from S3 again
+                      const documentBuffer = result.buffer;
+                      
+                      if (documentBuffer) {
+                        // Determine MIME type based on file extension
+                        let mimeType = result.mimetype;
+                        
+                        // Organize the notes using Groq AI
+                        const organizedNotes = await GrokService.organizeNotes({
+                          buffer: documentBuffer,
+                          mimetype: mimeType,
+                          originalName: result.originalname
+                        }, mimeType);
+                        
+                        // Update the lesson with processed notes
+                        await Lesson.findByIdAndUpdate(lesson._id, {
+                          notes: organizedNotes,
+                          status: 'completed' // Update status to completed
+                        });
+                        
+                        console.log('Successfully organized notes using Groq AI for lesson:', lesson._id);
                       }
-                      
-                      // Organize the notes using Groq AI
-                      const organizedNotes = await GrokService.organizeNotes({
-                        buffer: documentBuffer,
-                        mimetype: mimeType,
-                        originalName: result.originalname
-                      }, mimeType);
-                      
-                      // Update the lesson with processed notes
+                    } else {
+                      // If Groq is not configured, just update the status
                       await Lesson.findByIdAndUpdate(lesson._id, {
-                        notes: organizedNotes,
                         status: 'completed' // Update status to completed
                       });
-                      
-                      console.log('Successfully organized notes using Groq AI for lesson:', lesson._id);
                     }
-                  } else {
-                    // If Groq is not configured, just update the status
-                    await Lesson.findByIdAndUpdate(lesson._id, {
-                      status: 'completed' // Update status to completed
-                    });
+                  } catch (backgroundError) {
+                    console.error('Background processing error for lesson:', lesson._id, backgroundError);
+                    // Update lesson status to indicate error
+                    try {
+                      await Lesson.findByIdAndUpdate(lesson._id, {
+                        status: 'error'
+                      });
+                    } catch (updateError) {
+                      console.error('Failed to update lesson status after processing error:', updateError);
+                    }
                   }
-                } catch (backgroundError) {
-                  console.error('Background processing error for lesson:', lesson._id, backgroundError);
-                  // Update lesson status to indicate error
-                  try {
-                    await Lesson.findByIdAndUpdate(lesson._id, {
-                      status: 'error',
-                      notes: uploadResult.key // Keep original document reference
-                    });
-                  } catch (updateError) {
-                    console.error('Failed to update lesson status after processing error:', updateError);
-                  }
-                }
-              })();
-            });
+                })();
+              });
+            }
             
             // Return immediate response without waiting for AI processing
             return sendSuccess(res, {

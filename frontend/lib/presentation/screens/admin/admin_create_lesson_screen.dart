@@ -36,6 +36,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
   String? _selectedVideoId;
   String? _documentPath; // Store document path from S3 for AI notes
   String? _notesPdfUrl; // Store direct PDF path from S3
+  bool _processNotesWithAI = false; // Whether to process notes with AI
   int _duration = 0;
   bool _isLoading = false;
   bool _isUploadingVideo = false;
@@ -104,6 +105,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             description: _descriptionController.text.trim(),
             documentPath: _documentPath, // This will be processed for AI notes
             notesPdfUrl: _notesPdfUrl, // This is the direct PDF file
+            processNotes: _processNotesWithAI, // Use AI processing flag
             order: nextOrder, // Set order to next available
             duration: _duration,
           );
@@ -116,6 +118,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             videoId: _selectedVideoId,
             notes: null, // No notes if no document
             notesPdfUrl: _notesPdfUrl, // Direct PDF file
+            processNotes: _processNotesWithAI, // Use AI processing flag
             order: nextOrder, // Set order to next available
             duration: _duration,
           );
@@ -237,6 +240,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             sectionId: widget.sectionId,
             title: _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
             description: _descriptionController.text.trim(),
+            createLesson: false, // Ensure we don't auto-create lesson during upload
+            processNotes: false, // Don't process AI notes during initial upload
           );
           print('Web upload successful, response: $responseData');
         } catch (e) {
@@ -256,6 +261,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           additionalFields: {
             'courseId': widget.courseId,
             'sectionId': widget.sectionId,
+            'createLesson': 'false', // Ensure we don't auto-create lesson
+            'processNotes': 'false', // Don't process AI notes yet
             'title': _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
             'description': _descriptionController.text.trim(),
             'duration': _duration.toString(),
@@ -268,34 +275,24 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
       print('Response data: $responseData');
       print('Success: ${responseData['success']}');
       print('Data keys: ${responseData['data']?.keys?.toList()}');
-      print('Lesson data: ${responseData['data']?['lesson']}');
       print('========================');
       
       if (responseData['success'] == true) {
-        final lessonData = responseData['data']['lesson'];
-        
-        if (lessonData != null) {
-          // The lesson was created automatically with the document
-          setState(() {
-            _documentPath = lessonData['notes']; // Store the document path from the created lesson
-            _isUploadingDocument = false;
-          });
+        // Just store the document path if lesson wasn't created automatically
+        final documentPath = responseData['data']['s3Key'];
+        setState(() {
+          _documentPath = documentPath;
+          _processNotesWithAI = true; // Flag for processing notes with AI when lesson is saved
+          _isUploadingDocument = false;
+        });
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Document uploaded and lesson created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } else {
-          // Just store the document path if lesson wasn't created automatically
-          final documentPath = responseData['data']['s3Key'];
-          setState(() {
-            _documentPath = documentPath;
-            _isUploadingDocument = false;
-          });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document uploaded successfully for AI processing!'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       } else {
         throw Exception('Failed to upload document');
@@ -342,6 +339,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           sectionId: widget.sectionId,
           title: _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
           description: _descriptionController.text.trim(),
+          createLesson: false, // Ensure we don't auto-create lesson during upload
+          processNotes: false, // Don't process AI notes for direct PDF
         );
       } else {
         final response = await _apiClient.postFile(
@@ -351,6 +350,8 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           additionalFields: {
             'courseId': widget.courseId,
             'sectionId': widget.sectionId,
+            'createLesson': 'false', // Ensure we don't auto-create lesson
+            'processNotes': 'false', // Don't process AI notes for direct PDF
             'title': _titleController.text.trim().isNotEmpty ? _titleController.text.trim() : file.name,
           },
         );
@@ -359,12 +360,10 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
 
       if (responseData['success'] == true) {
         final s3Key = responseData['data']['s3Key'];
-        final lessonData = responseData['data']['lesson'];
         
         setState(() {
           _notesPdfUrl = s3Key;
-          // If a lesson was automatically created, we might want to store it, 
-          // but here we are in the Create Lesson screen, so we just store the key
+          _processNotesWithAI = false; // Disable AI processing flag if they chose direct PDF
           _isUploadingPdf = false;
         });
 

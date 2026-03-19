@@ -61,8 +61,9 @@ const createLesson = async (req, res) => {
     // If notes field looks like a document path, process it with AI to organize notes
     let processedNotes = notes;
     const documentPath = notesPdfUrl || notes; // Prioritize notesPdfUrl for processing
+    const shouldProcessNotes = req.body.processNotes === 'true' || req.body.processNotes === true;
     
-    if (documentPath && (documentPath.includes('documents/') || documentPath.includes('.pdf') || documentPath.includes('.doc') || documentPath.includes('.docx'))) {
+    if (shouldProcessNotes && documentPath && (documentPath.includes('documents/') || documentPath.includes('.pdf') || documentPath.includes('.doc') || documentPath.includes('.docx'))) {
       try {
         const S3Service = require('../services/s3.service');
         const DocumentProcessingService = require('../services/document_processing_service');

@@ -18,23 +18,27 @@ class DocumentUploadException implements Exception {
 
 /// Service for uploading documents for lesson notes processing
 class LessonDocumentService {
-  /// Upload document specifically for lesson notes organization
   Future<Map<String, dynamic>> uploadDocumentForLessonNotes({
     required PlatformFile file,
     required String courseId,
     required String sectionId,
     String? title,
     String? description,
+    bool createLesson = false,
+    bool processNotes = false,
   }) async {
     try {
       // Create multipart request
       final baseUrl = ApiConfig.baseUrl.replaceFirst('/api', '');
-      final url = '$baseUrl/api/documents/upload-for-notes';
+      // Use the generic upload endpoint to have more control
+      final url = '$baseUrl/api/documents/upload';
       print('=== DEBUG DOCUMENT UPLOAD ===');
       print('Base URL: $baseUrl');
       print('Full URL: $url');
       print('Course ID: $courseId');
       print('Section ID: $sectionId');
+      print('Create Lesson: $createLesson');
+      print('Process Notes: $processNotes');
       print('File name: ${file.name}');
       print('File size: ${file.size}');
       print('Is web: $kIsWeb');
@@ -86,6 +90,8 @@ class LessonDocumentService {
       // Add form fields
       request.fields['courseId'] = courseId;
       request.fields['sectionId'] = sectionId;
+      request.fields['createLesson'] = createLesson.toString();
+      request.fields['processNotes'] = processNotes.toString();
       if (title != null) request.fields['title'] = title;
       if (description != null) request.fields['description'] = description;
 

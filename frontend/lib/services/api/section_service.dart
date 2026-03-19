@@ -203,6 +203,7 @@ class SectionService {
     String? videoId,
     String? notes,
     String? notesPdfUrl,
+    bool processNotes = false,
     int order = 1,
     int duration = 0,
   }) async {
@@ -216,6 +217,7 @@ class SectionService {
           'videoId': videoId,
           'notes': notes,
           'notesPdfUrl': notesPdfUrl,
+          'processNotes': processNotes,
           'order': order,
           'duration': duration,
         },
@@ -283,6 +285,7 @@ class SectionService {
     String? description,
     String? documentPath,
     String? notesPdfUrl,
+    bool processNotes = false,
     int order = 1,
     int duration = 0,
   }) async {
@@ -296,6 +299,7 @@ class SectionService {
           'videoId': null, // No video for document-based lesson
           'notes': documentPath, 
           'notesPdfUrl': notesPdfUrl,
+          'processNotes': processNotes,
           'order': order,
           'duration': duration,
         },
