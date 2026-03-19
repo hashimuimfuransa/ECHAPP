@@ -1723,6 +1723,19 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                           ),
                         ),
                       ] else ...[
+                        // Mark as Complete button in the list
+                        IconButton(
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          icon: Icon(
+                            Icons.check_circle_outline,
+                            color: lessonTypeColor.withOpacity(0.5),
+                            size: isSmallMobile ? 20 : 24,
+                          ),
+                          onPressed: () => _markLessonAsComplete(lesson),
+                          tooltip: 'Mark as Complete',
+                        ),
+                        const SizedBox(width: 8),
                         // Type badge
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -1868,9 +1881,23 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         ),
       );
     }
+  }
+
+  void _checkAndAutocompleteSection(String sectionId) {
+    if (_sectionCompletionStatus[sectionId] == true) return;
     
-    // Also mark as complete when viewing (as per existing logic, but refactored)
-    _markLessonAsComplete(lesson);
+    final lessons = _sectionLessons[sectionId] ?? [];
+    if (lessons.isEmpty) return;
+    
+    final allCompleted = lessons.every((l) => _lessonCompletionStatus[l.id] == true);
+    
+    if (allCompleted) {
+      print('All lessons in section $sectionId completed, autocompleting section');
+      final sectionIndex = _sections?.indexWhere((s) => s.id == sectionId) ?? -1;
+      if (sectionIndex != -1) {
+        _completeSection(_sections![sectionIndex], sectionIndex);
+      }
+    }
   }
 
   void _markLessonAsComplete(Lesson lesson) async {
@@ -1890,6 +1917,9 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
         autoDismiss: true,
       );
       
+      // CHECK FOR SECTION AUTOCOMPLETE LOCALLY AS WELL
+      _checkAndAutocompleteSection(lesson.sectionId);
+      
       // Call backend to update progress if enrollment is found
       if (_courseAccessData != null && _courseAccessData!['enrollmentId'] != null) {
         final enrollmentId = _courseAccessData!['enrollmentId'].toString();
@@ -1902,7 +1932,6 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
           // Update local progress from backend to ensure accuracy
           if (result['progress'] != null) {
             // If backend returns updated progress, we could update our local state
-            // But we already calculate it locally for immediate feedback
           }
         } catch (e) {
           print('Error updating enrollment progress in backend: $e');

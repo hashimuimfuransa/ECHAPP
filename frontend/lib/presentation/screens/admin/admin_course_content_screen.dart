@@ -63,7 +63,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
       setState(() {
         _courseLoading = true;
         _courseError = null;
-      });
+      }); 
 
       final repository = CourseRepository();
       final course = await repository.getCourseById(widget.courseId);
@@ -794,7 +794,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${lesson.duration} mins • ${lessonType.capitalize()} • Tap to view',
+                      '${lesson.duration} mins • ${lessonType.capitalize()}',
                       style: const TextStyle(
                         color: AppTheme.greyColor,
                         fontSize: 12,
@@ -803,7 +803,6 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                   ],
                 ),
               ),
-              const Icon(Icons.visibility_outlined, size: 20, color: AppTheme.greyColor),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (value) => _handleLessonAction(value, lesson),
@@ -1231,26 +1230,38 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   void _handleLessonAction(String action, Lesson lesson) {
     switch (action) {
       case 'edit':
-        _showEditLessonDialog(context, lesson);
+        _showEditLessonDialog(context, lesson.toJson());
         break;
       case 'preview':
-        _showLessonViewer(context, lesson);
+        _viewLesson(lesson);
         break;
       case 'delete':
-        _showDeleteConfirmation(context, 'lesson', lesson.title, lesson: lesson);
+        _showDeleteConfirmation(context, 'lesson', lesson.title, lesson: lesson.toJson());
         break;
     }
   }
 
-  void _showLessonViewer(BuildContext context, Lesson lesson) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => LessonViewer(
-          lesson: lesson,
-          courseId: widget.courseId,
+  void _viewLesson(Lesson lesson) {
+    final contentState = ref.read(contentManagementProvider);
+    
+    // Navigate to the lesson viewer
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => LessonViewer(
+            lesson: lesson,
+            courseId: widget.courseId,
+            allSections: contentState.sections,
+            sectionLessons: contentState.lessonsBySection,
+            isAdminPreview: true,
+            // Certificates not needed for admin preview
+            onComplete: () {
+              print('Admin preview lesson completed: ${lesson.title}');
+            },
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _showAddSectionDialog(BuildContext context) {
@@ -1405,20 +1416,18 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  Future<void> _showEditLessonDialog(BuildContext context, Lesson lesson) async {
-    final titleController = TextEditingController(text: lesson.title);
-    final descriptionController = TextEditingController(text: lesson.description ?? '');
-    final notesController = TextEditingController(text: lesson.notes ?? '');
-    int duration = lesson.duration;
+  Future<void> _showEditLessonDialog(BuildContext context, Map<String, dynamic> lesson) async {
+    final titleController = TextEditingController(text: lesson['title']);
+    final descriptionController = TextEditingController(text: lesson['description'] ?? '');
+    final notesController = TextEditingController(text: lesson['notes'] ?? '');
+    int duration = lesson['duration'] ?? 0;
     
     // Get the selected video ID from the lesson
-    String? selectedVideoId = lesson.videoId;
+    String? selectedVideoId = lesson['videoId'];
     
     // Track document upload state
-    String? documentPath = lesson.notes; // If notes contain document path
-    String? notesPdfUrl = lesson.notesPdfUrl; // If direct PDF is attached
+    String? documentPath = lesson['notes']; // If notes contain document path
     bool isUploadingDocument = false;
-    bool isUploadingPdf = false;
     
     // Load videos for dropdown first before showing dialog
     List<Video> videos = [];
@@ -1428,7 +1437,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     try {
       final videoRepo = VideoRepository();
       // Use course-specific videos instead of all videos to avoid potential issues
-      final loadedVideos = await videoRepo.getVideosByCourse(lesson.courseId);
+      final loadedVideos = await videoRepo.getVideosByCourse(lesson['courseId']);
       // Ensure loadedVideos is indeed a List<Video> and not something else
       videos = loadedVideos;
       isLoadingVideos = false;
@@ -1652,8 +1661,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                               final lessonDocumentService = LessonDocumentService();
                                               uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
                                                 file: file,
-                                                courseId: lesson.courseId,
-                                                sectionId: lesson.sectionId,
+                                                courseId: lesson['courseId'],
+                                                sectionId: lesson['sectionId'] ?? '',
                                               );
                                             } catch (e) {
                                               print('=== WEB UPLOAD ERROR ===');
@@ -1670,8 +1679,8 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                               try {
                                                 uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
                                                   file: file,
-                                                  courseId: lesson.courseId,
-                                                  sectionId: lesson.sectionId,
+                                                  courseId: lesson['courseId'],
+                                                  sectionId: lesson['sectionId'] ?? '',
                                                 );
                                               } catch (e) {
                                                 print('=== MOBILE UPLOAD ERROR ===');
@@ -1814,106 +1823,6 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                                     foregroundColor: Colors.white,
                                   ),
                                 ),
-                                const SizedBox(height: 15),
-                                
-                                // Direct PDF Upload Section
-                                const Text(
-                                  'Direct PDF (Unorganized)',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 5),
-                                if (notesPdfUrl != null && notesPdfUrl!.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryGreen.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.picture_as_pdf, color: AppTheme.primaryGreen),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            'PDF Attached: ${notesPdfUrl!.split('/').last}',
-                                            style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.w500),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                          onPressed: () {
-                                            setDialogState(() {
-                                              notesPdfUrl = null;
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                
-                                ElevatedButton.icon(
-                                  onPressed: isUploadingPdf ? null : () async {
-                                    try {
-                                      final result = await FilePicker.platform.pickFiles(
-                                        type: FileType.custom,
-                                        allowedExtensions: ['pdf'],
-                                      );
-                                      
-                                      if (result == null) return;
-                                      
-                                      setDialogState(() {
-                                        isUploadingPdf = true;
-                                      });
-                                      
-                                      final file = result.files.single;
-                                      final lessonDocumentService = LessonDocumentService();
-                                      final uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
-                                        file: file,
-                                        courseId: lesson.courseId,
-                                        sectionId: lesson.sectionId,
-                                      );
-                                      
-                                      String? pdfKey;
-                                      if (uploadResult['success'] == true) {
-                                        pdfKey = uploadResult['data']['s3Key'];
-                                      }
-                                      
-                                      if (pdfKey != null) {
-                                        setDialogState(() {
-                                          notesPdfUrl = pdfKey;
-                                          isUploadingPdf = false;
-                                        });
-                                        
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Notes PDF uploaded successfully!'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        setDialogState(() {
-                                          isUploadingPdf = false;
-                                        });
-                                      }
-                                    } catch (e) {
-                                      setDialogState(() {
-                                        isUploadingPdf = false;
-                                      });
-                                    }
-                                  },
-                                  icon: isUploadingPdf 
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    : const Icon(Icons.picture_as_pdf),
-                                  label: Text(isUploadingPdf ? 'Uploading...' : 'Upload Direct PDF'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryGreen,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -1945,14 +1854,13 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                         'description': descriptionController.text.trim(),
                         'videoId': selectedVideoId,
                         'notes': documentPath ?? notesController.text.trim(),
-                        'notesPdfUrl': notesPdfUrl,
                         'duration': duration,
-                        'sectionId': lesson.sectionId, // Pass sectionId for local state update
+                        'sectionId': lesson['sectionId'], // Pass sectionId for local state update
                       };
                       
                       // Use the optimized updateLesson method from provider
                       await ref.read(contentManagementProvider.notifier).updateLesson(
-                        lesson.id,
+                        lesson['id'],
                         updateData,
                       );
                       
@@ -1986,7 +1894,7 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Lesson? lesson}) {
+  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Map<String, dynamic>? lesson}) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2021,11 +1929,11 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
                     );
                   }
                 }
-              } else if (type == 'lesson' && lesson != null) {
+              } else if (type == 'lesson') {
                 // Delete lesson
                 try {
                   final lessonRepo = LessonRepository();
-                  await lessonRepo.deleteLesson(lesson.id);
+                  await lessonRepo.deleteLesson(lesson!['id']);
                   // Reload sections to update the UI
                   await ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
                   if (mounted) {

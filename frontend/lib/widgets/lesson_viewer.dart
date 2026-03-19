@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
@@ -50,6 +51,7 @@ class LessonViewer extends ConsumerStatefulWidget {
   final Map<String, List<Lesson>>? sectionLessons;
   final List<Certificate>? certificates;
   final VoidCallback? onComplete;
+  final bool isAdminPreview;
   
   const LessonViewer({
     super.key,
@@ -59,6 +61,7 @@ class LessonViewer extends ConsumerStatefulWidget {
     this.sectionLessons,
     this.certificates,
     this.onComplete,
+    this.isAdminPreview = false,
   });
 
   @override
@@ -89,7 +92,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   List<NotesSection> _notesSections = [];
   String? _selectedNotesSection;
   Map<String, double> _sectionPositions = {};
-
+  Timer? _completionTimer;
+  bool _timerFinished = false;
+  
   // AI Chat state
   bool _isChatExpanded = false;
   final RealAIChatService _aiChatService = RealAIChatService();
@@ -145,10 +150,32 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
 
   @override
   void dispose() {
+    _completionTimer?.cancel();
     _flutterTts.stop();
     _player?.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _startCompletionTimer() {
+    _completionTimer?.cancel();
+    
+    // Admin bypass: automatically finish timer for admins
+    if (widget.isAdminPreview) {
+      _timerFinished = true;
+      return;
+    }
+    
+    _timerFinished = false;
+    _completionTimer = Timer(const Duration(minutes: 1), () {
+      if (mounted) {
+        setState(() {
+          _timerFinished = true;
+        });
+        print('User spent 1 minute on lesson ${widget.lesson.title}, marking as complete');
+        widget.onComplete?.call();
+      }
+    });
   }
 
   @override
@@ -173,6 +200,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       _examsLoading = true;
       _notesSummary = null;
       _showSummary = false;
+      _showPdfNotes = false; // Reset to default
     });
 
     try {
@@ -183,6 +211,26 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
       if (mounted) {
         setState(() {
           _isLoading = false; // Show notes immediately!
+          
+          // Determine if we should show PDF view automatically
+          if (_lessonContent != null) {
+            bool notesIsPdfLink = _lessonContent!.notes != null && 
+                                 (_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf'));
+            
+            bool hasOrganized = _lessonContent!.notes != null && 
+                               _lessonContent!.notes!.isNotEmpty && 
+                               !notesIsPdfLink;
+            
+            bool hasPdf = (_lessonContent!.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty) || 
+                          notesIsPdfLink;
+                          
+            if (!hasOrganized && hasPdf) {
+              _showPdfNotes = true;
+            }
+
+            // Start completion timer as soon as basic content is loaded
+            _startCompletionTimer();
+          }
         });
       }
 
@@ -416,6 +464,22 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     return map;
   }
 
+  void _markAsCompleteManually() {
+    setState(() {
+      _timerFinished = true;
+    });
+    if (widget.onComplete != null) widget.onComplete!();
+    
+    // Show success snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Lesson marked as complete!'),
+        backgroundColor: AppTheme.primaryGreen,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -475,6 +539,26 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                   _buildNotesContent(),
                 if (_sectionExams != null && _sectionExams!.isNotEmpty)
                   _buildExamsSection(),
+                const SizedBox(height: 32),
+                // Mark as Complete button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _markAsCompleteManually,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Mark Lesson as Complete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                      foregroundColor: AppTheme.primaryGreen,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppTheme.primaryGreen, width: 1.5),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
                 _buildNextLessonNavigation(),
                 SizedBox(height: MediaQuery.of(context).size.width < 600 ? 100 : 250), // Space for AI button
               ],
@@ -563,6 +647,9 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
+                if (!_timerFinished) {
+                  _timerFinished = true;
+                }
                 if (widget.onComplete != null) widget.onComplete!();
                 Navigator.pop(context);
               },
@@ -630,6 +717,11 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   }
 
   void _navigateToNextLesson(Lesson nextLesson) {
+    // Mark as complete manually if timer hasn't finished
+    if (!_timerFinished) {
+      _timerFinished = true;
+    }
+    
     if (widget.onComplete != null) widget.onComplete!();
     
     // Replace current route with next lesson
@@ -638,8 +730,11 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
         builder: (context) => LessonViewer(
           lesson: nextLesson,
           courseId: widget.courseId,
+          allSections: widget.allSections ?? _courseSections,
+          sectionLessons: widget.sectionLessons ?? _getSectionLessonsMap(),
           certificates: widget.certificates,
           onComplete: widget.onComplete,
+          isAdminPreview: widget.isAdminPreview,
         ),
       ),
     );
@@ -924,14 +1019,23 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
   Widget _buildNotesContent() {
     if (_lessonContent == null) return const SizedBox.shrink();
     
-    bool hasOrganized = _lessonContent!.notes != null && _lessonContent!.notes!.isNotEmpty && 
-                       !(_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf'));
-    bool hasPdf = _lessonContent!.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty;
+    // Check if the primary notes field actually contains a PDF link (unprocessed)
+    bool notesIsPdfLink = _lessonContent!.notes != null && 
+                         (_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf'));
     
-    // If we only have PDF, force PDF view
-    if (!hasOrganized && hasPdf) {
-      _showPdfNotes = true;
-    }
+    // Has organized content if notes is NOT a PDF link and NOT empty
+    bool hasOrganized = _lessonContent!.notes != null && 
+                       _lessonContent!.notes!.isNotEmpty && 
+                       !notesIsPdfLink;
+                       
+    // Has PDF if notesPdfUrl exists OR the notes field itself is a PDF link
+    bool hasPdf = (_lessonContent!.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty) || 
+                  notesIsPdfLink;
+    
+    // Get the actual PDF URL to use
+    final pdfUrl = (_lessonContent!.notesPdfUrl != null && _lessonContent!.notesPdfUrl!.isNotEmpty)
+        ? _lessonContent!.notesPdfUrl!
+        : (notesIsPdfLink ? _lessonContent!.notes! : '');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1002,13 +1106,12 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
               ],
             ),
           ),
-
+        
+        // Use logic to show appropriate view
         if (_showPdfNotes && hasPdf)
-          _buildPdfNotesView()
+          _buildPdfNotesView(pdfUrl)
         else if (hasOrganized)
           _buildOrganizedNotesView()
-        else if (_lessonContent!.notes != null && (_lessonContent!.notes!.contains('documents/') || _lessonContent!.notes!.contains('.pdf')))
-          _buildProcessingView()
         else
           const SizedBox.shrink(),
       ],
@@ -1065,9 +1168,7 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
     );
   }
 
-  Widget _buildPdfNotesView() {
-    final pdfUrl = _lessonContent!.notesPdfUrl!;
-    
+  Widget _buildPdfNotesView(String pdfUrl) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),

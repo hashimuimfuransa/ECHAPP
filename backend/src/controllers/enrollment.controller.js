@@ -234,7 +234,9 @@ const updateEnrollmentProgress = async (req, res) => {
       return sendError(res, 'Access to this course has expired', 403);
     }
 
-    if (completed && !enrollment.completedLessons.includes(lessonId)) {
+    const alreadyCompleted = enrollment.completedLessons.some(id => id.toString() === lessonId);
+    
+    if (completed && !alreadyCompleted) {
       enrollment.completedLessons.push(lessonId);
       
       // Calculate real progress percentage
@@ -300,7 +302,9 @@ const completeSection = async (req, res) => {
     // Add missing lessons to completedLessons
     let addedCount = 0;
     sectionLessonIds.forEach(lessonId => {
-      if (!enrollment.completedLessons.includes(lessonId)) {
+      // Ensure we compare strings to strings or use Mongoose's way
+      const alreadyCompleted = enrollment.completedLessons.some(id => id.toString() === lessonId);
+      if (!alreadyCompleted) {
         enrollment.completedLessons.push(lessonId);
         addedCount++;
       }

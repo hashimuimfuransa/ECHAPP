@@ -16,6 +16,7 @@ class LessonRepository {
     String? videoId,
     String? notes,
     String? notesPdfUrl,
+    bool processNotes = false,
     required int order,
     required int duration,
   }) async {
@@ -27,6 +28,7 @@ class LessonRepository {
       videoId: videoId,
       notes: notes,
       notesPdfUrl: notesPdfUrl,
+      processNotes: processNotes,
       order: order,
       duration: duration,
     );
@@ -40,6 +42,7 @@ class LessonRepository {
     String? description,
     String? documentPath,
     String? notesPdfUrl,
+    bool processNotes = false,
     required int order,
     required int duration,
   }) async {
@@ -50,6 +53,7 @@ class LessonRepository {
       description: description,
       documentPath: documentPath,
       notesPdfUrl: notesPdfUrl,
+      processNotes: processNotes,
       order: order,
       duration: duration,
     );
