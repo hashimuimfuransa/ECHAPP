@@ -538,9 +538,13 @@ ${contentPreview}
       const q = questions.find((quest) => quest._id.toString() === ua.questionId.toString());
       if (!q) return null;
 
-      const correctAnswerText = q.type === "mcq" || q.type === "true_false"
-        ? (q.options && q.options[q.correctAnswer] ? q.options[q.correctAnswer] : q.correctAnswer)
-        : q.correctAnswer;
+      const isPlaceholder = q.correctAnswer === "Sample answer" || !q.correctAnswer;
+
+      const correctAnswerText = isPlaceholder
+        ? "[MISSING - USE YOUR EXPERT KNOWLEDGE TO DETERMINE CORRECT ANSWER]"
+        : (q.type === "mcq" || q.type === "true_false"
+          ? (q.options && q.options[q.correctAnswer] ? q.options[q.correctAnswer] : q.correctAnswer)
+          : q.correctAnswer);
 
       const studentAnswerText = q.type === "mcq" || q.type === "true_false"
         ? (q.options && q.options[ua.selectedOption] ? q.options[ua.selectedOption] : ua.selectedOption)
@@ -554,6 +558,7 @@ ${contentPreview}
         correctAnswer: correctAnswerText,
         studentAnswer: studentAnswerText,
         points: q.points || 1,
+        isPlaceholder: isPlaceholder, // Explicitly tell the AI it's a placeholder
       };
     }).filter(Boolean);
 
@@ -566,7 +571,7 @@ RULES:
 1. For MCQ and true_false: The answer must match the correct answer exactly.
 2. For fill_blank: Allow minor spelling errors or case differences if the meaning is identical.
 3. For open: Grade based on conceptual correctness and completeness. Give partial points if partially correct.
-4. If the provided 'correctAnswer' is missing or seems incorrect, use your expert knowledge of the topic to grade.
+4. IMPORTANT: If 'correctAnswer' is "[MISSING - USE YOUR EXPERT KNOWLEDGE TO DETERMINE CORRECT ANSWER]" or isPlaceholder is true, you MUST ignore it and use your own expert knowledge to determine the ACTUAL correct answer and grade the student accordingly. Do NOT grade based on the placeholder text "Sample answer".
 5. Provide a brief "feedback" string for each answer (max 15 words) explaining the grade.
 6. Respond ONLY with a JSON array of objects.
 
@@ -596,7 +601,7 @@ ${JSON.stringify(gradingData, null, 2)}`;
       const gradedResults = this.parseGradingResponse(raw);
 
       // Map results back to the original userAnswers format
-      return userAnswers.map((ua) => {
+      return await Promise.all(userAnswers.map(async (ua) => {
         const graded = gradedResults.find((g) => g.id && g.id.toString() === ua.questionId.toString());
         const q = questions.find((quest) => quest._id.toString() === ua.questionId.toString());
         
@@ -610,40 +615,94 @@ ${JSON.stringify(gradingData, null, 2)}`;
         }
 
         // Fallback grading if AI missed a question
-        return this.fallbackGrade(q, ua);
-      });
+        return await this.fallbackGrade(q, ua);
+      }));
     } catch (error) {
-      console.error("AI Grading failed, using fallback:", error.message);
-      return userAnswers.map((ua) => {
+      console.error("AI Grading failed, using individual fallback:", error.message);
+      return await Promise.all(userAnswers.map(async (ua) => {
         const q = questions.find((quest) => quest._id.toString() === ua.questionId);
-        return this.fallbackGrade(q, ua);
-      });
+        return await this.fallbackGrade(q, ua);
+      }));
     }
   }
 
   /**
-   * Parse the JSON response from the grading prompt.
+   * Grade a single answer using AI for accuracy.
    */
-  parseGradingResponse(raw) {
+  async gradeSingleAnswerAI(question, userAnswer) {
+    if (!this.isConfigured()) return null;
+
+    const isPlaceholder = question.correctAnswer === "Sample answer" || !question.correctAnswer;
+    const correctAnswerText = isPlaceholder
+      ? "[MISSING - USE YOUR EXPERT KNOWLEDGE]"
+      : (question.type === "mcq" || question.type === "true_false"
+        ? (question.options?.[question.correctAnswer] ?? question.correctAnswer)
+        : question.correctAnswer);
+
+    const studentAnswerText = question.type === "mcq" || question.type === "true_false"
+      ? (question.options?.[userAnswer.selectedOption] ?? userAnswer.selectedOption)
+      : (userAnswer.answerText || userAnswer.selectedOption || "");
+
+    const prompt = `Grade this student's exam answer.
+Question: ${question.question}
+Type: ${question.type}
+Correct Answer (provided): ${correctAnswerText}
+Student Answer: ${studentAnswerText}
+
+RULES:
+1. If the provided correct answer is a placeholder, use your expert knowledge to determine the actual correct answer.
+2. For MCQ and true_false: The answer must match the correct answer exactly.
+3. For open and fill_blank: Grade based on conceptual correctness. Allow minor spelling/case differences.
+4. Respond ONLY with a JSON object: {"earnedPoints": number, "isCorrect": boolean, "feedback": "string (max 15 words)"}`;
+
     try {
-      // Clean markdown fences if present
+      const completion = await this.groq.chat.completions.create({
+        model: await this.resolveModel(),
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1,
+        max_tokens: 200,
+      });
+
+      const raw = completion.choices[0]?.message?.content ?? "";
       const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-      const match = cleaned.match(/\[[\s\S]*\]/);
-      if (match) {
-        return JSON.parse(match[0]);
-      }
-      return JSON.parse(cleaned);
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      const graded = JSON.parse(match ? match[0] : cleaned);
+
+      return {
+        ...userAnswer,
+        earnedPoints: Math.min(graded.earnedPoints ?? 0, question.points || 1),
+        isCorrect: !!graded.isCorrect,
+        feedback: graded.feedback || (graded.isCorrect ? "Correct." : "Incorrect."),
+      };
     } catch (e) {
-      console.error("Failed to parse grading response:", e.message);
-      return [];
+      console.error("Single answer AI grading failed:", e.message);
+      return null;
     }
   }
 
   /**
    * Deterministic fallback grading for simple question types.
+   * If AI is available, it tries to use it for accuracy.
    */
-  fallbackGrade(question, userAnswer) {
+  async fallbackGrade(question, userAnswer) {
     if (!question) return { ...userAnswer, earnedPoints: 0, isCorrect: false };
+
+    // Try AI grading first if configured for better accuracy
+    if (this.isConfigured()) {
+      const aiResult = await this.gradeSingleAnswerAI(question, userAnswer);
+      if (aiResult) return aiResult;
+    }
+
+    const isPlaceholder = question.correctAnswer === "Sample answer" || !question.correctAnswer;
+    
+    if (isPlaceholder) {
+      return {
+        ...userAnswer,
+        earnedPoints: 0,
+        isCorrect: false,
+        feedback: "Correct answer missing and AI unavailable for verification.",
+      };
+    }
 
     let isCorrect = false;
     if (question.type === "mcq" || question.type === "true_false") {
@@ -653,7 +712,6 @@ ${JSON.stringify(gradingData, null, 2)}`;
       const correctAnswer = String(question.correctAnswer || "").toLowerCase().trim();
       isCorrect = studentAnswer === correctAnswer;
     } else if (question.type === "open") {
-      // Basic similarity check for open questions
       const similarity = this.calculateBasicSimilarity(
         String(question.correctAnswer || ""),
         String(userAnswer.answerText || userAnswer.selectedOption || "")
