@@ -64,10 +64,8 @@ class ExamProcessingService {
         }
       }
       
-      // Additional filtering to ensure only MCQ and True/False questions
+      // Additional filtering to ensure supported question types
       processedQuestions = this.filterExamQuestions(processedQuestions);
-      console.log(`Questions after final filtering: ${processedQuestions.length} questions (MCQ + True/False only)`);
-
       console.log(`Document processing complete. Generated ${processedQuestions.length} questions.`);
 
       return {
@@ -208,9 +206,9 @@ class ExamProcessingService {
    * Validate exam processing result
    */
   filterExamQuestions(questions) {
-    // Only allow MCQ questions - filter out all other question types
+    // Only allow MCQ and other supported question types
     
-    const validTypes = ['MULTIPLE_CHOICE', 'mcq'];
+    const validTypes = ['MULTIPLE_CHOICE', 'mcq', 'true_false', 'fill_blank', 'open'];
     
     const filtered = questions.filter(question => {
       // Validate basic question structure
@@ -219,21 +217,20 @@ class ExamProcessingService {
         return false;
       }
       
-      const questionType = (question.type || '').toUpperCase();
+      const questionType = (question.type || '').toLowerCase();
       const isValidType = validTypes.some(allowed => 
-        questionType === allowed.toUpperCase()
+        questionType === allowed.toLowerCase()
       );
       
       if (!isValidType) {
-        console.log(`Filtering out non-MCQ question type: ${question.type}`);
+        console.log(`Filtering out unsupported question type: ${question.type}`);
         return false;
       }
       
-      // MCQ questions need options
-      if (questionType === 'MULTIPLE_CHOICE' || questionType === 'MCQ') {
-        // MCQ questions need options
+      // MCQ and True/False questions need options
+      if (questionType === 'multiple_choice' || questionType === 'mcq' || questionType === 'true_false') {
         if (!Array.isArray(question.options) || question.options.length < 2) {
-          console.log(`Filtering MCQ with insufficient options:`, question);
+          console.log(`Filtering ${questionType} with insufficient options:`, question);
           return false;
         }
       }
@@ -241,7 +238,7 @@ class ExamProcessingService {
       return true;
     });
     
-    console.log(`Filtered exam questions: ${filtered.length} MCQ questions from ${questions.length} total (non-MCQ removed)`);
+    console.log(`Filtered exam questions: ${filtered.length} questions from ${questions.length} total`);
     return filtered;
   }
 

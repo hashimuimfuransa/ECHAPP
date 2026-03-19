@@ -272,10 +272,10 @@ const uploadVideo = async (req, res) => {
         // Update progress to indicate completion
         UploadProgressService.updateProgress(uploadId, 100, 'completed', 'Upload completed successfully!');
 
-        // If courseId and sectionId are provided AND createLesson is true (or not specified), create a lesson with the video
+        // If courseId and sectionId are provided AND createLesson is true, create a lesson with the video
         let lesson = null;
         console.log('createLesson value:', req.body.createLesson, 'type:', typeof req.body.createLesson);
-        const createLesson = req.body.createLesson !== 'false' && req.body.createLesson !== false;
+        const createLesson = req.body.createLesson === 'true' || req.body.createLesson === true;
         console.log('createLesson evaluated to:', createLesson);
         if (createLesson && req.body.courseId && req.body.sectionId) {
           const Lesson = require('../models/Lesson');
@@ -514,8 +514,9 @@ const uploadDocument = async (req, res) => {
       
       // Check if this document is intended for lesson creation/update (not for exam)
       // If courseId and sectionId are provided but createExamFromDocument is not set to 'true',
-      // create a lesson with the document as notes
-      if (req.body.courseId && req.body.sectionId && req.body.createExamFromDocument !== 'true') {
+      // AND createLesson is true, create a lesson with the document as notes
+      const createLesson = req.body.createLesson === 'true' || req.body.createLesson === true;
+      if (createLesson && req.body.courseId && req.body.sectionId && req.body.createExamFromDocument !== 'true') {
         try {
           const Lesson = require('../models/Lesson');
           const Section = require('../models/Section');

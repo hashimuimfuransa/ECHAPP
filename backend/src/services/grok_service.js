@@ -231,7 +231,7 @@ class GrokService {
    */
   async processChunk(chunk, examType, fileName, chunkNum, totalChunks) {
     // Deliberately compact prompt — less ambiguity, fewer hallucinations
-    const prompt = `You are extracting exam questions from an educational document.
+    const prompt = `You are an expert examiner extracting and organizing exam questions from an educational document.
 
 EXAM TYPE: ${examType}
 FILE: ${fileName}
@@ -243,8 +243,9 @@ RULES:
 3. For MCQ: "correctAnswer" must be a zero-based integer index into "options".
 4. For true_false: set options to ["True","False"] and correctAnswer to 0 or 1.
 5. For fill_blank and open: omit "options"; set correctAnswer to the answer string.
-6. If no questions are found, return {"questions":[]}.
-7. Respond with ONLY valid JSON — no markdown fences, no explanation.
+6. Identify the "section" or topic for each question based on headings in the text.
+7. If no questions are found, return {"questions":[]}.
+8. Respond with ONLY valid JSON — no markdown fences, no explanation.
 
 QUESTION SCHEMA:
 {
@@ -254,7 +255,8 @@ QUESTION SCHEMA:
       "type": "mcq | true_false | fill_blank | open",
       "options": ["A","B","C","D"],   // MCQ and true_false only
       "correctAnswer": 0,             // integer index for MCQ/true_false; string for others
-      "points": 1
+      "points": 1,
+      "section": "<topic or section heading>"
     }
   ]
 }
@@ -360,7 +362,7 @@ ${chunk}
         }
         if (idx < 0 || idx >= q.options.length) idx = 0; // safe fallback
 
-        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1 });
+        acc.push({ ...q, type, correctAnswer: idx, points: q.points ?? 1, section: q.section || "" });
         return acc;
       }
 
@@ -377,7 +379,7 @@ ${chunk}
         }
         if (idx < 0 || idx > 1) idx = 0;
 
-        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1 });
+        acc.push({ ...q, type, options, correctAnswer: idx, points: q.points ?? 1, section: q.section || "" });
         return acc;
       }
 
@@ -387,6 +389,7 @@ ${chunk}
         type,
         correctAnswer: String(q.correctAnswer ?? ""),
         points: q.points ?? 1,
+        section: q.section || "",
       });
       return acc;
     }, []);
@@ -433,16 +436,29 @@ ${chunk}
     // Hard-limit to avoid token overflow — no inline comment leaking into prompt
     const contentPreview = documentText.substring(0, 8000);
 
-    const prompt = `You are an expert educational content organizer. Organize the lesson notes below into a clear, structured format for student study.
+    const prompt = `You are an expert educational content organizer. Your goal is to transform messy or raw lesson notes into a high-quality, structured study guide.
 
-Instructions:
-- Identify main topics and subtopics with clear headings
-- Use bullet points for key concepts
-- Include examples where present in the source
-- Keep language clear and accessible
+STRUCTURE:
+1. TITLE: A clear, descriptive title for the notes.
+2. OVERVIEW: A brief (2-3 sentence) summary of what these notes cover.
+3. STRUCTURED CONTENT: Organize into logical modules or sections:
+   - Use Markdown headers (# for title, ## for sections, ### for sub-sections).
+   - Use bold text for key terms and definitions.
+   - Use bullet points for lists and concepts.
+   - Use code blocks for any technical formulas or snippets.
+4. SUMMARY: A "Key Takeaways" section at the end.
 
-NOTES:
-${contentPreview}`;
+INSTRUCTIONS:
+- Identify main topics and subtopics with clear headings.
+- Preserve all factual information while removing redundancies.
+- Include all examples, case studies, or formulas present in the source.
+- If the source text is disorganized, reorder it into a logical learning sequence.
+- Keep the language professional, clear, and accessible.
+
+SOURCE NOTES:
+---
+${contentPreview}
+---`;
 
     const completion = await this.groq.chat.completions.create({
       model: await this.resolveModel(),

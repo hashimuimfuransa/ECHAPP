@@ -17,6 +17,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   record_windows
   rive_native
   share_plus
+  syncfusion_pdfviewer_windows
   url_launcher_windows
 )
 

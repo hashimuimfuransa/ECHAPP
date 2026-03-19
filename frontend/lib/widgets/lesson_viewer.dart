@@ -19,6 +19,7 @@ import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
+import 'package:excellencecoachinghub/presentation/widgets/document_viewer/document_viewer.dart';
 import 'dart:io';
 
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
@@ -1098,14 +1099,21 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () async {
-              final uri = Uri.parse(pdfUrl);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DocumentViewer(
+                    documentPath: pdfUrl,
+                    title: widget.lesson.title,
+                    isPdf: true,
+                    canDownload: false, // Ensure downloading is disabled
+                  ),
+                ),
+              );
             },
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('Open PDF Viewer'),
+            icon: const Icon(Icons.picture_as_pdf),
+            label: const Text('View PDF Notes'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
               foregroundColor: Colors.white,
