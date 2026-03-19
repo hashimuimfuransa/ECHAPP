@@ -902,7 +902,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           
           if (_documentPath != null || _notesPdfUrl != null)
             Padding(
-              padding: const EdgeInsets.top(15),
+              padding: const EdgeInsets.only(top: 15),
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(

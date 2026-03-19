@@ -522,15 +522,21 @@ ${contentPreview}`;
       const q = questions.find((quest) => quest._id.toString() === ua.questionId.toString());
       if (!q) return null;
 
+      const correctAnswerText = q.type === "mcq" || q.type === "true_false"
+        ? (q.options && q.options[q.correctAnswer] ? q.options[q.correctAnswer] : q.correctAnswer)
+        : q.correctAnswer;
+
+      const studentAnswerText = q.type === "mcq" || q.type === "true_false"
+        ? (q.options && q.options[ua.selectedOption] ? q.options[ua.selectedOption] : ua.selectedOption)
+        : (ua.answerText || ua.selectedOption || "");
+
       return {
         id: ua.questionId.toString(),
         type: q.type,
         question: q.question,
         options: q.options,
-        correctAnswer: q.correctAnswer,
-        studentAnswer: q.type === "mcq" || q.type === "true_false" 
-          ? (q.options[ua.selectedOption] || ua.selectedOption)
-          : (ua.answerText || ua.selectedOption || ""),
+        correctAnswer: correctAnswerText,
+        studentAnswer: studentAnswerText,
         points: q.points || 1,
       };
     }).filter(Boolean);
@@ -538,14 +544,15 @@ ${contentPreview}`;
     if (gradingData.length === 0) return [];
 
     const prompt = `You are an expert examiner grading a student's exam.
-Grade the following answers objectively based on the correct answer provided.
+For each question, first determine the correct answer independently based on the question text, then compare it with the student's answer and the provided correct answer to ensure fair and accurate grading.
 
 RULES:
-1. For MCQ and true_false: The answer must match the correct answer exactly (index or text).
+1. For MCQ and true_false: The answer must match the correct answer exactly.
 2. For fill_blank: Allow minor spelling errors or case differences if the meaning is identical.
 3. For open: Grade based on conceptual correctness and completeness. Give partial points if partially correct.
-4. Provide a brief "feedback" string for each answer (max 15 words).
-5. Respond ONLY with a JSON array of objects.
+4. If the provided 'correctAnswer' is missing or seems incorrect, use your expert knowledge of the topic to grade.
+5. Provide a brief "feedback" string for each answer (max 15 words) explaining the grade.
+6. Respond ONLY with a JSON array of objects.
 
 SCHEMA:
 [
