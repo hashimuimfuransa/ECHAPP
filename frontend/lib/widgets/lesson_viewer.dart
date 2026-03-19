@@ -52,6 +52,7 @@ class LessonViewer extends ConsumerStatefulWidget {
   final List<Certificate>? certificates;
   final VoidCallback? onComplete;
   final bool isAdminPreview;
+  final bool isCompleted;
   
   const LessonViewer({
     super.key,
@@ -62,6 +63,7 @@ class LessonViewer extends ConsumerStatefulWidget {
     this.certificates,
     this.onComplete,
     this.isAdminPreview = false,
+    this.isCompleted = false,
   });
 
   @override
@@ -544,16 +546,24 @@ class _LessonViewerState extends ConsumerState<LessonViewer> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _markAsCompleteManually,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Mark Lesson as Complete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    onPressed: widget.isCompleted ? null : _markAsCompleteManually,
+                    icon: Icon(widget.isCompleted ? Icons.check_circle : Icons.check_circle_outline),
+                    label: Text(
+                      widget.isCompleted ? 'Completed' : 'Mark Lesson as Complete', 
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                      foregroundColor: AppTheme.primaryGreen,
+                      backgroundColor: widget.isCompleted 
+                          ? Colors.green.withOpacity(0.1)
+                          : AppTheme.primaryGreen.withOpacity(0.1),
+                      foregroundColor: widget.isCompleted ? Colors.green : AppTheme.primaryGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppTheme.primaryGreen, width: 1.5),
+                        side: BorderSide(
+                          color: widget.isCompleted ? Colors.green : AppTheme.primaryGreen, 
+                          width: 1.5
+                        ),
                       ),
                       elevation: 0,
                     ),

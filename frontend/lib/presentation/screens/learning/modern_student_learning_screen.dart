@@ -1868,6 +1868,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
     
     // Navigate to the lesson viewer
     if (mounted) {
+      final isCompleted = _lessonCompletionStatus[lesson.id] ?? false;
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => LessonViewer(
@@ -1877,6 +1878,7 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
             sectionLessons: _sectionLessons,
             certificates: _courseCertificates,
             onComplete: () => _markLessonAsComplete(lesson),
+            isCompleted: isCompleted,
           ),
         ),
       );
@@ -1942,28 +1944,36 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
 
   Widget _buildCompleteSectionButton(Section section, int index) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompleted = _sectionCompletionStatus[section.id] ?? false;
     
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: AppTheme.primaryGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: isCompleted 
+            ? null 
+            : const LinearGradient(
+                colors: AppTheme.primaryGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        color: isCompleted ? Colors.green.withOpacity(0.1) : null,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: isCompleted 
+            ? null 
+            : [
+                BoxShadow(
+                  color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+        border: isCompleted ? Border.all(color: Colors.green.withOpacity(0.3), width: 1.5) : null,
       ),
       child: ElevatedButton(
-        onPressed: _isCompletingSection ? null : () => _completeSection(section, index),
+        onPressed: (isCompleted || _isCompletingSection) ? null : () => _completeSection(section, index),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: isCompleted ? Colors.green : Colors.white,
+          disabledForegroundColor: isCompleted ? Colors.green : Colors.white70,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -1993,20 +2003,21 @@ class _ModernStudentLearningScreenState extends ConsumerState<ModernStudentLearn
                 ),
               ],
             )
-          : const Row(
+          : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.check_circle,
-                  color: Colors.white,
+                  isCompleted ? Icons.check_circle : Icons.check_circle_outline,
+                  color: isCompleted ? Colors.green : Colors.white,
                   size: 20,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
-                  'Mark Section as Completed',
+                  isCompleted ? 'Section Completed' : 'Mark Section as Completed',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: isCompleted ? FontWeight.bold : FontWeight.w700,
+                    color: isCompleted ? Colors.green : Colors.white,
                   ),
                 ),
               ],

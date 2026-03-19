@@ -291,8 +291,10 @@ const completeSection = async (req, res) => {
       return sendError(res, 'Access to this course has expired', 403);
     }
 
+    const mongoose = require('mongoose');
+    
     // Find all lessons in this section
-    const sectionLessons = await Lesson.find({ sectionId });
+    const sectionLessons = await Lesson.find({ sectionId: new mongoose.Types.ObjectId(sectionId) });
     if (!sectionLessons || sectionLessons.length === 0) {
       return sendNotFound(res, 'No lessons found in this section');
     }
@@ -312,7 +314,7 @@ const completeSection = async (req, res) => {
     
     if (addedCount > 0 || enrollment.progress < 100) {
       // Calculate real progress percentage
-      const totalLessons = await Lesson.countDocuments({ courseId: enrollment.courseId });
+      const totalLessons = await Lesson.countDocuments({ courseId: new mongoose.Types.ObjectId(enrollment.courseId) });
       enrollment.progress = totalLessons > 0 
         ? Math.round((enrollment.completedLessons.length / totalLessons) * 100) 
         : 0;
