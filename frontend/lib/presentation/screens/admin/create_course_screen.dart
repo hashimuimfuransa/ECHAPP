@@ -90,6 +90,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       final course = await repository.getCourseById(widget.courseId!);
       
       print('Course loaded successfully: ${course.title}'); // Debug log
+      print('Course category ID from API: ${course.categoryId}');
+      print('Course category map: ${course.category}');
       
       // Populate form with course data
       _titleController.text = course.title ?? '';
@@ -103,6 +105,9 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
       _thumbnailUrl = course.thumbnail;
       _isPublished = course.isPublished; // Set publish status
       _selectedCategoryId = course.categoryId ?? course.category?['id'] ?? course.category?['_id'];
+      
+      print('Selected Category ID set to: $_selectedCategoryId');
+      
       _thumbnailKey = UniqueKey(); // Refresh key when loading course details
       
       // Load access duration if available
@@ -315,6 +320,14 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
         final accessDuration = _accessDurationController.text.trim().isEmpty 
             ? null 
             : int.tryParse(_accessDurationController.text.trim());
+        
+        print('=== DEBUG UPDATE COURSE ===');
+        print('Course ID: ${widget.courseId}');
+        print('Selected Category ID: $_selectedCategoryId');
+        print('Title: $title');
+        print('Description: $description');
+        print('Price: $price');
+        print('===========================');
         
         final course = await repository.updateCourse(
           id: widget.courseId!,

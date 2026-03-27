@@ -322,6 +322,12 @@ const updateCourse = async (req, res) => {
     // Prepare update data
     const updateData = { ...req.body };
     
+    // Map categoryId to category for MongoDB
+    if (req.body.categoryId) {
+      updateData.category = req.body.categoryId;
+      delete updateData.categoryId; // Remove categoryId to avoid confusion
+    }
+    
     // Calculate accessDurationDays for backward compatibility if accessDuration is updated
     if (req.body.accessDuration) {
       const value = parseInt(req.body.accessDuration);

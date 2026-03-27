@@ -192,6 +192,12 @@ class CourseService {
         if (accessDurationDays != null) 'accessDurationDays': accessDurationDays,
       };
 
+      print('=== UPDATE COURSE API CALL ===');
+      print('Course ID: $id');
+      print('Request Body: $requestBody');
+      print('Category ID in request: ${requestBody['categoryId']}');
+      print('==============================');
+
       final response = await _apiClient.put(
         '${ApiConfig.courses}/$id',
         body: requestBody,

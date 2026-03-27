@@ -1,6 +1,6 @@
 const axios = require('axios');
 const FormData = require('form-data');
-const mammoth = require('mammoth');
+const mammoth = require('mammoth'); 
 
 // Polyfill for DOMMatrix in Node.js environment
 if (typeof DOMMatrix === 'undefined') {
@@ -90,4 +90,4 @@ class DocumentProcessingService {
   }
 }
 
-module.exports = new DocumentProcessingService();
+module.exports = new DocumentProcessingService();      
