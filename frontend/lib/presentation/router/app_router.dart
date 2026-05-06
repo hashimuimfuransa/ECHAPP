@@ -52,6 +52,9 @@ import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_s
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
+import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 
 class AppRouter {
   // Static instance for singleton
@@ -375,6 +378,34 @@ class AppRouter {
               GoRoute(
                 path: '/downloads',
                 builder: (context, state) => const DownloadsScreen(),
+              ),
+              GoRoute(
+                path: '/my-courses',
+                builder: (context, state) => const EnrolledCoursesScreen(),
+              ),
+              GoRoute(
+                path: '/books',
+                builder: (context, state) => const LibraryScreen(),
+                routes: [
+                  GoRoute(
+                    path: '/:bookId',
+                    builder: (context, state) {
+                      final bookId = state.pathParameters['bookId'] ?? '';
+                      final book = state.extra as Book?;
+                      
+                      if (book != null) {
+                        return BookReaderScreen(book: book);
+                      } else {
+                        return Scaffold(
+                          appBar: AppBar(title: const Text('Book Not Found')),
+                          body: const Center(
+                            child: Text('Book not found or could not be loaded'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
               GoRoute(
                 path: '/notifications',

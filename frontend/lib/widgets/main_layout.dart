@@ -378,121 +378,256 @@ class MainLayout extends ConsumerWidget {
       currentIndex = 0;
     } else if (currentRoute.contains('/courses')) {
       currentIndex = 1;
-    } else if (currentRoute.contains('/my-courses')) {
+    } else if (currentRoute.contains('/books')) {
       currentIndex = 2;
     } else if (currentRoute.contains('/downloads')) {
       currentIndex = 3;
-    } else if (currentRoute.contains('/profile')) {
+    } else if (currentRoute.contains('/my-courses')) {
       currentIndex = 4;
     }
-
+    
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-        color: Colors.transparent,
-        child: Container(
-          height: 72,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-            border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.01),
-              width: 1,
-            ),
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return Container(
+      height: _getResponsiveNavBarHeight(context),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            width: 1,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BottomNavigationBar(
-              currentIndex: currentIndex,
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    context.go('/dashboard');
-                    break;
-                  case 1:
-                    context.go('/courses');
-                    break;
-                  case 2:
-                    context.go('/my-courses');
-                    break;
-                  case 3:
-                    context.go('/downloads');
-                    break;
-                  case 4:
-                    context.go('/profile');
-                    break;
-                }
-              },
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: AppTheme.primaryGreen,
-              unselectedItemColor: isDark ? Colors.white30 : Colors.black26,
-              selectedFontSize: 10,
-              unselectedFontSize: 10,
-              showUnselectedLabels: false,
-              showSelectedLabels: false,
-              items: [
-                _buildBottomNavItem(
-                  icon: currentIndex == 0 ? Icons.grid_view_rounded : Icons.grid_view_outlined,
-                  label: 'Home',
-                  isSelected: currentIndex == 0,
-                ),
-                _buildBottomNavItem(
-                  icon: currentIndex == 1 ? Icons.school_rounded : Icons.school_outlined,
-                  label: 'Courses',
-                  isSelected: currentIndex == 1,
-                ),
-                _buildBottomNavItem(
-                  icon: currentIndex == 2 ? Icons.play_circle_filled_rounded : Icons.play_circle_outline_rounded,
-                  label: 'Learning',
-                  isSelected: currentIndex == 2,
-                ),
-                _buildBottomNavItem(
-                  icon: currentIndex == 3 ? Icons.download_done_rounded : Icons.download_for_offline_outlined,
-                  label: 'Downloads',
-                  isSelected: currentIndex == 3,
-                ),
-                _buildBottomNavItem(
-                  icon: currentIndex == 4 ? Icons.person_rounded : Icons.person_outline_rounded,
-                  label: 'Profile',
-                  isSelected: currentIndex == 4,
-                ),
-              ],
-            ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: _getResponsiveNavBarPadding(context),
+            vertical: 4,
+          ),
+          child: Row(
+            children: _buildNavItems(context, currentIndex, screenWidth).map((item) => Expanded(child: item)).toList(),
           ),
         ),
       ),
     );
   }
 
-  BottomNavigationBarItem _buildBottomNavItem({
+  List<Widget> _buildNavItems(BuildContext context, int currentIndex, double screenWidth) {
+    final navItems = [
+      {'icon': Icons.home_rounded, 'label': 'Home'},
+      {'icon': Icons.school_rounded, 'label': 'Courses'},
+      {'icon': Icons.menu_book_rounded, 'label': 'Library'},
+      {'icon': Icons.download_rounded, 'label': 'Downloads'},
+      {'icon': Icons.bookmark_rounded, 'label': 'Enrolled'},
+    ];
+    
+    return navItems.asMap().entries.map<Widget>((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final isSelected = currentIndex == index;
+      
+      return _buildMobileNavItem(
+        context: context,
+        icon: item['icon'] as IconData,
+        label: item['label'] as String,
+        isSelected: isSelected,
+        onTap: _getNavigationAction(index, context),
+        screenWidth: screenWidth,
+      );
+    }).toList();
+  }
+
+  Widget _buildMobileNavItem({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required bool isSelected,
+    required VoidCallback onTap,
+    required double screenWidth,
   }) {
-    return BottomNavigationBarItem(
-      icon: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        margin: const EdgeInsets.only(bottom: 0),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryGreen.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmallScreen = screenWidth < 360;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: _getResponsiveNavItemPadding(context),
+          vertical: 6,
         ),
-        child: Icon(icon, size: 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: _getResponsiveNavIconSize(context),
+              height: _getResponsiveNavIconSize(context),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? const Color(0xFF10B981).withOpacity(0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(_getResponsiveNavIconRadius(context)),
+              ),
+              child: Icon(
+                icon,
+                size: _getResponsiveNavIconSize(context) * 0.6,
+                color: isSelected 
+                    ? const Color(0xFF10B981)
+                    : (isDark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: _getResponsiveNavTextSize(context),
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected 
+                    ? const Color(0xFF10B981)
+                    : (isDark ? Colors.white70 : Colors.black54),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
-      label: label,
     );
   }
+
+  void _showContactInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.support_agent_rounded, color: Color(0xFF10B981)),
+              SizedBox(width: 12),
+              Text('AI Support'),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Get help from our AI assistant for:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('• Course recommendations'),
+              Text('• Study tips and guidance'),
+              Text('• Technical support'),
+              Text('• Learning progress tracking'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to AI support or open chat
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start Chat'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Responsive helper methods for bottom navigation
+  double _getResponsiveNavBarHeight(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (screenHeight < 600) {
+      return 65; // Very small screens
+    } else if (screenHeight < 700) {
+      return 70; // Small screens
+    } else {
+      return 75; // Medium and large screens
+    }
+  }
+
+  double _getResponsiveNavBarPadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 2; // Very small screens - further reduced
+    } else if (screenWidth < 400) {
+      return 4; // Small screens - further reduced
+    } else {
+      return 8; // Medium and large screens - further reduced
+    }
+  }
+
+  double _getResponsiveNavIconSize(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 16; // Keep small for very small screens
+    } else if (screenWidth < 400) {
+      return 19; // Slightly increased for small screens
+    } else {
+      return 21; // Slightly increased for medium/large screens
+    }
+  }
+
+  double _getResponsiveNavIconRadius(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 8; // Very small screens
+    } else if (screenWidth < 400) {
+      return 10; // Small screens
+    } else {
+      return 12; // Medium and large screens
+    }
+  }
+
+  double _getResponsiveNavTextSize(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 8; // Very small screens - increased for readability
+    } else if (screenWidth < 400) {
+      return 9; // Small screens - increased for readability
+    } else {
+      return 10; // Medium and large screens - increased for readability
+    }
+  }
+
+  double _getResponsiveNavItemPadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 1; // Very small screens - minimum padding
+    } else if (screenWidth < 400) {
+      return 2; // Small screens - minimum padding
+    } else {
+      return 4; // Medium and large screens - reduced
+    }
+  }
+
+  VoidCallback _getNavigationAction(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        return () => context.go('/dashboard');
+      case 1:
+        return () => context.go('/courses');
+      case 2:
+        return () => context.go('/books');
+      case 3:
+        return () => context.go('/downloads');
+      case 4:
+        return () => context.go('/my-courses');
+      default:
+        return () => context.go('/dashboard');
+    }
+  }
+
 }
