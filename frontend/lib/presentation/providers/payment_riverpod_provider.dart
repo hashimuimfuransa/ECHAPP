@@ -107,6 +107,35 @@ class PaymentStateNotifier extends StateNotifier<PaymentState> {
     }
   }
   
+  // Admin Methods - Admin Payment Initiation
+  Future<PaymentInitiationResponse> adminInitiatePayment({
+    required String userId,
+    required String courseId,
+    required String paymentMethod,
+    required String contactInfo,
+  }) async {
+    state = state.copyWith(isProcessing: true, error: null);
+    
+    try {
+      final response = await _apiService.adminInitiatePayment(
+        userId: userId,
+        courseId: courseId,
+        paymentMethod: paymentMethod,
+        contactInfo: contactInfo,
+      );
+      
+      // Refresh admin payments and stats
+      await loadPayments(status: state.filterStatus, page: state.currentPage);
+      await loadPaymentStats();
+      state = state.copyWith(isProcessing: false);
+      
+      return response;
+    } catch (e) {
+      state = state.copyWith(error: e.toString(), isProcessing: false);
+      rethrow;
+    }
+  }
+
   // User Methods
   Future<void> loadUserPayments({PaymentStatus? status}) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -143,16 +172,19 @@ class PaymentStateNotifier extends StateNotifier<PaymentState> {
         contactInfo: contactInfo,
       );
       
-      // Refresh user payments
+      // Refresh both user payments and admin payments
       await loadUserPayments();
+      // Also refresh admin payments so new pending payments are visible immediately
+      await loadPayments(status: state.filterStatus, page: state.currentPage);
       state = state.copyWith(isProcessing: false);
       
       return response;
     } catch (e) {
-      // If it's a 'payment already initiated' error, still refresh user payments
+      // If it's a 'payment already initiated' error, still refresh both user and admin payments
       // so the UI can detect the pending payment
       if (e.toString().contains('already initiated')) {
         await loadUserPayments();
+        await loadPayments(status: state.filterStatus, page: state.currentPage);
       }
       
       state = state.copyWith(error: e.toString(), isProcessing: false);
@@ -179,6 +211,25 @@ class PaymentStateNotifier extends StateNotifier<PaymentState> {
     }
   }
   
+  Future<void> deletePayment(String paymentId) async {
+    state = state.copyWith(isProcessing: true, error: null);
+    
+    try {
+      await _apiService.deletePayment(paymentId);
+      
+      // Refresh payments lists
+      await loadUserPayments(status: state.filterStatus);
+      if (state.payments.isNotEmpty) {
+        await loadPayments(status: state.filterStatus, page: state.currentPage);
+      }
+      // Also refresh stats since payment count changed
+      await loadPaymentStats();
+      state = state.copyWith(isProcessing: false);
+    } catch (e) {
+      state = state.copyWith(error: e.toString(), isProcessing: false);
+    }
+  }
+  
   Future<Payment> getPaymentDetails(String paymentId) async {
     state = state.copyWith(isLoading: true, error: null);
     
@@ -188,6 +239,18 @@ class PaymentStateNotifier extends StateNotifier<PaymentState> {
       return payment;
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
+      rethrow;
+    }
+  }
+  
+  Future<void> downloadInvoice(String paymentId) async {
+    state = state.copyWith(isProcessing: true, error: null);
+    
+    try {
+      await _apiService.downloadInvoice(paymentId);
+      state = state.copyWith(isProcessing: false);
+    } catch (e) {
+      state = state.copyWith(error: e.toString(), isProcessing: false);
       rethrow;
     }
   }
@@ -257,7 +320,7 @@ class PaymentState {
     this.filterStatus,
     this.searchQuery = '',
     this.currentPage = 1,
-    this.itemsPerPage = 10,
+    this.itemsPerPage = 50,
     this.totalPages = 1,
     this.totalItems = 0,
   });

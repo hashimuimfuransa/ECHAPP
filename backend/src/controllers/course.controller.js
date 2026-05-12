@@ -137,6 +137,7 @@ const getCourses = async (req, res) => {
       { path: 'category', select: 'name' }
     ]);
     
+        
     const total = await Course.countDocuments(filter);
     
     console.log(`Found ${courses.length} courses out of ${total} total`);
@@ -379,6 +380,66 @@ const updateCourse = async (req, res) => {
     // Trigger notifications if course was just published
     if (!wasPublished && isNowPublished) {
       await sendCourseNotifications(course);
+    }
+    
+    // Update existing enrollments if access duration changed
+    if (req.body.accessDuration || req.body.accessDurationDays !== undefined) {
+      const Enrollment = require('../models/Enrollment');
+      const enrollments = await Enrollment.find({ courseId: req.params.id });
+      
+      console.log(`Updating ${enrollments.length} existing enrollments with new access duration`);
+      
+      for (const enrollment of enrollments) {
+        // Calculate new expiration date based on updated course access duration
+        let newExpirationDate = null;
+        
+        if (req.body.accessDuration) {
+          const value = parseInt(req.body.accessDuration);
+          const unit = req.body.accessDurationUnit || 'days';
+          let days = value;
+          
+          switch (unit) {
+            case 'hours':
+              days = value / 24;
+              break;
+            case 'weeks':
+              days = value * 7;
+              break;
+            case 'months':
+              days = value * 30; // Approximation
+              break;
+            case 'years':
+              days = value * 365; // Approximation
+              break;
+          }
+          
+          newExpirationDate = new Date(enrollment.enrollmentDate);
+          newExpirationDate.setDate(newExpirationDate.getDate() + Math.ceil(days));
+        } else if (req.body.accessDurationDays !== undefined) {
+          const days = req.body.accessDurationDays === null || req.body.accessDurationDays === '' ? null : parseInt(req.body.accessDurationDays);
+          if (days) {
+            newExpirationDate = new Date(enrollment.enrollmentDate);
+            newExpirationDate.setDate(newExpirationDate.getDate() + days);
+          }
+        }
+        
+        // Check if enrollment should be unenrolled (already expired)
+        const now = new Date();
+        if (newExpirationDate && newExpirationDate < now) {
+          console.log(`Unenrolling student ${enrollment.userId} - access expired on ${newExpirationDate}`);
+          await Enrollment.findByIdAndDelete(enrollment._id);
+        } else if (newExpirationDate) {
+          console.log(`Updating expiration for student ${enrollment.userId} to ${newExpirationDate}`);
+          await Enrollment.findByIdAndUpdate(enrollment._id, {
+            accessExpirationDate: newExpirationDate
+          });
+        } else {
+          console.log(`Removing expiration for student ${enrollment.userId} - unlimited access`);
+          await Enrollment.findByIdAndUpdate(enrollment._id, {
+            accessExpirationDate: null
+          });
+        }
+      }
     }
     
     sendSuccess(res, transformUrls(course), 'Course updated successfully');

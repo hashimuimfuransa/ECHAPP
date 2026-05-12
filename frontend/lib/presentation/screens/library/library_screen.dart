@@ -14,38 +14,26 @@ class LibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  late Future<List<Book>> _booksFuture;
   List<Book> _allBooks = [];
   List<Book> _filteredBooks = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
   String? _errorMessage;
   final GutenbergService _gutenbergService = GutenbergService();
   final TextEditingController _searchController = TextEditingController();
   String _selectedLanguage = 'All';
   String _selectedSubject = 'All';
   bool _showFilters = false;
+  final ScrollController _scrollController = ScrollController();
+  static const int _pageSize = 20;
 
   @override
   void initState() {
     super.initState();
-    _booksFuture = _gutenbergService.fetchBooks(limit: 50);
-    _booksFuture.then((books) {
-      if (mounted) {
-        setState(() {
-          _allBooks = books;
-          _filteredBooks = books;
-          _isLoading = false;
-          _errorMessage = null;
-        });
-      }
-    }).catchError((error) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = error.toString();
-        });
-      }
-    });
+    _loadInitialBooks();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -129,11 +117,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             if (_showFilters) _buildFilters(context),
             // Content
             Expanded(
-              child: _isLoading
+              child: _isLoading && _allBooks.isEmpty
                   ? const Center(
                       child: CircularProgressIndicator(color: Color(0xFF10B981)),
                     )
-                  : _errorMessage != null
+                  : _errorMessage != null && _allBooks.isEmpty
                       ? _buildErrorWidget()
                       : _buildCoursesList(context),
             ),
@@ -173,30 +161,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _isLoading = true;
-                _errorMessage = null;
-              });
-              _booksFuture = _gutenbergService.fetchBooks(limit: 50);
-              _booksFuture.then((books) {
-                if (mounted) {
-                  setState(() {
-                    _allBooks = books;
-                    _filteredBooks = books;
-                    _isLoading = false;
-                    _errorMessage = null;
-                  });
-                }
-              }).catchError((error) {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                    _errorMessage = error.toString();
-                  });
-                }
-              });
-            },
+            onPressed: _loadInitialBooks,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               foregroundColor: Colors.white,
@@ -218,6 +183,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           .where((lang) => lang.isNotEmpty)
           .toSet()
     ];
+    
+    // Use academic categories from the service with priority subjects first
+    final academicCategories = <String>[
+      'All Academic',
+      'ICT',
+      'Math',
+      'Science',
+      'Geography',
+      ..._gutenbergService.getAcademicCategories()
+    ];
+    
     final allSubjects = <String>[
       'All',
       ..._allBooks
@@ -307,9 +283,52 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          // Academic Category Filter
+          Text(
+            'Academic Category',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.getTextColor(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: academicCategories.length,
+              itemBuilder: (context, index) {
+                final category = academicCategories[index];
+                final isSelected = _selectedSubject == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(category.length > 15 ? category.substring(0, 15) + '...' : category),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedSubject = category;
+                        _applyFilters();
+                      });
+                    },
+                    backgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                    selectedColor: const Color(0xFF10B981).withOpacity(0.2),
+                    checkmarkColor: const Color(0xFF10B981),
+                    labelStyle: TextStyle(
+                      color: isSelected 
+                          ? const Color(0xFF10B981) 
+                          : AppTheme.getTextColor(context),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
           // Subject Filter
           Text(
-            'Subject',
+            'General Subject',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -355,7 +374,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Widget _buildCoursesList(BuildContext context) {
-    if (_filteredBooks.isEmpty) {
+    if (_filteredBooks.isEmpty && !_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -402,6 +421,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       onRefresh: _refreshBooks,
       color: const Color(0xFF10B981),
       child: GridView.builder(
+        controller: _scrollController,
         padding: ResponsiveBreakpoints.getPadding(context),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: ResponsiveBreakpoints.isDesktop(context) ? 3 : 2,
@@ -409,8 +429,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           mainAxisSpacing: 16,
           childAspectRatio: 0.75,
         ),
-        itemCount: _filteredBooks.length,
+        itemCount: _filteredBooks.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index == _filteredBooks.length && _hasMore) {
+            return _buildLoadingIndicator();
+          }
           return _buildBookCard(context, _filteredBooks[index]);
         },
       ),
@@ -565,14 +588,90 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     });
   }
 
-  void _applyFilters() {
+  Future<void> _applyFilters() async {
     setState(() {
-      _filteredBooks = _allBooks.where((book) {
-        final languageMatch = _selectedLanguage == 'All' || book.languages.contains(_selectedLanguage);
-        final subjectMatch = _selectedSubject == 'All' || book.subjects.contains(_selectedSubject);
-        return languageMatch && subjectMatch;
-      }).toList();
+      _isLoading = true;
     });
+
+    try {
+      List<Book> booksToFilter = _allBooks;
+
+      // If a priority subject is selected, fetch subject-specific books
+      if (['ICT', 'Math', 'Science', 'Geography'].contains(_selectedSubject)) {
+        final subjectBooks = await _gutenbergService.searchBySubject(_selectedSubject, limit: 100);
+        booksToFilter = subjectBooks;
+      }
+
+      setState(() {
+        _filteredBooks = booksToFilter.where((book) {
+          final languageMatch = _selectedLanguage == 'All' || book.languages.contains(_selectedLanguage);
+          
+          // Handle academic category filtering
+          bool subjectMatch = false;
+          if (_selectedSubject == 'All') {
+            subjectMatch = true;
+          } else if (_selectedSubject == 'All Academic') {
+            // Show all academic books
+            subjectMatch = _isAcademicBook(book);
+          } else if (['ICT', 'Math', 'Science', 'Geography'].contains(_selectedSubject)) {
+            // Already filtered by searchBySubject
+            subjectMatch = true;
+          } else {
+            // Filter by specific academic category or general subject
+            subjectMatch = book.subjects.any((subject) => 
+                subject.toLowerCase().contains(_selectedSubject.toLowerCase()));
+          }
+          
+          return languageMatch && subjectMatch;
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error filtering books: $error'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  // Helper method to check if a book is academic
+  bool _isAcademicBook(Book book) {
+    final titleLower = book.title.toLowerCase();
+    final subjectsLower = book.subjects.map((s) => s.toLowerCase()).join(' ');
+    
+    // Check for academic keywords
+    final academicKeywords = [
+      'textbook', 'handbook', 'manual', 'guide', 'introduction', 
+      'principles', 'theory', 'methods', 'studies', 'research',
+      'academic', 'scholar', 'university', 'college', 'education',
+      'learning', 'course', 'lecture', 'treatise', 'dissertation', 'thesis'
+    ];
+    
+    final hasAcademicKeyword = academicKeywords.any((keyword) =>
+        titleLower.contains(keyword) || subjectsLower.contains(keyword));
+    
+    // Check for academic subjects
+    final academicSubjects = [
+      'Science', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Medicine',
+      'Engineering', 'Computer Science', 'Philosophy', 'History', 'Literature',
+      'Psychology', 'Sociology', 'Economics', 'Political Science', 'Education',
+      'Law', 'Business', 'Technology', 'Religion', 'Art', 'Music', 'Linguistics',
+      'Anthropology', 'Geography', 'Archaeology', 'Astronomy', 'Geology',
+      'Botany', 'Zoology'
+    ];
+    
+    final hasAcademicSubject = book.subjects.any((subject) =>
+        academicSubjects.any((academicSubject) =>
+            subject.toLowerCase().contains(academicSubject.toLowerCase())));
+    
+    return hasAcademicKeyword || hasAcademicSubject;
   }
 
   void _openBook(BuildContext context, Book book) {
@@ -588,34 +687,107 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     });
   }
 
-  Future<void> _refreshBooks() async {
+  Future<void> _loadInitialBooks() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _currentPage = 1;
+      _allBooks.clear();
+      _filteredBooks.clear();
+      _hasMore = true;
     });
-    _booksFuture = _gutenbergService.fetchBooks(limit: 50);
-    await _booksFuture.then((books) {
+    
+    try {
+      final books = await _gutenbergService.fetchAcademicBooks(page: 1, limit: _pageSize);
       if (mounted) {
         setState(() {
           _allBooks = books;
           _filteredBooks = books;
           _isLoading = false;
-          _errorMessage = null;
+          _hasMore = books.length == _pageSize;
         });
       }
-    }).catchError((error) {
+    } catch (error) {
       if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = error.toString();
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreBooks() async {
+    if (_isLoadingMore || !_hasMore) return;
+    
+    setState(() {
+      _isLoadingMore = true;
     });
+    
+    try {
+      final newBooks = await _gutenbergService.fetchAcademicBooks(page: _currentPage + 1, limit: _pageSize);
+      if (mounted) {
+        setState(() {
+          _currentPage++;
+          _allBooks.addAll(newBooks);
+          _filteredBooks = _allBooks;
+          _isLoadingMore = false;
+          // Consider hasMore true if we got any books, not just full page
+          _hasMore = newBooks.isNotEmpty;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    final delta = 300.0; // Load more when 300px from the bottom
+    
+    if (maxScroll - currentScroll <= delta && !_isLoadingMore && _hasMore) {
+      _loadMoreBooks();
+    }
+  }
+
+  Future<void> _refreshBooks() async {
+    await _loadInitialBooks();
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: Color(0xFF10B981)),
+            const SizedBox(height: 8),
+            Text(
+              'Loading more books...',
+              style: TextStyle(
+                color: AppTheme.getSecondaryTextColor(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

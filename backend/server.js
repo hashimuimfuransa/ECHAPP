@@ -12,16 +12,6 @@ const connectDB = require('./src/config/database');
 // Initialize Firebase Admin SDK
 require('./src/config/firebase');
 
-// Initialize Course Expiration Service
-const CourseExpirationService = require('./src/services/course-expiration.service');
-const NotificationSchedulerService = require('./src/services/notification-scheduler.service');
-
-// Schedule course expiration checks (every 60 minutes)
-CourseExpirationService.scheduleExpirationChecks(60);
-
-// Schedule notification checks (every 24 hours)
-NotificationSchedulerService.schedule(24);
-
 console.log('🚀 Excellence Coaching Hub Backend Server Starting...');
 
 const app = express();
@@ -62,7 +52,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const courseRoutes = require('./src/routes/course.routes');
 const categoryRoutes = require('./src/routes/category.routes');
 const enrollmentRoutes = require('./src/routes/enrollment.routes');
-const examRoutes = require('./src/routes/exam.routes');
+const quizRoutes = require('./src/routes/quiz.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const videoRoutes = require('./src/routes/video.routes');
@@ -80,7 +70,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/exams', examRoutes);
+app.use('/api/quizzes', quizRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/videos', videoRoutes);
@@ -117,6 +107,19 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
   try {
     await connectDB();
     console.log('✅ Database connected successfully');
+    
+    // Initialize Course Expiration Service AFTER database connection
+    const CourseExpirationService = require('./src/services/course-expiration.service');
+    const NotificationSchedulerService = require('./src/services/notification-scheduler.service');
+
+    // Schedule course expiration checks (every 60 minutes)
+    CourseExpirationService.scheduleExpirationChecks(60);
+    console.log('🔄 Course expiration checks scheduled (every 60 minutes)');
+
+    // Schedule notification checks (every 24 hours)
+    NotificationSchedulerService.schedule(24);
+    console.log('📧 Notification checks scheduled (every 24 hours)');
+    
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
     process.exit(1);

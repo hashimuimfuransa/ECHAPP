@@ -8,18 +8,20 @@ class CourseExpirationService {
   // Check for expired enrollments and process them
   static async checkExpiredEnrollments() {
     try {
-      console.log('Checking for expired course enrollments...');
+      console.log('🔍 Checking for expired course enrollments...');
       
       const now = new Date();
+      console.log('⏰ Current time:', now.toISOString());
       
       // Find all enrollments where access has expired
       const expiredEnrollments = await Enrollment.find({
         accessExpirationDate: { $ne: null, $lt: now }
-      });
+      }).populate('courseId', 'title');
       
-      console.log(`Found ${expiredEnrollments.length} expired enrollments`);
+      console.log(`📋 Found ${expiredEnrollments.length} expired enrollments`);
       
       for (const enrollment of expiredEnrollments) {
+        console.log(`🗑️  Processing expired enrollment: User ${enrollment.userId}, Course: ${enrollment.courseId?.title || 'Unknown'}, Expired: ${enrollment.accessExpirationDate}`);
         // ALWAYS un-enroll (delete) regardless of completion status as per user request
         await this.processExpiredEnrollment(enrollment);
       }
@@ -33,7 +35,7 @@ class CourseExpirationService {
         message: `Processed ${expiredEnrollments.length} expired enrollments`
       };
     } catch (error) {
-      console.error('Error checking expired enrollments:', error);
+      console.error('❌ Error checking expired enrollments:', error);
       throw error;
     }
   }

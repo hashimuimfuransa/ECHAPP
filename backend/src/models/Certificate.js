@@ -13,7 +13,7 @@ const certificateSchema = new mongoose.Schema({
   },
   examId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Exam',
+    ref: 'Quiz',
     required: true
   },
   score: {

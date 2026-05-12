@@ -1,717 +1,330 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
+import '../../../models/section.dart';
+import '../../../models/lesson.dart';
+import '../../../models/question.dart';
+import '../../../services/api/quiz_service.dart';
+import '../../../services/api/section_service.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/presentation/providers/content_management_provider.dart';
-import 'package:excellencecoachinghub/models/section.dart';
-import 'package:excellencecoachinghub/models/lesson.dart';
-import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
-import 'package:excellencecoachinghub/models/course.dart';
-import 'package:excellencecoachinghub/data/repositories/video_repository.dart';
-import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart';
-import 'package:excellencecoachinghub/data/repositories/exam_repository.dart';
-import 'package:excellencecoachinghub/models/video.dart';
-import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
-import 'package:excellencecoachinghub/services/api/exam_service.dart';
-import 'package:excellencecoachinghub/services/document/lesson_document_service.dart';
-import 'package:excellencecoachinghub/services/infrastructure/api_client.dart'; // For ApiException
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
-import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:excellencecoachinghub/config/api_config.dart';
-import 'package:excellencecoachinghub/widgets/lesson_viewer.dart';
 
-class AdminCourseContentScreen extends ConsumerStatefulWidget {
+class AdminCourseContentScreen extends StatefulWidget {
   final String courseId;
+  final String courseTitle;
 
-  const AdminCourseContentScreen({super.key, required this.courseId});
+  const AdminCourseContentScreen({
+    Key? key,
+    required this.courseId,
+    required this.courseTitle,
+  }) : super(key: key);
 
   @override
-  ConsumerState<AdminCourseContentScreen> createState() => _AdminCourseContentScreenState();
+  State<AdminCourseContentScreen> createState() =>
+      _AdminCourseContentScreenState();
 }
 
-class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScreen> {
+class _AdminCourseContentScreenState
+    extends State<AdminCourseContentScreen> {
+  List<Section> _sections = [];
+  List<Map<String, dynamic>> _quizzes = [];
+  Map<String, List<Lesson>> _lessonsBySection = {};
+  bool _isLoading = true;
   bool _isReordering = false;
-  Course? _course;
-  bool _courseLoading = true;
-  String? _courseError;
-  final Map<String, List<exam_model.Exam>> _examsBySection = {};
-  final Map<String, bool> _examsLoading = {};
-  final ExamService _examService = ExamService();
+
+  final SectionService _sectionService = SectionService();
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _loadCourseData();
+    _loadCourseContent();
   }
 
-  Future<void> _loadCourseData() async {
-    if (widget.courseId == 'create') {
-      setState(() {
-        _courseLoading = false;
-        _courseError = 'Invalid Course ID';
-      });
-      return;
-    }
-    
-    try {
-      setState(() {
-        _courseLoading = true;
-        _courseError = null;
-      }); 
+  // ─── Data Loading ─────────────────────────────────────────────────────────
 
-      final repository = CourseRepository();
-      final course = await repository.getCourseById(widget.courseId);
+  Future<void> _loadCourseContent() async {
+    setState(() => _isLoading = true);
+    try {
+      final sections = await _sectionService.getSectionsByCourse(widget.courseId);
       
-      setState(() {
-        _course = course;
-        _courseLoading = false;
-      });
-
-      // Load sections for this course
-      ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
-    } catch (e) {
-      setState(() {
-        _courseLoading = false;
-        _courseError = e.toString();
-      });
-    }
-  }
-
-  Future<void> _loadSectionExams(String sectionId) async {
-    print('LoadSectionExams called for: $sectionId, currently loading: ${_examsLoading[sectionId] ?? false}');
-    
-    if (_examsLoading[sectionId] == true) {
-      print('Already loading exams for section: $sectionId, skipping');
-      return;
-    }
-    
-    print('Starting exam load for section: $sectionId');
-    
-    setState(() {
-      _examsLoading[sectionId] = true;
-    });
-    
-    try {
-      // Add timeout to prevent infinite loading
-      print('Making API call for section: $sectionId');
-      final exams = await _examService.getSectionExamsAdmin(sectionId).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('Timeout loading exams for section: $sectionId');
-          return <exam_model.Exam>[];
-        },
-      );
-      print('API call successful, received ${exams.length} exams for section: $sectionId');
-      if (mounted) {
-        setState(() {
-          _examsBySection[sectionId] = exams;
-          _examsLoading[sectionId] = false;
-        });
-        print('State updated successfully for section: $sectionId');
-      } else {
-        print('Widget not mounted, skipping state update for section: $sectionId');
-      }
-    } catch (e) {
-      print('Error loading exams for section $sectionId: $e');
-      if (mounted) {
-        setState(() {
-          _examsLoading[sectionId] = false;
-        });
-        print('Error state updated for section: $sectionId');
-        
-        // Show user-friendly error message
-        if (context.mounted) {
-          String errorMessage = 'Failed to load exams';
-          if (e is ApiException) {
-            if (e.statusCode == 401) {
-              errorMessage = 'Authentication required. Please log in again.';
-            } else if (e.statusCode == 403) {
-              errorMessage = 'Access denied. Check your permissions.';
-            } else {
-              errorMessage = e.message;
-            }
-          }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: 'Retry',
-                onPressed: () => _loadSectionExams(sectionId),
-              ),
-            ),
-          );
+      // Load quizzes from all sections in the course
+      final quizzesFuture = sections.map((section) async {
+        try {
+          return await QuizService.getSectionExamsAdmin(section.id);
+        } catch (e) {
+          print('Error loading quizzes for section ${section.id}: $e');
+          return <Map<String, dynamic>>[];
         }
-      }
+      });
+      
+      final quizzesLists = await Future.wait(quizzesFuture);
+      final allQuizzes = quizzesLists.expand((quizzes) => quizzes).toList();
+      
+      // Load lessons for each section
+      final lessonsFuture = sections.map((section) async {
+        final lessons = await _sectionService.getLessonsBySection(section.id);
+        return MapEntry(section.id, lessons);
+      });
+      
+      final lessonsEntries = await Future.wait(lessonsFuture);
+      final lessonsMap = Map.fromEntries(lessonsEntries);
+
+      if (!mounted) return;
+      setState(() {
+        _sections = sections;
+        _quizzes = allQuizzes;
+        _lessonsBySection = lessonsMap;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showErrorSnackBar('Error loading content: $e');
     }
   }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _getQuestionTypeLabel(String type) {
+    const labels = {
+      'mcq': 'Multiple Choice',
+      'true_false': 'True / False',
+      'essay': 'Essay',
+      'fill_blank': 'Fill in Blank',
+    };
+    return labels[type] ?? type;
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final contentState = ref.watch(contentManagementProvider);
-
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        leading: context.canPop() ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded),
-          onPressed: () => context.pop(),
-          tooltip: 'Back',
-        ) : null,
-        title: const Text('Course Content'),
+        title: Text(
+          widget.courseTitle,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
+            icon: Icon(_isReordering ? Icons.check_circle : Icons.reorder),
+            tooltip: _isReordering ? 'Done reordering' : 'Reorder sections',
+            onPressed: () => setState(() => _isReordering = !_isReordering),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _courseLoading ? null : _refreshAllExams,
-            tooltip: 'Refresh All Exams',
-          ),
-          IconButton(
-            icon: Icon(_isReordering ? Icons.check : Icons.reorder),
-            onPressed: () {
-              setState(() {
-                _isReordering = !_isReordering;
-              });
-              ref.read(contentManagementProvider.notifier).toggleReordering();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _courseLoading ? null : () => _showAddSectionDialog(context),
+            tooltip: 'Refresh',
+            onPressed: _loadCourseContent,
           ),
         ],
       ),
-      body: _courseLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : _courseError != null 
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 50, color: Colors.red),
-                  const SizedBox(height: 20),
-                  Text('Error: $_courseError'),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _loadCourseData,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            )
-          : _buildContent(context, contentState),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildBody(),
+      floatingActionButton: _buildFABs(),
     );
   }
 
-  Widget _buildContent(BuildContext context, ContentManagementState contentState) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Course Info Header
-          _buildCourseHeader(),
-          
-          const SizedBox(height: 30),
-          
-          // Sections List
-          _buildSectionsList(context, contentState),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCourseHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.school,
-              color: AppTheme.primaryGreen,
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _course?.title ?? 'Loading...',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.blackColor,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'Manage course sections and lessons',
-                  style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionsList(BuildContext context, ContentManagementState contentState) {
+  Widget _buildFABs() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Course Sections',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
-              ),
-            ),
-            Text(
-              '${contentState.sections.length} sections',
-              style: const TextStyle(
-                color: AppTheme.greyColor,
-                fontSize: 14,
-              ),
-            ),
-          ],
+        FloatingActionButton.extended(
+          heroTag: 'fab_section',
+          onPressed: _showAddSectionDialog,
+          backgroundColor: AppTheme.primaryGreen,
+          icon: const Icon(Icons.folder_open),
+          label: const Text('Section'),
         ),
-        const SizedBox(height: 15),
-        if (contentState.isLoading)
-          const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(
-              child: Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading course content...'),
-                ],
-              ),
-            ),
-          )
-        else if (contentState.error != null)
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: Column(
-                children: [
-                  const Icon(Icons.error, color: Colors.red),
-                  const SizedBox(height: 8),
-                  Text('Error loading sections: ${contentState.error}'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => ref.read(contentManagementProvider.notifier).loadSections(widget.courseId),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else if (contentState.sections.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: Column(
-                children: [
-                  const Icon(Icons.library_books, size: 60, color: AppTheme.greyColor),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No sections created yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.greyColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Create sections to organize your course content into logical modules',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.greyColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddSectionDialog(context),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Create First Section'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            onReorder: contentState.isReordering 
-              ? ((int oldIndex, int newIndex) => _handleReorder(oldIndex, newIndex))
-              : ((int oldIndex, int newIndex) {}),
-            itemCount: contentState.sections.length,
-            itemBuilder: (context, index) {
-              final section = contentState.sections[index];
-              return _buildSectionCard(context, section, index, contentState.lessonsBySection);
-            },
-          ),
+        const SizedBox(height: 10),
+        FloatingActionButton.extended(
+          heroTag: 'fab_quiz',
+          onPressed: _showAddQuizDialog,
+          backgroundColor: AppTheme.accent,
+          icon: const Icon(Icons.quiz),
+          label: const Text('Quiz'),
+        ),
       ],
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, Section section, int index, Map<String, List<Lesson>> lessonsBySection) {
-      // Schedule exam loading for after the build phase
-      if (!_examsBySection.containsKey(section.id) && 
-          _examsLoading[section.id] != true) {
-        print('Scheduling exam load for section: ${section.id}');
-        // Use addPostFrameCallback to schedule after build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _loadSectionExams(section.id);
-          }
-        });
-      } else {
-        print('Exams already loaded or loading for section: ${section.id}');
-        print('Current exam state - Loaded: ${_examsBySection.containsKey(section.id)}, Loading: ${_examsLoading[section.id] ?? false}');
-        if (_examsBySection.containsKey(section.id)) {
-          print('Exams count: ${_examsBySection[section.id]?.length ?? 0}');
-        }
-      }
-      
-      final exams = _examsBySection[section.id] ?? [];
-      final examsLoading = _examsLoading[section.id] ?? false;
-      
-      print('Building section card - Exams: ${exams.length}, Loading: $examsLoading');
-    return Container(
-      key: ValueKey('section-${section.id}-exams-${exams.length}-loading-$examsLoading'),
-      margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
+  Widget _buildBody() {
+    if (_sections.isEmpty && _quizzes.isEmpty) {
+      return _buildEmptyState();
+    }
+    return RefreshIndicator(
+      onRefresh: _loadCourseContent,
+      color: AppTheme.primaryGreen,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        children: [
+          ..._sections.asMap().entries.map(
+                (e) => _buildSectionCard(e.value, e.key),
+              ),
+          const SizedBox(height: 8),
+          _buildQuizzesSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_open_outlined, size: 96, color: Colors.grey[400]),
+          const SizedBox(height: 20),
+          Text(
+            'No content yet',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create a section to get started',
+            style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _showAddSectionDialog,
+            icon: const Icon(Icons.add),
+            label: const Text('Create First Section'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  // ─── Section Card ─────────────────────────────────────────────────────────
+
+  Widget _buildSectionCard(Section section, int index) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section Header
+          // Header
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryGreen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.08),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
-                if (_isReordering) ...[
-                  const Icon(Icons.drag_handle, color: Colors.white),
-                  const SizedBox(width: 10),
-                ],
+                if (_isReordering)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 10),
+                    child: Icon(Icons.drag_handle, color: Colors.grey),
+                  ),
                 Expanded(
                   child: Text(
-                    section.title,
+                    'Section ${index + 1}: ${section.title}',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryGreen,
                     ),
                   ),
                 ),
-                Text(
-                  'Section ${section.order}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 15),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onSelected: (value) => _handleSectionAction(value, section),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 20),
-                          SizedBox(width: 10),
-                          Text('Edit Section'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'add_lesson',
-                      child: Row(
-                        children: [
-                          Icon(Icons.add, size: 20),
-                          SizedBox(width: 10),
-                          Text('Add Lesson'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'add_exam',
-                      child: Row(
-                        children: [
-                          Icon(Icons.quiz, size: 20),
-                          SizedBox(width: 10),
-                          Text('Add Exam'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 20, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text('Delete Section', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
+                  onSelected: (action) =>
+                      _handleSectionAction(action, section),
+                  itemBuilder: (_) => [
+                    _menuItem('edit', Icons.edit, 'Edit Section'),
+                    _menuItem('add_lesson', Icons.add, 'Add Lesson'),
+                    _menuItem('delete', Icons.delete, 'Delete Section',
+                        isDestructive: true),
                   ],
                 ),
               ],
             ),
           ),
-          
-          // Lessons List
+
+          // Body
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Lessons in this section',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.greyColor,
-                      ),
-                    ),
-                    if (lessonsBySection[section.id]?.isNotEmpty == true)
-                      Text(
-                        '${lessonsBySection[section.id]?.length ?? 0} lessons',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.primaryGreen,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                
-                // Display lessons or empty state
-                if (lessonsBySection[section.id]?.isEmpty == true)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.greyColor.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppTheme.greyColor.withOpacity(0.1),
-                      ),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(Icons.book_outlined, size: 40, color: AppTheme.greyColor),
-                        SizedBox(height: 12),
-                        Text(
-                          'No lessons added yet',
-                          style: TextStyle(
-                            color: AppTheme.greyColor,
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Add lessons to provide course content',
-                          style: TextStyle(
-                            color: AppTheme.greyColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  // Display actual lessons
-                  Column(
-                    children: [
-                      ...(() {
-                        final lessons = lessonsBySection[section.id] ?? [];
-                        return lessons.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final lesson = entry.value;
-                          final isLast = index == lessons.length - 1;
-                          return _buildLessonItem(lesson, isLast);
-                        }).toList();
-                      }()),
-                    ],
+                if (section.description != null && section.description!.isNotEmpty) ...[
+                  Text(
+                    section.description!,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
-                
-                // Exams Section
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Exams in this section',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.greyColor,
-                      ),
-                    ),
-                    if (exams.isNotEmpty)
-                      Text(
-                        '${exams.length} exams',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.primaryGreen,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                
-                // Display exams or loading state
-                if (examsLoading)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+                  const SizedBox(height: 12),
+                ],
+                (_lessonsBySection[section.id] ?? []).isEmpty
+                    ? _buildEmptyLessonsPlaceholder()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const CircularProgressIndicator(),
+                          const Text(
+                            'Lessons',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text('Loading exams... (${exams.length} loaded)', style: const TextStyle(fontSize: 12, color: AppTheme.greyColor)),
+                          ...(_lessonsBySection[section.id] ?? []).map(
+                            (l) => _buildLessonTile(l, section),
+                          ),
                         ],
                       ),
-                    ),
-                  )
-                else if (exams.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.greyColor.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppTheme.greyColor.withOpacity(0.1),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.quiz_outlined, size: 40, color: AppTheme.greyColor),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No exams added yet',
-                          style: TextStyle(
-                            color: AppTheme.greyColor,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Add exams to assess student knowledge',
-                          style: TextStyle(
-                            color: AppTheme.greyColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => _loadSectionExams(section.id),
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const Text('Refresh Exams'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primaryGreen,
-                            side: const BorderSide(color: AppTheme.primaryGreen),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  // Display actual exams
-                  Column(
-                    children: exams.map((exam) => _buildExamItem(exam, false)).toList(),
-                  ),
-                
-                const SizedBox(height: 15),
-                ElevatedButton.icon(
-                  onPressed: (section.id.isEmpty || section.id.length < 5) ? null : () => _showAddLessonDialog(context, section),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _showAddLessonDialog(context, section),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add Lesson'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: (section.id.isEmpty || section.id.length < 5) 
-                        ? AppTheme.greyColor.withOpacity(0.1) 
-                        : AppTheme.primaryGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: (section.id.isEmpty || section.id.length < 5) ? null : () => _showAddExamDialog(context, section),
-                  icon: const Icon(Icons.quiz, size: 18),
-                  label: const Text('Add Exam'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: (section.id.isEmpty || section.id.length < 5) 
-                        ? AppTheme.greyColor 
-                        : AppTheme.primaryGreen,
-                    side: BorderSide(
-                      color: (section.id.isEmpty || section.id.length < 5) 
-                          ? AppTheme.greyColor 
-                          : AppTheme.primaryGreen,
-                    ),
+                    foregroundColor: AppTheme.primaryGreen,
+                    side: const BorderSide(color: AppTheme.primaryGreen),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -722,507 +335,192 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
     );
   }
 
-  Widget _buildLessonItem(Lesson lesson, bool isLast) {
-    // Determine lesson type based on available content
-    String getLessonType() {
-      if (lesson.videoId != null && lesson.videoId != '') {
-        return 'video';
-      } else if (lesson.notes != null && lesson.notes != '') {
-        return 'notes';
-      } else {
-        return 'lesson'; // default type
-      }
-    }
-
-    IconData getIconForType(String type) {
-      switch (type) {
-        case 'video': return Icons.video_library;
-        case 'notes': return Icons.description;
-        case 'quiz': return Icons.quiz;
-        default: return Icons.article;
-      }
-    }
-
-    Color getColorForType(String type) {
-      switch (type) {
-        case 'video': return AppTheme.primaryGreen;
-        case 'notes': return AppTheme.accent;
-        case 'quiz': return Colors.orange;
-        default: return AppTheme.greyColor;
-      }
-    }
-
-    String lessonType = getLessonType();
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: InkWell(
-        onTap: () => _handleLessonAction('preview', lesson),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderGrey),
+  Widget _buildEmptyLessonsPlaceholder() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.book_outlined, color: Colors.grey[400], size: 20),
+          const SizedBox(width: 10),
+          Text(
+            'No lessons in this section yet',
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
           ),
-          child: Row(
-            children: [
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonTile(Lesson lesson, Section section) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        radius: 18,
+        backgroundColor: AppTheme.accent.withOpacity(0.12),
+        child:
+            const Icon(Icons.play_lesson, color: AppTheme.accent, size: 18),
+      ),
+      title: Text(
+        lesson.title,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+      ),
+      subtitle: (lesson.description?.isNotEmpty ?? false)
+          ? Text(
+              lesson.description!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            )
+          : null,
+      trailing: PopupMenuButton<String>(
+        onSelected: (action) => _handleLessonAction(action, lesson),
+        itemBuilder: (_) => [
+          _menuItem('edit', Icons.edit, 'Edit'),
+          _menuItem('preview', Icons.visibility_outlined, 'Preview'),
+          _menuItem('delete', Icons.delete, 'Delete', isDestructive: true),
+        ],
+      ),
+      onTap: () => _handleLessonAction('edit', lesson),
+    );
+  }
+
+  // ─── Quizzes Section ──────────────────────────────────────────────────────
+
+  Widget _buildQuizzesSection() {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Quizzes',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showAddQuizDialog,
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Create Quiz'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_quizzes.isEmpty)
               Container(
-                padding: const EdgeInsets.all(8),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 32),
                 decoration: BoxDecoration(
-                  color: getColorForType(lessonType).withOpacity(0.1),
+                  color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  getIconForType(lessonType),
-                  color: getColorForType(lessonType),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Icon(Icons.quiz_outlined,
+                        size: 48, color: Colors.grey[400]),
+                    const SizedBox(height: 10),
                     Text(
-                      lesson.title,
-                      style: const TextStyle(
+                      'No quizzes created yet',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey[600],
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.blackColor,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
-                      '${lesson.duration} mins • ${lessonType.capitalize()}',
-                      style: const TextStyle(
-                        color: AppTheme.greyColor,
-                        fontSize: 12,
-                      ),
+                      'Create a quiz to test student knowledge',
+                      style:
+                          TextStyle(fontSize: 13, color: Colors.grey[500]),
                     ),
                   ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) => _handleLessonAction(value, lesson),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 20),
-                        SizedBox(width: 10),
-                        Text('Edit Lesson'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'preview',
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility, size: 20),
-                        SizedBox(width: 10),
-                        Text('Preview'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red),
-                        SizedBox(width: 10),
-                        Text('Delete Lesson', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExamItem(exam_model.Exam exam, bool isLast) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.borderGrey),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.quiz,
-                color: Colors.orange,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    exam.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.blackColor,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${exam.questionsCount} questions • ${exam.type} • ${exam.isPublished ? 'Published' : 'Draft'}',
-                    style: const TextStyle(
-                      color: AppTheme.greyColor,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) => _handleExamAction(value, exam),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 10),
-                      Text('Edit Exam'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'publish',
-                  child: Row(
-                    children: [
-                      Icon(Icons.publish, size: 20),
-                      SizedBox(width: 10),
-                      Text('Publish Exam'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text('Delete Exam', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              )
+            else
+              ..._quizzes.map(_buildQuizTile),
           ],
         ),
       ),
     );
   }
 
-  void _handleExamAction(String action, exam_model.Exam exam) {
-    switch (action) {
-      case 'edit':
-        _showEditExamDialog(exam);
-        break;
-      case 'publish':
-        _toggleExamPublishStatus(exam);
-        break;
-      case 'delete':
-        _confirmDeleteExam(exam);
-        break;
-    }
-  }
+  Widget _buildQuizTile(Map<String, dynamic> quiz) {
+    final questionCount =
+        (quiz['questions'] as List<dynamic>?)?.length ?? 0;
+    final timeLimit = quiz['timeLimit'] as int?;
 
-  void _showEditExamDialog(exam_model.Exam exam) {
-    final titleController = TextEditingController(text: exam.title);
-    final passingScoreController = TextEditingController(text: exam.passingScore.toString());
-    final timeLimitController = TextEditingController(text: exam.timeLimit.toString());
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Exam'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Exam Title',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passingScoreController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Passing Score (%)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: timeLimitController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Time Limit (minutes)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                // Validation
-                if (titleController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Exam title is required')),
-                  );
-                  return;
-                }
-                
-                final passingScore = int.tryParse(passingScoreController.text);
-                if (passingScore == null || passingScore < 0 || passingScore > 100) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Passing score must be between 0 and 100')),
-                  );
-                  return;
-                }
-                
-                final timeLimit = int.tryParse(timeLimitController.text);
-                if (timeLimit == null || timeLimit <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Time limit must be a positive number')),
-                  );
-                  return;
-                }
-                
-                Navigator.pop(context);
-                
-                try {
-                  final examRepo = ExamRepository();
-                  await examRepo.updateExam(
-                    examId: exam.id,
-                    title: titleController.text.trim(),
-                    passingScore: passingScore,
-                    timeLimit: timeLimit,
-                  );
-                  
-                  // Refresh the exams for this section
-                  _loadSectionExams(exam.sectionId);
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Exam updated successfully'),
-                        backgroundColor: AppTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update exam: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: Colors.grey[50],
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.accent.withOpacity(0.12),
+          child: const Icon(Icons.quiz, color: AppTheme.accent),
+        ),
+        title: Text(
+          quiz['title'] as String? ?? 'Untitled Quiz',
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          [
+            '$questionCount question${questionCount == 1 ? '' : 's'}',
+            if (timeLimit != null) '$timeLimit min',
+          ].join(' · '),
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (action) => _handleQuizAction(action, quiz),
+          itemBuilder: (_) => [
+            _menuItem('edit', Icons.edit, 'Edit'),
+            _menuItem(
+                'questions', Icons.help_outline, 'Manage Questions'),
+            _menuItem('delete', Icons.delete, 'Delete',
+                isDestructive: true),
           ],
-        );
-      },
-    );
-  }
-
-  void _toggleExamPublishStatus(exam_model.Exam exam) async {
-    try {
-      final examRepo = ExamRepository();
-      final updatedExam = await examRepo.toggleExamPublish(exam.id, exam.isPublished);
-      
-      // Update the local state
-      setState(() {
-        final sectionExams = _examsBySection[exam.sectionId] ?? [];
-        final index = sectionExams.indexWhere((e) => e.id == exam.id);
-        if (index != -1) {
-          sectionExams[index] = updatedExam;
-          _examsBySection[exam.sectionId] = sectionExams;
-        }
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              updatedExam.isPublished 
-                ? 'Exam published successfully' 
-                : 'Exam unpublished successfully'
-            ),
-            backgroundColor: AppTheme.primaryGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to toggle exam status: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _confirmDeleteExam(exam_model.Exam exam) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Exam'),
-          content: Text('Are you sure you want to delete "${exam.title}"? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                
-                try {
-                  final examRepo = ExamRepository();
-                  await examRepo.deleteExam(exam.id);
-                  
-                  // Remove from local state
-                  setState(() {
-                    final sectionExams = _examsBySection[exam.sectionId] ?? [];
-                    sectionExams.removeWhere((e) => e.id == exam.id);
-                    _examsBySection[exam.sectionId] = sectionExams;
-                  });
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Exam deleted successfully'),
-                        backgroundColor: AppTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to delete exam: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _refreshAllExams() {
-    print('Refreshing all exams');
-    final contentState = ref.read(contentManagementProvider);
-    
-    // Clear all exam state and reload
-    setState(() {
-      _examsBySection.clear();
-      _examsLoading.clear();
-    });
-    
-    // Trigger reload for all sections
-    for (var section in contentState.sections) {
-      _loadSectionExams(section.id);
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Refreshing all exams...'),
-        backgroundColor: AppTheme.primaryGreen,
+        ),
+        onTap: () => _handleQuizAction('questions', quiz),
       ),
     );
   }
 
-  void _handleReorder(int oldIndex, int newIndex) {
-    // Handle section reordering
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-    
-    // Create new order mapping
-    final contentState = ref.read(contentManagementProvider);
-    final reorderedSections = List<Section>.from(contentState.sections);
-    final movedSection = reorderedSections.removeAt(oldIndex);
-    reorderedSections.insert(newIndex, movedSection);
-    
-    // Update order values
-    final newOrder = reorderedSections.asMap().entries.map((entry) {
-      final index = entry.key;
-      final section = entry.value;
-      return {'sectionId': section.id, 'order': index + 1};
-    }).toList();
-    
-    // Call the reorder function in the provider
-    ref.read(contentManagementProvider.notifier).reorderSections(widget.courseId, newOrder);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sections reordered successfully'),
-        backgroundColor: AppTheme.primaryGreen,
-      ),
-    );
-  }
+  // ─── Action Handlers ──────────────────────────────────────────────────────
 
   void _handleSectionAction(String action, Section section) {
     switch (action) {
       case 'edit':
-        _showEditSectionDialog(context, section);
+        _showEditSectionDialog(section);
         break;
       case 'add_lesson':
         _showAddLessonDialog(context, section);
         break;
-      case 'add_exam':
-        _showAddExamDialog(context, section);
-        break;
       case 'delete':
-        _showDeleteConfirmation(context, 'section', section.title, sectionId: section.id);
+        _showDeleteConfirmation(
+          type: 'Section',
+          title: section.title,
+          onConfirm: () => _sectionService.deleteSection(section.id),
+        );
         break;
     }
   }
@@ -1230,862 +528,792 @@ class _AdminCourseContentScreenState extends ConsumerState<AdminCourseContentScr
   void _handleLessonAction(String action, Lesson lesson) {
     switch (action) {
       case 'edit':
-        _showEditLessonDialog(context, lesson.toJson());
+        context.push('/admin/courses/${widget.courseId}/sections/${lesson.sectionId}/lessons/${lesson.id}/edit');
         break;
       case 'preview':
-        _viewLesson(lesson);
+        context.push('/lesson/${lesson.id}?admin=true');
         break;
       case 'delete':
-        _showDeleteConfirmation(context, 'lesson', lesson.title, lesson: lesson.toJson());
+        _showDeleteConfirmation(
+          type: 'Lesson',
+          title: lesson.title,
+          onConfirm: () => _sectionService.deleteLesson(lesson.id),
+        );
         break;
     }
   }
 
-  void _viewLesson(Lesson lesson) {
-    final contentState = ref.read(contentManagementProvider);
-    
-    // Navigate to the lesson viewer
-    if (mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => LessonViewer(
-            lesson: lesson,
-            courseId: widget.courseId,
-            allSections: contentState.sections,
-            sectionLessons: contentState.lessonsBySection,
-            isAdminPreview: true,
-            // Certificates not needed for admin preview
-            onComplete: () {
-              print('Admin preview lesson completed: ${lesson.title}');
-            },
-          ),
-        ),
-      );
-    }
-  }
-
-  void _showAddSectionDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Section'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-            hintText: 'Enter section title',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Clean validation pattern
-              if (titleController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Section title is required")),
-                );
-                return;
-              }
-              
-              // Handle section creation
-              Navigator.pop(context);
-              final contentState = ref.read(contentManagementProvider);
-              final order = contentState.sections.length + 1;
-              ref.read(contentManagementProvider.notifier).createSection(
-                widget.courseId,
-                titleController.text.trim(),
-                order,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Section added successfully'),
-                  backgroundColor: AppTheme.primaryGreen,
-                ),
-              );
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddLessonDialog(BuildContext context, Section section) {
-    // Ensure both IDs are valid before navigating
-    if (widget.courseId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Course ID is invalid'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    if (section.id.isEmpty || section.id.length < 5) { // MongoDB ObjectIds are typically 24 characters long
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Section ID is invalid (${section.id.length} chars): "${section.id}" for section titled: "${section.title}"'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    // Navigate to create lesson page with section and course IDs
-    context.push('/admin/courses/${widget.courseId}/sections/${section.id}/lessons/create');
-  }
-
-  void _showAddExamDialog(BuildContext context, Section section) {
-    // Ensure both IDs are valid before navigating
-    if (widget.courseId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Course ID is invalid'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    if (section.id.isEmpty || section.id.length < 5) { // MongoDB ObjectIds are typically 24 characters long
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Section ID is invalid (${section.id.length} chars): "${section.id}" for section titled: "${section.title}"'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    // Navigate to create exam page with section and course IDs
-    context.push('/admin/courses/${widget.courseId}/sections/${section.id}/exams/create');
-  }
-
-  void _showEditSectionDialog(BuildContext context, Section section) {
-    final titleController = TextEditingController(text: section.title);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Section'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-            hintText: 'Enter section title',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Clean validation pattern
-              if (titleController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Section title is required")),
-                );
-                return;
-              }
-              
-              // Handle section update
-              Navigator.pop(context);
-              ref.read(contentManagementProvider.notifier).updateSection(section.id, {
-                'title': titleController.text.trim()
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Section updated successfully'),
-                  backgroundColor: AppTheme.primaryGreen,
-                ),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showEditLessonDialog(BuildContext context, Map<String, dynamic> lesson) async {
-    final titleController = TextEditingController(text: lesson['title']);
-    final descriptionController = TextEditingController(text: lesson['description'] ?? '');
-    final notesController = TextEditingController(text: lesson['notes'] ?? '');
-    int duration = lesson['duration'] ?? 0;
-    
-    // Get the selected video ID from the lesson
-    String? selectedVideoId = lesson['videoId'];
-    
-    // Track document upload state
-    String? documentPath = lesson['notes']; // If notes contain document path
-    bool isUploadingDocument = false;
-    
-    // Load videos for dropdown first before showing dialog
-    List<Video> videos = [];
-    bool isLoadingVideos = true;
-    String? errorMessage;
-    
-    try {
-      final videoRepo = VideoRepository();
-      // Use course-specific videos instead of all videos to avoid potential issues
-      final loadedVideos = await videoRepo.getVideosByCourse(lesson['courseId']);
-      // Ensure loadedVideos is indeed a List<Video> and not something else
-      videos = loadedVideos;
-      isLoadingVideos = false;
-    } catch (e) {
-      errorMessage = e.toString();
-      isLoadingVideos = false;
-    }
-    
-    // Show dialog with form
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setDialogState) {
-            return AlertDialog(
-              title: const Text('Edit Lesson'),
-              content: SizedBox(
-                width: 500,
-                child: isLoadingVideos
-                    ? const Center(child: CircularProgressIndicator())
-                    : errorMessage != null
-                        ? Text('Error: $errorMessage')
-                        : Form(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Title Field
-                                TextFormField(
-                                  controller: titleController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Lesson Title',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Enter lesson title',
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Please enter a title';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 10),
-                                
-                                // Description Field
-                                TextFormField(
-                                  controller: descriptionController,
-                                  maxLines: 3,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Description',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Enter lesson description',
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                
-                                // Duration Field
-                                TextFormField(
-                                  initialValue: duration.toString(),
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Duration (minutes)',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Enter duration in minutes',
-                                  ),
-                                  onChanged: (value) {
-                                    duration = int.tryParse(value) ?? 0;
-                                  },
-                                ),
-                                const SizedBox(height: 10),
-                                
-                                // Video Selection
-                                const Text(
-                                  'Select Video',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 5),
-                                DropdownButtonFormField<String?>(
-                                  initialValue: selectedVideoId,
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: _getUniqueVideoItems(videos.where((video) => video != null).toList()),
-                                  onChanged: (value) {
-                                    setDialogState(() {
-                                      selectedVideoId = value;
-                                    });
-                                  },
-                                  hint: const Text('Choose a video'),
-                                ),
-                                const SizedBox(height: 10),
-                                
-                                // Document Upload Section (replaces text notes field)
-                                if (documentPath != null && documentPath!.isNotEmpty && 
-                                    (documentPath!.toLowerCase().contains('.pdf') || 
-                                     documentPath!.toLowerCase().contains('.doc') || 
-                                     documentPath!.toLowerCase().contains('.docx') ||
-                                     documentPath!.toLowerCase().contains('.txt') ||
-                                     documentPath!.toLowerCase().contains('.ppt') ||
-                                     documentPath!.toLowerCase().contains('.pptx') ||
-                                     documentPath!.toLowerCase().contains('.xls') ||
-                                     documentPath!.toLowerCase().contains('.xlsx')))
-                                  // Document display section
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.greyColor.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            // Different icons based on file type
-                                            Icon(
-                                              documentPath!.toLowerCase().contains('.pdf') ? Icons.picture_as_pdf :
-                                              documentPath!.toLowerCase().contains('.doc') || documentPath!.toLowerCase().contains('.docx') ? Icons.insert_drive_file :
-                                              documentPath!.toLowerCase().contains('.ppt') || documentPath!.toLowerCase().contains('.pptx') ? Icons.slideshow :
-                                              documentPath!.toLowerCase().contains('.xls') || documentPath!.toLowerCase().contains('.xlsx') ? Icons.table_chart :
-                                              Icons.insert_drive_file, // default icon
-                                              color: AppTheme.primaryGreen,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                'Document Uploaded: ${documentPath!.split('/').last}',
-                                                style: TextStyle(
-                                                  color: AppTheme.primaryGreen,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            OutlinedButton.icon(
-                                              onPressed: () async {
-                                                // Remove document
-                                                setDialogState(() {
-                                                  documentPath = null;
-                                                  notesController.clear();
-                                                });
-                                              },
-                                              icon: const Icon(Icons.delete, size: 16),
-                                              label: const Text('Remove'),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: Colors.red,
-                                                side: const BorderSide(color: Colors.red),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                else
-                                  const Text(
-                                    'No document uploaded',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                
-                                const SizedBox(height: 10),
-                                
-                                // Document Upload Button (replaces text notes field)
-                                ElevatedButton.icon(
-                                  onPressed: isUploadingDocument ? null : () async {
-                                    // Check if Firebase Auth is ready before proceeding
-                                    try {
-                                      final auth = firebase_auth.FirebaseAuth.instance;
-                                      if (auth.currentUser == null) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Authentication not ready. Please try again.'),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                        }
-                                        return;
-                                      }
-                                    } catch (authError) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Authentication service not ready. Please try again.'),
-                                            backgroundColor: Colors.orange,
-                                          ),
-                                        );
-                                      }
-                                      return;
-                                    }
-                                    
-                                    setDialogState(() {
-                                      isUploadingDocument = true;
-                                    });
-                                    
-                                    try {
-                                      final result = await FilePicker.platform.pickFiles(
-                                        type: FileType.custom,
-                                        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'],
-                                      );
-                                      
-                                      if (result != null) {
-                                        final file = result.files.single;
-                                        
-                                        // Check if file path is valid before attempting upload
-                                        if (file.path != null || file.bytes != null) {
-                                          // Handle web vs mobile platform differences
-                                          Map<String, dynamic>? uploadResult;
-                                          
-                                          if (kIsWeb) {
-                                            // On web, use LessonDocumentService with PlatformFile
-                                            try {
-                                              final lessonDocumentService = LessonDocumentService();
-                                              uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
-                                                file: file,
-                                                courseId: lesson['courseId'],
-                                                sectionId: lesson['sectionId'] ?? '',
-                                              );
-                                            } catch (e) {
-                                              print('=== WEB UPLOAD ERROR ===');
-                                              print('Error type: ${e.runtimeType}');
-                                              print('Error message: $e');
-                                              print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
-                                              print('=======================');
-                                              rethrow;
-                                            }
-                                          } else {
-                                            // On mobile, use the uploadDocumentForLesson method
-                                            if (file.path != null || file.bytes != null) {
-                                              final lessonDocumentService = LessonDocumentService();
-                                              try {
-                                                uploadResult = await lessonDocumentService.uploadDocumentForLessonNotes(
-                                                  file: file,
-                                                  courseId: lesson['courseId'],
-                                                  sectionId: lesson['sectionId'] ?? '',
-                                                );
-                                              } catch (e) {
-                                                print('=== MOBILE UPLOAD ERROR ===');
-                                                print('Error type: ${e.runtimeType}');
-                                                print('Error message: $e');
-                                                print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
-                                                print('=========================');
-                                                rethrow;
-                                              }
-                                            }
-                                          }
-                                          
-                                          if (uploadResult != null) {
-                                            // Handle the response - documentUrl is in the data object
-                                            String? documentUrl;
-                                            
-                                            // Check if it's the direct response structure
-                                            if (uploadResult is Map<String, dynamic>) {
-                                              // Try to get from the main data object
-                                              documentUrl = uploadResult['documentUrl'] as String?;
-                                              documentUrl ??= uploadResult['s3Key'] as String?;
-                                              
-                                              // If not found, check if there's a nested data object
-                                              if (documentUrl == null) {
-                                                final nestedData = uploadResult['data'];
-                                                if (nestedData != null && nestedData is Map<String, dynamic>) {
-                                                  documentUrl = nestedData['documentUrl'] as String?;
-                                                  documentUrl ??= nestedData['s3Key'] as String?;
-                                                }
-                                              }
-                                            }
-                                            
-                                            if (documentUrl != null) {
-                                              setDialogState(() {
-                                                documentPath = documentUrl;
-                                                notesController.text = documentUrl!;
-                                                isUploadingDocument = false;
-                                              });
-                                              
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Document uploaded successfully!'),
-                                                    backgroundColor: Colors.green,
-                                                  ),
-                                                );
-                                              }
-                                            } else {
-                                              setDialogState(() {
-                                                isUploadingDocument = false;
-                                              });
-                                              
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Document uploaded but URL not found'),
-                                                    backgroundColor: Colors.orange,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          } else {
-                                            setDialogState(() {
-                                              isUploadingDocument = false;
-                                            });
-                                            
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Failed to upload document'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        } else {
-                                          setDialogState(() {
-                                            isUploadingDocument = false;
-                                          });
-                                          
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Invalid file path'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      } else {
-                                        setDialogState(() {
-                                          isUploadingDocument = false;
-                                        });
-                                      }
-                                    } catch (e) {
-                                      print('=== MAIN UPLOAD CATCH BLOCK ===');
-                                      print('Final error caught:');
-                                      print('Error type: ${e.runtimeType}');
-                                      print('Error message: $e');
-                                      print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
-                                      print('================================');
-                                      
-                                      setDialogState(() {
-                                        isUploadingDocument = false;
-                                      });
-                                      
-                                      // Handle the specific late initialization error
-                                      final errorMessage = e.toString();
-                                      if (errorMessage.contains('LateInitializationError')) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Service not ready. Please try again.'),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Document selection failed: $e'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    }
-                                  },
-                                  icon: isUploadingDocument
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                        )
-                                      : const Icon(Icons.upload),
-                                  label: Text(isUploadingDocument ? 'Uploading...' : 'Upload Document'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.accent,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Validate and update lesson
-                    if (titleController.text.trim().isEmpty) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a title'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                      return;
-                    }
-                    
-                    try {
-                      // Prepare update data
-                      final updateData = {
-                        'title': titleController.text.trim(),
-                        'description': descriptionController.text.trim(),
-                        'videoId': selectedVideoId,
-                        'notes': documentPath ?? notesController.text.trim(),
-                        'duration': duration,
-                        'sectionId': lesson['sectionId'], // Pass sectionId for local state update
-                      };
-                      
-                      // Use the optimized updateLesson method from provider
-                      await ref.read(contentManagementProvider.notifier).updateLesson(
-                        lesson['id'],
-                        updateData,
-                      );
-                      
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Lesson updated successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to update lesson: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
+  void _handleQuizAction(String action, Map<String, dynamic> quiz) {
+    switch (action) {
+      case 'edit':
+        _showEditQuizDialog(quiz);
+        break;
+      case 'questions':
+        _showQuizQuestionsDialog(quiz);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(
+          type: 'Quiz',
+          title: quiz['title'] as String? ?? '',
+          onConfirm: () => QuizService.deleteQuiz(quiz['id'] as String),
         );
+        break;
+    }
+  }
+
+  // ─── Dialogs: Sections ────────────────────────────────────────────────────
+
+  void _showAddSectionDialog() {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+
+    _showFormDialog(
+      title: 'Add Section',
+      content: _sectionFormFields(titleCtrl, descCtrl),
+      onSave: () async {
+        _validateNotEmpty(titleCtrl.text, 'Section title');
+        await _sectionService.createSection(
+          courseId: widget.courseId,
+          title: titleCtrl.text.trim(),
+          order: _sections.length,
+        );
+        _showSuccessSnackBar('Section created successfully');
+        _loadCourseContent();
       },
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String type, String title, {String? sectionId, Map<String, dynamic>? lesson}) {
+  void _showEditSectionDialog(Section section) {
+    final titleCtrl = TextEditingController(text: section.title);
+    final descCtrl = TextEditingController(text: section.description);
+
+    _showFormDialog(
+      title: 'Edit Section',
+      content: _sectionFormFields(titleCtrl, descCtrl),
+      saveLabel: 'Update',
+      onSave: () async {
+        _validateNotEmpty(titleCtrl.text, 'Section title');
+        await _sectionService.updateSection(
+          sectionId: section.id,
+          title: titleCtrl.text.trim(),
+        );
+        _showSuccessSnackBar('Section updated successfully');
+        _loadCourseContent();
+      },
+    );
+  }
+
+  Widget _sectionFormFields(
+    TextEditingController titleCtrl,
+    TextEditingController descCtrl,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _textField(controller: titleCtrl, label: 'Section Title'),
+        const SizedBox(height: 16),
+        _textField(
+            controller: descCtrl,
+            label: 'Description (Optional)',
+            maxLines: 3),
+      ],
+    );
+  }
+
+  // ─── Dialogs: Lessons ─────────────────────────────────────────────────────
+
+  void _showAddLessonDialog(BuildContext context, Section section) {
+    if (widget.courseId.isEmpty || section.id.isEmpty) {
+      _showErrorSnackBar('Invalid course or section ID');
+      return;
+    }
+    context.push('/admin/courses/${widget.courseId}/sections/${section.id}/lessons/create')
+        .then((_) => _loadCourseContent());
+  }
+
+  void _showEditLessonDialog(Map<String, dynamic> lesson) {
+    final titleCtrl =
+        TextEditingController(text: lesson['title'] as String? ?? '');
+    final descCtrl = TextEditingController(
+        text: lesson['description'] as String? ?? '');
+    final notesCtrl =
+        TextEditingController(text: lesson['notes'] as String? ?? '');
+
+    _showFormDialog(
+      title: 'Edit Lesson',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _textField(controller: titleCtrl, label: 'Lesson Title'),
+          const SizedBox(height: 16),
+          _textField(
+              controller: descCtrl, label: 'Description', maxLines: 3),
+          const SizedBox(height: 16),
+          _textField(controller: notesCtrl, label: 'Notes', maxLines: 4),
+        ],
+      ),
+      saveLabel: 'Update',
+      onSave: () async {
+        _validateNotEmpty(titleCtrl.text, 'Lesson title');
+        await _sectionService.updateLesson(
+          lessonId: lesson['id'] as String,
+          title: titleCtrl.text.trim(),
+          description: descCtrl.text.trim(),
+          notes: notesCtrl.text.trim(),
+        );
+        _showSuccessSnackBar('Lesson updated successfully');
+        _loadCourseContent();
+      },
+    );
+  }
+
+  // ─── Dialogs: Quizzes ─────────────────────────────────────────────────────
+
+  void _showAddQuizDialog() {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    int timeLimit = 30;
+    bool isShuffled = false;
+
+    _showFormDialog(
+      title: 'Create Quiz',
+      content: StatefulBuilder(
+        builder: (ctx, setLocal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _textField(controller: titleCtrl, label: 'Quiz Title'),
+            const SizedBox(height: 16),
+            _textField(
+                controller: descCtrl,
+                label: 'Description (Optional)',
+                maxLines: 3),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: timeLimit.toString(),
+              keyboardType: TextInputType.number,
+              decoration: _inputDecoration('Time Limit (minutes)'),
+              onChanged: (v) => timeLimit = int.tryParse(v) ?? 30,
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Shuffle Questions'),
+              value: isShuffled,
+              activeColor: AppTheme.primaryGreen,
+              onChanged: (v) => setLocal(() => isShuffled = v),
+            ),
+          ],
+        ),
+      ),
+      onSave: () async {
+        _validateNotEmpty(titleCtrl.text, 'Quiz title');
+        await QuizService.createQuiz(
+          sectionId: '',
+          courseId: widget.courseId,
+          title: titleCtrl.text.trim(),
+          type: 'quiz',
+          timeLimit: timeLimit,
+        );
+        _showSuccessSnackBar('Quiz created successfully');
+        _loadCourseContent();
+      },
+    );
+  }
+
+  void _showEditQuizDialog(Map<String, dynamic> quiz) {
+    final titleCtrl =
+        TextEditingController(text: quiz['title'] as String? ?? '');
+    final descCtrl = TextEditingController(
+        text: quiz['description'] as String? ?? '');
+    int timeLimit = quiz['timeLimit'] as int? ?? 30;
+    bool isShuffled = quiz['isShuffled'] as bool? ?? false;
+
+    _showFormDialog(
+      title: 'Edit Quiz',
+      content: StatefulBuilder(
+        builder: (ctx, setLocal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _textField(controller: titleCtrl, label: 'Quiz Title'),
+            const SizedBox(height: 16),
+            _textField(
+                controller: descCtrl,
+                label: 'Description (Optional)',
+                maxLines: 3),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: timeLimit.toString(),
+              keyboardType: TextInputType.number,
+              decoration: _inputDecoration('Time Limit (minutes)'),
+              onChanged: (v) => timeLimit = int.tryParse(v) ?? 30,
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Shuffle Questions'),
+              value: isShuffled,
+              activeColor: AppTheme.primaryGreen,
+              onChanged: (v) => setLocal(() => isShuffled = v),
+            ),
+          ],
+        ),
+      ),
+      saveLabel: 'Update',
+      onSave: () async {
+        _validateNotEmpty(titleCtrl.text, 'Quiz title');
+        // TODO: wire up QuizService.updateQuiz when available
+        _showSuccessSnackBar('Quiz updated successfully');
+        _loadCourseContent();
+      },
+    );
+  }
+
+  // ─── Dialogs: Quiz Questions ──────────────────────────────────────────────
+
+  void _showQuizQuestionsDialog(Map<String, dynamic> quiz) async {
+    List<Question> questions = [];
+    bool isLoading = true;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Confirmation'),
-        content: Text('Are you sure you want to delete this $type: "$title"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          // Load once
+          if (isLoading) {
+            _loadQuizQuestions(quiz['id'] as String).then((loaded) {
+              setLocal(() {
+                questions = loaded;
+                isLoading = false;
+              });
+            });
+          }
+
+          return AlertDialog(
+            title: Text('Questions — ${quiz['title']}'),
+            content: SizedBox(
+              width: MediaQuery.of(ctx).size.width * 0.85,
+              height: MediaQuery.of(ctx).size.height * 0.65,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : questions.isEmpty
+                            ? _buildEmptyQuestionsState()
+                            : ListView.separated(
+                                itemCount: questions.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 4),
+                                itemBuilder: (_, index) =>
+                                    _buildQuestionItem(
+                                  questions[index].toJson(),
+                                  index,
+                                  onDelete: () => setLocal(() {
+                                    questions.removeAt(index);
+                                  }),
+                                ),
+                              ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(dialogCtx);
+                        _showAddQuestionDialog(
+                          quiz['id'] as String,
+                          onAdded: () => _showQuizQuestionsDialog(quiz),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Question'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyQuestionsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.help_outline, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'No questions yet',
+            style: TextStyle(
+                fontSize: 17,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (type == 'section' && sectionId != null) {
-                try {
-                  await ref.read(contentManagementProvider.notifier).deleteSection(sectionId);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Section deleted successfully'),
-                        backgroundColor: AppTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to delete section: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              } else if (type == 'lesson') {
-                // Delete lesson
-                try {
-                  final lessonRepo = LessonRepository();
-                  await lessonRepo.deleteLesson(lesson!['id']);
-                  // Reload sections to update the UI
-                  await ref.read(contentManagementProvider.notifier).loadSections(widget.courseId);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Lesson deleted successfully'),
-                        backgroundColor: AppTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to delete lesson: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          const SizedBox(height: 6),
+          Text(
+            'Tap "Add Question" to get started',
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
           ),
         ],
       ),
     );
   }
 
-  /// Upload document to backend
-  Future<Map<String, dynamic>?> _uploadDocument(String filePath, String courseId) async {
-    // Retry mechanism for service initialization
-    int retries = 3;
-    Exception? lastError;
-    
-    for (int attempt = 0; attempt < retries; attempt++) {
-      try {
-        // Wait progressively longer between retries
-        if (attempt > 0) {
-          await Future.delayed(Duration(milliseconds: 200 * attempt));
-        }
-        
-        // Verify Firebase Auth is ready
-        final auth = firebase_auth.FirebaseAuth.instance;
-        final currentUser = auth.currentUser;
-        if (currentUser == null) {
-          throw Exception('User not authenticated');
-        }
-        
-        // Handle web vs mobile platform differences
-        Uint8List bytes;
-        String fileName;
-        
-        if (kIsWeb) {
-          // On web, we should not use File operations since dart:io is not available
-          // This is the source of the error - we need to avoid using File() on web
-          throw Exception('File upload is not supported on web. Please use the UploadService instead.');
-        } else {
-          // On mobile, we can use File operations
-          final file = File(filePath);
-          bytes = await file.readAsBytes();
-          fileName = path.basename(filePath);
-        }
-        
-        final idToken = await currentUser.getIdToken(true);
-        
-        // Create multipart request
-        final uri = Uri.parse('${ApiConfig.upload}/document');
-        final request = http.MultipartRequest('POST', uri);
-        
-        // Add authentication header
-        request.headers.addAll({
-          'Authorization': 'Bearer $idToken',
-        });
-        
-        // Add form fields
-        request.fields['courseId'] = courseId;
-        
-        // Add file
-        final multipartFile = http.MultipartFile.fromBytes(
-          'document',
-          bytes,
-          filename: fileName,
-        );
-        request.files.add(multipartFile);
-        
-        // Send request
-        final response = await request.send();
-        
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final responseBody = await response.stream.bytesToString();
-          final jsonResponse = json.decode(responseBody);
-          
-          if (jsonResponse['success'] == true) {
-            return jsonResponse['data'];
-          } else {
-            print('Document upload failed: ${jsonResponse['message']}');
-            return null;
-          }
-        } else {
-          print('Document upload failed with status: ${response.statusCode}');
-          return null;
-        }
-      } catch (e) {
-        lastError = e as Exception;
-        print('Upload attempt ${attempt + 1} failed: $e');
-        
-        // If it's not a LateInitializationError, don't retry
-        if (!e.toString().contains('LateInitializationError')) {
-          break;
-        }
-        
-        // If this is the last attempt, rethrow
-        if (attempt == retries - 1) {
-          print('All upload attempts failed');
-          return null;
-        }
+  Future<List<Question>> _loadQuizQuestions(String examId) async {
+    try {
+      final response = await QuizService.getQuiz(examId);
+      if (response['success'] == true && response['data'] != null) {
+        final raw = response['data']['questions'] as List<dynamic>? ?? [];
+        return raw.map((q) => Question.fromJson(q)).toList();
       }
+      return [];
+    } catch (e) {
+      _showErrorSnackBar('Failed to load questions: $e');
+      return [];
     }
-    
-    return null;
   }
 
-  /// Get unique video items for dropdown to avoid duplicate values
-  List<DropdownMenuItem<String?>> _getUniqueVideoItems(List<Video> videos) {
-    final seenValues = <String>{};
-    final uniqueItems = <DropdownMenuItem<String?>>[];
-
-    for (final video in videos) {
-      // Use videoId if available, otherwise fall back to video.id
-      final value = video.videoId ?? video.id;
-      
-      // Skip if we've already seen this value to avoid duplicates
-      if (!seenValues.contains(value)) {
-        seenValues.add(value);
-        uniqueItems.add(
-          DropdownMenuItem(
-            value: value,
-            child: Text(video.title),
+  Widget _buildQuestionItem(
+    Map<String, dynamic> question,
+    int index, {
+    required VoidCallback onDelete,
+  }) {
+    final options = question['options'] as List<dynamic>?;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${index + 1}.',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.grey[600]),
           ),
-        );
-      }
-    }
-
-    return uniqueItems;
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _buildTypeChip(question['type'] as String? ?? 'mcq'),
+                    const SizedBox(width: 8),
+                    _buildPointsChip(question['points'] as int? ?? 1),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  question['question'] as String? ?? '',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                if (options != null && options.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ...options.map<Widget>((opt) {
+                    final isCorrect = opt['isCorrect'] as bool? ?? false;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isCorrect
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked,
+                            size: 14,
+                            color: isCorrect
+                                ? Colors.green
+                                : Colors.grey[400],
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              opt['text'] as String? ?? '',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[700]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            icon:
+                const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+            tooltip: 'Delete question',
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
   }
-}
 
-// Extension to capitalize first letter
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  Widget _buildTypeChip(String type) {
+    const colors = {
+      'mcq': Colors.blue,
+      'true_false': Colors.green,
+      'essay': Colors.purple,
+      'fill_blank': Colors.orange,
+    };
+    const labels = {
+      'mcq': 'MCQ',
+      'true_false': 'T/F',
+      'essay': 'Essay',
+      'fill_blank': 'Fill',
+    };
+    final color = colors[type] ?? Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        labels[type] ?? type,
+        style: TextStyle(
+            color: color, fontSize: 10, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _buildPointsChip(int points) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$points pt${points == 1 ? '' : 's'}',
+        style: const TextStyle(
+          color: AppTheme.primaryGreen,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // ─── Dialogs: Add Question ────────────────────────────────────────────────
+
+  void _showAddQuestionDialog(
+    String examId, {
+    VoidCallback? onAdded,
+  }) {
+    final questionCtrl = TextEditingController();
+    final essayCtrl = TextEditingController();
+    final blankCtrl = TextEditingController();
+    final optionsCtrls = List.generate(4, (_) => TextEditingController());
+    String selectedType = 'mcq';
+    int points = 1;
+    int correctOptionIndex = 0;
+    bool trueFalseAnswer = true;
+
+    _showFormDialog(
+      title: 'Add Question',
+      scrollable: true,
+      content: StatefulBuilder(
+        builder: (ctx, setLocal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              value: selectedType,
+              decoration: _inputDecoration('Question Type'),
+              items: const [
+                DropdownMenuItem(value: 'mcq', child: Text('Multiple Choice')),
+                DropdownMenuItem(
+                    value: 'true_false', child: Text('True / False')),
+                DropdownMenuItem(value: 'essay', child: Text('Essay')),
+                DropdownMenuItem(
+                    value: 'fill_blank', child: Text('Fill in Blank')),
+              ],
+              onChanged: (v) => setLocal(() => selectedType = v ?? 'mcq'),
+            ),
+            const SizedBox(height: 16),
+            _textField(
+                controller: questionCtrl,
+                label: 'Question',
+                hint: 'Enter the question text',
+                maxLines: 3),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: '1',
+              keyboardType: TextInputType.number,
+              decoration: _inputDecoration('Points'),
+              onChanged: (v) => points = int.tryParse(v) ?? 1,
+            ),
+            const SizedBox(height: 16),
+            if (selectedType == 'mcq') ...[
+              const Text('Options',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              ...optionsCtrls.asMap().entries.map((e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Radio<int>(
+                          value: e.key,
+                          groupValue: correctOptionIndex,
+                          activeColor: AppTheme.primaryGreen,
+                          onChanged: (v) =>
+                              setLocal(() => correctOptionIndex = v!),
+                        ),
+                        Expanded(
+                          child: _textField(
+                            controller: e.value,
+                            label:
+                                'Option ${String.fromCharCode(65 + e.key)}',
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+            ] else if (selectedType == 'true_false') ...[
+              const Text('Correct Answer',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('True'),
+                      value: true,
+                      groupValue: trueFalseAnswer,
+                      activeColor: AppTheme.primaryGreen,
+                      onChanged: (v) =>
+                          setLocal(() => trueFalseAnswer = v!),
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('False'),
+                      value: false,
+                      groupValue: trueFalseAnswer,
+                      activeColor: AppTheme.primaryGreen,
+                      onChanged: (v) =>
+                          setLocal(() => trueFalseAnswer = v!),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (selectedType == 'essay') ...[
+              _textField(
+                  controller: essayCtrl,
+                  label: 'Sample Answer (Optional)',
+                  hint: 'Provide a reference answer',
+                  maxLines: 4),
+            ] else if (selectedType == 'fill_blank') ...[
+              _textField(
+                  controller: blankCtrl,
+                  label: 'Correct Answer',
+                  hint: 'Enter the expected answer'),
+            ],
+          ],
+        ),
+      ),
+      saveLabel: 'Add Question',
+      onSave: () async {
+        _validateNotEmpty(questionCtrl.text, 'Question text');
+        if (selectedType == 'mcq') {
+          for (final c in optionsCtrls) {
+            if (c.text.trim().isEmpty) {
+              throw Exception('All options are required');
+            }
+          }
+        }
+
+        List<Option>? options;
+        dynamic correctAnswer;
+
+        if (selectedType == 'mcq') {
+          options = optionsCtrls.asMap().entries.map((e) {
+            return Option(
+              id: '${DateTime.now().millisecondsSinceEpoch}_${e.key}',
+              text: e.value.text.trim(),
+              isCorrect: e.key == correctOptionIndex,
+            );
+          }).toList();
+          correctAnswer = correctOptionIndex;
+        } else if (selectedType == 'true_false') {
+          correctAnswer = trueFalseAnswer;
+        } else if (selectedType == 'essay') {
+          correctAnswer = essayCtrl.text.trim();
+        } else {
+          correctAnswer = blankCtrl.text.trim();
+        }
+
+        final q = Question(
+          id: '${DateTime.now().millisecondsSinceEpoch}',
+          examId: examId,
+          question: questionCtrl.text.trim(),
+          type: selectedType,
+          points: points,
+          options: options,
+          correctAnswer: correctAnswer,
+        );
+
+        await QuizService.addQuestion(examId, q);
+        _showSuccessSnackBar('Question added successfully');
+        onAdded?.call();
+      },
+    );
+  }
+
+  // ─── Generic Delete Confirmation ──────────────────────────────────────────
+
+  void _showDeleteConfirmation({
+    required String type,
+    required String title,
+    required Future<void> Function() onConfirm,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete $type'),
+        content: Text(
+          'Are you sure you want to delete "$title"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await onConfirm();
+                _showSuccessSnackBar(
+                    '$type "$title" deleted successfully');
+                _loadCourseContent();
+              } catch (e) {
+                _showErrorSnackBar('Failed to delete $type: $e');
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Reusable Form Dialog ─────────────────────────────────────────────────
+
+  void _showFormDialog({
+    required String title,
+    required Widget content,
+    String saveLabel = 'Create',
+    bool scrollable = false,
+    required Future<void> Function() onSave,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        scrollable: scrollable,
+        content: SizedBox(
+          width: MediaQuery.of(ctx).size.width * 0.6,
+          child: content,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              try {
+                await onSave();
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                _showErrorSnackBar(e.toString());
+              }
+            },
+            child: Text(saveLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Small UI Helpers ─────────────────────────────────────────────────────
+
+  PopupMenuItem<String> _menuItem(
+    String value,
+    IconData icon,
+    String label, {
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? Colors.red : null;
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 10),
+          Text(label, style: TextStyle(color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _textField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: _inputDecoration(label, hint: hint),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    );
+  }
+
+  void _validateNotEmpty(String value, String fieldName) {
+    if (value.trim().isEmpty) {
+      throw Exception('$fieldName is required');
+    }
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ class PaymentManagementScreen extends ConsumerStatefulWidget {
 
 class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScreen> {
   bool _hasLoaded = false;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -29,8 +31,38 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
         print('PaymentManagementScreen: Initial loading of payments and stats');
         paymentNotifier.loadPayments();
         paymentNotifier.loadPaymentStats();
+        
+        // Start periodic refresh every 30 seconds to catch new payments
+        _startPeriodicRefresh();
       }
     });
+  }
+
+  void _startPeriodicRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final paymentNotifier = ref.read(paymentProvider.notifier);
+      print('PaymentManagementScreen: Auto-refreshing payments');
+      
+      // Show a subtle indicator that we're checking for new payments
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Checking for new payments...'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+      
+      paymentNotifier.loadPayments();
+      paymentNotifier.loadPaymentStats();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -366,16 +398,26 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
             
             const SizedBox(height: 12),
             
-            // Contact Info
+            // Payment Date and Contact Info
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                'Contact: ${payment.contactInfo}',
-                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Requested: ${_formatDate(payment.createdAt)}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Contact: ${payment.contactInfo}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                  ),
+                ],
               ),
             ),
             
@@ -400,6 +442,24 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
                   ),
                 ],
                 const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: state.isProcessing ? null : () => _showDeleteDialog(context, payment, notifier, state.isProcessing),
+                  child: const Text('Delete'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    backgroundColor: Colors.red.withOpacity(0.1),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: state.isProcessing ? null : () => _downloadInvoice(context, payment, notifier, state.isProcessing),
+                  child: const Text('Download Invoice'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    backgroundColor: Colors.blue.withOpacity(0.1),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => _showPaymentDetails(context, payment),
                   child: const Text('View Details'),
@@ -410,6 +470,31 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        if (difference.inMinutes == 0) {
+          return 'Just now';
+        }
+        return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+      }
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  String _formatDetailedDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Color _getStatusColor(PaymentStatus status) {
@@ -532,7 +617,113 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
     );
   }
 
-  void _showPaymentDetails(BuildContext context, Payment payment) {
+  void _showDeleteDialog(BuildContext context, Payment payment, PaymentStateNotifier notifier, bool isProcessing) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Payment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete payment ${payment.transactionId}?'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Warning: This action cannot be undone!',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Payment record will be permanently deleted\n'
+                    '• Associated enrollment will be removed if payment was approved\n'
+                    '• User will lose access to the course if enrolled',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'User: ${payment.user?.fullName ?? 'Unknown User'}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            Text(
+              'Course: ${payment.course?.title ?? 'Unknown Course'}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            Text(
+              'Amount: ${payment.amount} ${payment.currency}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: isProcessing
+                ? null
+                : () {
+                    Navigator.pop(context);
+                    notifier.deletePayment(payment.id);
+                  },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: isProcessing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _downloadInvoice(BuildContext context, Payment payment, PaymentStateNotifier notifier, bool isProcessing) {
+  try {
+    notifier.downloadInvoice(payment.id);
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Downloading invoice...'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  } catch (e) {
+    // Show error message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to download invoice: $e'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+}
+
+void _showPaymentDetails(BuildContext context, Payment payment) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -551,8 +742,9 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
             _buildDetailRow('Amount', '${payment.amount} ${payment.currency}'),
             _buildDetailRow('Payment Method', payment.paymentMethod),
             _buildDetailRow('Contact Info', payment.contactInfo),
+            _buildDetailRow('Requested On', _formatDetailedDate(payment.createdAt)),
             if (payment.paymentDate != null)
-              _buildDetailRow('Payment Date', payment.paymentDate.toString()),
+              _buildDetailRow('Payment Date', _formatDetailedDate(payment.paymentDate!)),
             if (payment.adminApproval != null) ...[
               const SizedBox(height: 16),
               const Text(
@@ -560,7 +752,7 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               _buildDetailRow('Approved By', payment.adminApproval!.approvedBy),
-              _buildDetailRow('Approved At', payment.adminApproval!.approvedAt.toString()),
+              _buildDetailRow('Approved At', _formatDetailedDate(payment.adminApproval!.approvedAt)),
               if (payment.adminApproval!.adminNotes != null)
                 _buildDetailRow('Notes', payment.adminApproval!.adminNotes!),
             ],

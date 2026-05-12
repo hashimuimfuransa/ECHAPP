@@ -89,7 +89,10 @@ class Course {
       createdBy: json['createdBy'] is Map<String, dynamic>
           ? User.fromJson(json['createdBy'] as Map<String, dynamic>)
           : User(id: _getStringValue(json['createdBy']) ?? '', fullName: 'Unknown', email: '', role: 'user', createdAt: DateTime.now()),
-      categoryId: _getStringValue(json['categoryId']),
+      categoryId: _getStringValue(json['categoryId']) ?? 
+                  (json['category'] is Map<String, dynamic> 
+                      ? json['category']['_id']?.toString() ?? json['category']['id']?.toString()
+                      : _getStringValue(json['category'])),
       category: json['category'] is Map<String, dynamic>
           ? json['category'] as Map<String, dynamic>
           : _getStringValue(json['category']) is String

@@ -15,6 +15,7 @@ class StorageManager {
   static const String _userIdKey = 'user_id';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
+  static const String _userPhoneKey = 'user_phone';
 
   // Firebase handles authentication tokens internally
 
@@ -50,12 +51,23 @@ class StorageManager {
     return await _storage.read(key: _refreshTokenKey);
   }
 
+  Future<void> saveUserPhone(String? phone) async {
+    if (phone != null) {
+      await _storage.write(key: _userPhoneKey, value: phone);
+    }
+  }
+
+  Future<String?> getUserPhone() async {
+    return await _storage.read(key: _userPhoneKey);
+  }
+
   // Clear all stored data
   Future<void> clearAll() async {
     await _storage.delete(key: _userRoleKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _userPhoneKey);
   }
 
   // Check if user is logged in

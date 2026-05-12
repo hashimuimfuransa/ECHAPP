@@ -1,14 +1,55 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:io' show Platform, File, Directory;
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 import '../../models/payment.dart';
 import '../../models/payment_status.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Clean Payment API Service that integrates with backend endpoints
 class PaymentApiService {
   final ApiClient _apiClient;
 
   PaymentApiService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// Admin-initiated payment for a student
+  Future<PaymentInitiationResponse> adminInitiatePayment({
+    required String userId,
+    required String courseId,
+    required String paymentMethod,
+    required String contactInfo,
+  }) async {
+    try {
+      final requestBody = {
+        'userId': userId,
+        'courseId': courseId,
+        'paymentMethod': paymentMethod,
+        'contactInfo': contactInfo,
+      };
+
+      final response = await _apiClient.post(
+        '${ApiConfig.payments}/admin-initiate',
+        body: requestBody,
+      );
+
+      response.validateStatus();
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as Map<String, dynamic>;
+        return PaymentInitiationResponse.fromJson(data);
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Payment initiation failed');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to initiate payment: $e');
+    }
+  }
 
   /// Initiate payment for a course
   Future<PaymentInitiationResponse> initiatePayment({
@@ -224,6 +265,22 @@ class PaymentApiService {
     }
   }
 
+  /// Delete payment (admin only)
+  Future<void> deletePayment(String paymentId) async {
+    try {
+      final response = await _apiClient.delete('${ApiConfig.payments}/$paymentId');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to delete payment');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete payment: $e');
+    }
+  }
+
   /// Get payment statistics (admin only)
   Future<PaymentStatsResponse> getPaymentStats() async {
     try {
@@ -265,6 +322,99 @@ class PaymentApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch payment: $e');
+    }
+  }
+
+  /// Download payment invoice (admin only)
+  Future<void> downloadInvoice(String paymentId) async {
+    try {
+      print('PaymentApiService: Downloading invoice for payment: $paymentId');
+      
+      final response = await _apiClient.get('${ApiConfig.payments}/$paymentId/invoice');
+      
+      print('PaymentApiService: Invoice response status: ${response.statusCode}');
+      print('PaymentApiService: Invoice response content type: ${response.headers['content-type']}');
+      
+      if (response.statusCode != 200) {
+        throw ApiException('Failed to download invoice: Server returned ${response.statusCode}');
+      }
+      
+      // Check if response is PDF
+      final contentType = response.headers['content-type'] ?? '';
+      if (!contentType.contains('application/pdf')) {
+        throw ApiException('Invalid response format: Expected PDF, got $contentType');
+      }
+      
+      // Get filename from content-disposition header or generate one
+      String filename = 'invoice.pdf';
+      final contentDisposition = response.headers['content-disposition'];
+      if (contentDisposition != null && contentDisposition.contains('filename=')) {
+        final filenameMatch = RegExp(r'filename="?([^"]+)"?').firstMatch(contentDisposition);
+        if (filenameMatch != null) {
+          filename = filenameMatch.group(1) ?? 'invoice.pdf';
+        }
+      }
+      
+      // For web, we'll create a download link
+      if (kIsWeb) {
+        print('PaymentApiService: Creating blob for web download');
+        print('Response body type: ${response.bodyBytes.runtimeType}');
+        print('Response body length: ${response.bodyBytes.length}');
+        
+        // Convert response body bytes to Uint8List for blob
+        final bytes = response.bodyBytes;
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        
+        print('PaymentApiService: Blob created, URL: $url');
+        
+        // Create anchor element and trigger download
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', filename)
+          ..click();
+        
+        // Clean up the object URL after a small delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          html.Url.revokeObjectUrl(url);
+          print('PaymentApiService: Object URL revoked');
+        });
+        
+        print('PaymentApiService: Invoice downloaded successfully for web');
+      } else {
+        // For mobile/desktop platforms
+        print('PaymentApiService: Saving invoice for mobile/desktop platform');
+        
+        // Get the appropriate directory for saving files
+        Directory directory;
+        if (Platform.isAndroid || Platform.isIOS) {
+          directory = await getApplicationDocumentsDirectory();
+        } else {
+          directory = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+        }
+        
+        // Create the file path
+        final filePath = '${directory.path}/$filename';
+        final file = File(filePath);
+        
+        // Write the PDF bytes to the file
+        await file.writeAsBytes(response.bodyBytes);
+        print('PaymentApiService: Invoice saved to: $filePath');
+        
+        // Try to open the file with the default application
+        final uri = Uri.file(filePath);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+          print('PaymentApiService: Invoice opened with default application');
+        } else {
+          print('PaymentApiService: Could not open invoice, but file was saved successfully');
+          throw ApiException('Invoice saved to $filePath but could not open automatically. Please open the file manually.');
+        }
+      }
+      
+    } catch (e) {
+      print('PaymentApiService: Error downloading invoice: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to download invoice: $e');
     }
   }
 

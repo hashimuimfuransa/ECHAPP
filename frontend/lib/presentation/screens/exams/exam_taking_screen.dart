@@ -5,16 +5,17 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
-import 'package:excellencecoachinghub/services/api/exam_service.dart';
+import 'package:excellencecoachinghub/services/api/quiz_service.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:excellencecoachinghub/models/question.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:url_launcher/url_launcher.dart';
-import 'exam_history_screen.dart';
 import 'exam_question_details_screen.dart';
+import 'package:excellencecoachinghub/widgets/quiz/drag_drop_question_widget.dart';
 
 class ExamTakingScreen extends StatefulWidget {
-  final exam_model.Exam exam;
+  final Map<String, dynamic> exam;
 
   const ExamTakingScreen({
     super.key,
@@ -26,7 +27,7 @@ class ExamTakingScreen extends StatefulWidget {
 }
 
 class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBindingObserver {
-  List<Question> _questions = [];
+  List<Map<String, dynamic>> _questions = [];
   final Map<int, dynamic> _answers = {}; // Stores selectedOption (Number/String) and answerText (String) for each question
   final Map<int, TextEditingController> _textControllers = {}; // Controllers for text input fields
   int _currentQuestionIndex = 0;
@@ -39,6 +40,51 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
   int _warningCount = 0;
   final int _maxWarnings = 3;
   bool _isWarningDialogVisible = false;
+
+  // Helper function to convert question map to Question object
+  Question _convertMapToQuestion(Map<String, dynamic> questionMap) {
+    return Question(
+      id: questionMap['_id']?.toString() ?? questionMap['id']?.toString() ?? '',
+      examId: questionMap['examId']?.toString() ?? '',
+      question: questionMap['question'] ?? '',
+      type: questionMap['type'] ?? 'mcq',
+      questionImage: questionMap['questionImage'],
+      questionAudio: questionMap['questionAudio'],
+      questionVideo: questionMap['questionVideo'],
+      options: questionMap['options'] != null 
+        ? (questionMap['options'] as List).map((e) => Option.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      dragDropItems: questionMap['dragDropItems'] != null
+        ? (questionMap['dragDropItems'] as List).map((e) => DragDropItem.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      dropZones: questionMap['dropZones'] != null
+        ? (questionMap['dropZones'] as List).map((e) => DropZone.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      matchingPairs: questionMap['matchingPairs'] != null
+        ? (questionMap['matchingPairs'] as List).map((e) => MatchingPair.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      correctOrder: questionMap['correctOrder'] != null
+        ? (questionMap['correctOrder'] as List).map((e) => OrderItem.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      hotspots: questionMap['hotspots'] != null
+        ? (questionMap['hotspots'] as List).map((e) => Hotspot.fromJson(e as Map<String, dynamic>)).toList()
+        : null,
+      hotspotImage: questionMap['hotspotImage'],
+      correctAnswer: questionMap['correctAnswer'],
+      points: questionMap['points'] ?? 1,
+      partialCredit: questionMap['partialCredit'] ?? false,
+      explanation: questionMap['explanation'] ?? '',
+      difficulty: questionMap['difficulty'] ?? 'medium',
+      category: questionMap['category'],
+      tags: questionMap['tags'] != null 
+        ? List<String>.from(questionMap['tags'])
+        : null,
+      timeLimit: questionMap['timeLimit'] ?? 0,
+      maxAttempts: questionMap['maxAttempts'] ?? 1,
+      randomizeOptions: questionMap['randomizeOptions'] ?? false,
+      section: questionMap['section'],
+    );
+  }
 
   @override
   void initState() {
@@ -159,22 +205,20 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
 
   Future<Map<String, dynamic>> _loadExamData() async {
     try {
-      final examService = ExamService();
-      final examData = await examService.getExamQuestions(widget.exam.id);
+      final quizData = await QuizService.getQuiz(widget.exam['id']);
       
-      final questions = (examData['questions'] as List)
-          .map((q) => Question.fromJson(q))
-          .toList();
+      final questions = (quizData['data']?['questions'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
       
       setState(() {
         _questions = questions;
-        _timeRemaining = widget.exam.timeLimit * 60; // Convert minutes to seconds
+        _timeRemaining = (widget.exam['timeLimit'] ?? 30) * 60; // Convert minutes to seconds
         _isLoading = false;
         
         // Initialize text controllers for text input questions
         for (int i = 0; i < _questions.length; i++) {
           final question = _questions[i];
-          if (question.type == 'fill_blank' || question.type == 'open') {
+          if (question['type'] == 'fill_blank' || question['type'] == 'open') {
             if (!_textControllers.containsKey(i)) {
               // Initialize with existing answer if available
               String initialText = '';
@@ -193,15 +237,16 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
               });
             }
           }
+          // Note: Drag-drop questions don't need text controllers as they use DragDropQuestionWidget
         }
       });
 
       // Start timer if time limit is set
-      if (widget.exam.timeLimit > 0) {
+      if ((widget.exam['timeLimit'] ?? 0) > 0) {
         _startTimer();
       }
 
-      return examData;
+      return quizData;
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -234,15 +279,36 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     final currentQuestion = _questions[_currentQuestionIndex];
     
     setState(() {
-      if (currentQuestion.type == 'mcq' || currentQuestion.type == 'true_false') {
+      if (currentQuestion['type'] == 'mcq' || currentQuestion['type'] == 'true_false') {
         // For MCQ and True/False, store the selected option index
-        final optionIndex = currentQuestion.options.indexOf(answer);
+        int optionIndex = 0;
+        if (currentQuestion['type'] == 'true_false') {
+          // For True/False, use simple index mapping
+          optionIndex = answer == 'True' ? 0 : 1;
+        } else {
+          // For MCQ, find the option object that matches the answer text
+          final options = currentQuestion['options'] as List<dynamic>? ?? [];
+          for (int i = 0; i < options.length; i++) {
+            final option = options[i];
+            final optionText = option is Map ? option['text'] ?? option.toString() : option.toString();
+            if (optionText == answer) {
+              optionIndex = i;
+              break;
+            }
+          }
+        }
         _answers[_currentQuestionIndex] = {
           'selectedOption': optionIndex,
           'answerText': answer,
         };
-      } else if (currentQuestion.type == 'fill_blank' || currentQuestion.type == 'open') {
-        // For fill-in-blank and open questions, store the text answer
+      } else if (currentQuestion['type'] == 'drag_drop') {
+        // For drag-drop questions, store list of drag answers
+        _answers[_currentQuestionIndex] = {
+          'dragAnswers': answer,
+          'answerText': '', // Not used for drag-drop
+        };
+      } else if (currentQuestion['type'] == 'fill_blank' || currentQuestion['type'] == 'open') {
+        // For fill-in-blank and open questions, store text answer
         _answers[_currentQuestionIndex] = {
           'selectedOption': answer,
           'answerText': answer,
@@ -258,7 +324,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
 
   void _updateAnswer(int questionIndex, String text) {
     final question = _questions[questionIndex];
-    if (question.type == 'fill_blank' || question.type == 'open') {
+    if (question['type'] == 'fill_blank' || question['type'] == 'open') {
       setState(() {
         _answers[questionIndex] = {
           'selectedOption': text,
@@ -272,7 +338,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     if (_currentQuestionIndex < _questions.length - 1) {
       // Ensure text controller exists for the next question if it's a text input type
       final nextQuestion = _questions[_currentQuestionIndex + 1];
-      if (nextQuestion.type == 'fill_blank' || nextQuestion.type == 'open') {
+      if (nextQuestion['type'] == 'fill_blank' || nextQuestion['type'] == 'open') {
         if (!_textControllers.containsKey(_currentQuestionIndex + 1)) {
           String initialText = '';
           if (_answers[_currentQuestionIndex + 1] != null) {
@@ -301,7 +367,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     if (_currentQuestionIndex > 0) {
       // Ensure text controller exists for the previous question if it's a text input type
       final prevQuestion = _questions[_currentQuestionIndex - 1];
-      if (prevQuestion.type == 'fill_blank' || prevQuestion.type == 'open') {
+      if (prevQuestion['type'] == 'fill_blank' || prevQuestion['type'] == 'open') {
         if (!_textControllers.containsKey(_currentQuestionIndex - 1)) {
           String initialText = '';
           if (_answers[_currentQuestionIndex - 1] != null) {
@@ -332,7 +398,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     // Ensure all text field values are synced to answers before submitting
     for (int i = 0; i < _questions.length; i++) {
       final question = _questions[i];
-      if ((question.type == 'fill_blank' || question.type == 'open') && _textControllers.containsKey(i)) {
+      if ((question['type'] == 'fill_blank' || question['type'] == 'open') && _textControllers.containsKey(i)) {
         final textValue = _textControllers[i]!.text;
         if (textValue.isNotEmpty) {
           _answers[i] = {
@@ -348,9 +414,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     });
 
     try {
-      final examService = ExamService();
-      
-      // Prepare answers in the required format
+      // Prepare answers in required format
       final answers = _answers.entries
           .where((entry) => entry.value != null)
           .map((entry) {
@@ -359,22 +423,45 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
             
             // Handle the new answer format (Map with selectedOption and answerText)
             if (answerData is Map) {
+              // Handle drag-drop questions specifically
+              if (question['type'] == 'drag_drop') {
+                return {
+                  'questionId': question['_id']?.toString() ?? question['id']?.toString(),
+                  'dragAnswers': answerData['dragAnswers'] ?? [],
+                };
+              }
+              
               return {
-                'questionId': question.id,
+                'questionId': question['_id']?.toString() ?? question['id']?.toString(),
                 'selectedOption': answerData['selectedOption'],
                 'answerText': answerData['answerText'],
               };
             } else {
               // Fallback for old format
-              if (question.type == 'mcq' || question.type == 'true_false') {
-                final answerIndex = question.options.indexOf(answerData.toString());
+              if (question['type'] == 'mcq' || question['type'] == 'true_false') {
+                int answerIndex = 0;
+                if (question['type'] == 'true_false') {
+                  // For True/False, use simple index mapping
+                  answerIndex = answerData.toString() == 'True' ? 0 : 1;
+                } else {
+                  // For MCQ, find option index by comparing with option text
+                  final options = question['options'] as List<dynamic>? ?? [];
+                  for (int i = 0; i < options.length; i++) {
+                    final option = options[i];
+                    final optionText = option is Map ? option['text'] ?? option.toString() : option.toString();
+                    if (optionText == answerData.toString()) {
+                      answerIndex = i;
+                      break;
+                    }
+                  }
+                }
                 return {
-                  'questionId': question.id,
-                  'selectedOption': answerIndex >= 0 ? answerIndex : 0,
+                  'questionId': question['_id']?.toString() ?? question['id']?.toString(),
+                  'selectedOption': answerIndex,
                 };
               } else {
                 return {
-                  'questionId': question.id,
+                  'questionId': question['_id']?.toString() ?? question['id']?.toString(),
                   'selectedOption': answerData.toString(),
                   'answerText': answerData.toString(),
                 };
@@ -383,9 +470,9 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
           })
           .toList();
 
-      final result = await examService.submitExam(
-        examId: widget.exam.id,
-        answers: answers,
+      final result = await QuizService.submitQuiz(
+        widget.exam['id'],
+        answers,
       );
 
       _disableSecureMode();
@@ -704,7 +791,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.exam.title,
+                  widget.exam['title'],
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -714,7 +801,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${widget.exam.type.toUpperCase()} EXAM',
+                  '${widget.exam['type'].toString().toUpperCase()} EXAM',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 12,
@@ -726,7 +813,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
           ),
           
           // Timer
-          if (widget.exam.timeLimit > 0)
+          if ((widget.exam['timeLimit'] ?? 0) > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -876,7 +963,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     );
   }
 
-  Widget _buildQuestionCard(Question question, dynamic selectedAnswer) {
+  Widget _buildQuestionCard(Map<String, dynamic> question, dynamic selectedAnswer) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -911,7 +998,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                       fontSize: 12,
                     ),
                   ),
-                  if (question.section != null) ...[
+                  if (question['section'] != null) ...[
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -920,7 +1007,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        question.section!,
+                        question['section']!,
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontWeight: FontWeight.w600,
@@ -937,7 +1024,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${question.points} pts',
+                      '${question['points'] ?? 1} pts',
                       style: TextStyle(
                         color: Colors.orange.shade700,
                         fontWeight: FontWeight.w600,
@@ -958,11 +1045,11 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (question.type == 'fill_blank')
-                      _buildFillBlankQuestion(question.question, selectedAnswer)
+                    if (question['type'] == 'fill_blank')
+                      _buildFillBlankQuestion(question['text'] ?? '', selectedAnswer)
                     else
                       Text(
-                        question.question,
+                        question['text'] ?? '',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -978,17 +1065,17 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
             const SizedBox(height: 12),
             
             // Different UI for different question types - give more flex to options
-            if (question.type == 'mcq' || question.type == 'true_false')
+            if (question['type'] == 'mcq' || question['type'] == 'true_false')
               // MCQ and True/False Options
               Expanded(
                 flex: 2,
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
-                  itemCount: question.options.length,
+                  itemCount: _getOptionsCount(question),
                   separatorBuilder: (context, index) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final option = question.options[index];
-                    final isSelected = selectedAnswer == option;
+                    final optionText = _getOptionText(question, index);
+                    final isSelected = selectedAnswer == optionText;
                     
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -1007,7 +1094,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => _selectAnswer(option),
+                          onTap: () => _selectAnswer(optionText),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1042,7 +1129,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                                 // Option text
                                 Expanded(
                                   child: Text(
-                                    option,
+                                    optionText,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: isSelected 
@@ -1064,7 +1151,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                   },
                 ),
               )
-            else if (question.type == 'fill_blank')
+            else if (question['type'] == 'fill_blank')
               // Fill-in-the-blank Text Field
               Expanded(
                 flex: 2,
@@ -1095,6 +1182,17 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                     fontSize: 14,
                     height: 1.4,
                   ),
+                ),
+              )
+            else if (question['type'] == 'drag_drop')
+              // Drag and Drop Question
+              Expanded(
+                flex: 2,
+                child: DragDropQuestionWidget(
+                  question: _convertMapToQuestion(question),
+                  onAnswerChanged: (answer) => _selectAnswer(answer),
+                  currentAnswer: selectedAnswer is Map ? selectedAnswer['dragAnswers'] : null,
+                  isReadOnly: false,
                 ),
               )
             else
@@ -1135,6 +1233,35 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
         ),
       ),
     );
+  }
+
+  // Helper method to get options count for different question types
+  int _getOptionsCount(Map<String, dynamic> question) {
+    if (question['type'] == 'true_false') {
+      // For True/False questions, always return 2 (True and False)
+      return 2;
+    }
+    // For MCQ and other types, return the actual options count
+    final options = question['options'] as List<dynamic>? ?? [];
+    return options.length;
+  }
+
+  // Helper method to get option text for different question types
+  String _getOptionText(Map<String, dynamic> question, int index) {
+    if (question['type'] == 'true_false') {
+      // For True/False questions, return "True" or "False"
+      return index == 0 ? 'True' : 'False';
+    }
+    // For MCQ and other types, extract text from option object
+    final options = question['options'] as List<dynamic>? ?? [];
+    if (index < options.length) {
+      final option = options[index];
+      if (option is Map) {
+        return option['text'] ?? option.toString();
+      }
+      return option.toString();
+    }
+    return '';
   }
 
   Widget _buildFillBlankQuestion(String questionText, dynamic selectedAnswer) {
@@ -1291,41 +1418,12 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
   }
 }
 
-// Models for exam questions
-class Question {
-  final String id;
-  final String question;
-  final String type; // 'mcq', 'true_false', 'fill_blank', or 'open'
-  final List<String> options;
-  final int points;
-  final String? section;
-
-  Question({
-    required this.id,
-    required this.question,
-    required this.type,
-    required this.options,
-    required this.points,
-    this.section,
-  });
-
-  factory Question.fromJson(Map<String, dynamic> json) {
-    return Question(
-      id: json['_id'] ?? json['id'] ?? '',
-      question: json['question'] ?? '',
-      type: json['type'] ?? 'mcq', // Handle null type explicitly
-      options: List<String>.from(json['options'] ?? []),
-      points: json['points'] ?? 1,
-      section: json['section'],
-    );
-  }
-}
 
 
 
 class ExamResultsScreen extends StatefulWidget {
-  final exam_model.Exam exam;
-  final ExamResult result;
+  final Map<String, dynamic> exam;
+  final Map<String, dynamic> result;
 
   const ExamResultsScreen({
     super.key,
@@ -1351,12 +1449,12 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
       final certificateRepo = CertificateRepository();
       
       // Fetch certificates for this course to find the one just earned
-      final certificates = await certificateRepo.getCertificatesByCourse(widget.exam.courseId);
+      final certificates = await certificateRepo.getCertificatesByCourse(widget.exam['courseId']);
       
       if (certificates.isNotEmpty) {
         // Try to find certificate for this specific exam, or just take the latest one
         final certificate = certificates.firstWhere(
-          (c) => c.examId == widget.exam.id,
+          (c) => c.examId == widget.exam['id'],
           orElse: () => certificates.first,
         );
         
@@ -1410,8 +1508,8 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPassed = widget.result.passed;
-    final percentage = (widget.result.percentage ?? 0.0);
+    final isPassed = widget.result['passed'] ?? false;
+    final percentage = (widget.result['percentage']?.toDouble() ?? 0.0);
     
     return Scaffold(
       body: Container(
@@ -1481,7 +1579,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                           
                           // Result message
                           Text(
-                            widget.result.message,
+                            widget.result['message'] ?? 'Quiz completed',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
@@ -1582,7 +1680,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
             
             // Large score display
             Text(
-              '${widget.result.score}/${widget.result.totalPoints}',
+              '${widget.result['totalScore'] ?? 0}/${widget.result['maxScore'] ?? 0}',
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -1650,7 +1748,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
             Text(
               isPassed 
                 ? 'You passed the exam! Great job!' 
-                : 'You need ${((widget.exam.passingScore - percentage).clamp(0, 100)).toStringAsFixed(1)}% more to pass',
+                : 'You need ${((widget.exam['passingScore'] ?? 70 - percentage).clamp(0, 100)).toStringAsFixed(1)}% more to pass',
               style: TextStyle(
                 fontSize: 16,
                 color: isPassed ? AppTheme.primary : Colors.red.shade600,
@@ -1685,9 +1783,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
             ),
             const SizedBox(height: 16),
             
-            _buildStatRow('Total Points', '${widget.result.totalPoints}', Icons.star),
+            _buildStatRow('Total Points', '${widget.result['maxScore'] ?? 0}', Icons.star),
             const SizedBox(height: 12),
-            _buildStatRow('Your Score', '${widget.result.score}', Icons.emoji_events, isGood: isPassed),
+            _buildStatRow('Your Score', '${widget.result['totalScore'] ?? 0}', Icons.emoji_events, isGood: isPassed),
             const SizedBox(height: 12),
             _buildStatRow('Percentage', '${percentage.toStringAsFixed(1)}%', Icons.percent, isGood: isPassed),
             const SizedBox(height: 12),
@@ -1739,9 +1837,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    final percentage = widget.result.percentage ?? 0.0;
+    final percentage = widget.result['percentage']?.toDouble() ?? 0.0;
     // Show download button only for final exams with score >= 50%
-    final isFinalExam = widget.exam.type.toLowerCase() == 'final';
+    final isFinalExam = widget.exam['type']?.toString().toLowerCase() == 'final';
     final isEligible = isFinalExam && percentage >= 50.0;
 
     return Column(

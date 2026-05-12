@@ -2,10 +2,7 @@
 class ApiConfig {
   // Dynamic base URL that works across platforms
   static String get baseUrl {
-    // For web development, use localhost
-    // For mobile development, use your machine's IP address
-    const String ipAddress = 'https://echappbackend.onrender.com'; // Updated to your current IP with correct port
-    return '$ipAddress/api';
+    return 'https://echappbackend.onrender.com/api';
   }
   
   // AI endpoints
@@ -29,8 +26,8 @@ class ApiConfig {
   // Enrollment endpoints
   static String get enrollments => '$baseUrl/enrollments';
   
-  // Exam endpoints
-  static String get exams => '$baseUrl/exams';
+  // Quiz endpoints
+  static String get quizzes => '$baseUrl/quizzes';
   
   // Payment endpoints
   static String get payments => '$baseUrl/payments';

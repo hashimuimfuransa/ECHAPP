@@ -5,6 +5,122 @@ const User = require('../models/User');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../utils/response.utils');
 const emailService = require('../services/email.service');
 
+// Admin-initiated payment for a student
+const adminInitiatePayment = async (req, res) => {
+  try {
+    const { userId, courseId, paymentMethod, contactInfo } = req.body;
+    const adminId = req.user.id;
+
+    console.log('=== ADMIN PAYMENT INITIATION DEBUG ===');
+    console.log('Received courseId:', courseId);
+    console.log('Received userId:', userId);
+    console.log('Received paymentMethod:', paymentMethod);
+    console.log('Received contactInfo:', contactInfo);
+    console.log('Admin ID:', adminId);
+
+    // Validate required fields
+    if (!userId || !courseId || !paymentMethod || !contactInfo) {
+      return sendError(res, 'User ID, Course ID, payment method, and contact info are required', 400);
+    }
+
+    // Check if course exists and is paid
+    const course = await Course.findById(courseId);
+    console.log('Course found:', course ? course.title : 'NOT FOUND');
+    console.log('Course ID in DB:', course ? course._id : 'N/A');
+    console.log('Course price:', course ? course.price : 'N/A');
+    if (!course) {
+      return sendNotFound(res, 'Course not found');
+    }
+
+    if (course.price <= 0) {
+      return sendError(res, 'This course is free and does not require payment', 400);
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return sendNotFound(res, 'User not found');
+    }
+
+    // Check if user is already enrolled
+    const existingEnrollment = await Enrollment.findOne({ userId, courseId });
+    if (existingEnrollment) {
+      return sendError(res, 'User is already enrolled in this course', 400);
+    }
+
+    // Check if there's an ACTIVE payment already in progress for this user and course
+    // Allow new payments if previous payments were completed, approved, failed, or cancelled
+    const existingActivePayment = await Payment.findOne({ 
+      userId, 
+      courseId,
+      status: { $in: ['pending', 'admin_review'] }
+    });
+    if (existingActivePayment) {
+      return sendError(res, 'Payment already in progress for this course', 400);
+    }
+
+    // Generate unique transaction ID
+    const transactionId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // Create payment record
+    console.log('Creating payment with courseId:', courseId);
+    console.log('Payment amount:', course.price);
+    console.log('Payment currency:', 'RWF');
+    console.log('Payment method:', paymentMethod);
+    
+    const payment = await Payment.create({
+      userId,
+      courseId,
+      amount: course.price,
+      currency: 'RWF',
+      paymentMethod,
+      transactionId,
+      contactInfo,
+      status: 'pending',
+      adminInitiated: true, // Flag to indicate this was initiated by admin
+      initiatedBy: adminId // Track which admin initiated it
+    });
+    
+    console.log('Payment created with ID:', payment._id);
+    console.log('Payment courseId in created payment:', payment.courseId);
+
+    // Notify admins about the new payment request
+    try {
+      const admins = await User.find({ role: 'admin' }, 'email');
+      const adminEmails = admins.map(admin => admin.email);
+      
+      await emailService.sendAdminPaymentNotification(adminEmails, user, payment, course);
+    } catch (notificationError) {
+      console.error('Error in admin payment notification:', notificationError);
+    }
+
+    sendSuccess(res, {
+      paymentId: payment._id,
+      transactionId: payment.transactionId,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      contactInfo: payment.contactInfo,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email
+      },
+      course: {
+        id: course._id,
+        title: course.title,
+        price: course.price
+      },
+      adminContact: 'Contact admin at: info@excellencecoachinghub.com or +250 788 535 156 / +250 793 828 834',
+      instructions: 'Payment initiated by admin. Please contact the student to complete the payment process.'
+    }, 'Payment initiated successfully by admin', 201);
+
+  } catch (error) {
+    console.error('Error in adminInitiatePayment:', error);
+    sendError(res, 'Failed to initiate payment', 500, error.message);
+  }
+};
+
 // Initiate payment for a course
 const initiatePayment = async (req, res) => {
   try {
@@ -32,10 +148,15 @@ const initiatePayment = async (req, res) => {
       return sendError(res, 'You are already enrolled in this course', 400);
     }
 
-    // Check if payment already exists for this user and course
-    const existingPayment = await Payment.findOne({ userId, courseId });
-    if (existingPayment && existingPayment.status !== 'failed' && existingPayment.status !== 'cancelled') {
-      return sendError(res, 'Payment already initiated for this course', 400);
+    // Check if there's an ACTIVE payment already in progress for this user and course
+    // Allow new payments if previous payments were completed, approved, failed, or cancelled
+    const existingActivePayment = await Payment.findOne({ 
+      userId, 
+      courseId,
+      status: { $in: ['pending', 'admin_review'] }
+    });
+    if (existingActivePayment) {
+      return sendError(res, 'Payment already in progress for this course', 400);
     }
 
     // Generate unique transaction ID
@@ -292,7 +413,10 @@ const getAllPayments = async (req, res) => {
   try {
     const { status, courseId, userId, page = 1, limit = 10 } = req.query;
     
-    console.log('getAllPayments called with params:', { status, courseId, userId, page, limit });
+    // Ensure limit doesn't exceed 100 for performance
+    const finalLimit = Math.min(parseInt(limit) || 10, 100);
+    
+    console.log('getAllPayments called with params:', { status, courseId, userId, page, limit, finalLimit });
     console.log('User ID:', req.user?.id);
     console.log('User role:', req.user?.role);
 
@@ -305,15 +429,15 @@ const getAllPayments = async (req, res) => {
       .populate('userId', 'fullName email')
       .populate('courseId', 'title price')
       .populate('adminApproval.approvedBy', 'fullName')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .limit(finalLimit)
+      .skip((page - 1) * finalLimit)
       .sort({ createdAt: -1 });
 
     const total = await Payment.countDocuments(filter);
     
     const responseData = {
       payments,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / finalLimit),
       currentPage: Number(page),
       total
     };
@@ -377,6 +501,63 @@ const cancelPayment = async (req, res) => {
   }
 };
 
+// Delete payment (admin only)
+const deletePayment = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    console.log('deletePayment called for payment ID:', paymentId);
+    console.log('User ID:', req.user?.id);
+    console.log('User role:', req.user?.role);
+
+    // Find payment
+    const payment = await Payment.findById(paymentId)
+      .populate('userId', 'fullName email')
+      .populate('courseId', 'title price');
+    
+    if (!payment) {
+      console.log('Payment not found with ID:', paymentId);
+      return sendNotFound(res, 'Payment not found');
+    }
+
+    console.log('Payment found:', payment.transactionId, 'Status:', payment.status);
+
+    // Store payment info for response before deletion
+    const paymentInfo = {
+      id: payment._id,
+      transactionId: payment.transactionId,
+      status: payment.status,
+      amount: payment.amount,
+      currency: payment.currency,
+      user: payment.userId?.fullName || 'Unknown User',
+      course: payment.courseId?.title || 'Unknown Course'
+    };
+
+    // Delete associated enrollment if it exists
+    if (payment.status === 'approved' || payment.status === 'completed') {
+      try {
+        const deletedEnrollment = await Enrollment.findOneAndDelete({ paymentId: payment._id });
+        if (deletedEnrollment) {
+          console.log('Deleted associated enrollment for payment:', payment.transactionId);
+        }
+      } catch (enrollmentError) {
+        console.error('Error deleting enrollment:', enrollmentError);
+        // Don't fail the payment deletion if enrollment deletion fails
+      }
+    }
+
+    // Delete the payment
+    await Payment.findByIdAndDelete(paymentId);
+    console.log('Payment deleted successfully:', payment.transactionId);
+
+    sendSuccess(res, paymentInfo, 'Payment deleted successfully');
+
+  } catch (error) {
+    console.error('Error in deletePayment:', error);
+    sendError(res, 'Failed to delete payment', 500, error.message);
+  }
+};
+
 // Get payment statistics (admin only)
 const getPaymentStats = async (req, res) => {
   try {
@@ -425,10 +606,12 @@ const getPaymentStats = async (req, res) => {
 
 module.exports = {
   initiatePayment,
+  adminInitiatePayment,
   verifyPayment,
   getMyPayments,
   getPaymentById,
   getAllPayments,
   cancelPayment,
+  deletePayment,
   getPaymentStats
 };

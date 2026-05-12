@@ -52,4 +52,9 @@ class EnrollmentRepository {
   Future<void> submitCourseFeedback(String courseId, double rating, String feedback) async {
     return await _enrollmentService.submitCourseFeedback(courseId, rating, feedback);
   }
+
+  /// Mark lesson as completed
+  Future<void> markLessonComplete(String lessonId) async {
+    return await _enrollmentService.markLessonComplete(lessonId);
+  }
 }

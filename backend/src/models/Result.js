@@ -4,83 +4,47 @@ const resultSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required']
+    required: true
   },
   examId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Exam',
-    required: [true, 'Exam ID is required']
+    ref: 'Quiz',
+    required: true
   },
   answers: [{
-    questionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Question',
-      required: true
-    },
-    selectedOption: {
-      type: mongoose.Schema.Types.Mixed, // Can be Number (MCQ/TrueFalse) or String (Open/FillBlank)
-      required: false // Not required for open questions
-    },
-    answerText: {
-      type: String, // Store text answer for open and fill_blank questions
-      required: false
-    },
-    earnedPoints: {
-      type: Number, // Points earned for this question
-      required: false
-    },
-    feedback: {
-      type: String, // Feedback from AI grader
-      required: false
-    },
-    isCorrect: {
-      type: Boolean, // Whether the answer was considered correct
-      required: false
-    }
+    type: mongoose.Schema.Types.Mixed,
+    default: []
   }],
   score: {
     type: Number,
-    required: [true, 'Score is required'],
-    min: [0, 'Score cannot be negative']
+    default: 0
   },
-  totalPoints: {
+  totalScore: {
     type: Number,
-    required: [true, 'Total points is required'],
-    min: [0, 'Total points cannot be negative']
-  },
-  percentage: {
-    type: Number,
-    required: [true, 'Percentage is required'],
-    min: [0, 'Percentage cannot be negative'],
-    max: [100, 'Percentage cannot exceed 100']
+    default: 0
   },
   passed: {
     type: Boolean,
-    required: [true, 'Pass status is required']
+    default: false
   },
   submittedAt: {
     type: Date,
     default: Date.now
   },
-  studentClaim: {
-    type: String,
-    required: false
+  gradedAt: {
+    type: Date
   },
-  adminResponse: {
+  feedback: {
     type: String,
-    required: false
+    trim: true
   },
-  regraded: {
-    type: Boolean,
-    default: false
+  timeSpent: {
+    type: Number,
+    default: 0
   }
-}, {
-  timestamps: true
 });
 
-// Index for better performance
-resultSchema.index({ userId: 1 });
-resultSchema.index({ examId: 1 });
-resultSchema.index({ passed: 1 });
+// Add indexes for better performance
+resultSchema.index({ userId: 1, examId: 1, submittedAt: -1 });
 
 module.exports = mongoose.model('Result', resultSchema);

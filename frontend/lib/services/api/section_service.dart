@@ -104,6 +104,28 @@ class SectionService {
     }
   }
 
+  /// Get lesson by ID
+  Future<Map<String, dynamic>> getLessonById(String lessonId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.lessons}/$lessonId');
+      response.validateStatus();
+
+      final responseBody = response.body;
+      final json = jsonDecode(responseBody) as Map<String, dynamic>;
+      
+      return {
+        'success': true,
+        'data': json['data']
+      };
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      return {
+        'success': false,
+        'message': 'Failed to fetch lesson: $e'
+      };
+    }
+  }
+
   /// Delete lesson
   Future<void> deleteLesson(String lessonId) async {
     try {
@@ -206,6 +228,10 @@ class SectionService {
     bool processNotes = false,
     int order = 1,
     int duration = 0,
+    String? quizId, // New field for quiz association
+    List<String>? materials, // New field for additional materials
+    String? lessonType, // New field for lesson type
+    bool? isPublished, // New field for publish status
   }) async {
     try {
       final response = await _apiClient.post(
@@ -220,6 +246,10 @@ class SectionService {
           'processNotes': processNotes,
           'order': order,
           'duration': duration,
+          'quizId': quizId, // Include quiz ID
+          'materials': materials, // Include materials
+          'lessonType': lessonType, // Include lesson type
+          'isPublished': isPublished, // Include publish status
         },
       );
       response.validateStatus();
@@ -247,6 +277,10 @@ class SectionService {
     String? notesPdfUrl,
     int? order,
     int? duration,
+    String? quizId, // New field for quiz association
+    List<String>? materials, // New field for additional materials
+    String? lessonType, // New field for lesson type
+    bool? isPublished, // New field for publish status
   }) async {
     try {
       final Map<String, dynamic> data = {};
@@ -257,6 +291,10 @@ class SectionService {
       if (notesPdfUrl != null) data['notesPdfUrl'] = notesPdfUrl;
       if (order != null) data['order'] = order;
       if (duration != null) data['duration'] = duration;
+      if (quizId != null) data['quizId'] = quizId; // Include quiz ID
+      if (materials != null) data['materials'] = materials; // Include materials
+      if (lessonType != null) data['lessonType'] = lessonType; // Include lesson type
+      if (isPublished != null) data['isPublished'] = isPublished; // Include publish status
 
       final response = await _apiClient.put(
         '${ApiConfig.lessons}/$lessonId',

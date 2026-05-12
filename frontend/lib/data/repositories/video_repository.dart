@@ -55,4 +55,14 @@ class VideoRepository {
   Future<void> deleteVideo(String videoId) async {
     return await _videoService.deleteVideo(videoId);
   }
+
+  /// Get video by ID
+  Future<Video?> getVideoById(String videoId) async {
+    try {
+      return await _videoService.getVideoById(videoId);
+    } catch (e) {
+      print('Video Repository: Error getting video by ID: $e');
+      return null;
+    }
+  }
 }

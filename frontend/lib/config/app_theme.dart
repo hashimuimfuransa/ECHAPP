@@ -68,6 +68,18 @@ class AppTheme {
       : errorColor;          // Original red for light mode
   }
 
+  static Color getSurfaceColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkSurface 
+      : surface;
+  }
+
+  static Color getBorderColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark 
+      ? darkTextSecondary.withOpacity(0.3)
+      : borderGrey;
+  }
+
   // Dark mode neutrals - Enhanced for better visual appeal
   static const Color darkBg = Color(0xFF0F1419); // Deep space black with subtle blue undertone
   static const Color darkSurface = Color(0xFF1A202C); // Rich dark blue-gray

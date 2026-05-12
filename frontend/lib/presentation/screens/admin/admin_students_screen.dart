@@ -7,9 +7,11 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
+import 'package:excellencecoachinghub/models/course.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
   final String? studentId;
@@ -329,6 +331,112 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     );
   }
 
+  void _showPasswordResetDialog(User student) {
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Reset Password - ${student.fullName}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter a new temporary password for this student. The student will be required to change it on next login.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'New Password',
+                  hintText: 'Enter new password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm Password',
+                  hintText: 'Confirm new password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                if (newPasswordController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a new password')),
+                  );
+                  return;
+                }
+                if (newPasswordController.text != confirmPasswordController.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Passwords do not match')),
+                  );
+                  return;
+                }
+                if (newPasswordController.text.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password must be at least 6 characters')),
+                  );
+                  return;
+                }
+
+                setState(() => isLoading = true);
+                
+                try {
+                  await _resetStudentPassword(student.id, newPasswordController.text);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Password reset successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error resetting password: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } finally {
+                  setState(() => isLoading = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              child: isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Reset Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDeleteConfirmationDialog(User student) {
     showDialog(
       context: context,
@@ -372,6 +480,14 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _resetStudentPassword(String studentId, String newPassword) async {
+    try {
+      await _adminService.resetStudentPassword(studentId, newPassword);
+    } catch (e) {
+      throw e.toString();
+    }
   }
 
   Future<void> _deleteStudent(User student) async {
@@ -646,6 +762,30 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                   style: const TextStyle(fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (student.phone != null && student.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone,
+                        size: 14,
+                        color: AppTheme.primaryGreen,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          student.phone!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.primaryGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -745,6 +885,9 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       case 'toggle_status':
                         _showDeactivateDialog(student);
                         break;
+                      case 'reset_password':
+                        _showPasswordResetDialog(student);
+                        break;
                       case 'delete':
                         _showDeleteConfirmationDialog(student);
                         break;
@@ -791,6 +934,16 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                           ),
                           const SizedBox(width: 10),
                           Text((student.disabled == true) ? 'Activate Account' : 'Deactivate Account'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'reset_password',
+                      child: Row(
+                        children: [
+                          Icon(Icons.password, color: Colors.blue),
+                          SizedBox(width: 10),
+                          Text('Reset Password'),
                         ],
                       ),
                     ),
@@ -1195,6 +1348,22 @@ class StudentDetailModal extends StatelessWidget {
     this.onResetDevice,
   });
 
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return 'No data';
+    
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    
+    if (days > 0) {
+      return '${days}d ${hours}h ${minutes}m';
+    } else if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else {
+      return '${minutes}m';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -1262,6 +1431,26 @@ class StudentDetailModal extends StatelessWidget {
                             fontSize: 14,
                           ),
                         ),
+                        if (studentDetail.user.phone != null && studentDetail.user.phone!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.phone,
+                                size: 14,
+                                color: Colors.white70,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                studentDetail.user.phone!,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1295,6 +1484,11 @@ class StudentDetailModal extends StatelessWidget {
                     
                     const SizedBox(height: 20),
                     
+                    // Payment Request Section
+                    _buildPaymentRequestSection(context),
+                    
+                    const SizedBox(height: 20),
+                    
                     // Device Info Section
                     _buildDeviceInfoSection(context),
                   ],
@@ -1304,6 +1498,84 @@ class StudentDetailModal extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPaymentRequestSection(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final paymentState = ref.watch(paymentProvider);
+        final paymentNotifier = ref.read(paymentProvider.notifier);
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Payment Management',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.blackColor,
+              ),
+            ),
+            const SizedBox(height: 15),
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.payment,
+                        color: AppTheme.primaryGreen,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Request Payment for Student',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Initiate a payment request on behalf of this student for any course. The student will be notified to complete the payment process.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.greyColor,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: paymentState.isProcessing 
+                          ? null 
+                          : () => _showPaymentRequestDialog(context, ref, studentDetail.user.id, paymentNotifier),
+                      icon: const Icon(Icons.add_shopping_cart, size: 16),
+                      label: Text(paymentState.isProcessing ? 'Processing...' : 'Request Payment'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1377,30 +1649,50 @@ class StudentDetailModal extends StatelessWidget {
   }
   
   Widget _buildSummaryCards(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        _buildStatCard(
-          context,
-          'Total Enrollments',
-          studentDetail.totalEnrollments.toString(),
-          Icons.school,
-          AppTheme.primaryGreen,
+        // First row - existing cards
+        Row(
+          children: [
+            _buildStatCard(
+              context,
+              'Total Enrollments',
+              studentDetail.totalEnrollments.toString(),
+              Icons.school,
+              AppTheme.primaryGreen,
+            ),
+            const SizedBox(width: 15),
+            _buildStatCard(
+              context,
+              'Completed',
+              studentDetail.completedCourses.toString(),
+              Icons.check_circle,
+              Colors.green,
+            ),
+            const SizedBox(width: 15),
+            _buildStatCard(
+              context,
+              'In Progress',
+              studentDetail.inProgressCourses.toString(),
+              Icons.timelapse,
+              AppTheme.accent,
+            ),
+          ],
         ),
-        const SizedBox(width: 15),
-        _buildStatCard(
-          context,
-          'Completed',
-          studentDetail.completedCourses.toString(),
-          Icons.check_circle,
-          Colors.green,
-        ),
-        const SizedBox(width: 15),
-        _buildStatCard(
-          context,
-          'In Progress',
-          studentDetail.inProgressCourses.toString(),
-          Icons.timelapse,
-          AppTheme.accent,
+        const SizedBox(height: 15),
+        // Second row - time spent card
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                'Time Spent in App',
+                _formatDuration(studentDetail.timeSpentInApp),
+                Icons.access_time,
+                Colors.blue,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1726,6 +2018,251 @@ class StudentDetailModal extends StatelessWidget {
       default:
         return AppTheme.greyColor;
     }
+  }
+
+  void _showPaymentRequestDialog(BuildContext context, WidgetRef ref, String userId, PaymentStateNotifier paymentNotifier) {
+    // Get all courses by reading the courses provider
+    final coursesAsyncValue = ref.watch(coursesProvider);
+    
+    coursesAsyncValue.when(
+      data: (courses) {
+        final paidCourses = courses.where((course) => (course.price ?? 0) > 0).toList();
+        
+        if (paidCourses.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No paid courses available for payment requests'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        
+        _showPaymentRequestDialogWithData(context, ref, userId, paymentNotifier, paidCourses);
+      },
+      loading: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Loading courses...'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      },
+      error: (error, stack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading courses: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
+  }
+  
+  void _showPaymentRequestDialogWithData(BuildContext context, WidgetRef ref, String userId, PaymentStateNotifier paymentNotifier, List<Course> paidCourses) {
+
+    // Debug: Print all available courses
+    print('=== AVAILABLE COURSES DEBUG ===');
+    for (int i = 0; i < paidCourses.length; i++) {
+      final course = paidCourses[i];
+      print('Course ${i + 1}: ID=${course.id}, Title="${course.title}", Price=${course.price}');
+    }
+
+    final paymentMethodController = TextEditingController(text: 'mtn_momo');
+    final contactInfoController = TextEditingController(text: studentDetail.user.phone ?? '');
+    
+    // Initialize state variables outside StatefulBuilder to prevent re-initialization
+    String? selectedCourseId = paidCourses.isNotEmpty ? paidCourses.first.id : null;
+    String? selectedPaymentMethod = 'mtn_momo';
+    
+    // Debug: Track initial selection
+    print('Initial selectedCourseId: $selectedCourseId');
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          
+          return AlertDialog(
+            title: const Text('Request Payment'),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Student: ${studentDetail.user.fullName}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Course Selection
+                  const Text(
+                    'Select Course:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedCourseId,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Select a course',
+                    ),
+                    items: paidCourses.map((course) {
+                      return DropdownMenuItem<String>(
+                        value: course.id,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              course.title,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            Text(
+                              'RWF ${course.price}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCourseId = value;
+                        print('Course selected: $value');
+                        print('Updated selectedCourseId in setState: $selectedCourseId');
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Debug info - show selected course
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Selected Course ID: $selectedCourseId',
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Payment Method
+                  const Text(
+                    'Payment Method:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedPaymentMethod,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Select payment method',
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'mtn_momo', child: Text('MTN Mobile Money')),
+                      DropdownMenuItem(value: 'airtel_money', child: Text('Airtel Money')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedPaymentMethod = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Contact Info
+                  const Text(
+                    'Contact Information:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: contactInfoController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter phone number or contact details',
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              Consumer(
+                builder: (context, ref, child) {
+                  final paymentState = ref.watch(paymentProvider);
+                  
+                  return ElevatedButton(
+                    onPressed: paymentState.isProcessing || selectedCourseId == null
+                        ? null
+                        : () async {
+                            try {
+                              print('=== SUBMISSION DEBUG ===');
+                              print('selectedCourseId before submission: $selectedCourseId');
+                              print('selectedPaymentMethod before submission: $selectedPaymentMethod');
+                              print('contactInfo before submission: ${contactInfoController.text.trim()}');
+                              
+                              await paymentNotifier.adminInitiatePayment(
+                                userId: userId,
+                                courseId: selectedCourseId!,
+                                paymentMethod: selectedPaymentMethod!,
+                                contactInfo: contactInfoController.text.trim(),
+                              );
+                              
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Payment request initiated successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to initiate payment: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                    ),
+                    child: paymentState.isProcessing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Request Payment'),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   String _formatDateSimple(DateTime date) {

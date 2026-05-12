@@ -4,7 +4,10 @@ const { sendSuccess, sendError } = require('../utils/response.utils');
 // Get all categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find().sort({ level: 1, name: 1 });
+    const categories = await Category.find()
+      .select('name description icon subcategories isPopular isFeatured level')
+      .lean()
+      .sort({ level: 1, name: 1 });
     return sendSuccess(res, categories, 'Categories retrieved successfully');
   } catch (error) {
     return sendError(res, error.message, 500);
@@ -14,7 +17,10 @@ exports.getAllCategories = async (req, res) => {
 // Get popular categories
 exports.getPopularCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isPopular: true }).sort({ name: 1 });
+    const categories = await Category.find({ isPopular: true })
+      .select('name description icon subcategories isPopular isFeatured level')
+      .lean()
+      .sort({ name: 1 });
     return sendSuccess(res, categories, 'Popular categories retrieved successfully');
   } catch (error) {
     return sendError(res, error.message, 500);
@@ -24,7 +30,10 @@ exports.getPopularCategories = async (req, res) => {
 // Get featured categories
 exports.getFeaturedCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isFeatured: true }).sort({ name: 1 });
+    const categories = await Category.find({ isFeatured: true })
+      .select('name description icon subcategories isPopular isFeatured level')
+      .lean()
+      .sort({ name: 1 });
     return sendSuccess(res, categories, 'Featured categories retrieved successfully');
   } catch (error) {
     return sendError(res, error.message, 500);
@@ -35,7 +44,10 @@ exports.getFeaturedCategories = async (req, res) => {
 exports.getCategoriesByLevel = async (req, res) => {
   try {
     const { level } = req.params;
-    const categories = await Category.find({ level: parseInt(level) }).sort({ name: 1 });
+    const categories = await Category.find({ level: parseInt(level) })
+      .select('name description icon subcategories isPopular isFeatured level')
+      .lean()
+      .sort({ name: 1 });
     return sendSuccess(res, categories, `Level ${level} categories retrieved successfully`);
   } catch (error) {
     return sendError(res, error.message, 500);
@@ -46,7 +58,9 @@ exports.getCategoriesByLevel = async (req, res) => {
 exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const category = await Category.findById(id).populate('courses');
+    const category = await Category.findById(id)
+      .select('name description icon subcategories isPopular isFeatured level courses')
+      .populate('courses', 'title thumbnail price duration level');
     
     if (!category) {
       return sendError(res, 'Category not found', 404);
@@ -143,7 +157,10 @@ exports.searchCategories = async (req, res) => {
     
     const categories = await Category.find({
       $text: { $search: query }
-    }).sort({ score: { $meta: 'textScore' } });
+    })
+      .select('name description icon subcategories isPopular isFeatured level')
+      .lean()
+      .sort({ score: { $meta: 'textScore' } });
     
     return sendSuccess(res, categories, 'Search results retrieved successfully');
   } catch (error) {

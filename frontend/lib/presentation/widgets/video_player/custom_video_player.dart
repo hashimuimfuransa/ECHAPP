@@ -8,6 +8,7 @@ import 'package:chewie/chewie.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'dart:io';
 import 'dart:async';
 
@@ -465,7 +466,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (_chewieController == null || !_vpController!.value.isInitialized) {
       return Container(
         color: Colors.black,
-        height: 200,
+        height: ResponsiveBreakpoints.isDesktop(context) ? 400 : 200,
         child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
       );
     }
@@ -604,6 +605,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       );
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1024;
+    final isLargeDesktop = screenWidth > 1600;
+    
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -620,6 +625,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 controller: _mkVideoController!,
                 fit: BoxFit.contain,
                 fill: Colors.black,
+                width: isDesktop ? (isLargeDesktop ? 1200 : 900) : null,
+                height: isDesktop ? (isLargeDesktop ? 675 : 506) : null,
               ),
             ),
             if (_isOffline)

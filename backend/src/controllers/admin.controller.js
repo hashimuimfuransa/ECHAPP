@@ -740,6 +740,21 @@ const getStudentDetail = async (req, res) => {
       (enrollments.length > 0 ? enrollments[0].enrollmentDate : 
         (examResults.length > 0 ? examResults[0].submittedAt : user.createdAt));
     
+    // Get time tracking data from MongoDB user
+    let timeSpentInApp = 0;
+    if (mongoUserId) {
+      const mongoUser = await User.findById(mongoUserId).select('totalSessionTime lastSessionStart sessionCount');
+      if (mongoUser) {
+        timeSpentInApp = mongoUser.totalSessionTime || 0;
+        
+        // If there's an active session, calculate current session time
+        if (mongoUser.lastSessionStart && !mongoUser.lastSessionStart) {
+          const currentSessionTime = Math.floor((Date.now() - mongoUser.lastSessionStart) / 1000);
+          timeSpentInApp += currentSessionTime;
+        }
+      }
+    }
+    
     sendSuccess(res, {
       user,
       enrollments,
@@ -749,7 +764,8 @@ const getStudentDetail = async (req, res) => {
       completedCourses,
       inProgressCourses,
       totalSpent,
-      lastActive
+      lastActive,
+      timeSpentInApp
     }, 'Student details retrieved successfully');
   } catch (error) {
     console.error('Error in getStudentDetail:', error);
@@ -975,6 +991,7 @@ const getCourseAnalytics = async (req, res) => {
       return sendError(res, 'Course not found', 404);
     }
     
+        
     // Get all enrollments for this course
     const enrollments = await Enrollment.find({ courseId })
       .populate('userId', 'fullName email phone lastLogin createdAt')
@@ -991,18 +1008,55 @@ const getCourseAnalytics = async (req, res) => {
     const averageProgress = totalStudents > 0 ? totalProgress / totalStudents : 0;
     
     // Get students with their performance
-    const studentsPerformance = enrollments.map(e => ({
-      id: e.userId?._id || 'unknown',
-      name: e.userId?.fullName || 'Unknown Student',
-      email: e.userId?.email || 'N/A',
-      enrollmentDate: e.enrollmentDate,
-      progress: e.progress,
-      completionStatus: e.completionStatus,
-      lastAccessed: e.lastAccessed,
-      rating: e.rating,
-      feedback: e.feedback,
-      examScores: [] // We could populate this if needed
-    }));
+    const now = new Date();
+    const studentsPerformance = enrollments.map(e => {
+      let timeRemaining = null;
+      let isExpired = false;
+      let status = 'active';
+      
+      if (e.accessExpirationDate) {
+        const timeDiff = e.accessExpirationDate.getTime() - now.getTime();
+        isExpired = timeDiff <= 0;
+        
+        if (!isExpired) {
+          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+          
+          if (days > 0) {
+            timeRemaining = `${days}d ${hours}h ${minutes}m`;
+          } else if (hours > 0) {
+            timeRemaining = `${hours}h ${minutes}m`;
+          } else {
+            timeRemaining = `${minutes}m`;
+          }
+          status = 'active';
+        } else {
+          status = 'expired';
+          timeRemaining = 'Expired';
+        }
+      } else {
+        status = 'unlimited';
+        timeRemaining = 'Unlimited';
+      }
+      
+      return {
+        id: e.userId?._id || 'unknown',
+        name: e.userId?.fullName || 'Unknown Student',
+        email: e.userId?.email || 'N/A',
+        enrollmentDate: e.enrollmentDate,
+        progress: e.progress,
+        completionStatus: e.completionStatus,
+        lastAccessed: e.lastAccessed,
+        rating: e.rating,
+        feedback: e.feedback,
+        accessExpirationDate: e.accessExpirationDate,
+        timeRemaining,
+        status,
+        isExpired,
+        examScores: [] // We could populate this if needed
+      };
+    });
 
     // Calculate ratings data
     const ratings = enrollments.filter(e => e.rating != null).map(e => e.rating);
@@ -1027,11 +1081,21 @@ const getCourseAnalytics = async (req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const activeStudents = enrollments.filter(e => e.lastAccessed >= thirtyDaysAgo).length;
     
+    // Calculate expired students statistics
+    const expiredStudents = enrollments.filter(e => e.accessExpirationDate && e.accessExpirationDate < now).length;
+    const studentsWithExpiringAccess = enrollments.filter(e => {
+      if (!e.accessExpirationDate) return false;
+      const timeDiff = e.accessExpirationDate.getTime() - now.getTime();
+      return timeDiff > 0 && timeDiff <= 7 * 24 * 60 * 60 * 1000; // Expires within 7 days
+    }).length;
+    
     sendSuccess(res, {
       course: {
         id: course._id,
         title: course.title,
-        thumbnail: course.thumbnail
+        thumbnail: course.thumbnail,
+        accessDuration: course.accessDuration,
+        accessDurationUnit: course.accessDurationUnit
       },
       stats: {
         totalStudents,
@@ -1041,7 +1105,9 @@ const getCourseAnalytics = async (req, res) => {
         averageProgress,
         newStudentsThisMonth,
         averageRating,
-        totalRatings
+        totalRatings,
+        expiredStudents,
+        studentsWithExpiringAccess
       },
       reviews,
       students: studentsPerformance
@@ -1276,6 +1342,49 @@ const toggleStudentStatus = async (req, res) => {
   }
 };
 
+// Reset student password (admin only)
+const resetStudentPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return sendError(res, 'New password is required', 400);
+    }
+
+    if (newPassword.length < 6) {
+      return sendError(res, 'Password must be at least 6 characters long', 400);
+    }
+
+    // Find the student in MongoDB
+    const student = await User.findById(id);
+    if (!student) {
+      return sendError(res, 'Student not found', 404);
+    }
+
+    // Update the password in MongoDB
+    student.password = newPassword;
+    await student.save();
+
+    // Also update password in Firebase if user exists there
+    try {
+      if (student.firebaseUid) {
+        await admin.auth().updateUser(student.firebaseUid, {
+          password: newPassword
+        });
+      }
+    } catch (firebaseError) {
+      console.warn('Failed to update Firebase password:', firebaseError);
+      // Don't fail the request if Firebase update fails
+    }
+
+    sendSuccess(res, null, 'Student password reset successfully');
+  } catch (error) {
+    console.error('Error in resetStudentPassword:', error);
+    sendError(res, 'Failed to reset student password', 500, error.message);
+  }
+};
+
 // Unenroll a student from a course
 const unenrollStudent = async (req, res) => {
   try {
@@ -1450,5 +1559,6 @@ module.exports = {
   getUserDeviceInfo,
   resetUserDevice,
   toggleStudentStatus,
+  resetStudentPassword,
   unenrollStudent
 };

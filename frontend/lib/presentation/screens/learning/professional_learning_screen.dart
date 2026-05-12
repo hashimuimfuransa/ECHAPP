@@ -1,0 +1,2539 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
+import 'package:excellencecoachinghub/data/repositories/section_repository.dart' as section_repo;
+import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart' as lesson_repo;
+import 'package:excellencecoachinghub/services/api/section_service.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/section.dart';
+import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellencecoachinghub/models/payment.dart';
+import 'package:excellencecoachinghub/models/payment_status.dart';
+import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
+import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+
+// ─────────────────────────────────────────────
+//  Design Tokens
+// ─────────────────────────────────────────────
+class _DT {
+  // Brand
+  static const primary    = Color(0xFF00C853);
+  static const primaryDim = Color(0xFF00A846);
+  static const accent     = Color(0xFF7C4DFF);
+  static const accentDim  = Color(0xFF6E35F5);
+
+  // Gradients
+  static const List<Color> heroGrad   = [Color(0xFF00C853), Color(0xFF00897B)];
+  static const List<Color> darkGrad   = [Color(0xFF1A1F2E), Color(0xFF111522)];
+  static const List<Color> purpleGrad = [Color(0xFF7C4DFF), Color(0xFF5C35E0)];
+
+  // Surfaces
+  static const bg        = Color(0xFFF7F8FC);
+  static const bgDark    = Color(0xFF111522);
+  static const card      = Colors.white;
+  static const cardDark  = Color(0xFF1C2333);
+  static const surface   = Color(0xFFF0F2F8);
+  static const surfaceDk = Color(0xFF242C42);
+
+  // Text
+  static const textPrimary   = Color(0xFF0D1117);
+  static const textSecondary = Color(0xFF6B7280);
+  static const textHint      = Color(0xFFADB5BD);
+  static const textLight     = Colors.white;
+
+  // Borders
+  static const border     = Color(0xFFE5E9F2);
+  static const borderDark = Color(0xFF2D3748);
+
+  // Shadows
+  static List<BoxShadow> get cardShadow => [
+    BoxShadow(color: const Color(0xFF00C853).withOpacity(0.08), blurRadius: 24, offset: const Offset(0, 8)),
+    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+  ];
+  static List<BoxShadow> get floatShadow => [
+    BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 32, offset: const Offset(0, 12)),
+  ];
+
+  // Radius
+  static const r4  = BorderRadius.all(Radius.circular(4));
+  static const r8  = BorderRadius.all(Radius.circular(8));
+  static const r12 = BorderRadius.all(Radius.circular(12));
+  static const r16 = BorderRadius.all(Radius.circular(16));
+  static const r20 = BorderRadius.all(Radius.circular(20));
+  static const r24 = BorderRadius.all(Radius.circular(24));
+  static const r32 = BorderRadius.all(Radius.circular(32));
+}
+
+// ─────────────────────────────────────────────
+//  Main Screen
+// ─────────────────────────────────────────────
+class ProfessionalLearningScreen extends ConsumerStatefulWidget {
+  final String courseId;
+  const ProfessionalLearningScreen({super.key, required this.courseId});
+
+  @override
+  ConsumerState<ProfessionalLearningScreen> createState() =>
+      _ProfessionalLearningScreenState();
+}
+
+class _ProfessionalLearningScreenState
+    extends ConsumerState<ProfessionalLearningScreen>
+    with TickerProviderStateMixin<ProfessionalLearningScreen> {
+
+  Course? _course;
+  List<Section>? _chapters;
+  Map<String, List<Lesson>> _chapterLessons = {};
+  Map<String, bool> _chapterCompletionStatus = {};
+  Map<String, bool> _lessonCompletionStatus = {};
+  int _currentSectionIndex = 0;
+  bool _isChatExpanded = false;
+  bool _isLoading = false;
+  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey();
+  List<Certificate>? _courseCertificates;
+  Map<String, dynamic>? _courseAccessData;
+
+  final TextEditingController _searchController = TextEditingController();
+  List<Section>? _filteredChapters;
+  bool _isSearchActive = false;
+  final RealAIChatService _aiChatService = RealAIChatService();
+  final String _conversationId =
+      'conversation_${DateTime.now().millisecondsSinceEpoch}';
+
+  int _totalLessons = 0;
+  int _completedLessonsCount = 0;
+  int _totalDurationMinutes = 0;
+  int _completedDurationMinutes = 0;
+
+  late TabController _tabController;
+  late AnimationController _heroAnimCtrl;
+  late AnimationController _fabAnimCtrl;
+  late Animation<double> _heroFade;
+  late Animation<Offset> _heroSlide;
+  late Animation<double> _fabScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+
+    _heroAnimCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
+    _fabAnimCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+
+    _heroFade  = CurvedAnimation(parent: _heroAnimCtrl, curve: Curves.easeOut);
+    _heroSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _heroAnimCtrl, curve: Curves.easeOut));
+    _fabScale  = CurvedAnimation(parent: _fabAnimCtrl,  curve: Curves.elasticOut);
+
+    _searchController.addListener(_onSearchChanged);
+    _loadCourseData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _heroAnimCtrl.dispose();
+    _fabAnimCtrl.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ── Data ──────────────────────────────────────
+  Future<void> _loadCourseData() async {
+    setState(() => _isLoading = true);
+    try {
+      _course = await ref.read(courseProvider(widget.courseId).future);
+      _courseAccessData = await ref
+          .read(enrollmentRepositoryProvider)
+          .checkCourseAccess(widget.courseId);
+
+      final sectionService = SectionService();
+      final courseContent = await sectionService.getCourseContent(widget.courseId);
+
+      try {
+        _courseCertificates =
+            await CertificateRepository().getCertificatesByCourse(widget.courseId);
+      } catch (_) {
+        _courseCertificates = [];
+      }
+
+      final courseSections =
+          courseContent['sections'] ?? courseContent['chapters'];
+      if (courseSections != null) {
+        final sectionsData = courseSections as List;
+        _chapters =
+            sectionsData.map((s) => Section.fromJson(s as Map<String, dynamic>)).toList();
+        _chapters?.sort((a, b) => a.order.compareTo(b.order));
+
+        _totalLessons = 0;
+        _totalDurationMinutes = 0;
+        _chapterLessons.clear();
+
+        for (final chapterData in sectionsData) {
+          final cData = chapterData as Map<String, dynamic>;
+          final chapterId = (cData['_id'] ?? cData['id']).toString();
+          final lessonsData = cData['lessons'] as List?;
+          if (lessonsData != null) {
+            final lessons = lessonsData
+                .map((l) => Lesson.fromJson(l as Map<String, dynamic>))
+                .toList();
+            _chapterLessons[chapterId] = lessons;
+            _totalLessons += lessons.length;
+            for (var l in lessons) _totalDurationMinutes += l.duration;
+          }
+        }
+      } else {
+        _chapters = [];
+      }
+
+      _initializeCompletionStatus();
+      _filteredChapters = _chapters;
+      
+      // Load user payments for this course
+      try {
+        await ref.read(paymentProvider.notifier).loadUserPayments();
+      } catch (e) {
+        debugPrint('Error loading user payments: $e');
+      }
+      
+      _heroAnimCtrl.forward();
+      _fabAnimCtrl.forward();
+    } catch (e) {
+      debugPrint('Error loading course data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _initializeCompletionStatus() {
+    if (_chapters == null) return;
+    if (_chapters!.isNotEmpty) {
+      _chapterCompletionStatus[_chapters![0].id] = true;
+    }
+    for (int i = 1; i < _chapters!.length; i++) {
+      _chapterCompletionStatus[_chapters![i].id] = false;
+    }
+    if (_courseAccessData?['completedLessons'] != null) {
+      final completedList = _courseAccessData!['completedLessons'] as List;
+      _completedLessonsCount = completedList.length;
+      for (var id in completedList) {
+        _lessonCompletionStatus[id.toString()] = true;
+      }
+    }
+    if (_courseAccessData?['completedSections'] != null) {
+      final completedSectionsList =
+          _courseAccessData!['completedSections'] as List;
+      final completedSet =
+          completedSectionsList.map((e) => e.toString()).toSet();
+      for (var id in completedSectionsList) {
+        _chapterCompletionStatus[id.toString()] = true;
+      }
+      if (_chapters != null) {
+        for (int i = 0; i < _chapters!.length; i++) {
+          if (completedSet.contains(_chapters![i].id) &&
+              i + 1 < _chapters!.length) {
+            _chapterCompletionStatus[_chapters![i + 1].id] = true;
+          }
+        }
+        _currentSectionIndex = _chapters!.length - 1;
+        for (int i = 0; i < _chapters!.length; i++) {
+          if (!completedSet.contains(_chapters![i].id)) {
+            _currentSectionIndex = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // ── Search ────────────────────────────────────
+  void _onSearchChanged() {
+    final q = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredChapters = q.isEmpty
+          ? _chapters
+          : _chapters?.where((s) =>
+              s.displayName.toLowerCase().contains(q) ||
+              (s.description?.toLowerCase().contains(q) ?? false)).toList();
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────
+  double get _progress =>
+      _totalLessons > 0 ? _completedLessonsCount / _totalLessons : 0.0;
+
+  bool get _isDark =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  Color get _cardBg => _isDark ? _DT.cardDark : _DT.card;
+
+  Color get _surfaceBg => _isDark ? _DT.surfaceDk : _DT.surface;
+
+  Color get _borderColor => _isDark ? _DT.borderDark : _DT.border;
+
+  Color get _textPrimary =>
+      _isDark ? Colors.white : _DT.textPrimary;
+
+  Color get _textSecondary => _DT.textSecondary;
+
+  /// Get the user's payment for the current course (if any)
+  Payment? _getUserPaymentForCurrentCourse() {
+    final userPayments = ref.read(paymentProvider).userPayments;
+    try {
+      return userPayments.firstWhere(
+        (payment) => payment.courseId == widget.courseId,
+      );
+    } catch (e) {
+      return null; // No payment found for this course
+    }
+  }
+
+  /// Check if user has a completed payment for this course
+  bool get _hasPaidForCourse {
+    final payment = _getUserPaymentForCurrentCourse();
+    return payment != null && 
+           (payment.status == PaymentStatus.completed || 
+            payment.status == PaymentStatus.approved);
+  }
+
+  /// Download invoice for the current course
+  Future<void> _downloadInvoice() async {
+    final payment = _getUserPaymentForCurrentCourse();
+    if (payment == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No payment found for this course'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(paymentProvider.notifier).downloadInvoice(payment.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invoice downloaded successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download invoice: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  //  BUILD
+  // ─────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading && _course == null) return _buildSplash();
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            _isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
+        body: Stack(
+          children: [
+            _buildBody(),
+            if (_isChatExpanded) _buildAIChatOverlay(),
+          ],
+        ),
+        floatingActionButton: _buildAIChatFAB(),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  SPLASH / LOADING
+  // ─────────────────────────────────────────────
+  Widget _buildSplash() {
+    return Scaffold(
+      backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: _DT.heroGrad),
+                borderRadius: _DT.r20,
+              ),
+              child: const Icon(Icons.school_rounded,
+                  color: Colors.white, size: 36),
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                color: _DT.primary,
+                strokeWidth: 2.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Loading your course...',
+                style: TextStyle(
+                  color: _DT.textSecondary,
+                  fontSize: 14,
+                  letterSpacing: 0.3,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  BODY (CustomScrollView with SliverAppBar)
+  // ─────────────────────────────────────────────
+  Widget _buildBody() {
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) => [
+        _buildSliverAppBar(innerBoxIsScrolled),
+      ],
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildChaptersTab(),
+          _buildProgressTab(),
+          _buildMaterialsTab(),
+        ],
+      ),
+    );
+  }
+
+  // ── Sliver App Bar ────────────────────────────
+  Widget _buildSliverAppBar(bool innerScrolled) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    return SliverAppBar(
+      expandedHeight: isMobile ? 200 : 240,
+      pinned: true,
+      backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: _buildBackButton(),
+      actions: _buildActions(),
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        background: _buildHeroHeader(),
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: _buildTabBar(),
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: GestureDetector(
+        onTap: () => context.canPop() ? context.pop() : context.go('/dashboard'),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: _DT.r12,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Icon(Icons.arrow_back_ios_new_rounded,
+              size: 18, color: _textPrimary),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildActions() {
+    final actions = [
+      // Search toggle
+      _ActionChip(
+        icon: _isSearchActive ? Icons.close_rounded : Icons.search_rounded,
+        active: _isSearchActive,
+        isDark: _isDark,
+        cardBg: _cardBg,
+        onTap: () => setState(() {
+          _isSearchActive = !_isSearchActive;
+          if (!_isSearchActive) {
+            _searchController.clear();
+            _filteredChapters = _chapters;
+          }
+        }),
+      ),
+      // Invoice download (only if user has paid)
+      if (_hasPaidForCourse)
+        _ActionChip(
+          icon: Icons.download_rounded,
+          isDark: _isDark,
+          cardBg: _cardBg,
+          onTap: _downloadInvoice,
+        ),
+      // Exam history
+      _ActionChip(
+        icon: Icons.history_edu_rounded,
+        isDark: _isDark,
+        cardBg: _cardBg,
+        onTap: () => context.push('/exams/history'),
+      ),
+      // Refresh
+      _ActionChip(
+        icon: Icons.refresh_rounded,
+        isDark: _isDark,
+        cardBg: _cardBg,
+        onTap: _refreshData,
+      ),
+      const SizedBox(width: 8),
+    ];
+    return actions;
+  }
+
+  Widget _buildHeroHeader() {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final completedChapters =
+        _chapterCompletionStatus.values.where((v) => v).length;
+
+    return SlideTransition(
+      position: _heroSlide,
+      child: FadeTransition(
+        opacity: _heroFade,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00C853), Color(0xFF00897B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  isMobile ? 16 : 24, 56, isMobile ? 16 : 24, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Course badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: _DT.r32,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded,
+                            color: Colors.white, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          _course?.level?.toUpperCase() ?? 'BEGINNER',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Title
+                  Text(
+                    _course?.title ?? '',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isMobile ? 20 : 24,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  // Stats row
+                  Row(
+                    children: [
+                      _HeroStat(
+                          icon: Icons.library_books_rounded,
+                          value: '$completedChapters/${_chapters?.length ?? 0}',
+                          label: 'Chapters'),
+                      const SizedBox(width: 16),
+                      _HeroStat(
+                          icon: Icons.play_circle_rounded,
+                          value:
+                              '$_completedLessonsCount/$_totalLessons',
+                          label: 'Lessons'),
+                      const SizedBox(width: 16),
+                      _HeroStat(
+                          icon: Icons.trending_up_rounded,
+                          value: '${(_progress * 100).toInt()}%',
+                          label: 'Done'),
+                      const Spacer(),
+                      // Mini circular progress
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              value: _progress,
+                              backgroundColor:
+                                  Colors.white.withOpacity(0.3),
+                              valueColor:
+                                  const AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                              strokeWidth: 3.5,
+                            ),
+                            Text(
+                              '${(_progress * 100).toInt()}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: _isDark ? _DT.bgDark : _DT.bg,
+      child: Column(
+        children: [
+          // Search bar (expanded when active)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _isSearchActive
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _surfaceBg,
+                        borderRadius: _DT.r12,
+                        border: Border.all(
+                            color: _DT.primary.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 12),
+                          Icon(Icons.search_rounded,
+                              size: 18, color: _DT.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              style: TextStyle(
+                                  fontSize: 14, color: _textPrimary),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Search chapters or lessons…',
+                                hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: _textSecondary),
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              onPressed: () =>
+                                  setState(() => _searchController.clear()),
+                              icon: Icon(Icons.close_rounded,
+                                  size: 18, color: _textSecondary),
+                              padding: EdgeInsets.zero,
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          TabBar(
+            controller: _tabController,
+            isScrollable: false,
+            labelColor: _DT.primary,
+            unselectedLabelColor: _textSecondary,
+            indicatorColor: _DT.primary,
+            indicatorWeight: 2.5,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: const TextStyle(
+                fontWeight: FontWeight.w700, fontSize: 13),
+            unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500, fontSize: 13),
+            dividerColor: _borderColor,
+            dividerHeight: 0.5,
+            tabs: const [
+              Tab(text: 'Chapters'),
+              Tab(text: 'Progress'),
+              Tab(text: 'Materials'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  CHAPTERS TAB
+  // ─────────────────────────────────────────────
+  Widget _buildChaptersTab() {
+    final chapters = _filteredChapters ?? _chapters ?? [];
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final screenW = MediaQuery.of(context).size.width;
+
+    if (chapters.isEmpty) {
+      return _buildEmptyState(
+          icon: Icons.library_books_rounded,
+          title: _isSearchActive
+              ? 'No chapters match your search'
+              : 'No chapters yet',
+          subtitle: _isSearchActive
+              ? 'Try a different keyword'
+              : 'Check back soon for content');
+    }
+
+    return isDesktop && screenW > 1100
+        ? _buildChaptersGrid(chapters)
+        : _buildChaptersList(chapters);
+  }
+
+  Widget _buildChaptersGrid(List<Section> chapters) {
+    final screenW = MediaQuery.of(context).size.width;
+    final crossCount = screenW > 1600 ? 3 : 2;
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossCount,
+        childAspectRatio: 1.7,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+      ),
+      itemCount: chapters.length,
+      itemBuilder: (ctx, i) {
+        final s = chapters[i];
+        return _ChapterCard(
+          section: s,
+          lessons: _chapterLessons[s.id] ?? [],
+          isUnlocked: _chapterCompletionStatus[s.id] ?? false,
+          isCurrent: i == _currentSectionIndex,
+          lessonCompletionStatus: _lessonCompletionStatus,
+          isDark: _isDark,
+          isCompact: true,
+          onLessonTap: _openLesson,
+          onMoreTap: () => _openChapterDetails(s),
+        );
+      },
+    );
+  }
+
+  Widget _buildChaptersList(List<Section> chapters) {
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(
+        ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+        16,
+        ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+        100,
+      ),
+      itemCount: chapters.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (ctx, i) {
+        final s = chapters[i];
+        return _ChapterCard(
+          section: s,
+          lessons: _chapterLessons[s.id] ?? [],
+          isUnlocked: _chapterCompletionStatus[s.id] ?? false,
+          isCurrent: i == _currentSectionIndex,
+          lessonCompletionStatus: _lessonCompletionStatus,
+          isDark: _isDark,
+          isCompact: false,
+          onLessonTap: _openLesson,
+          onMoreTap: () => _openChapterDetails(s),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  PROGRESS TAB
+  // ─────────────────────────────────────────────
+  Widget _buildProgressTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        _buildProgressHeroCard(),
+        const SizedBox(height: 16),
+        _buildChapterProgressList(),
+        const SizedBox(height: 16),
+        _buildAchievementsGrid(),
+      ],
+    );
+  }
+
+  Widget _buildProgressHeroCard() {
+    final completedChapters =
+        _chapterCompletionStatus.values.where((v) => v).length;
+    final totalChapters = _chapters?.length ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: _DT.r20,
+        boxShadow: _DT.cardShadow,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Big ring
+              SizedBox(
+                width: 100,
+                height: 100,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      height: 100,
+                      child: CircularProgressIndicator(
+                        value: _progress,
+                        backgroundColor: _borderColor,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            _DT.primary),
+                        strokeWidth: 8,
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${(_progress * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: _DT.primary,
+                          ),
+                        ),
+                        Text('Done',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: _textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ProgressStatRow(
+                      label: 'Lessons completed',
+                      value: '$_completedLessonsCount / $_totalLessons',
+                      color: _DT.primary,
+                      isDark: _isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _ProgressStatRow(
+                      label: 'Chapters done',
+                      value: '$completedChapters / $totalChapters',
+                      color: _DT.accent,
+                      isDark: _isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _ProgressStatRow(
+                      label: 'Time invested',
+                      value: '${_completedDurationMinutes}m',
+                      color: const Color(0xFF00ACC1),
+                      isDark: _isDark,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Progress bar
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Overall completion',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: _textSecondary,
+                          fontWeight: FontWeight.w500)),
+                  Text('${(_progress * 100).toInt()}%',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: _DT.primary,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: _DT.r8,
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  minHeight: 8,
+                  backgroundColor: _borderColor,
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(_DT.primary),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChapterProgressList() {
+    if (_chapters == null || _chapters!.isEmpty) return const SizedBox.shrink();
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: _DT.r20,
+        boxShadow: _DT.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Text('Chapter breakdown',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary)),
+          ),
+          ..._chapters!.asMap().entries.map((e) {
+            final i = e.key;
+            final s = e.value;
+            final lessons = _chapterLessons[s.id] ?? [];
+            final done =
+                lessons.where((l) => _lessonCompletionStatus[l.id] == true).length;
+            final pct = lessons.isEmpty ? 0.0 : done / lessons.length;
+            final isCompleted = _chapterCompletionStatus[s.id] ?? false;
+
+            return _ChapterProgressRow(
+              index: i + 1,
+              title: s.displayName,
+              done: done,
+              total: lessons.length,
+              pct: pct,
+              isCompleted: isCompleted,
+              isDark: _isDark,
+              isLast: i == _chapters!.length - 1,
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementsGrid() {
+    final achievements = [
+      _Achievement(
+        title: 'First Steps',
+        desc: 'Complete your first lesson',
+        icon: Icons.emoji_events_rounded,
+        unlocked: _completedLessonsCount > 0,
+        color: const Color(0xFFFFC107),
+      ),
+      _Achievement(
+        title: 'Halfway',
+        desc: '50% course completion',
+        icon: Icons.trending_up_rounded,
+        unlocked: _progress >= 0.5,
+        color: _DT.primary,
+      ),
+      _Achievement(
+        title: 'Chapter Pro',
+        desc: 'Complete any chapter',
+        icon: Icons.book_rounded,
+        unlocked: _chapterCompletionStatus.values.any((v) => v),
+        color: _DT.accent,
+      ),
+      _Achievement(
+        title: 'Graduate',
+        desc: 'Finish the entire course',
+        icon: Icons.military_tech_rounded,
+        unlocked: _completedLessonsCount == _totalLessons && _totalLessons > 0,
+        color: const Color(0xFF00ACC1),
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: _DT.r20,
+        boxShadow: _DT.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Achievements',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary)),
+          const SizedBox(height: 16),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: achievements
+                .map((a) => _AchievementCard(a: a, isDark: _isDark))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  MATERIALS TAB
+  // ─────────────────────────────────────────────
+  Widget _buildMaterialsTab() {
+    if (_chapters == null || _chapters!.isEmpty) {
+      return _buildEmptyState(
+          icon: Icons.folder_open_rounded,
+          title: 'No materials yet',
+          subtitle: 'Materials appear as chapters are added');
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        if (_course?.description != null) ...[
+          _buildCourseSummaryCard(),
+          const SizedBox(height: 16),
+        ],
+        // Invoice download card (only if user has paid)
+        if (_hasPaidForCourse) ...[
+          _buildInvoiceDownloadCard(),
+          const SizedBox(height: 16),
+        ],
+        ..._chapters!.asMap().entries.map((e) {
+          final i = e.key;
+          final s = e.value;
+          final lessons = _chapterLessons[s.id] ?? [];
+          final materials = _extractChapterMaterials(s, lessons);
+          if (materials.isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _ChapterMaterialsCard(
+              section: s,
+              materials: materials,
+              chapterIndex: i,
+              isDark: _isDark,
+              onTap: _openMaterial,
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCourseSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_DT.primary.withOpacity(0.08), _DT.accent.withOpacity(0.06)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: _DT.r20,
+        border: Border.all(color: _DT.primary.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _DT.primary.withOpacity(0.12),
+              borderRadius: _DT.r12,
+            ),
+            child: const Icon(Icons.description_rounded,
+                color: _DT.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Course Overview',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: _textPrimary)),
+                const SizedBox(height: 4),
+                Text(
+                  _course!.description ?? '',
+                  style: TextStyle(fontSize: 13, color: _textSecondary, height: 1.4),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInvoiceDownloadCard() {
+    final payment = _getUserPaymentForCurrentCourse();
+    final isDownloading = ref.watch(paymentProvider).isProcessing;
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_DT.accent.withOpacity(0.08), _DT.primary.withOpacity(0.06)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: _DT.r20,
+        border: Border.all(color: _DT.accent.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _DT.accent.withOpacity(0.12),
+                  borderRadius: _DT.r12,
+                ),
+                child: Icon(Icons.receipt_long_rounded,
+                    color: _DT.accent, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Payment Invoice',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: _textPrimary)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Download your payment receipt for this course',
+                      style: TextStyle(fontSize: 13, color: _textSecondary, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (payment != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _surfaceBg,
+                borderRadius: _DT.r12,
+                border: Border.all(color: _borderColor.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Payment Details',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: _textPrimary)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getPaymentStatusColor(payment.status).withOpacity(0.1),
+                          borderRadius: _DT.r8,
+                        ),
+                        child: Text(
+                          payment.status.displayName.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: _getPaymentStatusColor(payment.status),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _PaymentDetailRow(
+                    label: 'Amount',
+                    value: '\$${payment.amount.toStringAsFixed(2)}',
+                    isDark: _isDark,
+                  ),
+                  _PaymentDetailRow(
+                    label: 'Payment ID',
+                    value: payment.id.substring(0, 8) + '...',
+                    isDark: _isDark,
+                  ),
+                  _PaymentDetailRow(
+                    label: 'Date',
+                    value: payment.createdAt.toString().substring(0, 10),
+                    isDark: _isDark,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: isDownloading ? null : _downloadInvoice,
+              icon: isDownloading
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.download_rounded, size: 18),
+              label: Text(isDownloading ? 'Downloading...' : 'Download Invoice'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _DT.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: _DT.r12),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getPaymentStatusColor(PaymentStatus status) {
+    switch (status) {
+      case PaymentStatus.completed:
+      case PaymentStatus.approved:
+        return _DT.primary;
+      case PaymentStatus.pending:
+        return Colors.orange;
+      case PaymentStatus.failed:
+        return Colors.red;
+      case PaymentStatus.cancelled:
+        return _textSecondary;
+      default:
+        return _textSecondary;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  //  AI CHAT FAB
+  // ─────────────────────────────────────────────
+  Widget _buildAIChatFAB() {
+    return ScaleTransition(
+      scale: _fabScale,
+      child: GestureDetector(
+        onTap: () => setState(() => _isChatExpanded = !_isChatExpanded),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+                colors: _DT.purpleGrad,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight),
+            borderRadius: _DT.r20,
+            boxShadow: [
+              BoxShadow(
+                  color: _DT.accent.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(Icons.smart_toy_rounded,
+                  color: Colors.white, size: 26),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: _DT.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  AI CHAT OVERLAY
+  // ─────────────────────────────────────────────
+  Widget _buildAIChatOverlay() {
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: () => setState(() => _isChatExpanded = false),
+        child: Container(
+          color: Colors.black.withOpacity(0.55),
+          child: Center(
+            child: GestureDetector(
+              onTap: () {},
+              child: ModernAIChatDialog(
+                currentCourse: _course,
+                allSections: _chapters,
+                sectionLessons: _chapterLessons,
+                chatService: _aiChatService,
+                conversationId: _conversationId,
+                guideKey: _guideKey,
+                onClose: () => setState(() => _isChatExpanded = false),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  CHAPTER DETAILS MODAL
+  // ─────────────────────────────────────────────
+  void _openChapterDetails(Section section) {
+    final lessons = _chapterLessons[section.id] ?? [];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ChapterDetailsSheet(
+        section: section,
+        lessons: lessons,
+        lessonCompletionStatus: _lessonCompletionStatus,
+        isDark: _isDark,
+        onLessonTap: (l) {
+          Navigator.pop(ctx);
+          _openLesson(l);
+        },
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  HELPERS
+  // ─────────────────────────────────────────────
+  List<Map<String, dynamic>> _extractChapterMaterials(
+      Section section, List<Lesson> lessons) {
+    final materials = <Map<String, dynamic>>[];
+    for (var lesson in lessons) {
+      if (lesson.hasVideo)
+        materials.add({
+          'title': lesson.title,
+          'type': 'video',
+          'icon': Icons.play_circle_rounded,
+          'color': _DT.primary,
+          'videoId': lesson.videoId,
+          'duration': lesson.duration,
+          'lessonId': lesson.id,
+          'subtitle': '${lesson.duration} min video',
+        });
+      if (lesson.hasNotes)
+        materials.add({
+          'title': '${lesson.title} — Notes',
+          'type': 'notes',
+          'icon': Icons.description_rounded,
+          'color': _DT.accent,
+          'notes': lesson.notes,
+          'notesPdfUrl': lesson.notesPdfUrl,
+          'lessonId': lesson.id,
+          'subtitle': 'Study notes',
+        });
+      if (lesson.hasQuiz)
+        materials.add({
+          'title': '${lesson.title} — Quiz',
+          'type': 'quiz',
+          'icon': Icons.quiz_rounded,
+          'color': const Color(0xFFF59E0B),
+          'quizId': lesson.quizId,
+          'lessonId': lesson.id,
+          'subtitle': 'Knowledge check',
+        });
+      if (lesson.hasMaterials)
+        for (var url in lesson.materials!)
+          materials.add({
+            'title': url.split('/').last,
+            'type': 'document',
+            'icon': Icons.insert_drive_file_rounded,
+            'color': const Color(0xFF8B5CF6),
+            'url': url,
+            'lessonId': lesson.id,
+            'subtitle': 'Resource file',
+          });
+    }
+    return materials;
+  }
+
+  void _openLesson(Lesson lesson) => context.push('/lesson/${lesson.id}');
+
+  void _openMaterial(Map<String, dynamic> m) {
+    switch (m['type'] as String) {
+      case 'video':
+      case 'notes':
+        context.push('/lesson/${m["lessonId"]}');
+        break;
+      case 'quiz':
+        final qid = m['quizId'] as String;
+        if (qid.isNotEmpty)
+          context.push(
+              '/enhanced-quiz/$qid?lessonTitle=${Uri.encodeComponent(_course?.title ?? "Quiz")}');
+        break;
+      case 'document':
+        final url = m['url'] as String? ?? m['notesPdfUrl'] as String?;
+        if (url != null && url.isNotEmpty && url.startsWith('http'))
+          launchUrl(Uri.parse(url));
+        break;
+    }
+  }
+
+  Future<void> _refreshData() async {
+    await _loadCourseData();
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Content refreshed'),
+          backgroundColor: _DT.primary,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
+  Widget _buildEmptyState(
+      {required IconData icon,
+      required String title,
+      required String subtitle}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _DT.primary.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 40, color: _DT.primary),
+            ),
+            const SizedBox(height: 20),
+            Text(title,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary)),
+            const SizedBox(height: 8),
+            Text(subtitle,
+                style: TextStyle(fontSize: 14, color: _textSecondary),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  CHAPTER CARD
+// ═════════════════════════════════════════════
+class _ChapterCard extends StatelessWidget {
+  final Section section;
+  final List<Lesson> lessons;
+  final bool isUnlocked;
+  final bool isCurrent;
+  final Map<String, bool> lessonCompletionStatus;
+  final bool isDark;
+  final bool isCompact;
+  final void Function(Lesson) onLessonTap;
+  final VoidCallback onMoreTap;
+
+  const _ChapterCard({
+    required this.section,
+    required this.lessons,
+    required this.isUnlocked,
+    required this.isCurrent,
+    required this.lessonCompletionStatus,
+    required this.isDark,
+    required this.isCompact,
+    required this.onLessonTap,
+    required this.onMoreTap,
+  });
+
+  int get completedCount =>
+      lessons.where((l) => lessonCompletionStatus[l.id] == true).length;
+
+  double get chapterProgress =>
+      lessons.isEmpty ? 0.0 : completedCount / lessons.length;
+
+  Color get _cardBg => isDark ? _DT.cardDark : _DT.card;
+  Color get _textPrimary => isDark ? Colors.white : _DT.textPrimary;
+  Color get _borderColor => isDark ? _DT.borderDark : _DT.border;
+  Color get _surfaceBg => isDark ? _DT.surfaceDk : _DT.surface;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: _DT.r20,
+        border: isCurrent
+            ? Border.all(color: _DT.primary, width: 2)
+            : Border.all(color: _borderColor, width: 0.5),
+        boxShadow: _DT.cardShadow,
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(),
+          if (isUnlocked && lessons.isNotEmpty) _buildLessonsSection(),
+          if (!isUnlocked) _buildLockedFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.all(isCompact ? 14 : 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isUnlocked
+              ? _DT.heroGrad
+              : [Colors.grey.shade400, Colors.grey.shade500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 6 : 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: _DT.r8,
+                ),
+                child: Icon(
+                  isUnlocked ? Icons.book_rounded : Icons.lock_rounded,
+                  color: Colors.white,
+                  size: isCompact ? 14 : 18,
+                ),
+              ),
+              SizedBox(width: isCompact ? 8 : 12),
+              Expanded(
+                child: Text(
+                  section.displayName,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isCompact ? 13 : 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                  maxLines: isCompact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Count badge
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: isCompact ? 7 : 10,
+                    vertical: isCompact ? 3 : 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: _DT.r32,
+                ),
+                child: Text(
+                  '$completedCount/${lessons.length}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isCompact ? 10 : 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!isCompact && section.description != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              section.description!,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          // Progress bar inside header
+          if (isUnlocked && lessons.isNotEmpty) ...[
+            SizedBox(height: isCompact ? 8 : 12),
+            ClipRRect(
+              borderRadius: _DT.r32,
+              child: LinearProgressIndicator(
+                value: chapterProgress,
+                minHeight: 3,
+                backgroundColor: Colors.white.withOpacity(0.3),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonsSection() {
+    final displayLessons = isCompact ? _getVisibleLessons() : lessons;
+    return Padding(
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...displayLessons.map((l) {
+            final done = lessonCompletionStatus[l.id] == true;
+            return _LessonRow(
+              lesson: l,
+              isCompleted: done,
+              isCompact: isCompact,
+              isDark: isDark,
+              onTap: () => onLessonTap(l),
+            );
+          }),
+          if (isCompact && _shouldShowMoreButton())
+            GestureDetector(
+              onTap: onMoreTap,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: _DT.primary.withOpacity(0.06),
+                  borderRadius: _DT.r12,
+                  border:
+                      Border.all(color: _DT.primary.withOpacity(0.2)),
+                ),
+                child: Text(
+                  '+${_getHiddenLessonCount()} more lessons',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: _DT.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Returns the lessons that should be visible based on completion status
+  List<Lesson> _getVisibleLessons() {
+    if (!isCompact || lessons.isEmpty) return lessons;
+    
+    List<Lesson> visibleLessons = [];
+    
+    for (int i = 0; i < lessons.length; i++) {
+      final lesson = lessons[i];
+      
+      // Always show the first lesson
+      if (i == 0) {
+        visibleLessons.add(lesson);
+        continue;
+      }
+      
+      // Check if previous lesson is completed
+      final previousLesson = lessons[i - 1];
+      final isPreviousCompleted = lessonCompletionStatus[previousLesson.id] == true;
+      
+      if (isPreviousCompleted) {
+        visibleLessons.add(lesson);
+      } else {
+        // Stop at the first incomplete lesson
+        break;
+      }
+    }
+    
+    return visibleLessons;
+  }
+
+  // Determines if the "more lessons" button should be shown
+  bool _shouldShowMoreButton() {
+    if (!isCompact || lessons.length <= 2) return false;
+    
+    final visibleLessons = _getVisibleLessons();
+    final hiddenCount = lessons.length - visibleLessons.length;
+    
+    return hiddenCount > 0;
+  }
+
+  // Returns the count of hidden lessons
+  int _getHiddenLessonCount() {
+    if (!isCompact) return 0;
+    
+    final visibleLessons = _getVisibleLessons();
+    return lessons.length - visibleLessons.length;
+  }
+
+  Widget _buildLockedFooter() {
+    return Padding(
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline_rounded,
+              size: 16, color: Colors.grey.shade400),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Complete the previous chapter to unlock',
+              style: TextStyle(
+                  fontSize: isCompact ? 11 : 13,
+                  color: Colors.grey.shade400),
+              maxLines: isCompact ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  LESSON ROW
+// ═════════════════════════════════════════════
+class _LessonRow extends StatelessWidget {
+  final Lesson lesson;
+  final bool isCompleted;
+  final bool isCompact;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _LessonRow({
+    required this.lesson,
+    required this.isCompleted,
+    required this.isCompact,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  IconData get _typeIcon {
+    switch (lesson.displayType.toLowerCase()) {
+      case 'video': return Icons.play_circle_rounded;
+      case 'notes': return Icons.description_rounded;
+      case 'quiz':  return Icons.quiz_rounded;
+      case 'mixed': return Icons.layers_rounded;
+      default:      return Icons.article_rounded;
+    }
+  }
+
+  Color get _typeColor {
+    switch (lesson.displayType.toLowerCase()) {
+      case 'video': return _DT.primary;
+      case 'notes': return _DT.accent;
+      case 'quiz':  return const Color(0xFFF59E0B);
+      case 'mixed': return const Color(0xFF8B5CF6);
+      default:      return _DT.textSecondary;
+    }
+  }
+
+  Color get _surface => isDark ? _DT.surfaceDk : _DT.surface;
+  Color get _border  => isDark ? _DT.borderDark : _DT.border;
+  Color get _text    => isDark ? Colors.white : _DT.textPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(bottom: isCompact ? 6 : 10),
+        padding: EdgeInsets.all(isCompact ? 10 : 12),
+        decoration: BoxDecoration(
+          color: isCompleted ? _DT.primary.withOpacity(0.06) : _surface,
+          borderRadius: _DT.r12,
+          border: Border.all(
+            color: isCompleted
+                ? _DT.primary.withOpacity(0.25)
+                : _border,
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isCompact ? 5 : 7),
+              decoration: BoxDecoration(
+                color: _typeColor.withOpacity(0.12),
+                borderRadius: _DT.r8,
+              ),
+              child: Icon(_typeIcon,
+                  color: _typeColor, size: isCompact ? 13 : 16),
+            ),
+            SizedBox(width: isCompact ? 8 : 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lesson.title,
+                    style: TextStyle(
+                      fontSize: isCompact ? 11 : 13,
+                      fontWeight: FontWeight.w600,
+                      color: _text,
+                      decoration:
+                          isCompleted ? TextDecoration.lineThrough : null,
+                      decorationColor: _DT.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!isCompact) ...[
+                    const SizedBox(height: 3),
+                    Text('${lesson.duration} min',
+                        style: TextStyle(
+                            fontSize: 11, color: _DT.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+            if (isCompleted)
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                    color: _DT.primary, shape: BoxShape.circle),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 10),
+              )
+            else
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: _DT.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  CHAPTER DETAILS BOTTOM SHEET
+// ═════════════════════════════════════════════
+class _ChapterDetailsSheet extends StatelessWidget {
+  final Section section;
+  final List<Lesson> lessons;
+  final Map<String, bool> lessonCompletionStatus;
+  final bool isDark;
+  final void Function(Lesson) onLessonTap;
+
+  const _ChapterDetailsSheet({
+    required this.section,
+    required this.lessons,
+    required this.lessonCompletionStatus,
+    required this.isDark,
+    required this.onLessonTap,
+  });
+
+  // Returns the lessons that should be visible based on completion status
+  List<Lesson> _getVisibleLessons() {
+    if (lessons.isEmpty) return lessons;
+    
+    List<Lesson> visibleLessons = [];
+    
+    for (int i = 0; i < lessons.length; i++) {
+      final lesson = lessons[i];
+      
+      // Always show the first lesson
+      if (i == 0) {
+        visibleLessons.add(lesson);
+        continue;
+      }
+      
+      // Check if previous lesson is completed
+      final previousLesson = lessons[i - 1];
+      final isPreviousCompleted = lessonCompletionStatus[previousLesson.id] == true;
+      
+      if (isPreviousCompleted) {
+        visibleLessons.add(lesson);
+      } else {
+        // Stop at the first incomplete lesson
+        break;
+      }
+    }
+    
+    return visibleLessons;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? _DT.cardDark : Colors.white;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? _DT.borderDark : _DT.border,
+              borderRadius: _DT.r32,
+            ),
+          ),
+          // Header
+          Container(
+            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                  colors: _DT.heroGrad,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight),
+              borderRadius: _DT.r16,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: _DT.r12),
+                  child: const Icon(Icons.book_rounded,
+                      color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(section.displayName,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700)),
+                      Text('${lessons.length} lessons',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              itemCount: _getVisibleLessons().length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (ctx, i) {
+                final l = _getVisibleLessons()[i];
+                return _LessonRow(
+                  lesson: l,
+                  isCompleted: lessonCompletionStatus[l.id] == true,
+                  isCompact: false,
+                  isDark: isDark,
+                  onTap: () => onLessonTap(l),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  CHAPTER MATERIALS CARD
+// ═════════════════════════════════════════════
+class _ChapterMaterialsCard extends StatelessWidget {
+  final Section section;
+  final List<Map<String, dynamic>> materials;
+  final int chapterIndex;
+  final bool isDark;
+  final void Function(Map<String, dynamic>) onTap;
+
+  const _ChapterMaterialsCard({
+    required this.section,
+    required this.materials,
+    required this.chapterIndex,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? _DT.cardDark : Colors.white;
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+    final border = isDark ? _DT.borderDark : _DT.border;
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: _DT.r20,
+        border: Border.all(color: border, width: 0.5),
+        boxShadow: _DT.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _DT.primary,
+                    borderRadius: _DT.r32,
+                  ),
+                  child: Text(
+                    'Ch. ${chapterIndex + 1}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(section.displayName,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: textPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+                Text('${materials.length} items',
+                    style: TextStyle(
+                        fontSize: 12, color: _DT.textSecondary)),
+              ],
+            ),
+          ),
+          // Grid
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: GridView.count(
+              crossAxisCount: isDesktop ? 4 : 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: isDesktop ? 1.8 : 1.5,
+              children: materials
+                  .map((m) => _MaterialTile(
+                        material: m,
+                        isDark: isDark,
+                        onTap: () => onTap(m),
+                      ))
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MaterialTile extends StatelessWidget {
+  final Map<String, dynamic> material;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _MaterialTile(
+      {required this.material,
+      required this.isDark,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color c = material['color'] as Color;
+    final bg = isDark ? _DT.surfaceDk : _DT.surface;
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: _DT.r12,
+          border: Border.all(color: c.withOpacity(0.25), width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                      color: c.withOpacity(0.12),
+                      borderRadius: _DT.r8),
+                  child:
+                      Icon(material['icon'] as IconData, color: c, size: 14),
+                ),
+                const Spacer(),
+                if (material['duration'] != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: c.withOpacity(0.12),
+                        borderRadius: _DT.r4),
+                    child: Text('${material["duration"]}m',
+                        style: TextStyle(
+                            color: c,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            Text(
+              material['title'] as String,
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: textPrimary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              material['subtitle'] as String? ?? '',
+              style:
+                  const TextStyle(fontSize: 9, color: _DT.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  SMALL REUSABLE WIDGETS
+// ═════════════════════════════════════════════
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final bool active;
+  final bool isDark;
+  final Color cardBg;
+  final VoidCallback onTap;
+
+  const _ActionChip({
+    required this.icon,
+    this.active = false,
+    required this.isDark,
+    required this.cardBg,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: active ? _DT.primary : cardBg,
+          borderRadius: _DT.r12,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Icon(icon,
+            size: 18,
+            color: active
+                ? Colors.white
+                : (isDark ? Colors.white : _DT.textPrimary)),
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _HeroStat(
+      {required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white70, size: 14),
+        const SizedBox(width: 4),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700)),
+        const SizedBox(width: 3),
+        Text(label,
+            style: const TextStyle(color: Colors.white60, fontSize: 11)),
+      ],
+    );
+  }
+}
+
+class _ProgressStatRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final bool isDark;
+  const _ProgressStatRow(
+      {required this.label,
+      required this.value,
+      required this.color,
+      required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+            width: 8,
+            height: 8,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: _DT.textSecondary)),
+        ),
+        Text(value,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : _DT.textPrimary)),
+      ],
+    );
+  }
+}
+
+class _ChapterProgressRow extends StatelessWidget {
+  final int index;
+  final String title;
+  final int done;
+  final int total;
+  final double pct;
+  final bool isCompleted;
+  final bool isDark;
+  final bool isLast;
+
+  const _ChapterProgressRow({
+    required this.index,
+    required this.title,
+    required this.done,
+    required this.total,
+    required this.pct,
+    required this.isCompleted,
+    required this.isDark,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+    final border = isDark ? _DT.borderDark : _DT.border;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      decoration: BoxDecoration(
+        border: !isLast
+            ? Border(bottom: BorderSide(color: border, width: 0.5))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? _DT.primary
+                  : _DT.primary.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: isCompleted
+                  ? const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 14)
+                  : Text('$index',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _DT.primary)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: _DT.r32,
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          minHeight: 4,
+                          backgroundColor:
+                              _DT.primary.withOpacity(0.1),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              isCompleted
+                                  ? _DT.primary
+                                  : _DT.primary.withOpacity(0.6)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('$done/$total',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: _DT.textSecondary,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Achievement {
+  final String title;
+  final String desc;
+  final IconData icon;
+  final bool unlocked;
+  final Color color;
+  const _Achievement(
+      {required this.title,
+      required this.desc,
+      required this.icon,
+      required this.unlocked,
+      required this.color});
+}
+
+class _AchievementCard extends StatelessWidget {
+  final _Achievement a;
+  final bool isDark;
+  const _AchievementCard({required this.a, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? _DT.surfaceDk : _DT.surface;
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: a.unlocked ? a.color.withOpacity(0.08) : bg,
+        borderRadius: _DT.r16,
+        border: Border.all(
+          color: a.unlocked
+              ? a.color.withOpacity(0.3)
+              : (isDark ? _DT.borderDark : _DT.border),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(a.icon,
+              color: a.unlocked ? a.color : _DT.textSecondary,
+              size: 26),
+          const SizedBox(height: 6),
+          Text(a.title,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: a.unlocked ? a.color : _DT.textSecondary),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 3),
+          Text(a.desc,
+              style: TextStyle(
+                  fontSize: 9,
+                  color: a.unlocked
+                      ? a.color.withOpacity(0.8)
+                      : _DT.textSecondary),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isDark;
+
+  const _PaymentDetailRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+    final textSecondary = _DT.textSecondary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

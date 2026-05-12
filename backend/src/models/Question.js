@@ -1,50 +1,137 @@
 const mongoose = require('mongoose');
 
 const questionSchema = new mongoose.Schema({
-  examId: {
+  quizId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Exam',
-    required: [true, 'Exam ID is required']
+    ref: 'Quiz',
+    required: true
   },
-  question: {
+  text: {
     type: String,
-    required: [true, 'Question is required'],
-    maxlength: [1000, 'Question cannot exceed 1000 characters']
+    required: true,
+    trim: true
   },
   type: {
     type: String,
-    enum: ['mcq', 'true_false', 'fill_blank', 'open'], // Support all question types
-    default: 'mcq',
-    required: true
+    required: true,
+    enum: ['mcq', 'true_false', 'fill_blank', 'essay', 'drag_drop', 'matching', 'ordering', 'hotspot', 'programming'],
+    default: 'mcq'
   },
   options: [{
-    type: String,
-    maxlength: [500, 'Option cannot exceed 500 characters']
+    id: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    image: {
+      type: String,
+      default: null
+    },
+    isCorrect: {
+      type: Boolean,
+      default: false
+    }
   }],
   correctAnswer: {
-    type: mongoose.Schema.Types.Mixed, // Can be either string (answer text) or number (option index)
+    type: mongoose.Schema.Types.Mixed,
     required: function() {
-      // correctAnswer is required for mcq and true_false, but optional for open and fill_blank
-      return this.type === 'mcq' || this.type === 'true_false';
+      return this.type === 'mcq' || this.type === 'true_false' || this.type === 'fill_blank' || this.type === 'essay' || this.type === 'programming';
     }
   },
+  // Drag and drop specific fields
+  dragDropItems: [{
+    id: { type: String, required: true },
+    content: { type: String, required: true },
+    image: { type: String, default: null },
+    targetZone: { type: String, required: true }
+  }],
+  dropZones: [{
+    id: { type: String, required: true },
+    label: { type: String, required: true },
+    correctItems: [{ type: String }],
+    acceptsMultiple: { type: Boolean, default: false }
+  }],
+  // Matching specific fields
+  matchingPairs: [{
+    leftItem: { type: String, required: true },
+    rightItem: { type: String, required: true },
+    leftId: { type: String },
+    rightId: { type: String }
+  }],
+  // Ordering specific fields
+  correctOrder: [{ type: String }],
+  // Hotspot specific fields
+  hotspots: [{
+    id: { type: String, required: true },
+    x: { type: Number, required: true },
+    y: { type: Number, required: true },
+    width: { type: Number, required: true },
+    height: { type: Number, required: true },
+    label: { type: String },
+    isCorrect: { type: Boolean, default: true }
+  }],
+  hotspotImage: { type: String },
   points: {
     type: Number,
     default: 1,
-    min: [0, 'Points cannot be negative']
+    min: 1
   },
-  section: {
+  explanation: {
     type: String,
-    maxlength: [100, 'Section name cannot exceed 100 characters'],
-    required: false
+    trim: true
+  },
+  timeLimit: {
+    type: Number,
+    default: 30
+  },
+  difficulty: {
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    default: 'medium'
+  },
+  mediaUrl: {
+    type: String,
+    trim: true
+  },
+  starterCode: {
+    type: String,
+    trim: true
+  },
+  testCases: [{
+    type: [{
+      input: { type: String, required: true },
+      expectedOutput: { type: String, required: true }
+    }],
+    default: []
+  }],
+  allowMultipleAttempts: {
+    type: Boolean,
+    default: true
+  },
+  maxAttempts: {
+    type: Number,
+    default: 3
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-
-
-// Index for better performance
-questionSchema.index({ examId: 1 });
+// Add indexes for better performance
+questionSchema.index({ quizId: 1 });
+questionSchema.index({ text: 1, type: 1, difficulty: 1 });
 
 module.exports = mongoose.model('Question', questionSchema);

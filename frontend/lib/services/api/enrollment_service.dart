@@ -234,6 +234,27 @@ class EnrollmentService {
     }
   }
 
+  /// Get course feedback
+  Future<List<Map<String, dynamic>>> getCourseFeedback(String courseId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.enrollments}/course/$courseId/feedback');
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] == true) {
+        final data = jsonBody['data'] as List? ?? [];
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to fetch course feedback');
+      }
+    } catch (e) {
+      print('Error in getCourseFeedback: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch course feedback: $e');
+    }
+  }
+
   /// Submit course feedback
   Future<void> submitCourseFeedback(String courseId, double rating, String feedback) async {
     try {
@@ -258,6 +279,88 @@ class EnrollmentService {
       print('Error in submitCourseFeedback: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to submit feedback: $e');
+    }
+  }
+
+  /// Mark lesson as completed
+  Future<void> markLessonComplete(String lessonId) async {
+    try {
+      final requestBody = {
+        'lessonId': lessonId,
+        'completed': true,
+      };
+
+      // Use the existing updateEnrollmentProgress method instead
+      // This will work with the existing backend endpoint
+      final enrollmentsResponse = await _apiClient.get('${ApiConfig.enrollments}/my-courses');
+      enrollmentsResponse.validateStatus();
+      
+      final enrollmentsJson = jsonDecode(enrollmentsResponse.body) as Map<String, dynamic>;
+      if (enrollmentsJson['success'] != true) {
+        throw ApiException('Failed to get enrollments');
+      }
+      
+      final enrollments = enrollmentsJson['data'] as List;
+      if (enrollments.isEmpty) {
+        throw ApiException('No active enrollments found');
+      }
+      
+      // Use the first active enrollment (simplified approach)
+      final firstEnrollment = enrollments.first as Map<String, dynamic>;
+      final enrollmentId = firstEnrollment['_id']?.toString();
+      
+      if (enrollmentId == null) {
+        throw ApiException('No enrollment found');
+      }
+
+      final response = await _apiClient.put(
+        '${ApiConfig.enrollments}/$enrollmentId/progress',
+        body: requestBody,
+      );
+
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to mark lesson as completed');
+      }
+    } catch (e) {
+      print('Error in markLessonComplete: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to mark lesson as completed: $e');
+    }
+  }
+
+  /// Unenroll from a course
+  Future<void> unenrollFromCourse(String courseId) async {
+    try {
+      print('Unenrolling from course: $courseId');
+      
+      // First get user's enrollments to find the enrollment ID
+      final enrollments = await getEnrollments();
+      final enrollment = enrollments.firstWhere(
+        (enroll) => enroll.courseId.toString() == courseId.toString(),
+        orElse: () => throw Exception('Enrollment not found for this course'),
+      );
+      
+      final response = await _apiClient.delete(
+        '${ApiConfig.enrollments}/${enrollment.id}',
+      );
+
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to unenroll from course');
+      }
+      
+      print('Successfully unenrolled from course: $courseId');
+    } catch (e) {
+      print('Error in unenrollFromCourse: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to unenroll from course: $e');
     }
   }
 }

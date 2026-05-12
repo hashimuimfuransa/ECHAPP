@@ -19,6 +19,7 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
   bool _isLoading = false;
   CourseAnalytics? _analytics;
   String? _errorMessage;
+  String _selectedFilter = 'all'; // 'all', 'active', 'expired', 'expiring'
 
   @override
   void initState() {
@@ -527,6 +528,9 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        // Filter chips
+        _buildFilterChips(isSmallScreen),
+        const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -555,6 +559,8 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                         Expanded(child: _headerText('RATING', textAlign: TextAlign.center)),
                       if (!isSmallScreen)
                         Expanded(child: _headerText('STATUS', textAlign: TextAlign.center)),
+                      if (!isSmallScreen)
+                        Expanded(child: _headerText('TIME LEFT', textAlign: TextAlign.center)),
                       if (isLargeScreen)
                         Expanded(child: _headerText('ENROLLED', textAlign: TextAlign.center)),
                       Expanded(child: _headerText('ACTIONS', textAlign: TextAlign.center)),
@@ -564,10 +570,10 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _analytics!.students.length,
+                  itemCount: _getFilteredStudents().length,
                   separatorBuilder: (context, index) => Divider(height: 1, color: AppTheme.greyColor.withOpacity(0.05)),
                   itemBuilder: (context, index) {
-                    final student = _analytics!.students[index];
+                    final student = _getFilteredStudents()[index];
                     return InkWell(
                       onTap: () => context.push('/admin/students/${student.id}'),
                       child: Padding(
@@ -648,6 +654,12 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                                   ),
                                 ),
                               ),
+                            if (!isSmallScreen)
+                              Expanded(
+                                child: Center(
+                                  child: _buildTimeRemainingWidget(student),
+                                ),
+                              ),
                             if (isLargeScreen)
                               Expanded(
                                 child: Text(
@@ -688,6 +700,96 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
         fontWeight: FontWeight.bold,
         color: AppTheme.greyColor.withOpacity(0.8),
         letterSpacing: 1,
+      ),
+    );
+  }
+
+  List<CourseStudentPerformance> _getFilteredStudents() {
+    switch (_selectedFilter) {
+      case 'active':
+        return _analytics!.students.where((s) => (s.isExpired ?? false) == false).toList();
+      case 'expired':
+        return _analytics!.students.where((s) => (s.isExpired ?? false) == true).toList();
+      case 'expiring':
+        return _analytics!.students.where((s) => (s.isExpired ?? false) == false && s.timeRemaining != null && s.timeRemaining!.contains('h') && !s.timeRemaining!.contains('d')).toList();
+      default:
+        return _analytics!.students;
+    }
+  }
+
+  Widget _buildFilterChips(bool isSmallScreen) {
+    final filters = [
+      {'value': 'all', 'label': 'All Students', 'count': _analytics!.students.length},
+      {'value': 'active', 'label': 'Active', 'count': _analytics!.students.where((s) => (s.isExpired ?? false) == false && s.status != 'unlimited').length},
+      {'value': 'expired', 'label': 'Expired', 'count': _analytics!.students.where((s) => (s.isExpired ?? false) == true).length},
+      {'value': 'expiring', 'label': 'Expiring Soon', 'count': _analytics!.students.where((s) => (s.isExpired ?? false) == false && s.timeRemaining != null && s.timeRemaining!.contains('h') && !s.timeRemaining!.contains('d')).length},
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: filters.map((filter) {
+        final isSelected = _selectedFilter == filter['value'];
+        return FilterChip(
+          label: Text(
+            '${filter['label']} (${filter['count']})',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 11 : 12,
+              color: isSelected ? Colors.white : AppTheme.greyColor,
+            ),
+          ),
+          selected: isSelected,
+          onSelected: (selected) {
+            if (selected) {
+              setState(() {
+                _selectedFilter = filter['value'] as String;
+              });
+            }
+          },
+          backgroundColor: Colors.white,
+          selectedColor: AppTheme.primaryGreen,
+          checkmarkColor: Colors.white,
+          side: BorderSide(
+            color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.3),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTimeRemainingWidget(CourseStudentPerformance student) {
+    String timeText = student.timeRemaining ?? 'Unlimited';
+    Color textColor = Colors.green;
+    Color backgroundColor = Colors.green.withOpacity(0.1);
+    
+    if ((student.isExpired ?? false) == true) {
+      timeText = 'Expired';
+      textColor = Colors.red;
+      backgroundColor = Colors.red.withOpacity(0.1);
+    } else if (student.status == 'unlimited') {
+      timeText = 'Unlimited';
+      textColor = Colors.blue;
+      backgroundColor = Colors.blue.withOpacity(0.1);
+    } else if (timeText.contains('h') && !timeText.contains('d')) {
+      // Less than 1 day remaining
+      textColor = Colors.orange;
+      backgroundColor = Colors.orange.withOpacity(0.1);
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        timeText,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

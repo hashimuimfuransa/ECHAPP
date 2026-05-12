@@ -1,8 +1,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/category.dart';
+import '../../models/category.dart';
+import 'dart:async';
 
 // Provider for categories
+class CategoriesCache {
+  static List<Category>? _cachedCategories;
+  static DateTime? _lastFetch;
+  static const Duration _cacheTimeout = Duration(minutes: 10); // Cache for 10 minutes
+  
+  static bool get isCacheValid {
+    if (_cachedCategories == null || _lastFetch == null) return false;
+    return DateTime.now().difference(_lastFetch!) < _cacheTimeout;
+  }
+  
+  static List<Category>? get cachedCategories => _cachedCategories;
+  
+  static void cacheCategories(List<Category> categories) {
+    _cachedCategories = categories;
+    _lastFetch = DateTime.now();
+  }
+  
+  static void invalidateCache() {
+    _cachedCategories = null;
+    _lastFetch = null;
+  }
+}
+
 final categoriesProvider = StateProvider<List<Category>>((ref) {
+  if (CategoriesCache.isCacheValid) {
+    return CategoriesCache.cachedCategories!;
+  }
   return CategoriesService.getAllCategories();
 });
 

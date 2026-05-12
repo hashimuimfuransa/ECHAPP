@@ -12,10 +12,10 @@ const {
 const { protect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 
-// Public routes
-router.get('/section/:sectionId', getLessonsBySection);
-router.get('/:lessonId', getLessonById);
-router.get('/course/:courseId/content', getCourseContent);
+// Protected routes (require authentication)
+router.get('/section/:sectionId', protect, getLessonsBySection);
+router.get('/:lessonId', protect, getLessonById);
+router.get('/course/:courseId/content', protect, getCourseContent);
 
 // Admin routes
 router.post('/section/:sectionId', protect, authorize('admin'), createLesson);

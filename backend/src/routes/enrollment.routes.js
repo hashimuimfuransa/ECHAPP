@@ -3,6 +3,7 @@ const router = express.Router();
 const { 
   enrollInCourse,
   getMyCourses,
+  getCourseFeedback,
   submitCourseFeedback,
   getEnrollmentProgress,
   updateEnrollmentProgress,
@@ -12,7 +13,8 @@ const {
   downloadCertificate,
   checkCourseAccess,
   downloadCertificateFile,
-  verifyCertificate
+  verifyCertificate,
+  generateCertificateManually
 } = require('../controllers/enrollment.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -23,6 +25,7 @@ router.get('/verify/:serialNumber', verifyCertificate);
 router.post('/', protect, enrollInCourse);
 router.get('/my-courses', protect, getMyCourses);
 router.post('/course/:courseId/feedback', protect, submitCourseFeedback);
+router.get('/course/:courseId/feedback', protect, getCourseFeedback);
 router.get('/:id/progress', protect, getEnrollmentProgress);
 router.put('/:id/progress', protect, updateEnrollmentProgress);
 router.put('/:id/complete-section', protect, completeSection);
@@ -31,6 +34,7 @@ router.put('/:id/complete-section', protect, completeSection);
 router.get('/certificates', protect, getCertificates);
 router.get('/:courseId/certificate-eligibility', protect, checkCertificateEligibility);
 router.get('/:courseId/certificate/download', protect, downloadCertificate);
+router.post('/generate-certificate', protect, generateCertificateManually);
 
 // New route for downloading certificate files
 router.get('/certificates/:certificateId/download-file', protect, downloadCertificateFile);

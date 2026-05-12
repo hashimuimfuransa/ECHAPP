@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
@@ -15,6 +16,8 @@ import 'package:excellencecoachinghub/presentation/providers/admin_course_provid
 import 'package:excellencecoachinghub/models/user.dart' as app_models;
 
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
+import 'package:excellencecoachinghub/services/categories_service.dart';
+import 'package:excellencecoachinghub/services/notification_service.dart';
 
 class MainLayout extends ConsumerWidget {
   final Widget child;
@@ -26,8 +29,20 @@ class MainLayout extends ConsumerWidget {
     this.title,
   });
 
+  void _enableFullscreenMode() async {
+    if (!kIsWeb) {
+      await SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+        overlays: [],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Enable fullscreen mode to hide system navigation
+    _enableFullscreenMode();
+    
     // Set context for notifications navigation
     PushNotificationService.setContext(context);
     
@@ -172,6 +187,10 @@ class MainLayout extends ConsumerWidget {
     ref.invalidate(notificationCountProvider);
     ref.invalidate(adminDashboardProvider);
     ref.invalidate(adminCourseProvider);
+    
+    // Invalidate caches
+    CategoriesCache.invalidateCache();
+    BackendCategoriesCache.invalidateCache();
     
     // Show a small feedback to the user
     ScaffoldMessenger.of(context).showSnackBar(
@@ -392,10 +411,10 @@ class MainLayout extends ConsumerWidget {
     return Container(
       height: _getResponsiveNavBarHeight(context),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        color: Colors.transparent,
         border: Border(
           top: BorderSide(
-            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            color: isDark ? const Color(0xFF374151).withOpacity(0.3) : const Color(0xFFE5E7EB).withOpacity(0.5),
             width: 1,
           ),
         ),
@@ -405,7 +424,7 @@ class MainLayout extends ConsumerWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: _getResponsiveNavBarPadding(context),
-            vertical: 4,
+            vertical: 8,
           ),
           child: Row(
             children: _buildNavItems(context, currentIndex, screenWidth).map((item) => Expanded(child: item)).toList(),
@@ -456,7 +475,7 @@ class MainLayout extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: _getResponsiveNavItemPadding(context),
-          vertical: 6,
+          vertical: 8,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -479,7 +498,7 @@ class MainLayout extends ConsumerWidget {
                     : (isDark ? Colors.white70 : Colors.black54),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             Text(
               label,
               style: TextStyle(
@@ -550,22 +569,24 @@ class MainLayout extends ConsumerWidget {
   double _getResponsiveNavBarHeight(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     if (screenHeight < 600) {
-      return 65; // Very small screens
+      return 110; // Very small screens - significantly increased
     } else if (screenHeight < 700) {
-      return 70; // Small screens
+      return 120; // Small screens - significantly increased
+    } else if (screenHeight < 800) {
+      return 130; // Medium screens - significantly increased
     } else {
-      return 75; // Medium and large screens
+      return 140; // Large screens - significantly increased
     }
   }
 
   double _getResponsiveNavBarPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 2; // Very small screens - further reduced
+      return 4; // Very small screens
     } else if (screenWidth < 400) {
-      return 4; // Small screens - further reduced
+      return 6; // Small screens
     } else {
-      return 8; // Medium and large screens - further reduced
+      return 10; // Medium and large screens
     }
   }
 
@@ -605,11 +626,11 @@ class MainLayout extends ConsumerWidget {
   double _getResponsiveNavItemPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 1; // Very small screens - minimum padding
+      return 2; // Very small screens
     } else if (screenWidth < 400) {
-      return 2; // Small screens - minimum padding
+      return 3; // Small screens
     } else {
-      return 4; // Medium and large screens - reduced
+      return 6; // Medium and large screens
     }
   }
 
@@ -620,7 +641,7 @@ class MainLayout extends ConsumerWidget {
       case 1:
         return () => context.go('/courses');
       case 2:
-        return () => context.go('/books');
+        return () => context.go('/library');
       case 3:
         return () => context.go('/downloads');
       case 4:

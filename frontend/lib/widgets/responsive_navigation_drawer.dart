@@ -122,6 +122,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'categories'
       },
       {
+        'title': 'Library',
+        'icon': Icons.local_library_outlined,
+        'route': '/library',
+        'key': 'library'
+      },
+      {
         'title': 'Certificates',
         'icon': Icons.verified_outlined,
         'route': '/certificates',
@@ -365,7 +371,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           Row(
             children: [
               Hero(
-                tag: 'app_logo_drawer',
+                tag: 'app_logo_drawer_${UniqueKey().toString()}',
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(

@@ -52,6 +52,12 @@ const categorySchema = new mongoose.Schema({
 // Index for search optimization
 categorySchema.index({ name: 'text', description: 'text' });
 
+// Performance indexes for common queries
+categorySchema.index({ level: 1, name: 1 }); // For getCategoriesByLevel
+categorySchema.index({ isPopular: 1, name: 1 }); // For getPopularCategories
+categorySchema.index({ isFeatured: 1, name: 1 }); // For getFeaturedCategories
+categorySchema.index({ level: 1, isPopular: 1, isFeatured: 1 }); // Compound index for filtering
+
 // Update the updatedAt field before saving
 categorySchema.pre('save', function() {
   this.updatedAt = Date.now();

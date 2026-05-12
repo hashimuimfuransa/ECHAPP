@@ -178,6 +178,8 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
               _buildActivityStats(isLargeScreen, isMediumScreen, isSmallScreen),
               const SizedBox(height: 40),
               _buildTopPerformers(isLargeScreen, isMediumScreen, isSmallScreen),
+              const SizedBox(height: 40),
+              _buildRecentlyUnenrolledStudents(isLargeScreen, isMediumScreen, isSmallScreen),
               const SizedBox(height: 48),
               _buildDataTimestamp(),
               const SizedBox(height: 32),
@@ -1064,9 +1066,216 @@ class _AdminAnalyticsScreenState extends ConsumerState<AdminAnalyticsScreen> {
     );
   }
 
+  Widget _buildRecentlyUnenrolledStudents(bool isLargeScreen, bool isMediumScreen, bool isSmallScreen) {
+    if (_analytics?.recentlyUnenrolledStudents.isEmpty ?? true) {
+      return const SizedBox.shrink();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Text(
+                'Recently Unenrolled Students',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.blackColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.warning_amber_rounded, size: 20, color: Colors.amber.shade700),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: AppTheme.greyColor.withOpacity(0.05)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.05),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.amber.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Students who have been automatically unenrolled due to access duration expiration',
+                        style: TextStyle(
+                          color: Colors.amber.shade800,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _analytics!.recentlyUnenrolledStudents.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  color: AppTheme.greyColor.withOpacity(0.05),
+                  indent: 24,
+                  endIndent: 24,
+                ),
+                itemBuilder: (context, index) {
+                  final student = _analytics!.recentlyUnenrolledStudents[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.amber.withOpacity(0.1),
+                              child: Text(
+                                student.name.substring(0, 1).toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.amber.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    student.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    student.email,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppTheme.greyColor.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Expired',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.greyColor.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.school, size: 16, color: AppTheme.primaryGreen),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Course: ${student.courseTitle}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.schedule, size: 16, color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Access Expired: ${_formatDate(student.accessExpirationDate)}',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.event_busy, size: 16, color: Colors.amber),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Unenrolled: ${_formatDate(student.unenrollmentDate)}',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade700,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
   Widget _buildDataTimestamp() {
     final now = DateTime.now();
-    final formattedTime = DateFormat('HH:mm:ss').format(now);
+    final formattedTime = DateFormat('h:mm a').format(now);
     final formattedDate = DateFormat('MMM dd, yyyy').format(now);
     
     return Container(

@@ -381,6 +381,7 @@ const firebaseLogin = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        phone: user.phone,
         avatar: user.avatar,
         provider: user.provider,
         createdAt: user.createdAt.getTime()  // Convert to milliseconds for Dart DateTime

@@ -9,7 +9,8 @@ class CertificateRepository {
 
   /// Get user's certificates
   Future<List<Certificate>> getCertificates() async {
-    return await _certificateService.getCertificates();
+    final certificates = await _certificateService.getCertificates();
+    return certificates ?? [];
   }
 
   /// Download a specific certificate

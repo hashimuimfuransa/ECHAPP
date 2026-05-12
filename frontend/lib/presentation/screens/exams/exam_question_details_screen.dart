@@ -1,534 +1,504 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/services/api/exam_service.dart';
 
-/// Screen to display detailed question results for a specific exam
 class ExamQuestionDetailsScreen extends StatefulWidget {
-  final ExamResult examResult;
+  final Map<String, dynamic> examResult;
 
-  const ExamQuestionDetailsScreen({super.key, required this.examResult});
+  const ExamQuestionDetailsScreen({
+    super.key,
+    required this.examResult,
+  });
 
   @override
   State<ExamQuestionDetailsScreen> createState() => _ExamQuestionDetailsScreenState();
 }
 
 class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
-  late ExamResult _currentResult;
-  bool _isLoading = false;
-  String? _errorMessage;
+  List<Map<String, dynamic>> results = [];
+  int totalScore = 0;
+  int maxScore = 0;
+  double percentage = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _currentResult = widget.examResult;
+    results = List<Map<String, dynamic>>.from(widget.examResult['results'] ?? []);
+    totalScore = widget.examResult['totalScore'] as int? ?? 0;
+    maxScore = widget.examResult['maxScore'] as int? ?? 0;
+    percentage = (widget.examResult['percentage'] as num?)?.toDouble() ?? 0.0;
     
-    // If questions are missing, fetch the full result
-    if (_currentResult.questions.isEmpty) {
-      _fetchFullResult();
+    // Debug logging
+    print('Exam result received: ${widget.examResult}');
+    if (results.isNotEmpty) {
+      print('First question result: ${results.first}');
     }
   }
 
-  Future<void> _fetchFullResult() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Color _getScoreColor(bool isCorrect) {
+    return isCorrect ? Colors.green.shade600 : Colors.red.shade600;
+  }
 
-    try {
-      final examService = ExamService();
-      final history = await examService.getUserExamHistory();
+  String _formatAnswer(Map<String, dynamic> question, dynamic userAnswer) {
+    final questionType = question['questionType'];
+    final selectedOption = userAnswer?['selectedOption'];
+    final answerText = userAnswer?['answerText'];
+    final options = question['options'] as List<dynamic>?;
+    
+    if (questionType == 'mcq') {
+      if (selectedOption != null && options != null && selectedOption < options.length) {
+        final option = options[selectedOption];
+        final optionText = option is Map ? option['text'] ?? option.toString() : option.toString();
+        return 'Option ${selectedOption + 1}: $optionText';
+      }
+      return selectedOption != null ? 'Option ${selectedOption + 1}' : 'Not answered';
+    } else if (questionType == 'true_false') {
+      if (selectedOption != null) {
+        return selectedOption == 0 ? 'True' : 'False';
+      }
+      return 'Not answered';
+    } else if (questionType == 'fill_blank' || questionType == 'open') {
+      return answerText?.toString() ?? 'Not answered';
+    } else if (questionType == 'drag_drop') {
+      final dragAnswers = userAnswer?['dragAnswers'] as List<dynamic>?;
+      if (dragAnswers == null || dragAnswers.isEmpty) {
+        return 'Not answered';
+      }
       
-      // Find the specific result in history by ID
-      final fullResult = history.firstWhere(
-        (r) => r.resultId == _currentResult.resultId,
-        orElse: () => throw Exception('Result not found in history'),
-      );
-
-      setState(() {
-        _currentResult = fullResult;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to fetch detailed results: $e';
-        _isLoading = false;
-      });
+      final dropZones = question['dropZones'] as List<dynamic>?;
+      final dragItems = question['dragDropItems'] as List<dynamic>?;
+      
+      if (dropZones == null || dragItems == null) {
+        return 'Invalid question structure';
+      }
+      
+      final answerTexts = <String>[];
+      for (final zone in dropZones) {
+        final zoneId = zone['id'] as String?;
+        final zoneLabel = zone['label'] as String?;
+        if (zoneId == null || zoneLabel == null) continue;
+        
+        final itemsInZone = dragAnswers.where((answer) => answer['zoneId'] == zoneId).toList();
+        if (itemsInZone.isNotEmpty) {
+          final itemNames = <String>[];
+          for (final itemAnswer in itemsInZone) {
+            final itemId = itemAnswer['itemId'] as String?;
+            if (itemId != null) {
+              final item = dragItems.firstWhere((i) => i['id'] == itemId, orElse: () => null);
+              if (item != null) {
+                itemNames.add(item['content'] as String? ?? itemId);
+              }
+            }
+          }
+          if (itemNames.isNotEmpty) {
+            answerTexts.add('$zoneLabel: ${itemNames.join(', ')}');
+          }
+        }
+      }
+      
+      return answerTexts.isEmpty ? 'No items placed' : answerTexts.join('\n');
     }
+    return 'Not answered';
+  }
+
+  String _getCorrectAnswer(Map<String, dynamic> question) {
+    final questionType = question['questionType'];
+    final correctAnswer = question['correctAnswer'];
+    final options = question['options'] as List<dynamic>?;
+    
+    print('Getting correct answer for type: $questionType, correctAnswer: $correctAnswer, options: $options');
+    
+    if (questionType == 'mcq') {
+      if (correctAnswer != null && options != null && correctAnswer < options.length) {
+        final option = options[correctAnswer];
+        final optionText = option is Map ? option['text'] ?? option.toString() : option.toString();
+        return 'Option ${correctAnswer + 1}: $optionText';
+      }
+      return correctAnswer != null ? 'Option ${correctAnswer + 1}' : 'N/A';
+    } else if (questionType == 'true_false') {
+      if (correctAnswer != null) {
+        return correctAnswer == 0 ? 'True' : 'False';
+      }
+      return 'N/A';
+    } else if (questionType == 'fill_blank' || questionType == 'open') {
+      return correctAnswer?.toString() ?? 'N/A';
+    } else if (questionType == 'drag_drop') {
+      // For drag_drop, correctAnswer contains the full structure with dragDropItems and dropZones
+      print('=== CORRECT ANSWER DEBUG ===');
+      print('Full correctAnswer: $correctAnswer');
+      print('correctAnswer type: ${correctAnswer.runtimeType}');
+      
+      if (correctAnswer is Map<String, dynamic>) {
+        final dropZones = correctAnswer['dropZones'] as List<dynamic>?;
+        final dragItems = correctAnswer['dragDropItems'] as List<dynamic>?;
+        
+        print('dropZones: $dropZones');
+        print('dragItems: $dragItems');
+        
+        if (dropZones == null || dragItems == null) {
+          return 'Invalid correct answer structure';
+        }
+        
+        final correctTexts = <String>[];
+        for (final zone in dropZones) {
+          final zoneId = zone['id'] as String?;
+          final zoneLabel = zone['label'] as String?;
+          final correctItems = zone['correctItems'] as List<dynamic>?;
+          
+          if (zoneId == null || zoneLabel == null || correctItems == null) continue;
+          
+          final itemNames = <String>[];
+          for (final itemId in correctItems) {
+            if (itemId is String) {
+              final item = dragItems.firstWhere((i) => i['id'] == itemId, orElse: () => null);
+              if (item != null) {
+                itemNames.add(item['content'] as String? ?? itemId);
+              }
+            }
+          }
+          
+          if (itemNames.isNotEmpty) {
+            correctTexts.add('$zoneLabel: ${itemNames.join(', ')}');
+          }
+        }
+        
+        return correctTexts.isEmpty ? 'No correct items specified' : correctTexts.join('\n');
+      }
+      return 'N/A';
+    }
+    return 'N/A';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.getBackgroundColor(context),
+      backgroundColor: const Color(0xFFF8FAF9),
       appBar: AppBar(
-        leading: context.canPop() ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded),
-          onPressed: () => context.pop(),
-          tooltip: 'Back',
-        ) : null,
-        title: const Text('Question Details'),
-        backgroundColor: AppTheme.getBackgroundColor(context),
-        elevation: 0,
-        actions: [
-          if (!_isLoading && _currentResult.questions.isEmpty)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _fetchFullResult,
-            ),
-        ],
-      ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryGreen),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _fetchFullResult,
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+        backgroundColor: AppTheme.primary,
+        title: const Text(
+          'Review Answers',
+          style: TextStyle(color: Colors.white),
         ),
-      );
-    }
-
-    if (_currentResult.questions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.quiz_outlined, size: 48, color: AppTheme.greyColor),
-            const SizedBox(height: 16),
-            const Text(
-              'No question analysis available for this exam.',
-              style: TextStyle(fontSize: 16, color: AppTheme.greyColor),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchFullResult,
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
-              child: const Text('Try Fetching Again'),
-            ),
-          ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with exam info
-          _buildExamHeader(),
-          const SizedBox(height: 24),
-          
-          // Statistics summary
-          _buildStatisticsCard(),
-          const SizedBox(height: 24),
-          
-          // Question list
-          const Text(
-            'Question Review',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          ..._currentResult.questions.asMap().entries.map((entry) {
-            final index = entry.key;
-            final question = entry.value;
-            return _buildQuestionCard(index + 1, question);
-          }),
-        ],
       ),
-    );
-  }
-
-  Widget _buildExamHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          Text(
-            _currentResult.examDetails?.title ?? 'Unknown Exam',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
+          // Summary Card
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: _currentResult.passed 
-                  ? AppTheme.successColor.withOpacity(0.1)
-                  : AppTheme.errorColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: Text(
-              _currentResult.passed ? 'PASSED' : 'FAILED',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: _currentResult.passed 
-                    ? AppTheme.successColor 
-                    : AppTheme.errorColor,
-              ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Score',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.blackColor,
+                      ),
+                    ),
+                    Text(
+                      '$totalScore/$maxScore',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: percentage >= 70 ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Percentage',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.blackColor,
+                      ),
+                    ),
+                    Text(
+                      '${percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: percentage >= 70 ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Status',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.blackColor,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: percentage >= 70 ? Colors.green.shade100 : Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        percentage >= 70 ? 'PASSED' : 'FAILED',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: percentage >= 70 ? Colors.green.shade700 : Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatisticsCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Statistics',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildStatRow(
-            'Total Questions', 
-            '${_currentResult.statistics.totalQuestions}', 
-            Icons.question_mark
-          ),
-          _buildStatRow(
-            'Correct Answers', 
-            '${_currentResult.statistics.correctAnswers}', 
-            Icons.check_circle,
-            AppTheme.successColor
-          ),
-          _buildStatRow(
-            'Incorrect Answers', 
-            '${_currentResult.statistics.incorrectAnswers}', 
-            Icons.cancel,
-            AppTheme.errorColor
-          ),
-          _buildStatRow(
-            'Accuracy', 
-            '${_currentResult.statistics.accuracy.toStringAsFixed(1)}%', 
-            Icons.assessment
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatRow(String label, String value, IconData icon, [Color? color]) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppTheme.greyColor),
-          const SizedBox(width: 12),
+          
+          // Questions List
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color ?? AppTheme.primaryGreen,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuestionCard(int questionNumber, QuestionResult question) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: question.isCorrect 
-            ? AppTheme.successColor.withOpacity(0.05)
-            : AppTheme.errorColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: question.isCorrect 
-              ? AppTheme.successColor.withOpacity(0.3)
-              : AppTheme.errorColor.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Question header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: question.isCorrect 
-                      ? AppTheme.successColor 
-                      : AppTheme.errorColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  question.isCorrect ? Icons.check : Icons.close,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Question $questionNumber',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${question.earnedPoints}/${question.points} points',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: question.isCorrect 
-                      ? AppTheme.successColor 
-                      : AppTheme.errorColor,
-                ),
-              ),
-            ],
-          ),
-        
-          const SizedBox(height: 12),
-        
-          // Question text
-          Text(
-            question.questionText,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        
-          const SizedBox(height: 12),
-        
-          // Display user's answer based on question type
-          if (question.selectedOptionText.isNotEmpty && 
-              !question.selectedOptionText.contains('Invalid option')) 
-          ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.blue.withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Your Answer:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    question.selectedOptionText,
-                    style: const TextStyle(
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        
-          // Options for MCQ and True/False questions only
-          if (question.options.isNotEmpty) ...[
-            // Only show options for MCQ and True/False questions
-            if (question.type == 'mcq' || question.type == 'true_false') ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Options:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.greyColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...question.options.asMap().entries.map((entry) {
-                final index = entry.key;
-                final option = entry.value;
-                final isSelected = index == question.selectedOption;
-                final isCorrect = (question.correctAnswer is int && question.correctAnswer == index) ||
-                                (question.correctAnswer is String && question.correctAnswer == option);
-              
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: results.length,
+              itemBuilder: (context, index) {
+                final result = results[index];
+                final isCorrect = result['isCorrect'] ?? false;
+                final questionType = result['questionType'] ?? 'unknown';
+                final questionText = result['question'] ?? 'Question not available';
+                final userAnswer = result['userAnswer'];
+                final score = result['score'] ?? 0;
+                final maxScore = result['maxScore'] ?? 1;
+                
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? (question.isCorrect 
-                            ? AppTheme.successColor.withOpacity(0.1)
-                            : AppTheme.errorColor.withOpacity(0.1))
-                        : (isCorrect 
-                            ? AppTheme.successColor.withOpacity(0.1)
-                            : Colors.transparent),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected 
-                          ? (question.isCorrect 
-                              ? AppTheme.successColor 
-                              : AppTheme.errorColor)
-                          : (isCorrect 
-                              ? AppTheme.successColor 
-                              : AppTheme.greyColor.withOpacity(0.3)),
-                      width: isSelected || isCorrect ? 2 : 1,
+                      color: _getScoreColor(isCorrect).withOpacity(0.2),
+                      width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (isSelected)
-                        Icon(
-                          question.isCorrect ? Icons.check_circle : Icons.cancel,
-                          size: 18,
-                          color: question.isCorrect 
-                              ? AppTheme.successColor 
-                              : AppTheme.errorColor,
-                        )
-                      else if (isCorrect)
-                        const Icon(
-                          Icons.check_circle,
-                          size: 18,
-                          color: AppTheme.successColor,
-                        )
-                      else
-                        const SizedBox(width: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${String.fromCharCode(65 + index)}. $option',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected || isCorrect ? FontWeight.w500 : FontWeight.normal,
-                            color: isSelected 
-                                ? (question.isCorrect 
-                                    ? AppTheme.successColor 
-                                    : AppTheme.errorColor)
-                                : (isCorrect 
-                                    ? AppTheme.successColor 
-                                    : Colors.black),
+                      // Question Header
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _getScoreColor(isCorrect).withOpacity(0.1),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(14),
+                            topRight: Radius.circular(14),
                           ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: _getScoreColor(isCorrect),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getQuestionTypeLabel(questionType),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.greyColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isCorrect ? 'Correct' : 'Incorrect',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getScoreColor(isCorrect),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '$score/$maxScore',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _getScoreColor(isCorrect),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Question Content
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              questionText,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.blackColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            // User Answer
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Your Answer:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.greyColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Builder(
+                                    builder: (context) {
+                                      print('=== FORMATTING ANSWER ===');
+                                      print('Question type: ${result['questionType']}');
+                                      print('User answer data: $userAnswer');
+                                      print('User answer type: ${userAnswer.runtimeType}');
+                                      
+                                      final formattedAnswer = _formatAnswer(result, userAnswer);
+                                      print('Formatted answer: $formattedAnswer');
+                                      
+                                      return Text(
+                                        formattedAnswer,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: AppTheme.blackColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Correct Answer
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green.shade200),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Correct Answer:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _getCorrectAnswer(result),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 );
-              }),
-            ]
-          ],
-        
-          // Correct answer section
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppTheme.primaryGreen.withOpacity(0.3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Correct Answer:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  question.correctAnswerText,
-                  style: const TextStyle(
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+              },
             ),
           ),
         ],
       ),
     );
+  }
+  
+  String _getQuestionTypeLabel(String type) {
+    switch (type) {
+      case 'mcq':
+        return 'Multiple Choice';
+      case 'true_false':
+        return 'True/False';
+      case 'fill_blank':
+        return 'Fill in the Blank';
+      case 'essay':
+        return 'Essay';
+      case 'drag_drop':
+        return 'Drag and Drop';
+      default:
+        return type.toUpperCase();
+    }
   }
 }

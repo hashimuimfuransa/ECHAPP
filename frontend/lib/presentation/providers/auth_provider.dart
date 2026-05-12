@@ -110,6 +110,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveRefreshToken(authResponse.refreshToken);
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
+        await _storageManager.saveUserPhone(authResponse.user.phone);
         
         debugPrint('AuthProvider: Login completed successfully');
         
@@ -217,6 +218,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveRefreshToken(authResponse.refreshToken);
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
+        await _storageManager.saveUserPhone(authResponse.user.phone);
         
         // Step 5: Initialize and sync FCM token for push notifications
         FCMTokenService.initializeAndSyncToken();
@@ -323,6 +325,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
           phone: phone,
           avatar: avatarUrl,
         );
+        
+        // Save updated phone number to storage
+        if (phone != null) {
+          await _storageManager.saveUserPhone(phone);
+        }
+        
         state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
       } catch (updateError) {
         // If profile update fails with auth error, try to refresh token once
@@ -336,6 +344,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
             phone: phone,
             avatar: avatarUrl,
           );
+          
+          // Save updated phone number to storage
+          if (phone != null) {
+            await _storageManager.saveUserPhone(phone);
+          }
+          
           state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
         } else {
           rethrow;
@@ -418,8 +432,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     
     // Reset state
+    final oldUser = state.user;
     state = AuthState();
-    debugPrint('AuthProvider: Logout completed successfully');
+    debugPrint('AuthProvider: Logout completed successfully - user was: ${oldUser?.email}, state reset to: user=${state.user}, isLoading=${state.isLoading}');
   }
 
   Future<void> signInWithGoogle() async {
@@ -601,6 +616,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final storedUserId = await _storageManager.getUserId();
         final storedUserRole = await _storageManager.getUserRole();
         final storedToken = await _storageManager.getAccessToken();
+        final storedPhone = await _storageManager.getUserPhone();
         
         if (storedUserId != null && 
             storedUserRole != null && 
@@ -613,7 +629,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             id: firebaseUser.uid,
             fullName: firebaseUser.displayName ?? '',
             email: firebaseUser.email ?? '',
-            phone: firebaseUser.phoneNumber,
+            phone: storedPhone,
             role: storedUserRole,
             createdAt: DateTime.fromMillisecondsSinceEpoch(firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch),
           );

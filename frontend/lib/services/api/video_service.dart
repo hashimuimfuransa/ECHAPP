@@ -320,6 +320,25 @@ class VideoService {
     }
   }
 
+  /// Get video by ID
+  Future<Video?> getVideoById(String videoId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.videos}/$videoId');
+      response.validateStatus();
+      
+      final apiResponse = response.toApiResponse(Video.fromJson);
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch video: $e');
+    }
+  }
+
   /// Delete a video
   Future<void> deleteVideo(String videoId) async {
     try {

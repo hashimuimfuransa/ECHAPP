@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:excellencecoachinghub/widgets/admin_layout_wrapper.dart';
 import 'package:excellencecoachinghub/presentation/screens/splash/splash_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/login_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/register_screen.dart';
@@ -8,6 +9,7 @@ import 'package:excellencecoachinghub/presentation/screens/auth/reset_password_s
 import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/enter_reset_code_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/phone_collection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
@@ -28,13 +30,11 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_create_le
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_students_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_videos_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_materials_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/admin/course_exams_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/admin/admin_exams_review_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_notifications_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_feedback_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_payment_settings_screen.dart';
@@ -42,16 +42,15 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_general_s
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/exams/create_exam_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/learning/modern_student_learning_screen.dart';
+import 'package:excellencecoachinghub/screens/admin/quiz_creation_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_quiz_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/notifications/notifications_screen.dart';
 import 'package:excellencecoachinghub/widgets/main_layout.dart';
-import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
@@ -125,7 +124,13 @@ class AppRouter {
                   return ResetPasswordScreen(oobCode: resetCode);
                 },
               ),
-            ],
+              ],
+          ),
+
+          // Phone Collection - Outside MainLayout to prevent layout duplication
+          GoRoute(
+            path: '/phone-collection',
+            builder: (context, state) => const PhoneCollectionScreen(),
           ),
 
           // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication
@@ -152,63 +157,99 @@ class AppRouter {
           // Admin Routes - Outside MainLayout because they have their own sidebar/layout
           GoRoute(
             path: '/admin',
-            builder: (context, state) => const AdminDashboardScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Dashboard',
+              child: AdminDashboardScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/courses',
-            builder: (context, state) => const AdminCoursesScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Courses',
+              child: AdminCoursesScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/courses/create',
-            builder: (context, state) => const AdminCreateCourseScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Create Course',
+              child: AdminCreateCourseScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/courses/:courseId/sections/:sectionId/lessons/:lessonId/edit',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              final sectionId = state.pathParameters['sectionId'] ?? '';
+              final lessonId = state.pathParameters['lessonId'] ?? '';
+              return AdminLayoutWrapper(
+                screenName: 'Edit Lesson',
+                child: AdminCreateLessonScreen(
+                  courseId: courseId,
+                  sectionId: sectionId,
+                  lessonId: lessonId,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/admin/courses/:courseId',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return AdminCourseContentScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Admin Course Content',
+                child: AdminCourseContentScreen(courseId: courseId, courseTitle: 'Course Content'),
+              );
             },
           ),
           GoRoute(
             path: '/admin/courses/:courseId/edit',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return AdminCreateCourseScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Edit Course',
+                child: AdminCreateCourseScreen(courseId: courseId),
+              );
             },
           ),
           GoRoute(
             path: '/admin/courses/:courseId/content',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return AdminCourseContentScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Admin Course Content',
+                child: AdminCourseContentScreen(courseId: courseId, courseTitle: 'Course Content'),
+              );
             },
           ),
           GoRoute(
             path: '/admin/courses/:courseId/videos',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return CourseVideosScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Course Videos',
+                child: CourseVideosScreen(courseId: courseId),
+              );
             },
           ),
           GoRoute(
             path: '/admin/courses/:courseId/materials',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return CourseMaterialsScreen(courseId: courseId);
-            },
-          ),
-          GoRoute(
-            path: '/admin/courses/:courseId/exams',
-            builder: (context, state) {
-              final courseId = state.pathParameters['courseId'] ?? '';
-              return CourseExamsScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Course Materials',
+                child: CourseMaterialsScreen(courseId: courseId),
+              );
             },
           ),
           GoRoute(
             path: '/admin/courses/:courseId/analytics',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return CourseAnalyticsScreen(courseId: courseId);
+              return AdminLayoutWrapper(
+                screenName: 'Course Analytics',
+                child: CourseAnalyticsScreen(courseId: courseId),
+              );
             },
           ),
           GoRoute(
@@ -216,82 +257,108 @@ class AppRouter {
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
               final sectionId = state.pathParameters['sectionId'] ?? '';
-              return AdminCreateLessonScreen(
-                courseId: courseId,
-                sectionId: sectionId,
+              return AdminLayoutWrapper(
+                screenName: 'Create Lesson',
+                child: AdminCreateLessonScreen(
+                  courseId: courseId,
+                  sectionId: sectionId,
+                ),
               );
             },
           ),
           GoRoute(
             path: '/admin/videos',
-            builder: (context, state) => const AdminVideosScreen(),
-          ),
-          GoRoute(
-            path: '/admin/exams',
-            builder: (context, state) => const CourseExamsScreen(courseId: 'all'),
-          ),
-          GoRoute(
-            path: '/admin/courses/:courseId/sections/:sectionId/exams/create',
-            builder: (context, state) {
-              final courseId = state.pathParameters['courseId'] ?? '';
-              final sectionId = state.pathParameters['sectionId'] ?? '';
-              return CreateExamScreen(courseId: courseId, sectionId: sectionId);
-            },
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Videos',
+              child: AdminVideosScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/students',
-            builder: (context, state) => const AdminStudentsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Students',
+              child: AdminStudentsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/admins',
-            builder: (context, state) => const AdminManagementScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Management',
+              child: AdminManagementScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/students/:studentId',
             builder: (context, state) {
               final studentId = state.pathParameters['studentId'] ?? '';
-              return AdminStudentsScreen(studentId: studentId);
+              return AdminLayoutWrapper(
+                screenName: 'Admin Student Details',
+                child: AdminStudentsScreen(studentId: studentId),
+              );
             },
           ),
           GoRoute(
             path: '/admin/payments',
-            builder: (context, state) => const PaymentManagementScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Payments',
+              child: PaymentManagementScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/settings',
-            builder: (context, state) => const AdminSettingsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Settings',
+              child: AdminSettingsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/settings/payments',
-            builder: (context, state) => const AdminPaymentSettingsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Payment Settings',
+              child: AdminPaymentSettingsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/settings/general',
-            builder: (context, state) => const AdminGeneralSettingsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin General Settings',
+              child: AdminGeneralSettingsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/settings/users',
-            builder: (context, state) => const AdminUserManagementSettingsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin User Settings',
+              child: AdminUserManagementSettingsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/settings/moderation',
-            builder: (context, state) => const AdminContentModerationSettingsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Moderation Settings',
+              child: AdminContentModerationSettingsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/analytics',
-            builder: (context, state) => const AdminAnalyticsScreen(),
-          ),
-          GoRoute(
-            path: '/admin/exams-review',
-            builder: (context, state) => const AdminExamsReviewScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Analytics',
+              child: AdminAnalyticsScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/user-feedback',
-            builder: (context, state) => const AdminFeedbackScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin User Feedback',
+              child: AdminFeedbackScreen(),
+            ),
           ),
           GoRoute(
             path: '/admin/notifications',
-            builder: (context, state) => const AdminNotificationsScreen(),
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Notifications',
+              child: AdminNotificationsScreen(),
+            ),
           ),
 
           // Learning Routes - Outside MainLayout for full-screen focus
@@ -299,7 +366,18 @@ class AppRouter {
             path: '/learning/:courseId',
             builder: (context, state) {
               final courseId = state.pathParameters['courseId'] ?? '';
-              return ModernStudentLearningScreen(courseId: courseId);
+              return ProfessionalLearningScreen(courseId: courseId);
+            },
+          ),
+                    GoRoute(
+            path: '/lesson/:lessonId',
+            builder: (context, state) {
+              final lessonId = state.pathParameters['lessonId'] ?? '';
+              final isAdminPreview = state.uri.queryParameters['admin'] == 'true';
+              return ProfessionalLessonScreen(
+                lessonId: lessonId,
+                isAdminPreview: isAdminPreview,
+              );
             },
           ),
           GoRoute(
@@ -321,28 +399,22 @@ class AppRouter {
             },
           ),
           GoRoute(
-            path: '/learning/:courseId/exam/:examId',
-            builder: (context, state) {
-              final examId = state.pathParameters['examId'] ?? '';
-              final courseId = state.pathParameters['courseId'] ?? '';
-              final exam = state.extra as exam_model.Exam?;
-              
-              if (exam != null) {
-                return ExamTakingScreen(exam: exam);
-              } else {
-                return Scaffold(
-                  appBar: AppBar(title: const Text('Exam')),  
-                  body: const Center(child: Text('Exam not found')),
-                );
-              }
-            },
-          ),
-          GoRoute(
             path: '/learning/:courseId/section/:sectionId',
             builder: (context, state) {
               return Scaffold(
                 appBar: AppBar(title: const Text('Section Learning')),
                 body: const Center(child: Text('Section learning screen')),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/enhanced-quiz/:quizId',
+            builder: (context, state) {
+              final quizId = state.pathParameters['quizId'] ?? '';
+              final lessonTitle = state.uri.queryParameters['lessonTitle'] ?? '';
+              return EnhancedQuizScreen(
+                quizId: quizId,
+                lessonTitle: Uri.decodeComponent(lessonTitle),
               );
             },
           ),
@@ -365,6 +437,7 @@ class AppRouter {
                   return CoursesScreen(
                     categoryId: extra?['categoryId'] as String?,
                     categoryName: extra?['categoryName'] as String?,
+                    searchQuery: extra?['searchQuery'] as String?,
                   );
                 },
               ),
@@ -384,28 +457,26 @@ class AppRouter {
                 builder: (context, state) => const EnrolledCoursesScreen(),
               ),
               GoRoute(
-                path: '/books',
+                path: '/library',
                 builder: (context, state) => const LibraryScreen(),
-                routes: [
-                  GoRoute(
-                    path: '/:bookId',
-                    builder: (context, state) {
-                      final bookId = state.pathParameters['bookId'] ?? '';
-                      final book = state.extra as Book?;
-                      
-                      if (book != null) {
-                        return BookReaderScreen(book: book);
-                      } else {
-                        return Scaffold(
-                          appBar: AppBar(title: const Text('Book Not Found')),
-                          body: const Center(
-                            child: Text('Book not found or could not be loaded'),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+              ),
+              GoRoute(
+                path: '/books/:bookId',
+                builder: (context, state) {
+                  final bookId = state.pathParameters['bookId'] ?? '';
+                  final book = state.extra as Book?;
+                  
+                  if (book != null) {
+                    return BookReaderScreen(book: book);
+                  } else {
+                    return Scaffold(
+                      appBar: AppBar(title: const Text('Book Not Found')),
+                      body: const Center(
+                        child: Text('Book not found or could not be loaded'),
+                      ),
+                    );
+                  }
+                },
               ),
               GoRoute(
                 path: '/notifications',
@@ -414,10 +485,6 @@ class AppRouter {
               GoRoute(
                 path: '/payments/history',
                 builder: (context, state) => const PaymentHistoryScreen(),
-              ),
-              GoRoute(
-                path: '/exams/history',
-                builder: (context, state) => const ExamHistoryScreen(),
               ),
               GoRoute(
                 path: '/profile',
@@ -443,10 +510,6 @@ class AppRouter {
           ),
         ],
         redirect: (context, state) {
-          // If the location is /admin/exams-review, ensure we don't redirect away
-          if (state.uri.path == '/admin/exams-review') {
-            return null;
-          }
           return null;
         },
       );

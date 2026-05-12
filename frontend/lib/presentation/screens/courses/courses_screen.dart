@@ -15,8 +15,9 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? categoryName;
+  final String? searchQuery;
 
-  const CoursesScreen({super.key, this.categoryId, this.categoryName});
+  const CoursesScreen({super.key, this.categoryId, this.categoryName, this.searchQuery});
 
   @override
   ConsumerState<CoursesScreen> createState() => _CoursesScreenState();
@@ -35,6 +36,11 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   @override
   void initState() {
     super.initState();
+    // Preload categories for faster access
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(categoryPreloadProvider);
+    });
+    
     // Always load ALL courses initially so that 'All' category works
     // and we can filter client-side as needed.
     _coursesFuture = CourseRepository().getCourses();
@@ -48,19 +54,25 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           if (widget.categoryId != null) {
             _selectedCategory = widget.categoryId!;
           }
+          // Set search query if provided
+          if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+            _searchController.text = widget.searchQuery!;
+          }
         });
         
         // Auto-show category popup after a short delay for better UX
-        if (widget.categoryId == null) {
-          Future.delayed(const Duration(milliseconds: 800), () {
+        if (widget.categoryId == null && widget.searchQuery == null) {
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
               _showCategoryPopup(context);
             }
           });
         }
         
-        // Apply initial filter if needed
+        // Apply initial filters if needed
         if (widget.categoryId != null && widget.categoryId != 'all') {
+          _filterCourses();
+        } else if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
           _filterCourses();
         }
       }
@@ -151,7 +163,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const SizedBox(height: 25),
+                                const SizedBox(height: 8),
                               ],
                             ),
                           ),
@@ -180,76 +192,111 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     
-    return Padding(
-      padding: EdgeInsets.symmetric(
+    return Container(
+      margin: EdgeInsets.symmetric(
         horizontal: _getResponsiveHorizontalPadding(context),
         vertical: _getResponsiveVerticalPadding(context),
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           // Search Bar
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
-                ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => _filterCourses(),
+              style: TextStyle(
+                color: AppTheme.getTextColor(context),
+                fontSize: _getResponsiveTextSize(context) * 1.1,
+                fontWeight: FontWeight.w500,
               ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => _filterCourses(),
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: _getResponsiveTextSize(context),
+              decoration: InputDecoration(
+                hintText: 'Search courses, instructors...',
+                hintStyle: TextStyle(
+                  color: AppTheme.greyColor.withOpacity(0.7),
+                  fontSize: _getResponsiveTextSize(context) * 1.1,
+                  fontWeight: FontWeight.w400,
                 ),
-                decoration: InputDecoration(
-                  hintText: 'Search courses...',
-                  hintStyle: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: _getResponsiveTextSize(context),
-                  ),
-                  prefixIcon: Icon(
+                prefixIcon: Container(
+                  margin: const EdgeInsets.only(left: 12, right: 8),
+                  child: Icon(
                     Icons.search_rounded,
-                    color: AppTheme.greyColor,
+                    color: const Color(0xFF10B981),
                     size: _getResponsiveIconSize(context) * 0.8,
                   ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, color: AppTheme.greyColor),
-                        onPressed: () {
-                          _searchController.clear();
-                          _filterCourses();
-                        },
-                      )
-                    : null,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: _getResponsiveHorizontalPadding(context),
-                    vertical: _getResponsiveVerticalPadding(context) * 0.8,
-                  ),
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(
+                        Icons.clear_rounded, 
+                        color: AppTheme.greyColor,
+                        size: _getResponsiveIconSize(context) * 0.7,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        _filterCourses();
+                      },
+                    )
+                  : Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Icon(
+                        Icons.tune_rounded,
+                        color: const Color(0xFF10B981).withOpacity(0.7),
+                        size: _getResponsiveIconSize(context) * 0.7,
+                      ),
+                    ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
+                  vertical: _getResponsiveVerticalPadding(context) * 1.2,
                 ),
               ),
             ),
           ),
-          SizedBox(width: _getResponsiveSpacing(context) * 0.5),
-          // Category Filter Button
+          // Modern Category Filter Button
           Container(
-            width: _getResponsiveIconSize(context) + 8,
-            height: _getResponsiveIconSize(context) + 8,
+            margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981),
-              borderRadius: BorderRadius.circular(_getResponsiveBorderRadius(context)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF10B981),
+                  const Color(0xFF059669),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: IconButton(
-              onPressed: () => _showCategoryPopup(context),
-              icon: Icon(
-                Icons.filter_list_rounded,
-                color: Colors.white,
-                size: _getResponsiveIconSize(context) * 0.6,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showCategoryPopup(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: EdgeInsets.all(_getResponsiveIconSize(context) * 0.3),
+                  child: Icon(
+                    Icons.filter_list_rounded,
+                    color: Colors.white,
+                    size: _getResponsiveIconSize(context) * 0.7,
+                  ),
+                ),
               ),
             ),
           ),
@@ -259,6 +306,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   }
 
   void _showCategoryPopup(BuildContext context) {
+    // Use cached categories provider to avoid unnecessary API calls
     final backendCategories = ref.watch(backendCategoriesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -276,84 +324,134 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               'id': 'all',
               'icon': CategoryUtils.getCategoryIcon('all', name: 'all'),
               'description': 'Browse all available courses',
+              'gradient': [const Color(0xFF10B981), const Color(0xFF059669)],
             },
             ...categories.asMap().entries.map((entry) {
               var cat = entry.value;
               final categoryId = cat.id;
+              final color = CategoryUtils.getCategoryColor(categoryId, name: cat.name);
               return {
                 'name': cat.name,
-                'color': CategoryUtils.getCategoryColor(categoryId, name: cat.name),
+                'color': color,
                 'id': categoryId,
                 'icon': CategoryUtils.getCategoryIcon(categoryId, name: cat.name),
                 'description': 'Courses in ${cat.name} category',
+                'gradient': [color, color.withOpacity(0.8)],
               };
             }),
           ];
           
           return Container(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+              maxWidth: MediaQuery.of(context).size.width * 0.95,
             ),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1F2937) : Colors.white,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(28),
+                topRight: Radius.circular(28),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, -10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Compact Header
+                // Modern Header with gradient
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-                        width: 1,
-                      ),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF10B981),
+                        const Color(0xFF059669),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(
-                        Icons.filter_list_rounded,
-                        color: const Color(0xFF10B981),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Select Category',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.getTextColor(context),
+                      // Handle bar
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: AppTheme.getSecondaryTextColor(context),
-                        ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.category_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Select Category',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'Choose a category to filter courses',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                // Compact Categories Grid
+                // Modern Categories Grid
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(20),
                     child: GridView.builder(
                       shrinkWrap: true,
                       physics: const BouncingScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: _getResponsiveCrossAxisCount(context),
-                        crossAxisSpacing: _getResponsiveSpacing(context),
-                        mainAxisSpacing: _getResponsiveSpacing(context),
+                        crossAxisSpacing: _getResponsiveSpacing(context) * 1.2,
+                        mainAxisSpacing: _getResponsiveSpacing(context) * 1.2,
                         childAspectRatio: _getResponsiveAspectRatio(context),
                       ),
                       itemCount: allCategories.length,
@@ -361,6 +459,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         final category = allCategories[index];
                         final isSelected = _selectedCategory == category['id'];
                         final categoryColor = category['color'] as Color;
+                        final gradient = category['gradient'] as List<Color>;
                         
                         return GestureDetector(
                           onTap: () {
@@ -370,52 +469,84 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             _filterCourses();
                             Navigator.of(context).pop();
                           },
-                          child: Container(
-                            padding: EdgeInsets.all(_getResponsiveCardPadding(context)),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: EdgeInsets.all(_getResponsiveCardPadding(context) * 1.2),
                             decoration: BoxDecoration(
+                              gradient: isSelected 
+                                  ? LinearGradient(
+                                      colors: gradient,
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
                               color: isSelected 
-                                  ? categoryColor.withOpacity(0.1)
+                                  ? null
                                   : (isDark ? const Color(0xFF374151) : const Color(0xFFF9FAFB)),
-                              borderRadius: BorderRadius.circular(_getResponsiveBorderRadius(context)),
+                              borderRadius: BorderRadius.circular(_getResponsiveBorderRadius(context) * 1.2),
                               border: Border.all(
                                 color: isSelected 
-                                      ? categoryColor
+                                      ? Colors.transparent
                                       : (isDark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB)),
-                                width: isSelected ? 1.5 : 1,
+                                width: 1.5,
                               ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: categoryColor.withOpacity(0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: _getResponsiveIconSize(context),
-                                      height: _getResponsiveIconSize(context),
-                                      decoration: BoxDecoration(
-                                        color: categoryColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(_getResponsiveIconRadius(context)),
-                                      ),
-                                      child: Icon(
-                                        category['icon'] as IconData,
-                                        color: categoryColor,
-                                        size: _getResponsiveIconSize(context) * 0.5,
-                                      ),
+                                Container(
+                                  width: _getResponsiveIconSize(context) * 1.3,
+                                  height: _getResponsiveIconSize(context) * 1.3,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: gradient,
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    SizedBox(width: _getResponsiveSpacing(context) * 0.5),
-                                    Expanded(
-                                      child: Text(
-                                        category['name'] as String,
-                                        style: TextStyle(
-                                          fontSize: _getResponsiveTextSize(context),
-                                          fontWeight: FontWeight.w600,
-                                          color: isSelected 
-                                              ? categoryColor
-                                              : AppTheme.getTextColor(context),
-                                        ),
+                                    borderRadius: BorderRadius.circular(_getResponsiveIconRadius(context) * 1.2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: categoryColor.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    category['icon'] as IconData,
+                                    color: Colors.white,
+                                    size: _getResponsiveIconSize(context) * 0.7,
+                                  ),
+                                ),
+                                SizedBox(height: _getResponsiveSpacing(context) * 0.8),
+                                Text(
+                                  category['name'] as String,
+                                  style: TextStyle(
+                                    fontSize: _getResponsiveTextSize(context) * 1.1,
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected 
+                                        ? Colors.white
+                                        : AppTheme.getTextColor(context),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -425,7 +556,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -438,117 +569,171 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   double _getResponsiveHorizontalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 12; // Very small screens
-    } else if (screenWidth < 600) {
-      return 16; // Small mobile screens
+    if (screenWidth < 320) {
+      return 8; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 12; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 16; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 20; // Tablets
+    } else if (screenWidth < 1440) {
+      return 24; // Small desktop
     } else {
-      return 20; // Medium tablets and desktop
+      return 32; // Large desktop
     }
   }
 
   double _getResponsiveVerticalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 8; // Very small screens
-    } else if (screenWidth < 600) {
-      return 12; // Small mobile screens
+    if (screenWidth < 320) {
+      return 6; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 8; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 12; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 16; // Tablets
+    } else if (screenWidth < 1440) {
+      return 20; // Small desktop
     } else {
-      return 16; // Medium tablets and desktop
+      return 24; // Large desktop
     }
   }
 
   int _getResponsiveCrossAxisCount(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 2; // Very small screens
-    } else if (screenWidth < 600) {
+    if (screenWidth < 320) {
+      return 1; // Ultra small screens (old phones)
+    } else if (screenWidth < 480) {
       return 2; // Small mobile screens
-    } else if (screenWidth < 800) {
-      return 3; // Medium tablets
+    } else if (screenWidth < 768) {
+      return 2; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 3; // Tablets
+    } else if (screenWidth < 1440) {
+      return 4; // Small desktop
     } else {
-      return 4; // Large tablets and desktop
+      return 5; // Large desktop
     }
   }
 
   double _getResponsiveSpacing(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 6; // Very small screens
-    } else if (screenWidth < 600) {
-      return 8; // Small mobile screens
-    } else if (screenWidth < 800) {
-      return 10; // Medium tablets
+    if (screenWidth < 320) {
+      return 4; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 6; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 8; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 10; // Tablets
+    } else if (screenWidth < 1440) {
+      return 12; // Small desktop
     } else {
-      return 12; // Large tablets and desktop
+      return 16; // Large desktop
     }
   }
 
   double _getResponsiveAspectRatio(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 1.0; // Very small screens - more square
-    } else if (screenWidth < 600) {
-      return 1.1; // Small mobile screens
-    } else if (screenWidth < 800) {
-      return 1.2; // Medium tablets
+    if (screenWidth < 320) {
+      return 0.9; // Ultra small screens - more square
+    } else if (screenWidth < 480) {
+      return 1.0; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 1.1; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 1.2; // Tablets
+    } else if (screenWidth < 1440) {
+      return 1.3; // Small desktop
     } else {
-      return 1.3; // Large tablets and desktop
+      return 1.4; // Large desktop
     }
   }
 
   double _getResponsiveCardPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 8; // Very small screens
-    } else if (screenWidth < 600) {
-      return 10; // Small mobile screens
+    if (screenWidth < 320) {
+      return 6; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 8; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 10; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 12; // Tablets
+    } else if (screenWidth < 1440) {
+      return 14; // Small desktop
     } else {
-      return 12; // Medium tablets and desktop
+      return 16; // Large desktop
     }
   }
 
   double _getResponsiveBorderRadius(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 8; // Very small screens
-    } else if (screenWidth < 600) {
-      return 10; // Small mobile screens
+    if (screenWidth < 320) {
+      return 6; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 8; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 10; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 12; // Tablets
+    } else if (screenWidth < 1440) {
+      return 14; // Small desktop
     } else {
-      return 12; // Medium tablets and desktop
+      return 16; // Large desktop
     }
   }
 
   double _getResponsiveIconSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 24; // Very small screens
-    } else if (screenWidth < 600) {
-      return 28; // Small mobile screens
+    if (screenWidth < 320) {
+      return 20; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 24; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 28; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 32; // Tablets
+    } else if (screenWidth < 1440) {
+      return 36; // Small desktop
     } else {
-      return 32; // Medium tablets and desktop
+      return 40; // Large desktop
     }
   }
 
   double _getResponsiveIconRadius(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 6; // Very small screens
-    } else if (screenWidth < 600) {
-      return 8; // Small mobile screens
+    if (screenWidth < 320) {
+      return 4; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 6; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 8; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 10; // Tablets
+    } else if (screenWidth < 1440) {
+      return 12; // Small desktop
     } else {
-      return 10; // Medium tablets and desktop
+      return 14; // Large desktop
     }
   }
 
   double _getResponsiveTextSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 12; // Very small screens
-    } else if (screenWidth < 600) {
-      return 13; // Small mobile screens
+    if (screenWidth < 320) {
+      return 11; // Ultra small screens
+    } else if (screenWidth < 480) {
+      return 12; // Small mobile screens
+    } else if (screenWidth < 768) {
+      return 13; // Standard mobile
+    } else if (screenWidth < 1024) {
+      return 14; // Tablets
+    } else if (screenWidth < 1440) {
+      return 15; // Small desktop
     } else {
-      return 14; // Medium tablets and desktop
+      return 16; // Large desktop
     }
   }
 
@@ -628,8 +813,103 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   }
 
   Widget _buildAllCourses(BuildContext context, List<Course> courses) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     if (courses.isEmpty) {
-      return Column(
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: _getResponsiveHorizontalPadding(context)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Courses',
+                  style: TextStyle(
+                    color: AppTheme.getTextColor(context),
+                    fontSize: _getResponsiveTextSize(context) * 1.4,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
+                    vertical: _getResponsiveVerticalPadding(context) * 0.3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${courses.length} courses',
+                    style: TextStyle(
+                      color: const Color(0xFF10B981),
+                      fontSize: _getResponsiveTextSize(context) * 0.9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: _getResponsiveSpacing(context) * 2),
+            Container(
+              padding: EdgeInsets.all(_getResponsiveHorizontalPadding(context) * 2),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: const Icon(
+                      Icons.search_off_rounded,
+                      color: Color(0xFF10B981),
+                      size: 40,
+                    ),
+                  ),
+                  SizedBox(height: _getResponsiveSpacing(context)),
+                  Text(
+                    'No courses found',
+                    style: TextStyle(
+                      color: AppTheme.getTextColor(context),
+                      fontSize: _getResponsiveTextSize(context) * 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: _getResponsiveSpacing(context) * 0.5),
+                  Text(
+                    'Try adjusting your search or filter criteria',
+                    style: TextStyle(
+                      color: AppTheme.getSecondaryTextColor(context),
+                      fontSize: _getResponsiveTextSize(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: _getResponsiveHorizontalPadding(context)),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -639,284 +919,234 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 'Courses',
                 style: TextStyle(
                   color: AppTheme.getTextColor(context),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: _getResponsiveTextSize(context) * 1.4,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              Text(
-                '${courses.length} courses',
-                style: const TextStyle(
-                  color: AppTheme.greyColor,
-                  fontSize: 14,
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
+                  vertical: _getResponsiveVerticalPadding(context) * 0.3,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${courses.length} courses',
+                  style: TextStyle(
+                    color: const Color(0xFF10B981),
+                    fontSize: _getResponsiveTextSize(context) * 0.9,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 15),
-          Container(
-            padding: const EdgeInsets.all(40),
-            alignment: Alignment.center,
-            child: Column(
-              children: [
-                Icon(
-                  Icons.search_off,
-                  size: 64,
-                  color: AppTheme.greyColor,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No courses found',
-                  style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Try adjusting your search or filter criteria',
-                  style: TextStyle(
-                    color: AppTheme.greyColor,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          SizedBox(height: _getResponsiveSpacing(context) * 1.5),
+          // Modern Grid Layout for Courses
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _getResponsiveCrossAxisCount(context),
+              crossAxisSpacing: _getResponsiveSpacing(context) * 1.2,
+              mainAxisSpacing: _getResponsiveSpacing(context) * 1.2,
+              childAspectRatio: _getResponsiveAspectRatio(context) * 0.8,
             ),
+            itemCount: courses.length,
+            itemBuilder: (context, index) {
+              final course = courses[index];
+              return _buildModernCourseCard(context, course);
+            },
           ),
         ],
-      );
-    }
+      ),
+    );
+  }
+
+  Widget _buildModernCourseCard(BuildContext context, Course course) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Courses',
-              style: TextStyle(
-                color: AppTheme.getTextColor(context),
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              '${courses.length} courses',
-              style: const TextStyle(
-                color: AppTheme.greyColor,
-                fontSize: 14,
-              ),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(_getResponsiveBorderRadius(context) * 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+          width: 1,
         ),
-        const SizedBox(height: 15),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: courses.length,
-          itemBuilder: (context, index) {
-            final course = courses[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 15),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).shadowColor.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: InkWell(
-                  onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
-                  borderRadius: BorderRadius.circular(15),
-                  child: Padding(
-                    padding: const EdgeInsets.all(15),
-                    child: Row(
-                      children: [
-                        // Course Image
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppTheme.greyColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                                ? NetworkImageWidget(
-                                    imageUrl: course.thumbnail!,
-                                    fit: BoxFit.cover,
-                                    width: 80,
-                                    height: 80,
-                                    placeholder: Container(
-                                      color: AppTheme.greyColor.withOpacity(0.1),
-                                      child: const Icon(
-                                        Icons.play_circle_outline,
-                                        color: AppTheme.greyColor,
-                                        size: 35,
-                                      ),
-                                    ),
-                                  )
-                                : const Icon(
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => CourseNavigationUtils.navigateToCourse(context, ref, course),
+          borderRadius: BorderRadius.circular(_getResponsiveBorderRadius(context) * 1.2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Course Image with Overlay
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(_getResponsiveBorderRadius(context) * 1.2),
+                          topRight: Radius.circular(_getResponsiveBorderRadius(context) * 1.2),
+                        ),
+                        color: AppTheme.greyColor.withOpacity(0.1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(_getResponsiveBorderRadius(context) * 1.2),
+                          topRight: Radius.circular(_getResponsiveBorderRadius(context) * 1.2),
+                        ),
+                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                            ? NetworkImageWidget(
+                                imageUrl: course.thumbnail!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                placeholder: Container(
+                                  color: AppTheme.greyColor.withOpacity(0.1),
+                                  child: Icon(
                                     Icons.play_circle_outline,
                                     color: AppTheme.greyColor,
-                                    size: 35,
+                                    size: _getResponsiveIconSize(context) * 0.8,
                                   ),
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        
-                        // Course Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                course.title ?? 'Untitled Course',
-                                style: TextStyle(
-                                  color: AppTheme.getTextColor(context),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'by ${course.displayInstructor}',
-                                style: const TextStyle(
-                                  color: AppTheme.greyColor,
-                                  fontSize: 13,
+                              )
+                            : Container(
+                                color: const Color(0xFF10B981).withOpacity(0.1),
+                                child: Icon(
+                                  Icons.play_circle_outline,
+                                  color: const Color(0xFF10B981),
+                                  size: _getResponsiveIconSize(context) * 0.8,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.access_time,
-                                    color: AppTheme.greyColor,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    course.formattedDuration,
-                                    style: const TextStyle(
-                                      color: AppTheme.greyColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Icon(
-                                    Icons.people_outline,
-                                    color: AppTheme.greyColor,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${course.enrollmentCount ?? 0} students',
-                                    style: const TextStyle(
-                                      color: AppTheme.greyColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    (course.averageRating ?? 0.0).toStringAsFixed(1),
-                                    style: TextStyle(
-                                      color: AppTheme.getTextColor(context),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.greyColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      course.level,
-                                      style: const TextStyle(
-                                        color: AppTheme.greyColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                      ),
+                    ),
+                    // Duration Badge
+                    Positioned(
+                      top: _getResponsiveSpacing(context) * 0.5,
+                      right: _getResponsiveSpacing(context) * 0.5,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: _getResponsiveHorizontalPadding(context) * 0.3,
+                          vertical: _getResponsiveVerticalPadding(context) * 0.2,
                         ),
-                        
-                        // Price and Enroll
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'RWF ${course.price}',
-                              style: const TextStyle(
-                                color: AppTheme.primaryGreen,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Icon(
+                              Icons.access_time,
+                              color: Colors.white,
+                              size: _getResponsiveIconSize(context) * 0.4,
                             ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                'Enroll',
-                                style: TextStyle(
-                                  color: AppTheme.whiteColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            SizedBox(width: _getResponsiveSpacing(context) * 0.2),
+                            Text(
+                              course.formattedDuration,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: _getResponsiveTextSize(context) * 0.8,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
+              // Course Info
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: EdgeInsets.all(_getResponsiveCardPadding(context)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Title
+                      Text(
+                        course.title ?? 'Untitled Course',
+                        style: TextStyle(
+                          color: AppTheme.getTextColor(context),
+                          fontSize: _getResponsiveTextSize(context) * 1.1,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: _getResponsiveSpacing(context) * 0.3),
+                      // Instructor
+                      Text(
+                        'by ${course.displayInstructor}',
+                        style: TextStyle(
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontSize: _getResponsiveTextSize(context) * 0.9,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: _getResponsiveSpacing(context) * 0.5),
+                      // Stats Row
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: _getResponsiveHorizontalPadding(context) * 0.3,
+                              vertical: _getResponsiveVerticalPadding(context) * 0.2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.people_outline,
+                                  color: const Color(0xFF10B981),
+                                  size: _getResponsiveIconSize(context) * 0.4,
+                                ),
+                                SizedBox(width: _getResponsiveSpacing(context) * 0.2),
+                                Text(
+                                  '${course.enrollmentCount ?? 0}',
+                                  style: TextStyle(
+                                    color: const Color(0xFF10B981),
+                                    fontSize: _getResponsiveTextSize(context) * 0.8,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -973,50 +1203,183 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildCoursesHeader(context, courses.length),
-            const SizedBox(height: 25),
+            const SizedBox(height: 12),
             _buildNoCoursesFound(context),
           ],
         ),
       );
     }
     
-    if (isDesktop) {
-      final gridCount = ResponsiveGridCount(context);
-      return SliverMainAxisGroup(
-        slivers: [
-          SliverToBoxAdapter(child: _buildCoursesHeader(context, courses.length)),
-          const SliverToBoxAdapter(child: SizedBox(height: 25)),
-          SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: gridCount.crossAxisCount,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: gridCount.childAspectRatio,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _buildResponsiveCourseCard(context, courses[index], enrolledCourses),
-              childCount: courses.length,
-            ),
+    // Group courses by category
+    final groupedCourses = _groupCoursesByCategory(courses);
+    
+    // Build slivers for each category
+    final slivers = <Widget>[];
+    
+    for (final entry in groupedCourses.entries) {
+      final categoryName = entry.key;
+      final categoryCourses = entry.value;
+      
+      if (categoryCourses.isEmpty) continue;
+      
+      // Add category header
+      slivers.add(SliverToBoxAdapter(
+        child: _buildCategoryHeader(context, categoryName, categoryCourses.length),
+      ));
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 12)));
+      
+      // Add courses for this category
+      if (isDesktop) {
+        final gridCount = ResponsiveGridCount(context);
+        slivers.add(SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: gridCount.crossAxisCount,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+            childAspectRatio: gridCount.childAspectRatio,
           ),
-        ],
-      );
-    } else {
-      return SliverMainAxisGroup(
-        slivers: [
-          SliverToBoxAdapter(child: _buildCoursesHeader(context, courses.length)),
-          const SliverToBoxAdapter(child: SizedBox(height: 15)),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => Container(
-                margin: const EdgeInsets.only(bottom: 15),
-                child: _buildCourseListItem(context, courses[index], enrolledCourses),
-              ),
-              childCount: courses.length,
-            ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildResponsiveCourseCard(context, categoryCourses[index], enrolledCourses),
+            childCount: categoryCourses.length,
           ),
-        ],
-      );
+        ));
+      } else {
+        slivers.add(SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => Container(
+              margin: const EdgeInsets.only(bottom: 15),
+              child: _buildCourseListItem(context, categoryCourses[index], enrolledCourses),
+            ),
+            childCount: categoryCourses.length,
+          ),
+        ));
+      }
+      
+      // Add spacing between categories
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
     }
+    
+    return SliverMainAxisGroup(
+      slivers: slivers,
+    );
+  }
+
+  Widget _buildCategoryHeader(BuildContext context, String categoryName, int courseCount) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              categoryName,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isDesktop ? 16 : 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '$courseCount courses',
+            style: TextStyle(
+              color: AppTheme.greyColor,
+              fontSize: isDesktop ? 14 : 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Map<String, List<Course>> _groupCoursesByCategory(List<Course> courses) {
+    final Map<String, List<Course>> grouped = {};
+    
+    // Define category order - starting with Technical & Digital Coaching
+    final categoryOrder = [
+      'Digital and Tech coaching',
+      'Entrepreneurship & Innovation Hub',
+      'Jobseeker Coaching',
+      'Laguange coaching',
+      'Mental Health & Parental Coaching',
+      'Professional Coaching',
+    ];
+    
+    // Initialize all categories in order
+    for (final categoryName in categoryOrder) {
+      grouped[categoryName] = [];
+    }
+    
+    // Add 'Uncategorized' at the end
+    grouped['Uncategorized'] = [];
+    
+    // Group courses by category
+    for (final course in courses) {
+      String? categoryName;
+      
+      // Try to get category name from course.category (populated object)
+      if (course.category != null && course.category! is Map<String, dynamic>) {
+        final categoryMap = course.category! as Map<String, dynamic>;
+        categoryName = categoryMap['name'] as String?;
+        
+        // Debug logging
+        if (categoryName == null) {
+          print('Course: ${course.title} - Category object found but no name field: ${categoryMap.keys}');
+        }
+      }
+      
+      // If no category name, try to get by categoryId
+      if (categoryName == null && course.categoryId != null) {
+        // This would require categories data, but for now we'll use a mapping
+        final categoryMapping = {
+          '69c503cb27858856e87d0027': 'Digital and Tech coaching',
+          '69c50aa727858856e87d003f': 'Entrepreneurship & Innovation Hub',
+          '69c5067c27858856e87d002f': 'Jobseeker Coaching',
+          '69c5017a27858856e87d001f': 'Laguange coaching',
+          '69c5116627858856e87d004f': 'Mental Health & Parental Coaching',
+          '69c50a3327858856e87d0037': 'Professional Coaching',
+        };
+        categoryName = categoryMapping[course.categoryId];
+        
+        // Debug logging
+        print('Course: ${course.title} - Using categoryId mapping: ${course.categoryId} -> $categoryName');
+      }
+      
+      // Add to appropriate category
+      if (categoryName != null && grouped.containsKey(categoryName)) {
+        grouped[categoryName]!.add(course);
+      } else {
+        grouped['Uncategorized']!.add(course);
+      }
+    }
+    
+    // Remove empty categories (except Uncategorized if it has courses)
+    final filteredGrouped = <String, List<Course>>{};
+    for (final entry in grouped.entries) {
+      if (entry.value.isNotEmpty) {
+        filteredGrouped[entry.key] = entry.value;
+      }
+    }
+    
+    return filteredGrouped;
   }
 
   Widget _buildCoursesHeader(BuildContext context, int count) {

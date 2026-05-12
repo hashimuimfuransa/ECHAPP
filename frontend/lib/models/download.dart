@@ -1,4 +1,5 @@
 enum DownloadStatus { pending, downloading, paused, completed, failed }
+enum DownloadType { video, notes, material }
 
 class Download {
   final String id;
@@ -8,6 +9,9 @@ class Download {
   final String localPath;
   final String url;
   final String? error;
+  final DownloadType type;
+  final String? lessonTitle;
+  final String? sectionTitle;
   double downloadProgress;
   bool isDownloading;
   DownloadStatus status;
@@ -20,6 +24,9 @@ class Download {
     required this.localPath,
     required this.url,
     this.error,
+    required this.type,
+    this.lessonTitle,
+    this.sectionTitle,
     required this.downloadProgress,
     required this.isDownloading,
     required this.status,
@@ -33,6 +40,9 @@ class Download {
     String? localPath,
     String? url,
     String? error,
+    DownloadType? type,
+    String? lessonTitle,
+    String? sectionTitle,
     double? downloadProgress,
     bool? isDownloading,
     DownloadStatus? status,
@@ -45,6 +55,9 @@ class Download {
       localPath: localPath ?? this.localPath,
       url: url ?? this.url,
       error: error ?? this.error,
+      type: type ?? this.type,
+      lessonTitle: lessonTitle ?? this.lessonTitle,
+      sectionTitle: sectionTitle ?? this.sectionTitle,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       isDownloading: isDownloading ?? this.isDownloading,
       status: status ?? this.status,
@@ -60,6 +73,9 @@ class Download {
       localPath: json['localPath'] as String,
       url: json['url'] as String? ?? '',
       error: json['error'] as String?,
+      type: _downloadTypeFromString(json['type'] as String? ?? 'video'),
+      lessonTitle: json['lessonTitle'] as String?,
+      sectionTitle: json['sectionTitle'] as String?,
       downloadProgress: (json['downloadProgress'] as num).toDouble(),
       isDownloading: json['isDownloading'] as bool,
       status: _downloadStatusFromString(json['status'] as String),
@@ -75,6 +91,9 @@ class Download {
       'localPath': localPath,
       'url': url,
       'error': error,
+      'type': _downloadTypeToString(type),
+      'lessonTitle': lessonTitle,
+      'sectionTitle': sectionTitle,
       'downloadProgress': downloadProgress,
       'isDownloading': isDownloading,
       'status': _downloadStatusToString(status),
@@ -110,6 +129,30 @@ class Download {
         return 'completed';
       case DownloadStatus.failed:
         return 'failed';
+    }
+  }
+
+  static DownloadType _downloadTypeFromString(String type) {
+    switch (type) {
+      case 'video':
+        return DownloadType.video;
+      case 'notes':
+        return DownloadType.notes;
+      case 'material':
+        return DownloadType.material;
+      default:
+        return DownloadType.video;
+    }
+  }
+
+  static String _downloadTypeToString(DownloadType type) {
+    switch (type) {
+      case DownloadType.video:
+        return 'video';
+      case DownloadType.notes:
+        return 'notes';
+      case DownloadType.material:
+        return 'material';
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/models/download.dart';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
@@ -17,6 +18,28 @@ class DownloadService extends ChangeNotifier {
     receiveTimeout: const Duration(minutes: 60),
     sendTimeout: const Duration(seconds: 30),
   ));
+
+  /// Get authorization header with Firebase ID token
+  Future<Map<String, String>> _getAuthHeaders() async {
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      
+      if (user != null) {
+        // Force refresh to ensure we have a valid token
+        final token = await user.getIdToken(true);
+        if (token != null) {
+          return {
+            'Authorization': 'Bearer $token',
+          };
+        }
+      }
+    } catch (e) {
+      print('DownloadService: Error getting auth token: $e');
+    }
+    
+    // Return empty headers when no valid token is available
+    return {};
+  }
   final Map<String, Download> _downloads = {}; // Key: lessonId
   final Map<String, CancelToken> _cancelTokens = {}; // Key: lessonId
   static const String _downloadsKey = 'downloaded_videos';
@@ -64,6 +87,7 @@ class DownloadService extends ChangeNotifier {
                 originalTitle: fileName, // We don't have the original title
                 localPath: file.path,
                 url: '', // Unknown URL for scanned files
+                type: DownloadType.video, // Default to video type for scanned files
                 downloadProgress: 1.0,
                 isDownloading: false,
                 status: DownloadStatus.completed,
@@ -190,6 +214,8 @@ class DownloadService extends ChangeNotifier {
 
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        print('Download attempt ${attempt + 1} for lesson: $lessonId');
+        
         final directory = await _getAppDirectory();
         print('Download directory: $directory (Attempt ${attempt + 1})');
         final filePath = p.join(directory, "$fileName.mp4");
@@ -221,6 +247,7 @@ class DownloadService extends ChangeNotifier {
           originalTitle: originalTitle,
           localPath: filePath,
           url: url,
+          type: DownloadType.video, // Default to video type
           downloadProgress: _downloads[lessonId]?.downloadProgress ?? (downloadedBytes > 0 ? -1.0 : 0.0), // -1 means unknown if we have file but no total
           isDownloading: true,
           status: DownloadStatus.downloading,
@@ -235,6 +262,9 @@ class DownloadService extends ChangeNotifier {
         print('Starting actual download with Dio. Range: bytes=$downloadedBytes-');
         
         try {
+          // Get auth headers for the request
+          final authHeaders = await _getAuthHeaders();
+          
           final response = await _dio.get<ResponseBody>(
             url,
             options: Options(
@@ -242,6 +272,7 @@ class DownloadService extends ChangeNotifier {
               followRedirects: true,
               validateStatus: (status) => status == 200 || status == 206,
               headers: {
+                ...authHeaders,
                 if (downloadedBytes > 0) 'range': 'bytes=$downloadedBytes-',
               },
             ),
@@ -269,20 +300,20 @@ class DownloadService extends ChangeNotifier {
                 if (actualTotal != -1) {
                   double progress = currentReceived / actualTotal;
                   
-                  // Only notify UI and save to storage for significant changes (every 2% for smoothness) or 100%
-                  if (progress > (download.downloadProgress + 0.02) || progress >= 1.0 || progress < download.downloadProgress) {
+                  // Update progress more frequently for smoother UI (every 1% instead of 2%)
+                  if (progress > (download.downloadProgress + 0.01) || progress >= 1.0 || progress < download.downloadProgress) {
                     download.downloadProgress = progress;
                     _downloads[lessonId] = download.copyWith(downloadProgress: progress);
                     onProgress?.call(progress);
                     notifyListeners();
                     
-                    // Only save to SharedPreferences on major milestones (every 10%) or completion
-                    if (progress >= 1.0 || (progress * 10).floor() > ((download.downloadProgress - 0.1) * 10).floor()) {
+                    // Save to storage on major milestones (every 5%) or completion for better performance
+                    if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
                       _saveDownloadsToStorage(); 
                     }
                   }
                 } else {
-                  // Indeterminate progress (we know we're downloading but don't know total size)
+                  // Indeterminate progress - use a pulsing pattern to show activity
                   if (download.downloadProgress != -1.0) {
                     download.downloadProgress = -1.0;
                     _downloads[lessonId] = download.copyWith(downloadProgress: -1.0);
@@ -324,7 +355,25 @@ class DownloadService extends ChangeNotifier {
             await _saveDownloadsToStorage();
             return filePath;
           }
-          rethrow;
+          
+          // Handle specific HTTP errors
+          String errorMessage = 'Download failed';
+          if (e.response?.statusCode == 403) {
+            errorMessage = 'Access denied. Please check your subscription or login again.';
+          } else if (e.response?.statusCode == 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (e.response?.statusCode == 404) {
+            errorMessage = 'Video not found. It may have been removed.';
+          } else if (e.type == DioExceptionType.connectionTimeout) {
+            errorMessage = 'Connection timeout. Please check your internet connection.';
+          } else if (e.type == DioExceptionType.receiveTimeout) {
+            errorMessage = 'Download timeout. Please try again.';
+          } else if (e.type == DioExceptionType.connectionError) {
+            errorMessage = 'Network error. Please check your internet connection.';
+          }
+          
+          print('Download DioException: ${e.type}, Status: ${e.response?.statusCode}, Message: $errorMessage');
+          throw Exception(errorMessage);
         }
       } catch (e) {
         print('Download attempt ${attempt + 1} failed: $e');
@@ -367,11 +416,11 @@ class DownloadService extends ChangeNotifier {
   }
 
   // Resume a download
-  Future<void> resumeDownload(String lessonId) async {
+  Future<void> resumeDownload(String lessonId, {String? newUrl}) async {
     final download = _downloads[lessonId];
     if (download != null && (download.status == DownloadStatus.paused || download.status == DownloadStatus.failed)) {
       await downloadVideo(
-        url: download.url,
+        url: newUrl ?? download.url,
         fileName: download.fileName,
         originalTitle: download.originalTitle,
         lessonId: download.lessonId,
@@ -470,6 +519,206 @@ class DownloadService extends ChangeNotifier {
     } catch (e) {
       return false;
     }
+  }
+
+  // Download notes or materials with organization metadata
+  Future<String> downloadNotesOrMaterial({
+    required String url,
+    required String title,
+    required String lessonId,
+    required DownloadType type,
+    String? lessonTitle,
+    String? sectionTitle,
+    Function(double)? onProgress,
+    Function()? onSuccess,
+    Function(String)? onError,
+  }) async {
+    try {
+      // Generate a unique ID for this download
+      final downloadId = '${type.name}_$lessonId';
+      
+      // Check if already downloaded
+      if (_downloads.containsKey(downloadId) && _downloads[downloadId]!.status == DownloadStatus.completed) {
+        onProgress?.call(1.0);
+        onSuccess?.call();
+        return _downloads[downloadId]!.localPath;
+      }
+
+      // Determine file extension from URL
+      String fileExtension = '';
+      if (url.toLowerCase().endsWith('.pdf')) {
+        fileExtension = '.pdf';
+      } else if (url.toLowerCase().endsWith('.doc') || url.toLowerCase().endsWith('.docx')) {
+        fileExtension = '.docx';
+      } else if (url.toLowerCase().endsWith('.txt')) {
+        fileExtension = '.txt';
+      } else if (url.toLowerCase().endsWith('.md')) {
+        fileExtension = '.md';
+      } else {
+        fileExtension = '.pdf'; // Default to PDF
+      }
+
+      final directory = await _getAppDirectory();
+      final fileName = '${type.name}_$lessonId$fileExtension';
+      final filePath = p.join(directory, fileName);
+
+      // Create download record
+      final download = Download(
+        id: downloadId,
+        lessonId: lessonId,
+        fileName: fileName,
+        originalTitle: title,
+        localPath: filePath,
+        url: url,
+        type: type,
+        lessonTitle: lessonTitle,
+        sectionTitle: sectionTitle,
+        downloadProgress: 0.0,
+        isDownloading: true,
+        status: DownloadStatus.downloading,
+      );
+      
+      _downloads[downloadId] = download;
+      notifyListeners();
+      await _saveDownloadsToStorage();
+
+      // Get auth headers for request
+      final authHeaders = await _getAuthHeaders();
+      
+      final response = await _dio.get<ResponseBody>(
+        url,
+        options: Options(
+          responseType: ResponseType.stream,
+          followRedirects: true,
+          validateStatus: (status) => status == 200 || status == 206,
+          headers: authHeaders,
+        ),
+      );
+
+      final File file = File(filePath);
+      final IOSink raf = file.openWrite();
+      
+      try {
+        int currentReceived = 0;
+        int? contentLength = int.tryParse(response.headers.value('content-length') ?? '-1');
+
+        await response.data!.stream.listen(
+          (List<int> chunk) {
+            raf.add(chunk);
+            currentReceived += chunk.length;
+
+            if (contentLength != null && contentLength != -1) {
+              double progress = currentReceived / contentLength;
+              
+              // Update progress more frequently for smoother UI
+              if (progress > (download.downloadProgress + 0.01) || progress >= 1.0) {
+                download.downloadProgress = progress;
+                _downloads[downloadId] = download.copyWith(downloadProgress: progress);
+                onProgress?.call(progress);
+                notifyListeners();
+                
+                // Save to storage on major milestones for better performance
+                if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
+                  _saveDownloadsToStorage(); 
+                }
+              }
+            } else {
+              // Indeterminate progress
+              if (download.downloadProgress != -1.0) {
+                download.downloadProgress = -1.0;
+                _downloads[downloadId] = download.copyWith(downloadProgress: -1.0);
+                onProgress?.call(-1.0);
+                notifyListeners();
+              }
+            }
+          },
+          onError: (e) {
+            throw e;
+          },
+          cancelOnError: true,
+        ).asFuture();
+      } finally {
+        await raf.close();
+      }
+      
+      // Mark download as completed
+      _downloads[downloadId] = download.copyWith(
+        isDownloading: false,
+        downloadProgress: 1.0,
+        status: DownloadStatus.completed,
+      );
+      notifyListeners();
+      await _saveDownloadsToStorage();
+      onSuccess?.call();
+
+      return filePath;
+    } on DioException catch (e) {
+      final downloadId = '${type.name}_$lessonId';
+      
+      // Handle specific HTTP errors
+      String errorMessage = 'Download failed';
+      if (e.response?.statusCode == 403) {
+        errorMessage = 'Access denied. Please check your subscription or login again.';
+      } else if (e.response?.statusCode == 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (e.response?.statusCode == 404) {
+        errorMessage = 'File not found. It may have been removed.';
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Download timeout. Please try again.';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      print('Download DioException for notes/materials: ${e.type}, Status: ${e.response?.statusCode}, Message: $errorMessage');
+      
+      if (_downloads.containsKey(downloadId)) {
+        _downloads[downloadId] = _downloads[downloadId]!.copyWith(
+          isDownloading: false,
+          status: DownloadStatus.failed,
+          error: errorMessage,
+        );
+        notifyListeners();
+        await _saveDownloadsToStorage();
+      }
+      
+      onError?.call(errorMessage);
+      rethrow;
+    } catch (e) {
+      final downloadId = '${type.name}_$lessonId';
+      print('Download failed for notes/materials: $e');
+      
+      if (_downloads.containsKey(downloadId)) {
+        _downloads[downloadId] = _downloads[downloadId]!.copyWith(
+          isDownloading: false,
+          status: DownloadStatus.failed,
+          error: e.toString(),
+        );
+        notifyListeners();
+        await _saveDownloadsToStorage();
+      }
+      
+      onError?.call(e.toString());
+      rethrow;
+    }
+  }
+
+  // Get downloads by type
+  List<Download> getDownloadsByType(DownloadType type) {
+    return _downloads.values.where((download) => download.type == type).toList();
+  }
+
+  // Get downloads by lesson
+  List<Download> getDownloadsByLesson(String lessonId) {
+    return _downloads.values.where((download) => download.lessonId == lessonId).toList();
+  }
+
+  // Check if notes/materials are downloaded
+  Future<bool> isContentDownloaded(String lessonId, DownloadType type) async {
+    final downloadId = '${type.name}_$lessonId';
+    final download = _downloads[downloadId];
+    return download?.status == DownloadStatus.completed;
   }
 
   // Get total storage used by downloads

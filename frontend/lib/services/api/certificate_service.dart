@@ -16,7 +16,7 @@ class CertificateService {
   CertificateService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
   /// Get user's certificates
-  Future<List<Certificate>> getCertificates() async {
+  Future<List<Certificate>?> getCertificates() async {
     try {
       final response = await _apiClient.get('${ApiConfig.enrollments}/certificates');
       response.validateStatus();
@@ -24,11 +24,19 @@ class CertificateService {
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       
       if (jsonBody['success'] == true && jsonBody['data'] != null) {
-        final data = jsonBody['data'] as List;
-        
-        return data
-            .map((json) => Certificate.fromJson(json as Map<String, dynamic>))
-            .toList();
+        // Handle different response formats
+        if (jsonBody['data'] is List) {
+          final data = jsonBody['data'] as List;
+          return data
+              .map((json) => Certificate.fromJson(json as Map<String, dynamic>))
+              .toList();
+        } else if (jsonBody['data'] is Map) {
+          // Handle case where data is a Map (for getCertificatesByCourse)
+          final data = [jsonBody['data']];
+          return data
+              .map((json) => Certificate.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
       } else {
         final message = jsonBody['message'];
         final errorMessage = (message is String) 

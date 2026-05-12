@@ -15,6 +15,32 @@ const getLessonsBySection = async (req, res) => {
     if (!section) {
       return sendNotFound(res, 'Section not found');
     }
+
+    // Check if user is enrolled in course (skip for admins)
+    if (req.user && req.user.role !== 'admin') {
+      const Enrollment = require('../models/Enrollment');
+      const enrollment = await Enrollment.findOne({
+        userId: req.user.id,
+        courseId: section.courseId
+      });
+
+      if (!enrollment) {
+        return sendError(res, 'Access denied. You must be enrolled in this course to access lessons.', 403);
+      }
+
+      // Check if enrollment has expired
+      const isEnrollmentExpired = (enrollment) => {
+        if (!enrollment.accessExpirationDate) {
+          return false; // No expiration set, access is unlimited
+        }
+        const currentDate = new Date();
+        return currentDate > enrollment.accessExpirationDate;
+      };
+
+      if (isEnrollmentExpired(enrollment)) {
+        return sendError(res, 'Access denied. Your enrollment has expired.', 403);
+      }
+    }
     
     const lessons = await Lesson.find({ sectionId })
       .sort({ order: 1 });
@@ -37,6 +63,32 @@ const getLessonById = async (req, res) => {
     if (!lesson) {
       return sendNotFound(res, 'Lesson not found');
     }
+
+    // Check if user is enrolled in the course (skip for admins)
+    if (req.user && req.user.role !== 'admin') {
+      const Enrollment = require('../models/Enrollment');
+      const enrollment = await Enrollment.findOne({
+        userId: req.user.id,
+        courseId: lesson.courseId
+      });
+
+      if (!enrollment) {
+        return sendError(res, 'Access denied. You must be enrolled in this course to access lessons.', 403);
+      }
+
+      // Check if enrollment has expired
+      const isEnrollmentExpired = (enrollment) => {
+        if (!enrollment.accessExpirationDate) {
+          return false; // No expiration set, access is unlimited
+        }
+        const currentDate = new Date();
+        return currentDate > enrollment.accessExpirationDate;
+      };
+
+      if (isEnrollmentExpired(enrollment)) {
+        return sendError(res, 'Access denied. Your enrollment has expired.', 403);
+      }
+    }
     
     const lessonObj = formatLessonUrls(lesson, s3Service);
     
@@ -50,7 +102,9 @@ const getLessonById = async (req, res) => {
 const createLesson = async (req, res) => {
   try {
     const { sectionId } = req.params;
-    const { title, description, videoId, notes, notesPdfUrl, order, duration } = req.body;
+    const { title, description, videoId, notes, notesPdfUrl, order, duration, quizId, materials, lessonType, isPublished } = req.body;
+
+    console.log('Creating lesson with data:', { sectionId, title, videoId, notesPdfUrl, quizId, lessonType, order, duration });
     
     // Verify section exists
     const section = await Section.findById(sectionId);
@@ -101,7 +155,7 @@ const createLesson = async (req, res) => {
       }
     }
     
-    const lesson = await Lesson.create({
+    const lessonData = {
       sectionId,
       courseId: section.courseId,
       title,
@@ -110,13 +164,22 @@ const createLesson = async (req, res) => {
       notes: processedNotes, // Use processed notes instead of original
       notesPdfUrl,
       order,
-      duration
-    });
+      duration,
+      quizId, // New field for quiz association
+      materials: materials || [], // New field for additional materials
+      lessonType: lessonType || 'Content', // New field for lesson type
+      isPublished: isPublished !== undefined ? isPublished : true // New field for publish status
+    };
+
+    console.log('Lesson data to create:', lessonData);
+    
+    const lesson = await Lesson.create(lessonData);
     
     const lessonObj = formatLessonUrls(lesson, s3Service);
     
     sendSuccess(res, transformUrls(lessonObj, ['thumbnail', 'videoUrl', 'url', 'notesPdfUrl']), 'Lesson created successfully', 201);
   } catch (error) {
+    console.error('Error creating lesson:', error);
     sendError(res, 'Failed to create lesson', 500, error.message);
   }
 };
@@ -243,6 +306,32 @@ const getCourseContent = async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) {
       return sendNotFound(res, 'Course not found');
+    }
+
+    // Check if user is enrolled in course (skip for admins)
+    if (req.user && req.user.role !== 'admin') {
+      const Enrollment = require('../models/Enrollment');
+      const enrollment = await Enrollment.findOne({
+        userId: req.user.id,
+        courseId: courseId
+      });
+
+      if (!enrollment) {
+        return sendError(res, 'Access denied. You must be enrolled in this course to access content.', 403);
+      }
+
+      // Check if enrollment has expired
+      const isEnrollmentExpired = (enrollment) => {
+        if (!enrollment.accessExpirationDate) {
+          return false; // No expiration set, access is unlimited
+        }
+        const currentDate = new Date();
+        return currentDate > enrollment.accessExpirationDate;
+      };
+
+      if (isEnrollmentExpired(enrollment)) {
+        return sendError(res, 'Access denied. Your enrollment has expired.', 403);
+      }
     }
     
     // Get all sections for the course

@@ -5,6 +5,8 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/link.dart';
+import 'package:flutter/services.dart';
 
 class BookReaderScreen extends ConsumerStatefulWidget {
   final Book book;
@@ -30,7 +32,6 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   @override
   void initState() {
     super.initState();
-    _isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     // Set default format preference
     if (widget.book.formats != null) {
@@ -44,6 +45,12 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         _selectedFormat = widget.book.formats!.keys.first;
       }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _isDarkMode = Theme.of(context).brightness == Brightness.dark;
   }
 
   @override
@@ -651,29 +658,139 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
 
   void _launchUrl(String url) async {
     try {
+      print('Attempting to launch URL: $url');
       final uri = Uri.parse(url);
+      print('Parsed URI: $uri');
+      
+      // Try external browser first
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open book'),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
+        print('canLaunchUrl returned true, attempting to launch...');
+        final launched = await launchUrl(
+          uri, 
+          mode: LaunchMode.externalApplication
+        );
+        print('Launch result: $launched');
+        
+        if (launched) {
+          return; // Success!
         }
       }
+      
+      // Fallback: try in-app webview
+      print('External browser failed, trying in-app webview...');
+      _showInAppWebView(url);
+      
     } catch (e) {
+      print('Error launching URL: $e');
+      if (mounted) {
+        _showErrorDialog(url, e.toString());
+      }
+    }
+  }
+
+  void _showInAppWebView(String url) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Open Book'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('External browser not available. Would you like to:'),
+            const SizedBox(height: 16),
+            Link(
+              uri: Uri.parse(url),
+              target: LinkTarget.blank,
+              builder: (context, followLink) => ElevatedButton.icon(
+                onPressed: followLink,
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Open in App'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _copyUrlToClipboard(url);
+              },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy URL'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B7280),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyUrlToClipboard(String url) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: url));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error opening book: $e'),
-            backgroundColor: const Color(0xFFEF4444),
+          const SnackBar(
+            content: Text('URL copied to clipboard!'),
+            backgroundColor: Color(0xFF10B981),
           ),
         );
       }
+      Navigator.of(context).pop();
+    } catch (e) {
+      // Fallback to showing URL if clipboard fails
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Book URL'),
+          content: SingleChildScrollView(
+            child: SelectableText(url),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
     }
+  }
+
+  void _showErrorDialog(String url, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cannot Open Book'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Error: $error'),
+            const SizedBox(height: 16),
+            const Text('You can try opening the book manually:'),
+            const SizedBox(height: 8),
+            SelectableText(url),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getFormatDisplayName(String format) {

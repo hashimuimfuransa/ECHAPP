@@ -68,6 +68,17 @@ const userSchema = new mongoose.Schema({
   lastActive: {
     type: Date,
     default: Date.now
+  },
+  totalSessionTime: {
+    type: Number,
+    default: 0  // Total time spent in app in seconds
+  },
+  lastSessionStart: {
+    type: Date
+  },
+  sessionCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

@@ -47,13 +47,34 @@ const lessonSchema = new mongoose.Schema({
     type: String,
     enum: ['draft', 'processing', 'completed', 'error'],
     default: 'completed' // Default to completed for existing lessons
+  },
+  // New fields for professional structure
+  quizId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quiz',
+    default: null
+  },
+  materials: [{
+    type: String, // Array of material URLs or references
+  }],
+  lessonType: {
+    type: String,
+    enum: ['video', 'notes', 'quiz', 'Quiz', 'mixed', 'Video + Notes', 'Video + Quiz', 'Notes + Quiz', 'Mixed', 'Content'],
+    default: 'Content'
+  },
+  isPublished: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
 });
 
-// Index for better performance
+// Indexes for better performance
 lessonSchema.index({ sectionId: 1, order: 1 });
 lessonSchema.index({ courseId: 1 });
+lessonSchema.index({ quizId: 1 }); // New index for quiz association
+lessonSchema.index({ lessonType: 1 }); // New index for lesson type filtering
+lessonSchema.index({ isPublished: 1 }); // New index for published status
 
 module.exports = mongoose.model('Lesson', lessonSchema);

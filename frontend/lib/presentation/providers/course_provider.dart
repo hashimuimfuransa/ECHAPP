@@ -9,8 +9,6 @@ import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
-import 'package:excellencecoachinghub/services/api/exam_service.dart';
-import 'package:excellencecoachinghub/models/exam.dart' as exam_model;
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
@@ -39,18 +37,9 @@ final videoApiServiceProvider = Provider<VideoApiService>((ref) {
   return VideoApiService();
 });
 
-final examApiServiceProvider = Provider<ExamService>((ref) {
-  return ExamService();
-});
-
 final lessonContentProvider = FutureProvider.family<LessonContent, String>((ref, lessonId) async {
   final service = ref.read(videoApiServiceProvider);
   return await service.getLessonContent(lessonId);
-});
-
-final lessonExamsProvider = FutureProvider.family<List<exam_model.Exam>, String>((ref, sectionId) async {
-  final service = ref.read(examApiServiceProvider);
-  return await service.getExamsBySection(sectionId);
 });
 
 final courseContentProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, courseId) async {
@@ -147,21 +136,98 @@ final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
   return await enrollmentRepository.getEnrollments();
 });
 
-// Category providers
+// Category providers with optimized loading
 final allCategoriesProvider = Provider<List<dynamic>>((ref) {
-  // Note: This returns the mock categories for now, but could be updated to fetch from backend
-  return CategoriesService.getAllCategories();
+  // Use backend categories if available, fallback to mock
+  final backendCategories = ref.watch(backendCategoriesProvider);
+  return backendCategories.when(
+    data: (categories) => categories.cast<dynamic>(),
+    loading: () => CategoriesService.getAllCategories(), // Fallback to mock while loading
+    error: (_, __) => CategoriesService.getAllCategories(), // Fallback to mock on error
+  );
 });
 
-// Backend category providers
+// Preload categories provider for faster initial load
+final categoryPreloadProvider = Provider<void>((ref) {
+  // Start preloading when provider is first accessed
+  Future.microtask(() {
+    final repository = ref.read(categoryRepositoryProvider);
+    BackendCategoriesCache.preloadCategories(repository);
+  });
+});
+
+// Backend category providers with caching
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return CategoryRepository();
 });
 
+class BackendCategoriesCache {
+  static List<Category>? _cachedCategories;
+  static DateTime? _lastFetch;
+  static const Duration _cacheTimeout = Duration(minutes: 30); // Extended cache for 30 minutes
+  static const int _maxCacheSize = 100; // Increased cache size
+  static bool _isPreloading = false;
+  
+  static bool get isCacheValid {
+    if (_cachedCategories == null || _lastFetch == null) return false;
+    return DateTime.now().difference(_lastFetch!) < _cacheTimeout;
+  }
+  
+  static List<Category>? get cachedCategories => _cachedCategories;
+  
+  static void cacheCategories(List<Category> categories) {
+    // Limit cache size to prevent memory issues
+    if (categories.length <= _maxCacheSize) {
+      _cachedCategories = categories;
+      _lastFetch = DateTime.now();
+    } else {
+      _cachedCategories = categories.take(_maxCacheSize).toList();
+      _lastFetch = DateTime.now();
+    }
+  }
+  
+  static void invalidateCache() {
+    _cachedCategories = null;
+    _lastFetch = null;
+  }
+  
+  static bool get isPreloading => _isPreloading;
+  
+  static void setPreloading(bool value) {
+    _isPreloading = value;
+  }
+  
+  // Preload categories in background
+  static Future<void> preloadCategories(CategoryRepository repository) async {
+    if (_isPreloading || isCacheValid) return;
+    
+    _isPreloading = true;
+    try {
+      final categories = await repository.getAllCategories();
+      cacheCategories(categories);
+    } catch (e) {
+      // Silent fail for preloading
+      print('Background category preload failed: $e');
+    } finally {
+      _isPreloading = false;
+    }
+  }
+}
+
+// Optimized provider with immediate cache access and background refresh
 final backendCategoriesProvider = FutureProvider<List<Category>>((ref) async {
+  // Return cached categories immediately if available
+  if (BackendCategoriesCache.isCacheValid) {
+    return BackendCategoriesCache.cachedCategories!;
+  }
+  
+  // Fetch fresh data
   final repository = ref.read(categoryRepositoryProvider);
-  return await repository.getAllCategories();
+  final categories = await repository.getAllCategories();
+  BackendCategoriesCache.cacheCategories(categories);
+  return categories;
 });
+
 
 final popularCategoriesProvider = Provider<List<dynamic>>((ref) {
   final allCategories = ref.read(allCategoriesProvider);

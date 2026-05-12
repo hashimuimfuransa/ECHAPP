@@ -5,8 +5,8 @@ const path = require('path');
 class TTSService {
   constructor() {
     this.apiKey = process.env.ELEVENLABS_API_KEY;
-    this.voiceId = process.env.ELEVENLABS_VOICE_ID || 'nT6n6V0X6o7O6b6E6R6E'; // Default: Brian (Deep, Professional British)
-    // Previous: 'pNInz6obpgnuM07pZNoR' (Adam - British Male)
+    this.voiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgnuM07pZNoR'; // Default: Adam (British Male)
+    // Previous invalid: 'nT6n6V0X6o7O6b6E6R6E' (not found)
   }
 
   /**

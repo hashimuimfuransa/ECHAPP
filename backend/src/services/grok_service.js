@@ -570,7 +570,12 @@ For each question, first determine the correct answer independently based on the
 RULES:
 1. For MCQ and true_false: The answer must match the correct answer exactly.
 2. For fill_blank: Allow minor spelling errors or case differences if the meaning is identical.
-3. For open: Grade based on conceptual correctness and completeness. Give partial points if partially correct.
+3. For essay/open questions: Grade based on conceptual correctness, completeness, and understanding. 
+   - Give full points if the answer demonstrates clear understanding of the core concept.
+   - Give partial points (50-75%) if the answer is partially correct or lacks detail but shows basic understanding.
+   - Give minimal points (25%) if the answer is relevant but incorrect or very incomplete.
+   - Give 0 points only if the answer is completely irrelevant, empty, or shows no understanding.
+   - Be generous - if the student's answer captures the essence of the topic, award full points even if minor details are missing.
 4. IMPORTANT: If 'correctAnswer' is "[MISSING - USE YOUR EXPERT KNOWLEDGE TO DETERMINE CORRECT ANSWER]" or isPlaceholder is true, you MUST ignore it and use your own expert knowledge to determine the ACTUAL correct answer and grade the student accordingly. Do NOT grade based on the placeholder text "Sample answer".
 5. Provide a brief "feedback" string for each answer (max 15 words) explaining the grade.
 6. Respond ONLY with a JSON array of objects.
@@ -743,6 +748,37 @@ RULES:
     const intersection = new Set([...words1].filter(x => words2.has(x)));
     const union = new Set([...words1, ...words2]);
     return union.size > 0 ? intersection.size / union.size : 0;
+  }
+
+  /**
+   * Parse grading response from Groq AI.
+   * Handles markdown code fences and extracts the JSON array.
+   */
+  parseGradingResponse(raw) {
+    // 1. Try direct parse
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { /* fall through */ }
+
+    // 2. Strip markdown code fences and retry
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+    try {
+      const parsed = JSON.parse(stripped);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { /* fall through */ }
+
+    // 3. Extract the first [...] array block
+    const match = stripped.match(/\[[\s\S]*\]/);
+    if (match) {
+      try {
+        const parsed = JSON.parse(match[0]);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) { /* fall through */ }
+    }
+
+    console.error("Could not parse grading response from Groq AI");
+    return [];
   }
 
   // ─── Internal Helpers ────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,19 +51,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   void _checkUserRole() {
+    // Role checking is now handled by AdminLayoutWrapper
+    // This method is kept for compatibility but no longer performs checks
     if (!_hasCheckedRole) {
       final authState = ref.watch(authProvider);
       if (authState.user != null && !authState.isLoading) {
         _hasCheckedRole = true;
-        debugPrint('AdminDashboardScreen: Checking user role - ${authState.user?.role}');
-        
-        // If user is not admin, redirect to student dashboard
-        if (authState.user?.role != 'admin') {
-          debugPrint('AdminDashboardScreen: Non-admin detected, redirecting to student dashboard');
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/dashboard');
-          });
-        }
+        debugPrint('AdminDashboardScreen: User authenticated - role checking delegated to AdminLayoutWrapper');
       }
     }
   }

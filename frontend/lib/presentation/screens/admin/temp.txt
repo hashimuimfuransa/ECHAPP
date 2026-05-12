@@ -1,0 +1,427 @@
+    // Enhanced question dialog with all question types
+    // Matches the enhanced quiz creation dialog functionality
+    final questionController = TextEditingController();
+    String selectedType = 'mcq';
+    int points = 1;
+    
+    // MCQ specific controllers
+    final optionsControllers = [
+      TextEditingController(),
+      TextEditingController(),
+      TextEditingController(),
+      TextEditingController(),
+    ];
+    int correctAnswer = 0;
+    
+    // True/False specific
+    bool trueFalseAnswer = true;
+    
+    // Essay specific
+    final essayAnswerController = TextEditingController();
+    
+    // Fill blank specific
+    final blankAnswerController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Add ${_getQuestionTypeLabel(selectedType)} Question'),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.6,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Question Type Selector
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    decoration: const InputDecoration(
+                      labelText: 'Question Type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'mcq', child: Text('Multiple Choice')),
+                      DropdownMenuItem(value: 'true_false', child: Text('True/False')),
+                      DropdownMenuItem(value: 'essay', child: Text('Essay')),
+                      DropdownMenuItem(value: 'fill_blank', child: Text('Fill in Blank')),
+                      DropdownMenuItem(value: 'drag_drop', child: Text('Drag & Drop')),
+                      DropdownMenuItem(value: 'matching', child: Text('Matching')),
+                      DropdownMenuItem(value: 'ordering', child: Text('Ordering')),
+                      DropdownMenuItem(value: 'hotspot', child: Text('Hotspot')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          selectedType = value;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Question Text
+                  TextField(
+                    controller: questionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Question',
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter your question',
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Points
+                  TextFormField(
+                    initialValue: points.toString(),
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Points',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      points = int.tryParse(value) ?? 1;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Type-specific fields
+                  if (selectedType == 'mcq') ...[
+                    const Text('Options:'),
+                    const SizedBox(height: 8),
+                    ...optionsControllers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final controller = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: index,
+                              groupValue: correctAnswer,
+                              onChanged: (value) {
+                                setState(() {
+                                  correctAnswer = value!;
+                                });
+                              },
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                decoration: InputDecoration(
+                                  labelText: 'Option ${String.fromCharCode(65 + index)}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ] else if (selectedType == 'true_false') ...[
+                    const Text('Correct Answer:'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: RadioListTile<bool>(
+                            title: const Text('True'),
+                            value: true,
+                            groupValue: trueFalseAnswer,
+                            onChanged: (value) {
+                              setState(() {
+                                trueFalseAnswer = value!;
+                              });
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: RadioListTile<bool>(
+                            title: const Text('False'),
+                            value: false,
+                            groupValue: trueFalseAnswer,
+                            onChanged: (value) {
+                              setState(() {
+                                trueFalseAnswer = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (selectedType == 'essay') ...[
+                    TextField(
+                      controller: essayAnswerController,
+                      decoration: const InputDecoration(
+                        labelText: 'Sample Answer (Optional)',
+                        border: OutlineInputBorder(),
+                        hintText: 'Provide a sample answer for reference',
+                      ),
+                      maxLines: 4,
+                    ),
+                  ] else if (selectedType == 'fill_blank') ...[
+                    TextField(
+                      controller: blankAnswerController,
+                      decoration: const InputDecoration(
+                        labelText: 'Correct Answer',
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter the correct answer for the blank',
+                      ),
+                    ),
+                  ] else if (selectedType == 'drag_drop') ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.drag_indicator, color: Colors.blue),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Drag & Drop Question',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Configure drag items and drop zones in the quiz editor after creation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF757575),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (selectedType == 'matching') ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.compare_arrows, color: Colors.indigo),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Matching Question',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.indigo,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Configure matching pairs in the quiz editor after creation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF757575),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (selectedType == 'ordering') ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.format_list_numbered, color: Colors.red),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Ordering Question',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Configure correct order in the quiz editor after creation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF757575),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (selectedType == 'hotspot') ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.touch_app, color: Colors.purple),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Hotspot Question',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.purple,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Configure image and clickable hotspots in the quiz editor after creation',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF757575),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (questionController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Question is required')),
+                  );
+                  return;
+                }
+                
+                // Type-specific validation
+                if (selectedType == 'mcq' && optionsControllers.any((c) => c.text.trim().isEmpty)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All options are required')),
+                  );
+                  return;
+                }
+                
+                // Create question data
+                final questionData = {
+                  'question': questionController.text.trim(),
+                  'type': selectedType,
+                  'points': points,
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                };
+                
+                // Add type-specific data
+                if (selectedType == 'mcq') {
+                  questionData['options'] = optionsControllers
+                      .asMap()
+                      .entries
+                      .map((entry) => {
+                            'id': DateTime.now().millisecondsSinceEpoch.toString() + '_' + entry.key.toString(),
+                            'text': entry.value.text.trim(),
+                            'isCorrect': entry.key == correctAnswer,
+                          })
+                      .toList();
+                  questionData['correctAnswer'] = correctAnswer;
+                } else if (selectedType == 'true_false') {
+                  questionData['correctAnswer'] = trueFalseAnswer;
+                } else if (selectedType == 'essay') {
+                  questionData['sampleAnswer'] = essayAnswerController.text.trim();
+                } else if (selectedType == 'fill_blank') {
+                  questionData['correctAnswer'] = blankAnswerController.text.trim();
+                } else if (selectedType == 'drag_drop') {
+                  // Placeholder for drag & drop - will be configured in quiz editor
+                  questionData['dragDropItems'] = [];
+                  questionData['dropZones'] = [];
+                } else if (selectedType == 'matching') {
+                  // Placeholder for matching - will be configured in quiz editor
+                  questionData['matchingPairs'] = [];
+                } else if (selectedType == 'ordering') {
+                  // Placeholder for ordering - will be configured in quiz editor
+                  questionData['correctOrder'] = [];
+                } else if (selectedType == 'hotspot') {
+                  // Placeholder for hotspot - will be configured in quiz editor
+                  questionData['hotspots'] = [];
+                }
+                
+                Navigator.pop(context);
+                
+                try {
+                  final question = Question(
+                    id: questionData['id'] as String,
+                    examId: examId,
+                    question: questionData['question'] as String,
+                    type: questionData['type'] as String,
+                    points: questionData['points'] as int,
+                    options: questionData['options'] != null
+                        ? (questionData['options'] as List).map((opt) => Option.fromJson(opt)).toList()
+                        : null,
+                    correctAnswer: questionData['correctAnswer'] as dynamic,
+                  );
+                  
+                  await QuizService.addQuestion(examId, question);
+                  
+                  // Refresh questions
+                  _loadExamQuestions(examId);
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Question added successfully'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add question: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add Question'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+

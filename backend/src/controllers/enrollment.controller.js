@@ -8,6 +8,7 @@ const Certificate = require('../models/Certificate');
 const mongoose = require('mongoose');
 const emailService = require('../services/email.service');
 const notificationController = require('./notification.controller');
+const CertificatePDFService = require('../services/certificate_pdf_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
 const { transformUrls } = require('../utils/url.utils');
 
@@ -150,6 +151,29 @@ const getMyCourses = async (req, res) => {
     sendSuccess(res, transformUrls(activeEnrollments), 'Enrolled courses retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve enrolled courses', 500, error.message);
+  }
+};
+
+// Get course feedback
+const getCourseFeedback = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+
+    const enrollment = await Enrollment.findOne({ userId, courseId });
+    if (!enrollment) {
+      return sendNotFound(res, 'Enrollment not found for this course');
+    }
+
+    const feedbackData = {
+      rating: enrollment.rating,
+      feedback: enrollment.feedback,
+      hasSubmittedFeedback: enrollment.rating !== null && enrollment.rating !== undefined
+    };
+
+    sendSuccess(res, feedbackData, 'Course feedback retrieved successfully');
+  } catch (error) {
+    sendError(res, 'Failed to retrieve course feedback', 500, error.message);
   }
 };
 
@@ -600,17 +624,98 @@ const verifyCertificate = async (req, res) => {
   }
 };
 
+// Note: getCertificates function is already declared above at line 361
+
+// Manual certificate generation for passed final exams
+const generateCertificateManually = async (req, res) => {
+  try {
+    const { courseId, examId } = req.body;
+    const userId = req.user.id;
+    
+    console.log('Manual certificate generation request:', { userId, courseId, examId });
+    
+    // Verify user passed the exam
+    const Submission = require('../../models/Submission');
+    const submission = await Submission.findOne({ 
+      userId, 
+      examId,
+      passed: true 
+    }).sort({ submittedAt: -1 });
+    
+    if (!submission) {
+      return sendError(res, 'No passed exam found for this user', 400);
+    }
+    
+    // Check if certificate already exists
+    const existingCertificate = await Certificate.findOne({
+      userId,
+      courseId
+    });
+    
+    if (existingCertificate) {
+      return sendError(res, 'Certificate already exists for this course', 400);
+    }
+    
+    // Get course and user details
+    const course = await Course.findById(courseId);
+    const user = await User.findById(userId).select('fullName email');
+    
+    if (!course || !user) {
+      return sendError(res, 'Course or user not found', 404);
+    }
+    
+    // Generate serial number first
+    const serialNumber = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    // Generate PDF certificate first
+    const pdfPath = await CertificatePDFService.generateCertificatePDF({
+      studentName: user.fullName,
+      userFullName: user.fullName,
+      courseTitle: course.title,
+      completionDate: new Date(),
+      score: submission.percentage,
+      percentage: submission.percentage,
+      serialNumber: serialNumber,
+      issuedDate: new Date()
+    });
+    
+    // Generate certificate with PDF path included
+    const certificateData = {
+      userId,
+      courseId,
+      examId,
+      score: submission.percentage,
+      percentage: submission.percentage,
+      issuedDate: new Date(),
+      isValid: true,
+      serialNumber: serialNumber,
+      certificatePdfPath: pdfPath
+    };
+    
+    const certificate = await Certificate.create(certificateData);
+    
+    console.log(`Certificate generated manually: ${certificate._id}`);
+    
+    sendSuccess(res, certificate, 'Certificate generated successfully');
+  } catch (error) {
+    console.error('MANUAL CERTIFICATE GENERATION ERROR:', error);
+    sendError(res, 'Failed to generate certificate', 500, error.message);
+  }
+};
+
 module.exports = {
   enrollInCourse,
   getMyCourses,
+  getCourseFeedback,
+  submitCourseFeedback,
   getEnrollmentProgress,
   updateEnrollmentProgress,
   completeSection,
   getCertificates,
   checkCertificateEligibility,
   downloadCertificate,
-  submitCourseFeedback,
   checkCourseAccess,
   downloadCertificateFile,
-  verifyCertificate
+  verifyCertificate,
+  generateCertificateManually
 };

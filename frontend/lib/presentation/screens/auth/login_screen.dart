@@ -63,10 +63,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               duration: const Duration(seconds: 2),
             ),
           );
-          if (authState.user?.role == 'admin') {
-            context.go('/admin');
+          
+          // Check if user is student and missing phone number
+          if (authState.user?.role != 'admin' && 
+              (authState.user?.phone == null || authState.user!.phone!.trim().isEmpty)) {
+            // Redirect to phone collection screen for students without phone
+            context.go('/phone-collection');
           } else {
-            context.go('/dashboard');
+            // Normal navigation
+            if (authState.user?.role == 'admin') {
+              context.go('/admin');
+            } else {
+              context.go('/dashboard');
+            }
           }
         }
       }
@@ -101,10 +110,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         _hasNavigated = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            if (current.user?.role == 'admin') {
-              context.go('/admin');
+            // Check if user is student and missing phone number
+            if (current.user?.role != 'admin' && 
+                (current.user?.phone == null || current.user!.phone!.trim().isEmpty)) {
+              // Redirect to phone collection screen for students without phone
+              context.go('/phone-collection');
             } else {
-              context.go('/dashboard');
+              // Normal navigation
+              if (current.user?.role == 'admin') {
+                context.go('/admin');
+              } else {
+                context.go('/dashboard');
+              }
             }
           }
         });

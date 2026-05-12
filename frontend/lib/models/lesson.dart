@@ -5,11 +5,18 @@ class Lesson {
   final String title;
   final String? description;
   final String? videoId;
+  final String? videoUrl; // Direct video URL from API
   final String? notes;
   final String? notesPdfUrl;
   final String? status;
   final int order;
   final int duration;
+  final String? quizId; // Add quiz association
+  final List<String>? materials; // Additional materials (PDFs, etc.)
+  final String? lessonType; // video, text, quiz, mixed
+  final bool? isPublished;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Lesson({
     required this.id,
@@ -18,11 +25,18 @@ class Lesson {
     required this.title,
     this.description,
     this.videoId,
+    this.videoUrl,
     this.notes,
     this.notesPdfUrl,
     this.status,
     required this.order,
     required this.duration,
+    this.quizId,
+    this.materials,
+    this.lessonType,
+    this.isPublished,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
@@ -33,12 +47,45 @@ class Lesson {
       title: json['title'] ?? '',
       description: json['description'] as String?,
       videoId: json['videoId'] as String?,
+      videoUrl: json['videoUrl'] as String?,
       notes: json['notes'] as String?,
       notesPdfUrl: json['notesPdfUrl'] as String?,
       status: json['status'] as String?,
-      order: json['order'] ?? 0,
-      duration: json['duration'] ?? 0,
+      order: _parseInt(json['order']),
+      duration: _parseInt(json['duration']),
+      quizId: json['quizId'] as String?,
+      materials: (json['materials'] as List<dynamic>?)?.cast<String>(),
+      lessonType: json['lessonType'] as String?,
+      isPublished: json['isPublished'] as bool?,
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return 0;
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) {
+      if (value.isEmpty) return null;
+      return DateTime.tryParse(value);
+    }
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+    // Handle case where value is an empty Map or other invalid type
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -54,6 +101,12 @@ class Lesson {
       'status': status,
       'order': order,
       'duration': duration,
+      'quizId': quizId,
+      'materials': materials,
+      'lessonType': lessonType,
+      'isPublished': isPublished,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -69,6 +122,12 @@ class Lesson {
     String? status,
     int? order,
     int? duration,
+    String? quizId,
+    List<String>? materials,
+    String? lessonType,
+    bool? isPublished,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Lesson(
       id: id ?? this.id,
@@ -82,6 +141,36 @@ class Lesson {
       status: status ?? this.status,
       order: order ?? this.order,
       duration: duration ?? this.duration,
+      quizId: quizId ?? this.quizId,
+      materials: materials ?? this.materials,
+      lessonType: lessonType ?? this.lessonType,
+      isPublished: isPublished ?? this.isPublished,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  // Helper methods for lesson content
+  bool get hasVideo => videoId != null && videoId!.isNotEmpty;
+  bool get hasNotes => (notes != null && notes!.isNotEmpty) || (notesPdfUrl != null && notesPdfUrl!.isNotEmpty);
+  bool get hasQuiz => quizId != null && quizId!.isNotEmpty;
+  bool get hasMaterials => materials != null && materials!.isNotEmpty;
+  
+  String get displayType {
+    if (lessonType != null) return lessonType!;
+    if (hasVideo && hasNotes) return 'Mixed';
+    if (hasVideo) return 'Video';
+    if (hasNotes) return 'Notes';
+    if (hasQuiz) return 'Quiz';
+    return 'Content';
+  }
+  
+  List<String> get availableMaterials {
+    List<String> materials = [];
+    if (hasVideo) materials.add('Video');
+    if (hasNotes) materials.add('Notes');
+    if (hasQuiz) materials.add('Quiz');
+    if (this.materials != null) materials.addAll(this.materials!);
+    return materials;
   }
 }

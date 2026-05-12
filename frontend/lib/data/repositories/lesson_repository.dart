@@ -1,11 +1,15 @@
 import '../../models/lesson.dart';
 import '../../services/api/section_service.dart';
+import '../../services/infrastructure/api_client.dart';
+import '../../config/api_config.dart';
 
 class LessonRepository {
   final SectionService _sectionService;
+  final ApiClient _apiClient;
 
-  LessonRepository({SectionService? sectionService}) 
-      : _sectionService = sectionService ?? SectionService();
+  LessonRepository({SectionService? sectionService, ApiClient? apiClient}) 
+      : _sectionService = sectionService ?? SectionService(),
+        _apiClient = apiClient ?? ApiClient();
 
   /// Create a new lesson
   Future<Lesson> createLesson({
@@ -19,6 +23,10 @@ class LessonRepository {
     bool processNotes = false,
     required int order,
     required int duration,
+    String? quizId, // New field for quiz association
+    List<String>? materials, // New field for additional materials
+    String? lessonType, // New field for lesson type
+    bool? isPublished, // New field for publish status
   }) async {
     return await _sectionService.createLesson(
       courseId: courseId,
@@ -31,6 +39,10 @@ class LessonRepository {
       processNotes: processNotes,
       order: order,
       duration: duration,
+      quizId: quizId, // Pass quiz ID
+      materials: materials, // Pass materials
+      lessonType: lessonType, // Pass lesson type
+      isPublished: isPublished, // Pass publish status
     );
   }
 
@@ -69,6 +81,10 @@ class LessonRepository {
     String? notesPdfUrl,
     int? order,
     int? duration,
+    String? quizId, // New field for quiz association
+    List<String>? materials, // New field for additional materials
+    String? lessonType, // New field for lesson type
+    bool? isPublished, // New field for publish status
   }) async {
     return await _sectionService.updateLesson(
       lessonId: lessonId,
@@ -79,6 +95,10 @@ class LessonRepository {
       notesPdfUrl: notesPdfUrl,
       order: order,
       duration: duration,
+      quizId: quizId, // Pass quiz ID
+      materials: materials, // Pass materials
+      lessonType: lessonType, // Pass lesson type
+      isPublished: isPublished, // Pass publish status
     );
   }
 
@@ -90,5 +110,24 @@ class LessonRepository {
   /// Get lessons by section
   Future<List<Lesson>> getLessonsBySection(String sectionId) async {
     return await _sectionService.getLessonsBySection(sectionId);
+  }
+
+  /// Get lesson by ID
+  Future<Lesson?> getLessonById(String lessonId) async {
+    try {
+      final response = await _apiClient.get('${ApiConfig.lessons}/$lessonId');
+      response.validateStatus();
+
+      final apiResponse = response.toApiResponse((json) => Lesson.fromJson(json));
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        return apiResponse.data!;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch lesson: $e');
+    }
   }
 }

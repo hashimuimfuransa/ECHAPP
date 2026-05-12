@@ -294,6 +294,9 @@ class AdminService {
         lastActive: data['lastActive'] != null 
             ? _parseDateTime(data['lastActive'])
             : null,
+        timeSpentInApp: data['timeSpentInApp'] != null 
+            ? Duration(seconds: data['timeSpentInApp'] as int? ?? 0)
+            : null,
       );
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -324,6 +327,9 @@ class AdminService {
             .toList(),
         studentActivityStats: StudentActivityStats.fromJson(
             data['studentActivityStats'] as Map<String, dynamic>),
+        recentlyUnenrolledStudents: (data['recentlyUnenrolledStudents'] as List?)
+            ?.map((item) => UnenrolledStudent.fromJson(item as Map<String, dynamic>))
+            .toList() ?? [],
       );
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -571,15 +577,27 @@ class AdminService {
     try {
       final response = await _apiClient.put(
         '${ApiConfig.admin}/students/$userId/device-reset',
-        body: {'deviceId': deviceId},
+        body: deviceId != null ? {'deviceId': deviceId} : {},
       );
       response.validateStatus();
       
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       return jsonBody['data'] as Map<String, dynamic>;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to reset user device: $e');
+      throw 'Failed to reset user device: $e';
+    }
+  }
+
+  /// Reset student password (admin only)
+  Future<void> resetStudentPassword(String studentId, String newPassword) async {
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/students/$studentId/reset-password',
+        body: {'newPassword': newPassword},
+      );
+      response.validateStatus();
+    } catch (e) {
+      throw 'Failed to reset student password: $e';
     }
   }
 
@@ -726,6 +744,7 @@ class StudentDetail {
   final int inProgressCourses;
   final double totalSpent;
   final DateTime? lastActive;
+  final Duration? timeSpentInApp;
 
   StudentDetail({
     required this.user,
@@ -737,6 +756,7 @@ class StudentDetail {
     required this.inProgressCourses,
     required this.totalSpent,
     this.lastActive,
+    this.timeSpentInApp,
   });
 }
 
@@ -749,6 +769,7 @@ class StudentAnalytics {
   final List<TopStudent> topPerformingStudents;
   final List<EnrollmentTrend> enrollmentTrends;
   final StudentActivityStats studentActivityStats;
+  final List<UnenrolledStudent> recentlyUnenrolledStudents;
 
   StudentAnalytics({
     required this.totalStudents,
@@ -759,7 +780,40 @@ class StudentAnalytics {
     required this.topPerformingStudents,
     required this.enrollmentTrends,
     required this.studentActivityStats,
+    this.recentlyUnenrolledStudents = const [],
   });
+}
+
+class UnenrolledStudent {
+  final String id;
+  final String name;
+  final String email;
+  final String courseTitle;
+  final String unenrollmentReason;
+  final DateTime unenrollmentDate;
+  final DateTime accessExpirationDate;
+
+  UnenrolledStudent({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.courseTitle,
+    required this.unenrollmentReason,
+    required this.unenrollmentDate,
+    required this.accessExpirationDate,
+  });
+
+  factory UnenrolledStudent.fromJson(Map<String, dynamic> json) {
+    return UnenrolledStudent(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      courseTitle: json['courseTitle'] as String,
+      unenrollmentReason: json['unenrollmentReason'] as String,
+      unenrollmentDate: AdminService._parseDateTime(json['unenrollmentDate']),
+      accessExpirationDate: AdminService._parseDateTime(json['accessExpirationDate']),
+    );
+  }
 }
 
 class TopStudent {
@@ -958,6 +1012,10 @@ class CourseStudentPerformance {
   final DateTime? lastAccessed;
   final double? rating;
   final String? feedback;
+  final DateTime? accessExpirationDate;
+  final String? timeRemaining;
+  final String status;
+  final bool isExpired;
 
   CourseStudentPerformance({
     required this.id,
@@ -969,6 +1027,10 @@ class CourseStudentPerformance {
     this.lastAccessed,
     this.rating,
     this.feedback,
+    this.accessExpirationDate,
+    this.timeRemaining,
+    required this.status,
+    required this.isExpired,
   });
 
   factory CourseStudentPerformance.fromJson(Map<String, dynamic> json) {
@@ -982,6 +1044,10 @@ class CourseStudentPerformance {
       lastAccessed: json['lastAccessed'] != null ? DateTime.parse(json['lastAccessed'] as String) : null,
       rating: (json['rating'] as num?)?.toDouble(),
       feedback: json['feedback'] as String?,
+      accessExpirationDate: json['accessExpirationDate'] != null ? DateTime.parse(json['accessExpirationDate'] as String) : null,
+      timeRemaining: json['timeRemaining'] as String?,
+      status: json['status'] as String? ?? 'active',
+      isExpired: json['isExpired'] as bool? ?? false,
     );
   }
 }

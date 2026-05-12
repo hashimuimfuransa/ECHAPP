@@ -13,7 +13,7 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 /// This utility automatically determines the correct destination when a user
 /// clicks on a course based on their enrollment status:
 /// 
-/// - If user IS enrolled: Navigate directly to Modern Learning Screen (/learning/:id)
+/// - If user IS enrolled: Navigate directly to Professional Learning Screen (/learning/:id)
 /// - If user has PENDING payment: Navigate to Payment Screen
 /// - If user is NOT enrolled: Navigate to Course Detail Screen (/course/:id)
 /// 
@@ -23,7 +23,7 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 class CourseNavigationUtils {
   /// Navigates to the appropriate screen based on enrollment and payment status
   /// Priority order: 
-  /// 1. Already enrolled -> Continue Learning (Modern Learning Screen)
+  /// 1. Already enrolled -> Continue Learning (Professional Learning Screen)
   /// 2. Pending payment -> Payment screen
   /// 3. New course -> Course detail
   /// After payment approval, automatically redirects to learning screen
@@ -40,8 +40,8 @@ class CourseNavigationUtils {
       print('Enrollment check result: $isEnrolled');
       
       if (isEnrolled) {
-        // If already enrolled, go directly to modern learning screen
-        print('✅ User already enrolled in course ${course.id} - navigating to modern learning screen');
+        // If already enrolled, go directly to professional learning screen
+        print('✅ User already enrolled in course ${course.id} - navigating to professional learning screen');
         
         // PRE-FETCH: Start pre-fetching course content for instant loading
         ref.read(courseContentProvider(course.id).future);
@@ -111,7 +111,7 @@ class CourseNavigationUtils {
       final isEnrolled = await ref.read(isEnrolledInCourseProvider(course.id).future);
       
       if (isEnrolled && context.mounted) {
-        print('🎉 User is now enrolled after payment - redirecting to modern learning screen');
+        print('🎉 User is now enrolled after payment - redirecting to professional learning screen');
         context.pushReplacement('/learning/${course.id}');
         
         // Show success message
@@ -151,8 +151,8 @@ class CourseNavigationUtils {
       print('Enrollment check result (context method): $isEnrolled');
       
       if (isEnrolled) {
-        // If already enrolled, go directly to modern learning screen
-        print('✅ User already enrolled - navigating to modern learning screen');
+        // If already enrolled, go directly to professional learning screen
+        print('✅ User already enrolled - navigating to professional learning screen');
         
         // PRE-FETCH: Start pre-fetching course content for instant loading
         ref.read(courseContentProvider(course.id).future);

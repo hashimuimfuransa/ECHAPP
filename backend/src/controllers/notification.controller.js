@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const Quiz = require('../models/Quiz');
 const admin = require('firebase-admin');
 
 class NotificationController {
