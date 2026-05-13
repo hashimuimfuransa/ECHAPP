@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
@@ -480,18 +481,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
-                        child: Image.network(
-                          book.coverUrl!,
+                        child: CachedNetworkImage(
+                          imageUrl: book.coverUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Icon(
-                                Icons.menu_book_rounded,
-                                color: const Color(0xFF10B981),
-                                size: 48,
+                          placeholder: (context, url) => Container(
+                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF10B981),
                               ),
-                            );
-                          },
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Center(
+                            child: Icon(
+                              Icons.menu_book_rounded,
+                              color: const Color(0xFF10B981),
+                              size: 48,
+                            ),
+                          ),
                         ),
                       )
                     : Center(

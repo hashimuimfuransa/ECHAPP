@@ -24,14 +24,20 @@ class CoursesScreen extends ConsumerStatefulWidget {
 }
 
 class _CoursesScreenState extends ConsumerState<CoursesScreen> {
-  late Future<List<Course>> _coursesFuture;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _selectedCategory = 'all';
   List<Course> _allCourses = [];
   List<Course> _filteredCourses = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  static const int _pageSize = 20;
 
   String? _errorMessage;
+
+  final CourseRepository _repository = CourseRepository();
 
   @override
   void initState() {
@@ -40,99 +46,90 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(categoryPreloadProvider);
     });
-    
-    // Always load ALL courses initially so that 'All' category works
-    // and we can filter client-side as needed.
-    _coursesFuture = CourseRepository().getCourses();
-    _coursesFuture.then((courses) {
-      if (mounted) {
-        setState(() {
-          _allCourses = courses;
-          _filteredCourses = courses;
-          _isLoading = false;
-          _errorMessage = null;
-          if (widget.categoryId != null) {
-            _selectedCategory = widget.categoryId!;
-          }
-          // Set search query if provided
-          if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
-            _searchController.text = widget.searchQuery!;
-          }
-        });
-        
-        // Auto-show category popup after a short delay for better UX
-        if (widget.categoryId == null && widget.searchQuery == null) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              _showCategoryPopup(context);
-            }
-          });
+
+    _scrollController.addListener(_onScroll);
+
+    if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+      _searchController.text = widget.searchQuery!;
+    }
+    if (widget.categoryId != null) {
+      _selectedCategory = widget.categoryId!;
+    }
+
+    _loadPage(1, reset: true);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      _loadNextPage();
+    }
+  }
+
+  Future<void> _loadPage(int page, {bool reset = false}) async {
+    if (!mounted) return;
+    if (reset) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final result = await _repository.getCoursesPaged(
+        page: page,
+        limit: _pageSize,
+        categoryId: _selectedCategory == 'all' ? null : _selectedCategory,
+        search: _searchController.text.isNotEmpty ? _searchController.text : null,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        if (reset) {
+          _allCourses = result.courses;
+        } else {
+          _allCourses = [..._allCourses, ...result.courses];
         }
-        
-        // Apply initial filters if needed
-        if (widget.categoryId != null && widget.categoryId != 'all') {
-          _filterCourses();
-        } else if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
-          _filterCourses();
-        }
-      }
-    }).catchError((error) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = error.toString();
+        _currentPage = result.currentPage;
+        _hasMore = result.hasNextPage;
+        _isLoading = false;
+        _isLoadingMore = false;
+        _filteredCourses = _allCourses;
+      });
+
+      // Auto-show category popup on first load when no filters
+      if (reset && page == 1 && widget.categoryId == null && widget.searchQuery == null) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _showCategoryPopup(context);
         });
       }
-    });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _isLoadingMore = false;
+        _errorMessage = error.toString();
+      });
+    }
+  }
+
+  Future<void> _loadNextPage() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() => _isLoadingMore = true);
+    await _loadPage(_currentPage + 1);
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _filterCourses() {
     if (!mounted) return;
-    
-    debugPrint('CoursesScreen: Filtering courses for category $_selectedCategory');
-    
-    setState(() {
-      List<Course> filtered = _allCourses;
-      
-      // Apply category filter
-      if (_selectedCategory != 'all') {
-        filtered = filtered.where((course) {
-          // Check if course belongs to selected category
-          bool matchesCategory = false;
-          
-          // If course has categoryId field set
-          if (course.categoryId != null && (course.categoryId == _selectedCategory || course.categoryId.toString() == _selectedCategory)) {
-            matchesCategory = true;
-          }
-          // If course has category object with id field
-          else if (course.category != null) {
-            final catId = course.category!['id'] ?? course.category!['_id'];
-            if (catId != null && catId.toString() == _selectedCategory) {
-              matchesCategory = true;
-            }
-          }
-          
-          return matchesCategory;
-        }).toList();
-      }
-      
-      // Apply search filter
-      if (_searchController.text.isNotEmpty) {
-        filtered = filtered.where((course) =>
-          course.title.toLowerCase().contains(_searchController.text.toLowerCase()) ||
-          course.description.toLowerCase().contains(_searchController.text.toLowerCase())
-        ).toList();
-      }
-      
-      debugPrint('CoursesScreen: Found ${filtered.length} courses after filtering');
-      _filteredCourses = filtered;
-    });
+    debugPrint('CoursesScreen: Reloading courses for category $_selectedCategory');
+    _loadPage(1, reset: true);
   }
   
   @override
@@ -156,6 +153,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 : _errorMessage != null
                   ? _buildErrorWidget()
                   : CustomScrollView(
+                      controller: _scrollController,
                       slivers: [
                         SliverPadding(
                           padding: ResponsiveBreakpoints.getPadding(context),
@@ -178,6 +176,15 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             error: (err, stack) => _buildSliverAllCourses(context, _filteredCourses, []),
                           ),
                         ),
+                        if (_isLoadingMore)
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                              ),
+                            ),
+                          ),
                         const SliverToBoxAdapter(child: SizedBox(height: 40)),
                       ],
                     ),
@@ -446,7 +453,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     child: GridView.builder(
-                      shrinkWrap: true,
                       physics: const BouncingScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: _getResponsiveCrossAxisCount(context),

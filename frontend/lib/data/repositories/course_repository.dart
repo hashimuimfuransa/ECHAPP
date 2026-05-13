@@ -11,6 +11,22 @@ class CourseRepository {
     return await _courseService.getAllCourses(categoryId: categoryId);
   }
 
+  Future<PagedCoursesResult> getCoursesPaged({
+    int page = 1,
+    int limit = 20,
+    String? categoryId,
+    String? search,
+    bool showUnpublished = false,
+  }) async {
+    return await _courseService.getCoursesPaged(
+      page: page,
+      limit: limit,
+      categoryId: categoryId,
+      search: search,
+      showUnpublished: showUnpublished,
+    );
+  }
+
   Future<Course> getCourseById(String id) async {
     print('Getting course by ID: $id'); // Debug log
     return await _courseService.getCourseById(id);

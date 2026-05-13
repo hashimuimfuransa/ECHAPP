@@ -46,7 +46,8 @@ const sendCourseNotifications = async (course) => {
 // Get all courses
 const getCourses = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, level, minPrice, maxPrice, category, showUnpublished } = req.query;
+    const { page = 1, limit = 20, search, level, minPrice, maxPrice, category, showUnpublished } = req.query;
+    const finalLimit = Math.min(parseInt(limit) || 20, 100);
     
     console.log('getCourses called with query params:', req.query);
     console.log('User role:', req.user?.role);
@@ -125,8 +126,8 @@ const getCourses = async (req, res) => {
         }
       },
       { $sort: { createdAt: -1 } },
-      { $skip: (Number(page) - 1) * Number(limit) },
-      { $limit: Number(limit) }
+      { $skip: (Number(page) - 1) * finalLimit },
+      { $limit: finalLimit }
     ];
 
     let courses = await Course.aggregate(aggregationPipeline);
@@ -145,9 +146,11 @@ const getCourses = async (req, res) => {
     
     sendSuccess(res, {
       courses: transformUrls(courses),
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / finalLimit),
       currentPage: Number(page),
-      total
+      total,
+      hasNextPage: Number(page) < Math.ceil(total / finalLimit),
+      limit: finalLimit
     }, 'Courses retrieved successfully');
   } catch (error) {
     console.error('Error in getCourses:', error);

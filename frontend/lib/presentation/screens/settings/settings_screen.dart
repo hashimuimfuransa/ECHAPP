@@ -5,6 +5,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/feedback_provider.dart';
+import 'package:excellencecoachinghub/widgets/modern_dialog.dart';
 
 // Providers for settings
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -593,90 +594,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final feedbackController = TextEditingController();
     bool isSubmitting = false;
 
-    showDialog(
+    showModernDialog(
       context: context,
       barrierDismissible: !isSubmitting,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF1E1E1E) 
-                : AppTheme.whiteColor,
-              title: Text('Send Feedback', 
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.whiteColor 
-                    : AppTheme.blackColor)),
-              content: SizedBox(
-                height: 150, // Set a fixed height to prevent overflow
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSubmitting)
-                      const Center(child: CircularProgressIndicator())
-                    else
-                      TextField(
-                        controller: feedbackController,
-                        maxLines: 4,
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark 
-                            ? AppTheme.whiteColor 
-                            : AppTheme.blackColor),
-                        decoration: InputDecoration(
-                          hintText: 'Tell us how we can improve...',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark 
-                              ? AppTheme.white60 
-                              : AppTheme.greyColor),
-                          border: const OutlineInputBorder(),
-                        ),
+      title: 'Send Feedback',
+      icon: const Icon(Icons.feedback_outlined, color: AppTheme.primaryGreen, size: 32),
+      content: StatefulBuilder(
+        builder: (context, setDialogState) {
+          return SizedBox(
+            width: double.maxFinite,
+            child: isSubmitting
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : TextField(
+                    controller: feedbackController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Tell us how we can improve...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () {
-                    if (context.canPop()) context.pop();
-                  },
-                  child: Text('Cancel', 
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor)),
-                ),
-                TextButton(
-                  onPressed: isSubmitting ? null : () async {
-                    final content = feedbackController.text.trim();
-                    if (content.isEmpty) {
-                      _showSnackbar(context, 'Please enter some feedback');
-                      return;
-                    }
-
-                    setDialogState(() {
-                      isSubmitting = true;
-                    });
-
-                    final success = await ref.read(feedbackNotifierProvider.notifier).submitFeedback(content);
-
-                    if (mounted) {
-                      if (context.canPop()) context.pop();
-                      if (success) {
-                        _showSnackbar(context, 'Thank you for your feedback!');
-                      } else {
-                        _showSnackbar(context, 'Failed to send feedback. Please try again.');
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                      ),
+                    ),
+                  ),
+          );
+        },
+      ),
+      actions: [
+        ModernDialogAction.cancel(
+          onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+        ),
+        StatefulBuilder(
+          builder: (context, setDialogState) {
+            return ModernDialogAction.confirm(
+              text: 'Send',
+              isLoading: isSubmitting,
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final content = feedbackController.text.trim();
+                      if (content.isEmpty) {
+                        _showSnackbar(context, 'Please enter some feedback');
+                        return;
                       }
-                    }
-                  },
-                  child: const Text('Send', 
-                    style: TextStyle(color: AppTheme.primaryGreen)),
-                ),
-              ],
+
+                      setDialogState(() => isSubmitting = true);
+
+                      final success = await ref.read(feedbackNotifierProvider.notifier).submitFeedback(content);
+
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                        if (success) {
+                          _showSnackbar(context, 'Thank you for your feedback!');
+                        } else {
+                          _showSnackbar(context, 'Failed to send feedback. Please try again.');
+                        }
+                      }
+                    },
             );
-          }
-        );
-      },
+          },
+        ),
+      ],
     );
   }
 
@@ -749,171 +734,127 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     bool isDeleting = false;
     String? localError;
 
-    showDialog(
+    showModernDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF1E1E1E) 
-                : AppTheme.whiteColor,
-              title: const Text('Delete Account', 
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Are you sure you want to permanently delete your account? '
-                    'This action cannot be undone and all your data will be lost.',
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor),
-                  ),
-                  const SizedBox(height: 20),
-                  if (localError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(
-                        localError!,
-                        style: const TextStyle(color: Colors.red, fontSize: 13),
-                      ),
-                    ),
-                  Text(
-                    'Please enter your password to confirm:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.whiteColor 
-                        : AppTheme.blackColor),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.whiteColor 
-                        : AppTheme.blackColor),
-                    decoration: InputDecoration(
-                      hintText: 'Current Password',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                          ? AppTheme.white60 
-                          : AppTheme.greyColor),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Theme.of(context).brightness == Brightness.dark 
-                            ? AppTheme.white60 
-                            : AppTheme.greyColor.withOpacity(0.5)),
-                      ),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.red),
-                      ),
-                    ),
-                  ),
-                ],
+      title: 'Delete Account',
+      icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 32),
+      content: StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Are you sure you want to permanently delete your account? '
+                'This action cannot be undone and all your data will be lost.',
+                style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
               ),
-              actions: [
-                TextButton(
-                  onPressed: isDeleting ? null : () {
-                    if (context.canPop()) context.pop();
-                  },
-                  child: Text('Cancel', 
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                        ? AppTheme.white70 
-                        : AppTheme.greyColor)),
+              const SizedBox(height: 20),
+              if (localError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
                 ),
-                TextButton(
-                  onPressed: isDeleting ? null : () async {
-                    final password = passwordController.text.trim();
-                    if (password.isEmpty) {
-                      setDialogState(() => localError = 'Password is required');
-                      return;
-                    }
-
-                    setDialogState(() {
-                      isDeleting = true;
-                      localError = null;
-                    });
-
-                    try {
-                      await ref.read(authProvider.notifier).deleteAccount(password);
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        context.go('/splash');
-                        _showSnackbar(context, 'Account deleted successfully');
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        setDialogState(() {
-                          isDeleting = false;
-                          localError = e.toString().replaceFirst('Exception: ', '');
-                        });
-                      }
-                    }
-                  },
-                  child: isDeleting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
-                    : const Text('Delete', style: TextStyle(color: Colors.red)),
+              const Text(
+                'Please enter your password to confirm:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Current Password',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        ModernDialogAction.cancel(
+          onPressed: isDeleting ? null : () => Navigator.of(context).pop(),
+        ),
+        StatefulBuilder(
+          builder: (context, setDialogState) {
+            return ModernDialogAction.danger(
+              text: 'Delete',
+              isLoading: isDeleting,
+              onPressed: isDeleting
+                  ? null
+                  : () async {
+                      final password = passwordController.text.trim();
+                      if (password.isEmpty) {
+                        setDialogState(() => localError = 'Password is required');
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isDeleting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        await ref.read(authProvider.notifier).deleteAccount(password);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          context.go('/splash');
+                          _showSnackbar(context, 'Account deleted successfully');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          setDialogState(() {
+                            isDeleting = false;
+                            localError = e.toString().replaceFirst('Exception: ', '');
+                          });
+                        }
+                      }
+                    },
             );
           },
-        );
-      },
+        ),
+      ],
     );
   }
 
   void _showSignOutDialog(BuildContext context) {
-    showDialog(
+    showModernDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF1E1E1E) 
-            : AppTheme.whiteColor,
-          title: Text('Sign Out', 
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.whiteColor 
-                : AppTheme.blackColor)),
-          content: Text(
-            'Are you sure you want to sign out?',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.white70 
-                : AppTheme.greyColor),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-              },
-              child: Text('Cancel', 
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppTheme.white70 
-                    : AppTheme.greyColor)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (context.canPop()) context.pop();
-                ref.read(authProvider.notifier).logout();
-                context.go('/login');
-                _showSnackbar(context, 'Signed out successfully');
-              },
-              child: const Text('Sign Out', 
-                style: TextStyle(color: Colors.orange)),
-            ),
-          ],
-        );
-      },
+      title: 'Sign Out',
+      content: const Text(
+        'Are you sure you want to sign out?',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+      ),
+      icon: const Icon(Icons.logout_rounded, color: Colors.orange, size: 32),
+      actions: [
+        ModernDialogAction.cancel(onPressed: () => Navigator.of(context).pop()),
+        ModernDialogAction.custom(
+          onPressed: () {
+            Navigator.of(context).pop();
+            ref.read(authProvider.notifier).logout();
+            context.go('/login');
+            _showSnackbar(context, 'Signed out successfully');
+          },
+          text: 'Sign Out',
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.white,
+        ),
+      ],
     );
   }
 

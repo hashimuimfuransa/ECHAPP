@@ -55,6 +55,45 @@ import 'package:excellencecoachinghub/presentation/screens/library/library_scree
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 
+/// Custom page transition for smooth navigation
+class _FadeTransitionPage extends CustomTransitionPage<void> {
+  _FadeTransitionPage({
+    required super.child,
+    required super.name,
+  }) : super(
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeInOut))),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        );
+}
+
+/// Slide transition for modal-style navigation
+class _SlideUpTransitionPage extends CustomTransitionPage<void> {
+  _SlideUpTransitionPage({
+    required super.child,
+    required super.name,
+  }) : super(
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 0.05);
+            const end = Offset.zero;
+            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeOutCubic));
+            final offsetAnimation = animation.drive(tween);
+            return FadeTransition(
+              opacity: animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut))),
+              child: SlideTransition(
+                position: offsetAnimation,
+                child: child,
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 250),
+        );
+}
+
 class AppRouter {
   // Static instance for singleton
   static final AppRouter _instance = AppRouter._internal();
@@ -428,24 +467,33 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: '/dashboard',
-                builder: (context, state) => const DashboardScreen(),
+                pageBuilder: (context, state) => _FadeTransitionPage(
+                  name: state.matchedLocation,
+                  child: const DashboardScreen(),
+                ),
               ),
               GoRoute(
                 path: '/courses',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final extra = state.extra as Map<String, dynamic>?;
-                  return CoursesScreen(
-                    categoryId: extra?['categoryId'] as String?,
-                    categoryName: extra?['categoryName'] as String?,
-                    searchQuery: extra?['searchQuery'] as String?,
+                  return _SlideUpTransitionPage(
+                    name: state.matchedLocation,
+                    child: CoursesScreen(
+                      categoryId: extra?['categoryId'] as String?,
+                      categoryName: extra?['categoryName'] as String?,
+                      searchQuery: extra?['searchQuery'] as String?,
+                    ),
                   );
                 },
               ),
               GoRoute(
                 path: '/course/:id',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final courseId = state.pathParameters['id'] ?? '';
-                  return CourseDetailScreen(courseId: courseId);
+                  return _SlideUpTransitionPage(
+                    name: state.matchedLocation,
+                    child: CourseDetailScreen(courseId: courseId),
+                  );
                 },
               ),
               GoRoute(

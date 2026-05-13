@@ -411,10 +411,10 @@ const getPaymentById = async (req, res) => {
 // Get all payments (admin only)
 const getAllPayments = async (req, res) => {
   try {
-    const { status, courseId, userId, page = 1, limit = 10 } = req.query;
+    const { status, courseId, userId, page = 1, limit = 20 } = req.query;
     
     // Ensure limit doesn't exceed 100 for performance
-    const finalLimit = Math.min(parseInt(limit) || 10, 100);
+    const finalLimit = Math.min(parseInt(limit) || 20, 100);
     
     console.log('getAllPayments called with params:', { status, courseId, userId, page, limit, finalLimit });
     console.log('User ID:', req.user?.id);
@@ -580,7 +580,7 @@ const getPaymentStats = async (req, res) => {
       .populate('userId', 'fullName email')
       .populate('courseId', 'title')
       .sort({ updatedAt: -1, paymentDate: -1 })
-      .limit(10);
+      .limit(20);
 
     const responseData = {
       totalPayments,

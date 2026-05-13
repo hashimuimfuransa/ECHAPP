@@ -1031,16 +1031,18 @@ class _ProfessionalLearningScreenState
                   fontWeight: FontWeight.w700,
                   color: _textPrimary)),
           const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
-            children: achievements
-                .map((a) => _AchievementCard(a: a, isDark: _isDark))
-                .toList(),
+          GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.6,
+            ),
+            itemCount: achievements.length,
+            itemBuilder: (context, index) {
+              final a = achievements[index];
+              return _AchievementCard(a: a, isDark: _isDark);
+            },
           ),
         ],
       ),
@@ -1058,24 +1060,45 @@ class _ProfessionalLearningScreenState
           subtitle: 'Materials appear as chapters are added');
     }
 
-    return ListView(
+    // Pre-filter chapters with materials for efficient rendering
+    final chaptersWithMaterials = _chapters!.asMap().entries.where((e) {
+      final s = e.value;
+      final lessons = _chapterLessons[s.id] ?? [];
+      final materials = _extractChapterMaterials(s, lessons);
+      return materials.isNotEmpty;
+    }).toList();
+
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      children: [
-        if (_course?.description != null) ...[
-          _buildCourseSummaryCard(),
-          const SizedBox(height: 16),
-        ],
-        // Invoice download card (only if user has paid)
-        if (_hasPaidForCourse) ...[
-          _buildInvoiceDownloadCard(),
-          const SizedBox(height: 16),
-        ],
-        ..._chapters!.asMap().entries.map((e) {
+      itemCount: (_course?.description != null ? 1 : 0) + 
+                 (_hasPaidForCourse ? 1 : 0) + 
+                 chaptersWithMaterials.length,
+      itemBuilder: (context, index) {
+        // Course description card
+        if (_course?.description != null && index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildCourseSummaryCard(),
+          );
+        }
+        
+        // Invoice download card
+        final invoiceOffset = _course?.description != null ? 1 : 0;
+        if (_hasPaidForCourse && index == invoiceOffset) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildInvoiceDownloadCard(),
+          );
+        }
+        
+        // Chapter materials cards
+        final chapterIndex = index - invoiceOffset - (_hasPaidForCourse ? 1 : 0);
+        if (chapterIndex < chaptersWithMaterials.length) {
+          final e = chaptersWithMaterials[chapterIndex];
           final i = e.key;
           final s = e.value;
           final lessons = _chapterLessons[s.id] ?? [];
           final materials = _extractChapterMaterials(s, lessons);
-          if (materials.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: _ChapterMaterialsCard(
@@ -1086,8 +1109,10 @@ class _ProfessionalLearningScreenState
               onTap: _openMaterial,
             ),
           );
-        }),
-      ],
+        }
+        
+        return const SizedBox.shrink();
+      },
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
@@ -163,8 +164,6 @@ class WishlistScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 1,
             childAspectRatio: 3.5,
@@ -221,7 +220,7 @@ class WishlistScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                           image: course.thumbnail != null && course.thumbnail!.isNotEmpty
                               ? DecorationImage(
-                                  image: NetworkImage(course.thumbnail!),
+                                  image: CachedNetworkImageProvider(course.thumbnail!),
                                   fit: BoxFit.cover,
                                 )
                               : null,

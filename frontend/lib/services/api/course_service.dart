@@ -1,8 +1,26 @@
 
-import '../../models/course.dart';
+import 'dart:convert';
 
+import '../../models/course.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
+
+/// Holds a paginated page of courses plus metadata
+class PagedCoursesResult {
+  final List<Course> courses;
+  final int currentPage;
+  final int totalPages;
+  final int total;
+  final bool hasNextPage;
+
+  const PagedCoursesResult({
+    required this.courses,
+    required this.currentPage,
+    required this.totalPages,
+    required this.total,
+    required this.hasNextPage,
+  });
+}
 
 /// Service for course-related API operations
 class CourseService {
@@ -40,10 +58,10 @@ class CourseService {
     }
   }
 
-  /// Get all courses with optional category filter
+  /// Get all courses with optional category filter (up to 100 results in one request)
   Future<List<Course>> getAllCourses({String? categoryId, bool showUnpublished = false}) async {
     try {
-      final queryParams = <String, dynamic>{};
+      final queryParams = <String, dynamic>{'limit': '100'};
       if (categoryId != null) {
         queryParams['category'] = categoryId;
       }
@@ -73,6 +91,48 @@ class CourseService {
       } else {
         throw ApiException(apiResponse.message);
       }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch courses: $e');
+    }
+  }
+
+  /// Get a single page of courses with full pagination metadata
+  Future<PagedCoursesResult> getCoursesPaged({
+    int page = 1,
+    int limit = 20,
+    String? categoryId,
+    String? search,
+    String? level,
+    bool showUnpublished = false,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      if (categoryId != null) queryParams['category'] = categoryId;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (level != null) queryParams['level'] = level;
+      if (showUnpublished) queryParams['showUnpublished'] = 'true';
+
+      final response = await _apiClient.get(ApiConfig.courses, queryParams: queryParams);
+      response.validateStatus();
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final dataMap = json['data'] as Map<String, dynamic>? ?? {};
+      final rawList = dataMap['courses'] as List? ?? [];
+      final courses = rawList
+          .map((item) => Course.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+      return PagedCoursesResult(
+        courses: courses,
+        currentPage: (dataMap['currentPage'] as num?)?.toInt() ?? page,
+        totalPages: (dataMap['totalPages'] as num?)?.toInt() ?? 1,
+        total: (dataMap['total'] as num?)?.toInt() ?? courses.length,
+        hasNextPage: dataMap['hasNextPage'] as bool? ?? false,
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch courses: $e');

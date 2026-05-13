@@ -79,10 +79,11 @@ class MainLayout extends ConsumerWidget {
     // This provides the "window layout" the user expects on Windows
     final bool useSidebarLayout = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
 
-    final app_models.User? user = ref.watch(authProvider).user;
+    // Use selective watching to minimize rebuilds - only rebuild when user changes, not on loading state
+    final user = ref.watch(authProvider.select((state) => state.user));
     final String currentRoute = GoRouterState.of(context).uri.path;
     
-    // Responsive sidebar auto-collapse
+    // Responsive sidebar auto-collapse - only watch the value, not the entire state
     final double screenWidth = MediaQuery.of(context).size.width;
     final bool shouldBeCollapsed = screenWidth < 1100 && screenWidth >= 600;
     
@@ -97,6 +98,7 @@ class MainLayout extends ConsumerWidget {
       }
     });
 
+    // Watch only the boolean value, not the entire notifier state
     final isCollapsed = ref.watch(sidebarProvider);
     final bool isAuthRoute = currentRoute == '/login' || 
                              currentRoute == '/register' || 

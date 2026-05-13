@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
+import 'package:excellencecoachinghub/widgets/modern_dialog.dart';
 
 class ResponsiveNavigationDrawer extends ConsumerWidget {
   final String currentPage;
@@ -171,8 +172,8 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutExpo,
       width: isCollapsed ? 80 : 280,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -751,27 +752,25 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showModernDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ref.read(authProvider.notifier).logout();
-              },
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+      title: 'Logout',
+      content: const Text(
+        'Are you sure you want to logout?',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+      ),
+      icon: const Icon(Icons.logout_rounded, color: AppTheme.primary, size: 32),
+      actions: [
+        ModernDialogAction.cancel(onPressed: () => Navigator.of(context).pop()),
+        ModernDialogAction.danger(
+          onPressed: () {
+            Navigator.of(context).pop();
+            ref.read(authProvider.notifier).logout();
+          },
+          text: 'Logout',
+        ),
+      ],
     );
   }
 }

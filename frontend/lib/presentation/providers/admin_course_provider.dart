@@ -8,12 +8,14 @@ class AdminCourseState {
   final bool isLoading;
   final String? error;
   final Course? selectedCourse;
+  final int totalCourses;
 
   AdminCourseState({
     required this.courses,
     required this.isLoading,
     this.error,
     this.selectedCourse,
+    this.totalCourses = 0,
   });
 
   AdminCourseState copyWith({
@@ -21,12 +23,14 @@ class AdminCourseState {
     bool? isLoading,
     String? error,
     Course? selectedCourse,
+    int? totalCourses,
   }) {
     return AdminCourseState(
       courses: courses ?? this.courses,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       selectedCourse: selectedCourse ?? this.selectedCourse,
+      totalCourses: totalCourses ?? this.totalCourses,
     );
   }
 }
@@ -34,24 +38,35 @@ class AdminCourseState {
 // Admin course notifier
 class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
   final CourseService _courseService = CourseService();
+  static const int _pageSize = 50;
 
   AdminCourseNotifier() : super(AdminCourseState(
     courses: [],
     isLoading: false,
   ));
 
-  // Load all courses for admin
+  // Load all courses for admin by fetching all pages
   Future<void> loadCourses() async {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Fetch real courses from backend, including unpublished ones for admin
-      final courses = await _courseService.getAllCourses(showUnpublished: true);
-      print('Loaded ${courses.length} courses for admin'); // Debug log
-      for (var course in courses) {
-        print('Course ID: ${course.id}, Title: ${course.title ?? "Untitled Course"}'); // Debug log
+      final allCourses = <Course>[];
+      int page = 1;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final result = await _courseService.getCoursesPaged(
+          page: page,
+          limit: _pageSize,
+          showUnpublished: true,
+        );
+        allCourses.addAll(result.courses);
+        hasMore = result.hasNextPage;
+        page++;
       }
-      state = state.copyWith(courses: courses, isLoading: false);
+
+      print('Loaded ${allCourses.length} courses for admin');
+      state = state.copyWith(courses: allCourses, isLoading: false, totalCourses: allCourses.length);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -65,9 +80,23 @@ class AdminCourseNotifier extends StateNotifier<AdminCourseState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Fetch courses with search query
-      final courses = await _courseService.searchCourses(query, showUnpublished: true);
-      state = state.copyWith(courses: courses, isLoading: false);
+      final allCourses = <Course>[];
+      int page = 1;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final result = await _courseService.getCoursesPaged(
+          page: page,
+          limit: _pageSize,
+          search: query,
+          showUnpublished: true,
+        );
+        allCourses.addAll(result.courses);
+        hasMore = result.hasNextPage;
+        page++;
+      }
+
+      state = state.copyWith(courses: allCourses, isLoading: false);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,

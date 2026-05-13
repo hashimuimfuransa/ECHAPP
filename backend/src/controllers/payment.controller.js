@@ -141,7 +141,8 @@ const getPaymentById = async (req, res) => {
 // Admin: Get all payments
 const getAllPayments = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
+    const finalLimit = Math.min(parseInt(limit) || 20, 100);
     
     const filter = {};
     if (status) {
@@ -151,17 +152,19 @@ const getAllPayments = async (req, res) => {
     const payments = await Payment.find(filter)
       .populate('userId', 'fullName email')
       .populate('courseId', 'title price')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .limit(finalLimit)
+      .skip((page - 1) * finalLimit)
       .sort({ createdAt: -1 });
     
     const total = await Payment.countDocuments(filter);
     
     sendSuccess(res, {
       payments,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / finalLimit),
       currentPage: Number(page),
-      total
+      total,
+      hasNextPage: Number(page) < Math.ceil(total / finalLimit),
+      limit: finalLimit
     }, 'Payments retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve payments', 500, error.message);

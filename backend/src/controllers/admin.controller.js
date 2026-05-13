@@ -97,7 +97,7 @@ const deleteUserSync = async (req, res) => {
 // Get all students from Firebase with MongoDB backup
 const getStudents = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, source = 'firebase' } = req.query;
+    const { page = 1, limit = 20, search, source = 'firebase' } = req.query;
     
     if (source === 'firebase') {
       // Fetch from Firebase
@@ -234,7 +234,7 @@ const getStudents = async (req, res) => {
 // Get all admins from Firebase with MongoDB backup
 const getAdmins = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, source = 'firebase' } = req.query;
+    const { page = 1, limit = 20, search, source = 'firebase' } = req.query;
     
     if (source === 'firebase') {
       try {
@@ -438,7 +438,7 @@ const getPaymentStats = async (req, res) => {
       .populate('userId', 'fullName email')
       .populate('courseId', 'title')
       .sort({ paymentDate: -1 })
-      .limit(10);
+      .limit(20);
     
     const responseData = {
       totalPayments,
@@ -483,7 +483,7 @@ const getExamStats = async (req, res) => {
       .populate('userId', 'fullName')
       .populate('examId', 'title')
       .sort({ submittedAt: -1 })
-      .limit(10);
+      .limit(20);
     
     sendSuccess(res, {
       totalResults,

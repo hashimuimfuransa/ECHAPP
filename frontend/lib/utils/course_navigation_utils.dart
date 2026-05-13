@@ -64,12 +64,26 @@ class CourseNavigationUtils {
           if (context.mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => PaymentPendingScreen(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => PaymentPendingScreen(
                   course: course,
                   transactionId: 'pending',
                   amount: course.price ?? 0.0,
                 ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(0.0, 1.0);
+                  const end = Offset.zero;
+                  final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeOutCubic));
+                  final offsetAnimation = animation.drive(tween);
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 300),
               ),
             ).then((_) {
               // After returning from payment screen, check if enrolled

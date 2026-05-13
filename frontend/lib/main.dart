@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
@@ -17,6 +18,9 @@ import 'package:media_kit/media_kit.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  
+  // Enable gesture resampling for smoother touch interactions
+  GestureBinding.instance.resamplingEnabled = true;
   
   // Set system UI mode to hide navigation buttons for mobile
   if (!kIsWeb) {
