@@ -51,8 +51,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           ),
         );
         
-        // Navigate to dashboard after successful save
-        context.go('/dashboard');
+        // Navigate to interest selection after successful save
+        context.go('/interest-selection');
       }
     } catch (e) {
       if (mounted) {
@@ -314,8 +314,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
   Widget _buildSkipButton() {
     return TextButton(
       onPressed: _isLoading ? null : () {
-        // Allow user to skip and continue to dashboard
-        context.go('/dashboard');
+        // Allow user to skip and continue to interest selection
+        context.go('/interest-selection');
       },
       child: Text(
         'Skip for now',

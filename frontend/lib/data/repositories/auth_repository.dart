@@ -356,7 +356,16 @@ class AuthRepository {
     }
   }
 
-  Future<User> updateProfile(String token, {String? fullName, String? phone, String? avatar}) async {
+  Future<User> updateProfile(String token, {
+    String? fullName, 
+    String? phone, 
+    String? avatar,
+    List<String>? interests,
+    String? shortTermGoal,
+    String? midTermGoal,
+    String? longTermGoal,
+    bool? hasCompletedOnboarding,
+  }) async {
     try {
       final response = await _client.put(
         Uri.parse('${ApiConfig.baseUrl}/auth/profile'),
@@ -368,6 +377,11 @@ class AuthRepository {
           if (fullName != null) 'fullName': fullName,
           if (phone != null) 'phone': phone,
           if (avatar != null) 'avatar': avatar,
+          if (interests != null) 'interests': interests,
+          if (shortTermGoal != null) 'shortTermGoal': shortTermGoal,
+          if (midTermGoal != null) 'midTermGoal': midTermGoal,
+          if (longTermGoal != null) 'longTermGoal': longTermGoal,
+          if (hasCompletedOnboarding != null) 'hasCompletedOnboarding': hasCompletedOnboarding,
         }),
       );
 

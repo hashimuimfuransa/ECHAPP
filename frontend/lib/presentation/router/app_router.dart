@@ -10,6 +10,8 @@ import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_s
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/enter_reset_code_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_collection_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/onboarding/interest_selection_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/onboarding/personalization_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
@@ -170,6 +172,16 @@ class AppRouter {
           GoRoute(
             path: '/phone-collection',
             builder: (context, state) => const PhoneCollectionScreen(),
+          ),
+
+          // Onboarding Screens - Outside MainLayout for full-screen experience
+          GoRoute(
+            path: '/interest-selection',
+            builder: (context, state) => const InterestSelectionScreen(),
+          ),
+          GoRoute(
+            path: '/personalization',
+            builder: (context, state) => const PersonalizationScreen(),
           ),
 
           // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication

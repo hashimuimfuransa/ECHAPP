@@ -295,7 +295,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return token;
   }
 
-  Future<void> updateProfile({String? fullName, String? phone, File? imageFile}) async {
+  Future<void> updateProfile({
+    String? fullName, 
+    String? phone, 
+    File? imageFile,
+    List<String>? interests,
+    String? shortTermGoal,
+    String? midTermGoal,
+    String? longTermGoal,
+    bool? hasCompletedOnboarding,
+  }) async {
     state = state.copyWith(isLoading: true, isEmailLoading: false, isGoogleLoading: false, error: null);
     try {
       String token = await _getOrRefreshAccessToken();
@@ -324,6 +333,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
           fullName: fullName,
           phone: phone,
           avatar: avatarUrl,
+          interests: interests,
+          shortTermGoal: shortTermGoal,
+          midTermGoal: midTermGoal,
+          longTermGoal: longTermGoal,
+          hasCompletedOnboarding: hasCompletedOnboarding,
         );
         
         // Save updated phone number to storage
@@ -343,6 +357,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
             fullName: fullName,
             phone: phone,
             avatar: avatarUrl,
+            interests: interests,
+            shortTermGoal: shortTermGoal,
+            midTermGoal: midTermGoal,
+            longTermGoal: longTermGoal,
+            hasCompletedOnboarding: hasCompletedOnboarding,
           );
           
           // Save updated phone number to storage

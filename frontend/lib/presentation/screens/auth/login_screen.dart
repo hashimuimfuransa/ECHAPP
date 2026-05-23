@@ -69,13 +69,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               (authState.user?.phone == null || authState.user!.phone!.trim().isEmpty)) {
             // Redirect to phone collection screen for students without phone
             context.go('/phone-collection');
+          } else if (authState.user?.role != 'admin') {
+            // Students go through onboarding flow
+            context.go('/interest-selection');
           } else {
-            // Normal navigation
-            if (authState.user?.role == 'admin') {
-              context.go('/admin');
-            } else {
-              context.go('/dashboard');
-            }
+            // Admins go directly to admin dashboard
+            context.go('/admin');
           }
         }
       }
@@ -115,13 +114,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 (current.user?.phone == null || current.user!.phone!.trim().isEmpty)) {
               // Redirect to phone collection screen for students without phone
               context.go('/phone-collection');
+            } else if (current.user?.role != 'admin') {
+              // Students go through onboarding flow
+              context.go('/interest-selection');
             } else {
-              // Normal navigation
-              if (current.user?.role == 'admin') {
-                context.go('/admin');
-              } else {
-                context.go('/dashboard');
-              }
+              // Admins go directly to admin dashboard
+              context.go('/admin');
             }
           }
         });
@@ -330,7 +328,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Sign In',
+                    'Welcome Back!',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 36,
@@ -340,7 +338,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Enter your email and password to continue',
+                    'Sign in to your account to continue',
                     style: TextStyle(
                       color: Colors.white60,
                       fontSize: 16,
@@ -418,6 +416,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                             ),
                           ),
                         const SizedBox(height: 24),
+                        _buildSocialLoginDivider(),
+                        const SizedBox(height: 24),
+                        _buildSocialLoginButtons(),
+                        const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -432,7 +434,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                               onPressed: () => context.push('/register'),
                               style: TextButton.styleFrom(padding: EdgeInsets.zero),
                               child: const Text(
-                                'Sign up',
+                                'Sign Up',
                                 style: TextStyle(
                                   color: Color(0xFF00C896),
                                   fontSize: 14,
@@ -509,7 +511,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                   ),
                   const SizedBox(height: 30),
                   const Text(
-                    'Sign In',
+                    'Welcome Back!',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -518,7 +520,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Welcome back to your learning journey',
+                    'Sign in to your account to continue',
                     style: TextStyle(
                       color: Colors.white60,
                       fontSize: 14,
@@ -594,6 +596,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                             ),
                           ),
                         const SizedBox(height: 20),
+                        _buildSocialLoginDivider(),
+                        const SizedBox(height: 20),
+                        _buildSocialLoginButtons(),
+                        const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -608,7 +614,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                               onPressed: () => context.push('/register'),
                               style: TextButton.styleFrom(padding: EdgeInsets.zero),
                               child: const Text(
-                                'Sign up',
+                                'Sign Up',
                                 style: TextStyle(
                                   color: Color(0xFF00C896),
                                   fontSize: 13,
@@ -747,7 +753,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     ),
                   )
                 : const Text(
-                    'Sign In',
+                    'Login',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -760,5 +766,127 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         ),
       ),
     );
+  }
+
+  Widget _buildSocialLoginDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: Colors.white.withOpacity(0.2),
+            thickness: 1,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'or continue with',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: Colors.white.withOpacity(0.2),
+            thickness: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSocialLoginButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildSocialButton(
+          icon: 'assets/google_logo.png',
+          label: 'Google',
+          onTap: () {
+            // TODO: Implement Google sign-in
+          },
+        ),
+        const SizedBox(width: 16),
+        _buildSocialButton(
+          icon: 'assets/apple_logo.png',
+          label: 'Apple',
+          onTap: () {
+            // TODO: Implement Apple sign-in
+          },
+        ),
+        const SizedBox(width: 16),
+        _buildSocialButton(
+          icon: 'assets/facebook_logo.png',
+          label: 'Facebook',
+          onTap: () {
+            // TODO: Implement Facebook sign-in
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Placeholder for social media icons
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Icon(
+                _getIconForLabel(label),
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconForLabel(String label) {
+    switch (label.toLowerCase()) {
+      case 'google':
+        return Icons.g_mobiledata;
+      case 'apple':
+        return Icons.apple;
+      case 'facebook':
+        return Icons.facebook;
+      default:
+        return Icons.person;
+    }
   }
 }

@@ -479,25 +479,53 @@ const getRecommendedCourses = async (req, res) => {
       'intermediate': 0,
       'advanced': 0
     };
+    
+    // User preferences from onboarding
+    let userInterests = [];
+    let userShortTermGoal = null;
+    let userMidTermGoal = null;
+    let userLongTermGoal = null;
 
     if (userId) {
       // 1. Get user's enrolled courses
       const enrollments = await Enrollment.find({ userId }).populate('courseId');
       enrolledCourseIds = enrollments.map(e => e.courseId ? e.courseId._id : null).filter(id => id !== null);
       
-      // 2. Identify categories and levels user is interested in
+      // 2. Identify categories and levels user is interested in from enrollments
       enrollments.forEach(e => {
         if (e.courseId) {
           if (e.courseId.category) interestedCategoryIds.add(e.courseId.category.toString());
           if (e.courseId.level) levelProgress[e.courseId.level]++;
         }
       });
+      
+      // 3. Get user's onboarding preferences
+      const user = await User.findById(userId);
+      if (user) {
+        userInterests = user.interests || [];
+        userShortTermGoal = user.shortTermGoal;
+        userMidTermGoal = user.midTermGoal;
+        userLongTermGoal = user.longTermGoal;
+      }
     }
 
     // Determine target level (if they've done many beginner, suggest intermediate)
     let targetLevel = 'beginner';
     if (levelProgress['beginner'] > 2) targetLevel = 'intermediate';
     if (levelProgress['intermediate'] > 1) targetLevel = 'advanced';
+
+    // Get categories that match user interests
+    const Category = require('../models/Category');
+    const interestCategoryIds = new Set();
+    if (userInterests.length > 0) {
+      const matchingCategories = await Category.find({
+        name: { $in: userInterests.map(i => new RegExp(i, 'i')) }
+      });
+      matchingCategories.forEach(cat => interestCategoryIds.add(cat._id.toString()));
+    }
+
+    // Combine category interests from enrollments and onboarding
+    interestCategoryIds.forEach(id => interestedCategoryIds.add(id));
 
     // 3. Recommendation aggregation pipeline
     const aggregationPipeline = [
@@ -528,14 +556,31 @@ const getRecommendedCourses = async (req, res) => {
           categoryScore: {
             $cond: [
               { $in: [{ $toString: '$category' }, Array.from(interestedCategoryIds)] },
-              10,
+              15, // Higher weight for category matching
               0
             ]
           },
           levelScore: {
             $cond: [
               { $eq: ['$level', targetLevel] },
-              5,
+              8,
+              0
+            ]
+          },
+          // Bonus for matching user goals
+          goalScore: {
+            $cond: [
+              {
+                $or: [
+                  { $regexMatch: { input: '$title', regex: userShortTermGoal || '', options: 'i' } },
+                  { $regexMatch: { input: '$description', regex: userShortTermGoal || '', options: 'i' } },
+                  { $regexMatch: { input: '$title', regex: userMidTermGoal || '', options: 'i' } },
+                  { $regexMatch: { input: '$description', regex: userMidTermGoal || '', options: 'i' } },
+                  { $regexMatch: { input: '$title', regex: userLongTermGoal || '', options: 'i' } },
+                  { $regexMatch: { input: '$description', regex: userLongTermGoal || '', options: 'i' } }
+                ]
+              },
+              10,
               0
             ]
           }
@@ -547,6 +592,7 @@ const getRecommendedCourses = async (req, res) => {
             $add: [
               '$categoryScore',
               '$levelScore',
+              '$goalScore',
               { $multiply: ['$averageRating', 2] }, // Rating weight
               { $divide: ['$enrollmentCount', 10] }  // Popularity weight
             ]

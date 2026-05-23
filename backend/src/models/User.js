@@ -79,6 +79,23 @@ const userSchema = new mongoose.Schema({
   sessionCount: {
     type: Number,
     default: 0
+  },
+  interests: {
+    type: [String],
+    default: []
+  },
+  shortTermGoal: {
+    type: String
+  },
+  midTermGoal: {
+    type: String
+  },
+  longTermGoal: {
+    type: String
+  },
+  hasCompletedOnboarding: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

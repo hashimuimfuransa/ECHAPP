@@ -10,6 +10,11 @@ class User {
   final bool disabled;
   final DateTime createdAt;
   final DateTime? lastActive;
+  final List<String>? interests;
+  final String? shortTermGoal;
+  final String? midTermGoal;
+  final String? longTermGoal;
+  final bool hasCompletedOnboarding;
 
   User({
     required this.id,
@@ -22,6 +27,11 @@ class User {
     this.disabled = false,
     required this.createdAt,
     this.lastActive,
+    this.interests,
+    this.shortTermGoal,
+    this.midTermGoal,
+    this.longTermGoal,
+    this.hasCompletedOnboarding = false,
   });
 
   /// Alias for fullName to maintain compatibility with legacy code
@@ -50,6 +60,13 @@ class User {
       disabled: json['disabled'] == true,
       createdAt: _parseDateTime(json['createdAt']),
       lastActive: json['lastActive'] != null ? _parseDateTime(json['lastActive']) : null,
+      interests: json['interests'] != null 
+          ? List<String>.from(json['interests']) 
+          : null,
+      shortTermGoal: _getStringValue(json['shortTermGoal']),
+      midTermGoal: _getStringValue(json['midTermGoal']),
+      longTermGoal: _getStringValue(json['longTermGoal']),
+      hasCompletedOnboarding: json['hasCompletedOnboarding'] == true,
     );
   }
 
@@ -66,6 +83,11 @@ class User {
       'disabled': disabled,
       'createdAt': createdAt.toIso8601String(),
       'lastActive': lastActive?.toIso8601String(),
+      'interests': interests,
+      'shortTermGoal': shortTermGoal,
+      'midTermGoal': midTermGoal,
+      'longTermGoal': longTermGoal,
+      'hasCompletedOnboarding': hasCompletedOnboarding,
     };
   }
 

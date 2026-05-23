@@ -371,6 +371,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
               ),
               const SizedBox(height: 32),
+              // Modern Category Section
+              _buildModernCategorySection(context),
+              const SizedBox(height: 32),
               userEnrollmentsAsync.when(
                 data: (enrollments) {
                   final enrolledCourses = enrollments.map((e) => e.course).where((course) => course != null).cast<Course>().toList();
@@ -424,6 +427,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           loading: () => _buildLoadingCard(context, 'Continue Learning'),
           error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
         ),
+        const SizedBox(height: 32),
+        // Modern Category Section
+        _buildModernCategorySection(context),
         const SizedBox(height: 32),
         userEnrollmentsAsync.when(
           data: (enrollments) {
@@ -2646,9 +2652,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
-    // Take only first 2 courses for cleaner layout
-    final displayCourses = courses.take(2).toList();
+    // Take more courses for desktop, fewer for mobile
+    final displayCourses = isDesktop ? courses.take(4).toList() : courses.take(2).toList();
     
     if (displayCourses.isEmpty) {
       return const SizedBox.shrink();
@@ -2657,22 +2664,303 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recommended for You',
-          style: TextStyle(
-            fontSize: isSmallMobile ? 18 : 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-            color: AppTheme.getTextColor(context),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recommended for You',
+              style: TextStyle(
+                fontSize: isSmallMobile ? 18 : 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: AppTheme.getTextColor(context),
+              ),
+            ),
+            if (!isMobile)
+              TextButton(
+                onPressed: () => context.push('/courses'),
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: const Color(0xFF10B981),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 16),
-        // Course Cards
-        ...displayCourses.map((course) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildRecommendedCourseCard(context, course, enrolledCourses),
-        )).toList(),
+        // Course Cards - Grid for desktop, list for mobile
+        isDesktop 
+          ? _buildRecommendedCoursesGrid(context, displayCourses, enrolledCourses)
+          : Column(
+              children: displayCourses.map((course) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildRecommendedCourseCard(context, course, enrolledCourses),
+              )).toList(),
+            ),
       ],
+    );
+  }
+
+  Widget _buildRecommendedCoursesGrid(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.6,
+      ),
+      itemCount: courses.length,
+      itemBuilder: (context, index) {
+        return _buildRecommendedCourseCard(context, courses[index], enrolledCourses);
+      },
+    );
+  }
+
+  Widget _buildModernCategorySection(BuildContext context) {
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Explore Categories',
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: AppTheme.getTextColor(context),
+              ),
+            ),
+            if (!isMobile)
+              TextButton(
+                onPressed: () => context.push('/courses'),
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: const Color(0xFF10B981),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        categoriesAsync.when(
+          data: (categories) {
+            final displayCategories = isDesktop ? categories.take(6).toList() : categories.take(4).toList();
+            return isDesktop
+                ? _buildCategoryGrid(context, displayCategories)
+                : _buildCategoryHorizontalList(context, displayCategories);
+          },
+          loading: () => _buildCategoryLoading(context),
+          error: (_, __) => _buildCategoryError(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryGrid(BuildContext context, List<Category> categories) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
+        final icon = CategoryUtils.getCategoryIcon(category.id, name: category.name);
+        
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              context.push('/courses', extra: {
+                'categoryId': category.id,
+                'categoryName': category.name,
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    color.withOpacity(0.15),
+                    color.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: color.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: color,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    category.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.getTextColor(context),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryHorizontalList(BuildContext context, List<Category> categories) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        padding: EdgeInsets.zero,
+        physics: const BouncingScrollPhysics(),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
+          final icon = CategoryUtils.getCategoryIcon(category.id, name: category.name);
+          
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  context.push('/courses', extra: {
+                    'categoryId': category.id,
+                    'categoryName': category.name,
+                  });
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 100,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.15),
+                        color.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: color.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: color,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          category.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.getTextColor(context),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryLoading(BuildContext context) {
+    return Container(
+      height: 100,
+      child: const Center(
+        child: CircularProgressIndicator(color: Color(0xFF10B981)),
+      ),
+    );
+  }
+
+  Widget _buildCategoryError(BuildContext context) {
+    return Container(
+      height: 100,
+      child: Center(
+        child: Text(
+          'Failed to load categories',
+          style: TextStyle(
+            color: AppTheme.getSecondaryTextColor(context),
+            fontSize: 14,
+          ),
+        ),
+      ),
     );
   }
 

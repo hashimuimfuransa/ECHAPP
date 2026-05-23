@@ -76,26 +76,42 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
 
     try {
-      final result = await _repository.getCoursesPaged(
-        page: page,
-        limit: _pageSize,
-        categoryId: _selectedCategory == 'all' ? null : _selectedCategory,
-        search: _searchController.text.isNotEmpty ? _searchController.text : null,
-      );
+      // Use recommended courses when no filters are applied
+      if (page == 1 && reset && _selectedCategory == 'all' && _searchController.text.isEmpty && widget.categoryId == null && widget.searchQuery == null) {
+        // Load recommended courses for first page
+        final recommended = await _repository.getRecommendedCourses();
+        if (!mounted) return;
+        setState(() {
+          _allCourses = recommended;
+          _currentPage = 1;
+          _hasMore = false; // Recommendations are a fixed set
+          _isLoading = false;
+          _isLoadingMore = false;
+          _filteredCourses = _allCourses;
+        });
+      } else {
+        // Use regular pagination when filters are applied
+        final result = await _repository.getCoursesPaged(
+          page: page,
+          limit: _pageSize,
+          categoryId: _selectedCategory == 'all' ? null : _selectedCategory,
+          search: _searchController.text.isNotEmpty ? _searchController.text : null,
+        );
 
-      if (!mounted) return;
-      setState(() {
-        if (reset) {
-          _allCourses = result.courses;
-        } else {
-          _allCourses = [..._allCourses, ...result.courses];
-        }
-        _currentPage = result.currentPage;
-        _hasMore = result.hasNextPage;
-        _isLoading = false;
-        _isLoadingMore = false;
-        _filteredCourses = _allCourses;
-      });
+        if (!mounted) return;
+        setState(() {
+          if (reset) {
+            _allCourses = result.courses;
+          } else {
+            _allCourses = [..._allCourses, ...result.courses];
+          }
+          _currentPage = result.currentPage;
+          _hasMore = result.hasNextPage;
+          _isLoading = false;
+          _isLoadingMore = false;
+          _filteredCourses = _allCourses;
+        });
+      }
 
       // Auto-show category popup on first load when no filters
       if (reset && page == 1 && widget.categoryId == null && widget.searchQuery == null) {
@@ -135,6 +151,11 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   @override
   Widget build(BuildContext context) {
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
+    
+    // Cache MediaQuery results to avoid repeated expensive lookups
+    final mediaQueryData = MediaQuery.of(context);
+    final screenWidth = mediaQueryData.size.width;
+    final isDark = mediaQueryData.platformBrightness == Brightness.dark;
     
     return Scaffold(
       backgroundColor: Colors.transparent, // Let MainLayout background show through
@@ -573,8 +594,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     );
   }
 
-  double _getResponsiveHorizontalPadding(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveHorizontalPadding(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 8; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -590,8 +611,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveVerticalPadding(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveVerticalPadding(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 6; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -607,8 +628,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  int _getResponsiveCrossAxisCount(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  int _getResponsiveCrossAxisCount(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 1; // Ultra small screens (old phones)
     } else if (screenWidth < 480) {
@@ -624,8 +645,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveSpacing(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveSpacing(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 4; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -641,8 +662,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveAspectRatio(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveAspectRatio(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 0.9; // Ultra small screens - more square
     } else if (screenWidth < 480) {
@@ -658,8 +679,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveCardPadding(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveCardPadding(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 6; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -675,8 +696,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveBorderRadius(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveBorderRadius(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 6; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -692,8 +713,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveIconSize(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveIconSize(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 20; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -709,8 +730,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveIconRadius(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveIconRadius(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 4; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -726,8 +747,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
   }
 
-  double _getResponsiveTextSize(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  double _getResponsiveTextSize(BuildContext context, {double? screenWidth}) {
+    screenWidth ??= MediaQuery.of(context).size.width;
     if (screenWidth < 320) {
       return 11; // Ultra small screens
     } else if (screenWidth < 480) {
@@ -754,17 +775,17 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           topRight: Radius.circular(24),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(40),
+      child: const Padding(
+        padding: EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: Color(0xFF10B981)),
-            const SizedBox(height: 20),
+            CircularProgressIndicator(color: Color(0xFF10B981)),
+            SizedBox(height: 20),
             Text(
               'Loading categories...',
               style: TextStyle(
-                color: AppTheme.getSecondaryTextColor(context),
+                color: AppTheme.greyColor,
                 fontSize: 16,
               ),
             ),
@@ -785,188 +806,35 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           topRight: Radius.circular(24),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(40),
+      child: const Padding(
+        padding: EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.error_outline_rounded,
-              color: const Color(0xFFEF4444),
+              color: Color(0xFFEF4444),
               size: 48,
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Text(
               'Failed to load categories',
               style: TextStyle(
-                color: AppTheme.getTextColor(context),
+                color: AppTheme.greyColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Please try again later',
               style: TextStyle(
-                color: AppTheme.getSecondaryTextColor(context),
+                color: AppTheme.greyColor,
                 fontSize: 14,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAllCourses(BuildContext context, List<Course> courses) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    if (courses.isEmpty) {
-      return Container(
-        margin: EdgeInsets.symmetric(horizontal: _getResponsiveHorizontalPadding(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Courses',
-                  style: TextStyle(
-                    color: AppTheme.getTextColor(context),
-                    fontSize: _getResponsiveTextSize(context) * 1.4,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
-                    vertical: _getResponsiveVerticalPadding(context) * 0.3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${courses.length} courses',
-                    style: TextStyle(
-                      color: const Color(0xFF10B981),
-                      fontSize: _getResponsiveTextSize(context) * 0.9,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: _getResponsiveSpacing(context) * 2),
-            Container(
-              padding: EdgeInsets.all(_getResponsiveHorizontalPadding(context) * 2),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1F2937) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: const Icon(
-                      Icons.search_off_rounded,
-                      color: Color(0xFF10B981),
-                      size: 40,
-                    ),
-                  ),
-                  SizedBox(height: _getResponsiveSpacing(context)),
-                  Text(
-                    'No courses found',
-                    style: TextStyle(
-                      color: AppTheme.getTextColor(context),
-                      fontSize: _getResponsiveTextSize(context) * 1.3,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: _getResponsiveSpacing(context) * 0.5),
-                  Text(
-                    'Try adjusting your search or filter criteria',
-                    style: TextStyle(
-                      color: AppTheme.getSecondaryTextColor(context),
-                      fontSize: _getResponsiveTextSize(context),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: _getResponsiveHorizontalPadding(context)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Courses',
-                style: TextStyle(
-                  color: AppTheme.getTextColor(context),
-                  fontSize: _getResponsiveTextSize(context) * 1.4,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
-                  vertical: _getResponsiveVerticalPadding(context) * 0.3,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${courses.length} courses',
-                  style: TextStyle(
-                    color: const Color(0xFF10B981),
-                    fontSize: _getResponsiveTextSize(context) * 0.9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: _getResponsiveSpacing(context) * 1.5),
-          // Modern Grid Layout for Courses
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: _getResponsiveCrossAxisCount(context),
-              crossAxisSpacing: _getResponsiveSpacing(context) * 1.2,
-              mainAxisSpacing: _getResponsiveSpacing(context) * 1.2,
-              childAspectRatio: _getResponsiveAspectRatio(context) * 0.8,
-            ),
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              final course = courses[index];
-              return _buildModernCourseCard(context, course);
-            },
-          ),
-        ],
       ),
     );
   }
