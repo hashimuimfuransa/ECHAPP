@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 const _kDeep       = Color(0xFF041B2D);
@@ -1139,15 +1140,27 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     if (!_hasNavigated) _checkAndNavigate();
   }
 
-  void _checkAndNavigate() {
+  void _checkAndNavigate() async {
     final authState = ref.watch(authProvider);
     if (authState.user != null && !authState.isLoading && !_hasNavigated) {
       _hasNavigated = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (authState.user?.role == 'admin') {
           context.go('/admin');
         } else {
-          context.go('/dashboard');
+          // Check local storage first for faster onboarding check
+          final storageManager = StorageManager();
+          final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
+          final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
+          
+          // Skip onboarding if either source shows it's complete
+          if (hasCompletedOnboarding || userHasCompletedOnboarding) {
+            // Students who completed onboarding go to dashboard
+            context.go('/dashboard');
+          } else {
+            // Students who haven't completed onboarding go through onboarding flow
+            context.go('/interest-selection');
+          }
         }
       });
     }

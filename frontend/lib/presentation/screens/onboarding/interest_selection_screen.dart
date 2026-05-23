@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/category_utils.dart';
 
 class InterestSelectionScreen extends ConsumerStatefulWidget {
   const InterestSelectionScreen({super.key});
@@ -13,17 +15,6 @@ class InterestSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScreen> {
-  final List<String> _allInterests = [
-    'Programming',
-    'Design',
-    'Business',
-    'Data Science',
-    'Artificial Intelligence',
-    'Personal Development',
-    'Marketing',
-    'Leadership',
-  ];
-
   final Set<String> _selectedInterests = {};
 
   @override
@@ -114,47 +105,85 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   }
 
   Widget _buildInterestsGrid() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: _allInterests.map((interest) {
-        final isSelected = _selectedInterests.contains(interest);
-        return InkWell(
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                _selectedInterests.remove(interest);
-              } else {
-                _selectedInterests.add(interest);
-              }
-            });
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF00C896)
-                  : Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF00C896)
-                    : Colors.white.withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+    
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return const Center(
             child: Text(
-              interest,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white70,
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
+              'No categories available',
+              style: TextStyle(color: Colors.white60),
             ),
-          ),
+          );
+        }
+        
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: categories.map((category) {
+            final interest = category.name;
+            final isSelected = _selectedInterests.contains(interest);
+            final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
+            
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _selectedInterests.remove(interest);
+                  } else {
+                    _selectedInterests.add(interest);
+                  }
+                });
+              },
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color
+                      : Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isSelected
+                        ? color
+                        : Colors.white.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CategoryUtils.getCategoryIcon(category.id, name: category.name),
+                      color: isSelected ? Colors.white : color,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      interest,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.white70,
+                        fontSize: 15,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF00C896)),
+      ),
+      error: (_, __) => const Center(
+        child: Text(
+          'Failed to load categories',
+          style: TextStyle(color: Colors.white60),
+        ),
+      ),
     );
   }
 

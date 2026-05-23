@@ -405,6 +405,8 @@ class MainLayout extends ConsumerWidget {
       currentIndex = 3;
     } else if (currentRoute.contains('/my-courses')) {
       currentIndex = 4;
+    } else if (currentRoute.contains('/personalization')) {
+      currentIndex = 5;
     }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -443,6 +445,7 @@ class MainLayout extends ConsumerWidget {
       {'icon': Icons.menu_book_rounded, 'label': 'Library'},
       {'icon': Icons.download_rounded, 'label': 'Downloads'},
       {'icon': Icons.bookmark_rounded, 'label': 'Enrolled'},
+      {'icon': Icons.tune_rounded, 'label': 'Personalize'},
     ];
     
     return navItems.asMap().entries.map<Widget>((entry) {
@@ -648,6 +651,8 @@ class MainLayout extends ConsumerWidget {
         return () => context.go('/downloads');
       case 4:
         return () => context.go('/my-courses');
+      case 5:
+        return () => context.go('/personalization');
       default:
         return () => context.go('/dashboard');
     }

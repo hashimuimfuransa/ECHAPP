@@ -172,7 +172,7 @@ const getProfile = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, phone, avatar } = req.body;
+    const { fullName, phone, avatar, interests, shortTermGoal, midTermGoal, longTermGoal, hasCompletedOnboarding } = req.body;
     
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -182,6 +182,11 @@ const updateProfile = async (req, res) => {
     if (fullName) user.fullName = fullName;
     if (phone !== undefined) user.phone = phone;
     if (avatar !== undefined) user.avatar = avatar;
+    if (interests !== undefined) user.interests = interests;
+    if (shortTermGoal !== undefined) user.shortTermGoal = shortTermGoal;
+    if (midTermGoal !== undefined) user.midTermGoal = midTermGoal;
+    if (longTermGoal !== undefined) user.longTermGoal = longTermGoal;
+    if (hasCompletedOnboarding !== undefined) user.hasCompletedOnboarding = hasCompletedOnboarding;
     
     await user.save();
     
@@ -192,6 +197,11 @@ const updateProfile = async (req, res) => {
       role: user.role,
       phone: user.phone,
       avatar: user.avatar,
+      interests: user.interests,
+      shortTermGoal: user.shortTermGoal,
+      midTermGoal: user.midTermGoal,
+      longTermGoal: user.longTermGoal,
+      hasCompletedOnboarding: user.hasCompletedOnboarding,
       createdAt: user.createdAt.getTime()
     }, 'Profile updated successfully');
   } catch (error) {

@@ -48,8 +48,8 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  final StorageManager _storageManager = StorageManager();
   final AuthRepository _authRepository = AuthRepository();
+  final StorageManager _storageManager = StorageManager();
 
   AuthNotifier() : super(AuthState()) {
     // Check auth status on initialization
@@ -340,6 +340,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           hasCompletedOnboarding: hasCompletedOnboarding,
         );
         
+        debugPrint('AuthProvider: Profile update returned user with hasCompletedOnboarding = ${updatedUser.hasCompletedOnboarding}');
+        
         // Save updated phone number to storage
         if (phone != null) {
           await _storageManager.saveUserPhone(phone);
@@ -367,6 +369,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // Save updated phone number to storage
           if (phone != null) {
             await _storageManager.saveUserPhone(phone);
+          }
+          
+          // Save onboarding completion to storage for faster access
+          if (hasCompletedOnboarding != null) {
+            await _storageManager.saveHasCompletedOnboarding(hasCompletedOnboarding);
           }
           
           state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
@@ -461,14 +468,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, isGoogleLoading: true, isEmailLoading: false, error: null);
     
     try {
-      // Get device ID for device binding
+      // Get device ID for device binding - do this in background, don't block
       String? deviceId;
-      try {
-        deviceId = await DeviceIdUtils.getAppDeviceId();
-        debugPrint('AuthProvider: Retrieved device ID: $deviceId');
-      } catch (e) {
-        debugPrint('AuthProvider: Error getting device ID: $e');
-      }
+      DeviceIdUtils.getAppDeviceId().then((id) {
+        deviceId = id;
+        debugPrint('AuthProvider: Retrieved device ID in background: $deviceId');
+      }).catchError((e) {
+        debugPrint('AuthProvider: Error getting device ID in background: $e');
+      });
       
       debugPrint('AuthProvider: Calling Firebase service');
       final userCredential = await FirebaseAuthService.signInWithGoogle();
@@ -497,14 +504,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
         debugPrint('AuthProvider: Backend authentication successful');
         
-        // Save tokens for future API requests
-        await _storageManager.saveAccessToken(authResponse.token);
-        await _storageManager.saveRefreshToken(authResponse.refreshToken);
-        await _storageManager.saveUserRole(authResponse.user.role);
-        await _storageManager.saveUserId(authResponse.user.id);
-        
-        // Step 5: Initialize and sync FCM token for push notifications
-        FCMTokenService.initializeAndSyncToken();
+        // Save tokens for future API requests - do in parallel for speed
+        await Future.wait([
+          _storageManager.saveAccessToken(authResponse.token),
+          _storageManager.saveRefreshToken(authResponse.refreshToken),
+          _storageManager.saveUserRole(authResponse.user.role),
+          _storageManager.saveUserId(authResponse.user.id),
+        ]);
         
         debugPrint('AuthProvider: Setting success state');
         state = state.copyWith(
@@ -515,6 +521,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           error: null
         );
         debugPrint('AuthProvider: State updated - User: ${authResponse.user.email}');
+        
+        // Initialize FCM token in background after user is already logged in
+        FCMTokenService.initializeAndSyncToken();
       } catch (tokenError) {
         debugPrint('AuthProvider: Token/Backend Error: $tokenError');
         

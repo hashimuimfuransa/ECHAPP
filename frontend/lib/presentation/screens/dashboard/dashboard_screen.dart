@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
@@ -207,7 +208,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   // didChangeDependencies already handles re-checks; calling it from
   // didUpdateWidget too caused redundant checks on every widget rebuild.
 
-  void _checkUserRole() {
+  void _checkUserRole() async {
     if (!_hasCheckedRole) {
       final authState =
           ref.read(authProvider); // use read, not watch, outside build
@@ -222,6 +223,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) context.go('/admin');
           });
+        } else {
+          // Check local storage first for faster onboarding check
+          final storageManager = StorageManager();
+          final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
+          final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
+          
+          debugPrint('DashboardScreen: hasCompletedOnboarding (storage) = $hasCompletedOnboarding');
+          debugPrint('DashboardScreen: userHasCompletedOnboarding (user data) = $userHasCompletedOnboarding');
+          
+          // Only redirect if both sources show onboarding is incomplete
+          final shouldRedirect = !hasCompletedOnboarding && !userHasCompletedOnboarding;
+          
+          if (shouldRedirect) {
+            debugPrint(
+                'DashboardScreen: Student has not completed onboarding, redirecting to onboarding');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) context.go('/interest-selection');
+            });
+          }
         }
       }
     }
@@ -2655,7 +2675,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     // Take more courses for desktop, fewer for mobile
-    final displayCourses = isDesktop ? courses.take(4).toList() : courses.take(2).toList();
+    final displayCourses = isDesktop ? courses.take(5).toList() : courses.take(5).toList();
     
     if (displayCourses.isEmpty) {
       return const SizedBox.shrink();
@@ -2676,18 +2696,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 color: AppTheme.getTextColor(context),
               ),
             ),
-            if (!isMobile)
-              TextButton(
-                onPressed: () => context.push('/courses'),
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    color: const Color(0xFF10B981),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+            TextButton(
+              onPressed: () => context.push('/courses'),
+              child: Text(
+                'See More',
+                style: TextStyle(
+                  color: const Color(0xFF10B981),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
+            ),
           ],
         ),
         const SizedBox(height: 16),

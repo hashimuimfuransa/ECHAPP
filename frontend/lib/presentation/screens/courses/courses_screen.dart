@@ -113,12 +113,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         });
       }
 
-      // Auto-show category popup on first load when no filters
-      if (reset && page == 1 && widget.categoryId == null && widget.searchQuery == null) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) _showCategoryPopup(context);
-        });
-      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -287,43 +281,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: _getResponsiveHorizontalPadding(context) * 0.5,
                   vertical: _getResponsiveVerticalPadding(context) * 1.2,
-                ),
-              ),
-            ),
-          ),
-          // Modern Category Filter Button
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF10B981),
-                  const Color(0xFF059669),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _showCategoryPopup(context),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: EdgeInsets.all(_getResponsiveIconSize(context) * 0.3),
-                  child: Icon(
-                    Icons.filter_list_rounded,
-                    color: Colors.white,
-                    size: _getResponsiveIconSize(context) * 0.7,
-                  ),
                 ),
               ),
             ),

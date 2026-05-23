@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class StorageManager {
   static const _storage = FlutterSecureStorage(
@@ -16,6 +17,7 @@ class StorageManager {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userPhoneKey = 'user_phone';
+  static const String _hasCompletedOnboardingKey = 'has_completed_onboarding';
 
   // Firebase handles authentication tokens internally
 
@@ -60,13 +62,23 @@ class StorageManager {
   Future<String?> getUserPhone() async {
     return await _storage.read(key: _userPhoneKey);
   }
+Future<void> saveHasCompletedOnboarding(bool completed) async {
+    await _storage.write(key: _hasCompletedOnboardingKey, value: completed.toString());
+  }
 
+  Future<bool> hasCompletedOnboarding() async {
+    final value = await _storage.read(key: _hasCompletedOnboardingKey);
+    return value == 'true';
+  }
+
+  
   // Clear all stored data
   Future<void> clearAll() async {
     await _storage.delete(key: _userRoleKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _hasCompletedOnboardingKey);
     await _storage.delete(key: _userPhoneKey);
   }
 
@@ -78,4 +90,4 @@ class StorageManager {
 }
 
 // Provider for StorageManager
-final storageManagerProvider = StorageManager();
+final storageManagerProvider = Provider<StorageManager>((ref) => StorageManager());

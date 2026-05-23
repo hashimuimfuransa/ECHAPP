@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -50,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     });
   }
 
-  void _checkAndNavigate() {
+  void _checkAndNavigate() async {
     if (!_hasNavigated && mounted) {
       final authState = ref.watch(authProvider);
       if (!authState.isLoading && authState.user != null) {
@@ -70,8 +71,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
             // Redirect to phone collection screen for students without phone
             context.go('/phone-collection');
           } else if (authState.user?.role != 'admin') {
-            // Students go through onboarding flow
-            context.go('/interest-selection');
+            // Check local storage first for faster onboarding check
+            final storageManager = StorageManager();
+            final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
+            final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
+            
+            // Skip onboarding if either local storage or user data shows it's complete
+            if (hasCompletedOnboarding || userHasCompletedOnboarding) {
+              // Students who completed onboarding go to dashboard
+              context.go('/dashboard');
+            } else {
+              // Students who haven't completed onboarding go through onboarding flow
+              context.go('/interest-selection');
+            }
           } else {
             // Admins go directly to admin dashboard
             context.go('/admin');
@@ -114,8 +126,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 (current.user?.phone == null || current.user!.phone!.trim().isEmpty)) {
               // Redirect to phone collection screen for students without phone
               context.go('/phone-collection');
+            } else if (current.user?.role != 'admin' && 
+                       (current.user?.hasCompletedOnboarding ?? false)) {
+              // Students who completed onboarding go to dashboard
+              context.go('/dashboard');
             } else if (current.user?.role != 'admin') {
-              // Students go through onboarding flow
+              // Students who haven't completed onboarding go through onboarding flow
               context.go('/interest-selection');
             } else {
               // Admins go directly to admin dashboard
@@ -416,10 +432,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                             ),
                           ),
                         const SizedBox(height: 24),
-                        _buildSocialLoginDivider(),
-                        const SizedBox(height: 24),
-                        _buildSocialLoginButtons(),
-                        const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -595,10 +607,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                               ],
                             ),
                           ),
-                        const SizedBox(height: 20),
-                        _buildSocialLoginDivider(),
-                        const SizedBox(height: 20),
-                        _buildSocialLoginButtons(),
                         const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
