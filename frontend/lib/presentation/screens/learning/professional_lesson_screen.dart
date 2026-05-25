@@ -20,6 +20,7 @@ import 'package:excellencecoachinghub/presentation/providers/download_provider.d
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
+import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
@@ -169,7 +170,6 @@ class _ProfessionalLessonScreenState
           });
         }
       }
-      setState(() {});
     }
   }
 
@@ -1778,7 +1778,7 @@ class _ProfessionalLessonScreenState
       child: AspectRatio(
         aspectRatio: 16 / 9,
         child: _lesson!.videoId != null && videoUrl.isNotEmpty
-            ? CustomVideoPlayer(
+            ? OptimizedVideoPlayer(
                 videoId: _lesson!.videoId!,
                 videoUrl: videoUrl,
                 title: _lesson!.title,

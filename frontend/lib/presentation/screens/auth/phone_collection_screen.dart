@@ -41,6 +41,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
       final formattedPhone = PhoneValidator.formatPhoneNumber(_phoneController.text.trim());
       await ref.read(authProvider.notifier).updateProfile(
         phone: formattedPhone,
+        hasCompletedOnboarding: true,
       );
 
       if (mounted) {
@@ -51,8 +52,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           ),
         );
         
-        // Navigate to interest selection after successful save
-        context.go('/interest-selection');
+        // Navigate to dashboard after completing onboarding
+        context.go('/dashboard');
       }
     } catch (e) {
       if (mounted) {

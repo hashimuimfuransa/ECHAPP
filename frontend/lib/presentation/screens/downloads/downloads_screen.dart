@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
+import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
@@ -504,7 +505,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CustomVideoPlayer(
+        builder: (context) => OptimizedVideoPlayer(
           videoId: download.lessonId,
           videoUrl: download.localPath,
           title: download.originalTitle,

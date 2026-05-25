@@ -17,32 +17,46 @@ class AuthState {
   final bool isLoading;
   final bool isEmailLoading;
   final bool isGoogleLoading;
+  final bool isPhoneLoading;
   final User? user;
   final String? error;
+  final String? verificationId;
+  final bool isCodeSent;
 
   AuthState({
     bool? isLoading,
     bool? isEmailLoading,
     bool? isGoogleLoading,
+    bool? isPhoneLoading,
     this.user,
     this.error,
+    this.verificationId,
+    bool? isCodeSent,
   })  : isLoading = isLoading ?? false,
         isEmailLoading = isEmailLoading ?? false,
-        isGoogleLoading = isGoogleLoading ?? false;
+        isGoogleLoading = isGoogleLoading ?? false,
+        isPhoneLoading = isPhoneLoading ?? false,
+        isCodeSent = isCodeSent ?? false;
 
   AuthState copyWith({
     bool? isLoading,
     bool? isEmailLoading,
     bool? isGoogleLoading,
+    bool? isPhoneLoading,
     User? user,
     String? error,
+    String? verificationId,
+    bool? isCodeSent,
   }) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isEmailLoading: isEmailLoading ?? this.isEmailLoading,
       isGoogleLoading: isGoogleLoading ?? this.isGoogleLoading,
+      isPhoneLoading: isPhoneLoading ?? this.isPhoneLoading,
       user: user ?? this.user,
       error: error ?? this.error,
+      verificationId: verificationId ?? this.verificationId,
+      isCodeSent: isCodeSent ?? this.isCodeSent,
     );
   }
 }
@@ -164,6 +178,176 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
+  }
+
+  // Phone Authentication - Send OTP
+  Future<void> sendPhoneOTP(String phoneNumber) async {
+    debugPrint('AuthProvider: Sending OTP to $phoneNumber');
+    state = state.copyWith(isLoading: true, isPhoneLoading: true, error: null, verificationId: null, isCodeSent: false);
+    
+    try {
+      await FirebaseAuthService.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        codeSent: (String verificationId, int? resendToken) {
+          debugPrint('AuthProvider: OTP sent successfully, verificationId: $verificationId');
+          state = state.copyWith(
+            isLoading: false,
+            isPhoneLoading: false,
+            verificationId: verificationId,
+            isCodeSent: true,
+            error: null,
+          );
+        },
+        verificationFailed: (firebase_auth.FirebaseAuthException e) {
+          debugPrint('AuthProvider: OTP sending failed: ${e.code} - ${e.message}');
+          String errorMessage = e.toString();
+          
+          // Provide user-friendly error messages
+          final msgLower = errorMessage.toLowerCase();
+          if (msgLower.contains('invalid-phone-number')) {
+            errorMessage = 'Please enter a valid phone number.';
+          } else if (msgLower.contains('quota-exceeded')) {
+            errorMessage = 'Too many SMS requests. Please try again later.';
+          } else if (msgLower.contains('network error') || 
+                     msgLower.contains('connection failed') || 
+                     msgLower.contains('socketexception')) {
+            errorMessage = 'Network connection error. Please check your internet connection and try again.';
+          } else {
+            errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication');
+          }
+          
+          state = state.copyWith(
+            isLoading: false,
+            isPhoneLoading: false,
+            error: errorMessage,
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint('AuthProvider: Auto-retrieval timeout');
+          // Don't update state here - let user manually enter code
+        },
+      );
+    } catch (e) {
+      debugPrint('AuthProvider: Send OTP Error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        isPhoneLoading: false,
+        error: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  // Phone Authentication - Verify OTP and Sign In
+  Future<void> verifyPhoneOTP(String smsCode) async {
+    debugPrint('AuthProvider: Verifying OTP');
+    state = state.copyWith(isLoading: true, isPhoneLoading: true, error: null);
+    
+    try {
+      final verificationId = state.verificationId;
+      if (verificationId == null) {
+        throw Exception('No verification ID found. Please request a new code.');
+      }
+      
+      // Create phone credential
+      final credential = firebase_auth.PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      
+      // Sign in with phone credential
+      final userCredential = await FirebaseAuthService.signInWithPhoneCredential(credential);
+      
+      if (userCredential?.user != null) {
+        final firebaseUser = userCredential!.user!;
+        debugPrint('AuthProvider: Phone sign-in successful for ${firebaseUser.phoneNumber}');
+        
+        // Get device ID for device binding
+        String? deviceId;
+        try {
+          deviceId = await DeviceIdUtils.getAppDeviceId();
+          debugPrint('AuthProvider: Retrieved device ID: $deviceId');
+        } catch (e) {
+          debugPrint('AuthProvider: Error getting device ID: $e');
+        }
+        
+        // Get Firebase ID token
+        debugPrint('AuthProvider: Getting Firebase ID token...');
+        final idToken = await firebaseUser.getIdToken();
+        
+        if (idToken == null) {
+          throw Exception('Failed to get Firebase ID token after phone sign-in');
+        }
+        
+        // Send token to backend for authentication
+        debugPrint('AuthProvider: Sending token to backend for authentication...');
+        final authResponse = await _authRepository.firebaseLogin(idToken, deviceId: deviceId);
+        debugPrint('AuthProvider: Backend authentication successful');
+        
+        // Save tokens and user data
+        await _storageManager.saveAccessToken(authResponse.token);
+        await _storageManager.saveRefreshToken(authResponse.refreshToken);
+        await _storageManager.saveUserRole(authResponse.user.role);
+        await _storageManager.saveUserId(authResponse.user.id);
+        await _storageManager.saveUserPhone(authResponse.user.phone);
+        
+        debugPrint('AuthProvider: Phone sign-in completed successfully');
+        
+        state = state.copyWith(
+          isLoading: false,
+          isPhoneLoading: false,
+          user: authResponse.user,
+          verificationId: null,
+          isCodeSent: false,
+          error: 'Welcome! Phone sign-in successful.',
+        );
+        
+        // Initialize FCM token for push notifications
+        FCMTokenService.initializeAndSyncToken();
+        
+        await Future.delayed(const Duration(milliseconds: 50));
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isPhoneLoading: false,
+          error: 'Phone sign-in failed. Please try again.',
+        );
+      }
+    } catch (e) {
+      debugPrint('AuthProvider: Verify OTP Error: $e');
+      String errorMessage = e.toString();
+      
+      // Provide user-friendly error messages
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('invalid-verification-code') || 
+          msgLower.contains('invalid code') ||
+          msgLower.contains('wrong code')) {
+        errorMessage = 'The verification code is invalid. Please check and try again.';
+      } else if (msgLower.contains('code-expired') || 
+                 msgLower.contains('session-expired')) {
+        errorMessage = 'The verification code has expired. Please request a new code.';
+      } else if (msgLower.contains('network error') || 
+                 msgLower.contains('connection failed') || 
+                 msgLower.contains('socketexception')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else {
+        errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication');
+      }
+      
+      state = state.copyWith(
+        isLoading: false,
+        isPhoneLoading: false,
+        error: errorMessage,
+      );
+    }
+  }
+
+  // Reset phone auth state
+  void resetPhoneAuth() {
+    state = state.copyWith(
+      verificationId: null,
+      isCodeSent: false,
+      error: null,
+    );
   }
 
   Future<void> register(String fullName, String email, String password, String? phone) async {

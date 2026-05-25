@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class NetworkImageWidget extends StatelessWidget {
@@ -47,6 +48,17 @@ class NetworkImageWidget extends StatelessWidget {
       fit: fit,
       placeholder: (context, url) => placeholder ?? _buildDefaultPlaceholder(),
       errorWidget: (context, url, error) => errorWidget ?? _buildDefaultErrorWidget(context),
+      memCacheWidth: width?.toInt(),
+      memCacheHeight: height?.toInt(),
+      maxWidthDiskCache: 1200,
+      maxHeightDiskCache: 1200,
+      cacheManager: CacheManager(
+        Config(
+          'customCacheKey',
+          stalePeriod: const Duration(days: 7),
+          maxNrOfCacheObjects: 200,
+        ),
+      ),
     );
 
     if (borderRadius != null) {
@@ -65,9 +77,13 @@ class NetworkImageWidget extends StatelessWidget {
       height: height,
       color: AppTheme.greyColor.withOpacity(0.1),
       child: const Center(
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: AppTheme.primaryGreen,
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppTheme.primaryGreen,
+          ),
         ),
       ),
     );

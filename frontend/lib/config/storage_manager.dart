@@ -71,6 +71,10 @@ Future<void> saveHasCompletedOnboarding(bool completed) async {
     return value == 'true';
   }
 
+  Future<void> clearOnboarding() async {
+    await _storage.delete(key: _hasCompletedOnboardingKey);
+  }
+
   
   // Clear all stored data
   Future<void> clearAll() async {

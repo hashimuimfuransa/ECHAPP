@@ -33,7 +33,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialBooks();
+    // Load initial books with microtask for better performance
+    Future.microtask(() => _loadInitialBooks());
     _scrollController.addListener(_onScroll);
   }
 

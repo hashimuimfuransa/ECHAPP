@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _loadUserData() {
-    final user = ref.read(authProvider).user;
+    final user = ref.read(authProvider.select((state) => state.user));
     if (user != null) {
       _nameController.text = user.fullName;
       _emailController.text = user.email;
@@ -545,6 +546,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildActionButtons() {
+    final user = ref.read(authProvider).user;
+    final hasCompletedOnboarding = user?.hasCompletedOnboarding ?? false;
+    
     return Column(
       children: [
         _buildActionButton(
@@ -553,6 +557,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           () => context.push('/settings'),
           Colors.blueGrey,
         ),
+        if (hasCompletedOnboarding) ...[
+          const SizedBox(height: 15),
+          _buildActionButton(
+            'Reset Onboarding',
+            Icons.refresh_rounded,
+            () => _showResetOnboardingDialog(),
+            Colors.orange,
+          ),
+        ],
         const SizedBox(height: 15),
         _buildActionButton(
           'Log Out',
@@ -623,6 +636,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ref.read(authProvider.notifier).logout();
             },
             child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetOnboardingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Onboarding'),
+        content: const Text('This will reset your onboarding status and you will need to complete it again. Do you want to continue?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(authProvider.notifier).updateProfile(
+                  hasCompletedOnboarding: false,
+                  interests: null,
+                  shortTermGoal: null,
+                  midTermGoal: null,
+                  longTermGoal: null,
+                );
+                // Clear local storage
+                final storageManager = StorageManager();
+                await storageManager.clearOnboarding();
+                // Navigate to onboarding
+                if (mounted) {
+                  context.go('/interest-selection');
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reset onboarding: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Reset', style: TextStyle(color: Colors.orange)),
           ),
         ],
       ),

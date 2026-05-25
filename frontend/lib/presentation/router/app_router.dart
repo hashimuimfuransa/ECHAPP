@@ -10,6 +10,7 @@ import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_s
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/enter_reset_code_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_collection_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/phone_auth_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/interest_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/personalization_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
@@ -69,7 +70,8 @@ class _FadeTransitionPage extends CustomTransitionPage<void> {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 200),
+          transitionDuration: const Duration(milliseconds: 150),
+          key: ValueKey('fade_$name'),
         );
 }
 
@@ -92,7 +94,8 @@ class _SlideUpTransitionPage extends CustomTransitionPage<void> {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 250),
+          transitionDuration: const Duration(milliseconds: 180),
+          key: ValueKey('slide_$name'),
         );
 }
 
@@ -113,6 +116,12 @@ class AppRouter {
 
   GoRouter _buildRouter() => GoRouter(
         initialLocation: '/',
+        debugLogDiagnostics: false,
+        errorBuilder: (context, state) => Scaffold(
+          body: Center(
+            child: Text('Route not found: ${state.uri.path}'),
+          ),
+        ),
         routes: [
           // Authentication Routes
           ShellRoute(
@@ -140,6 +149,10 @@ class AppRouter {
               GoRoute(
                 path: '/login',
                 builder: (context, state) => const LoginScreen(),
+              ),
+              GoRoute(
+                path: '/phone-auth',
+                builder: (context, state) => const PhoneAuthScreen(),
               ),
               GoRoute(
                 path: '/register',
@@ -178,10 +191,6 @@ class AppRouter {
           GoRoute(
             path: '/interest-selection',
             builder: (context, state) => const InterestSelectionScreen(),
-          ),
-          GoRoute(
-            path: '/personalization',
-            builder: (context, state) => const PersonalizationScreen(),
           ),
 
           // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication

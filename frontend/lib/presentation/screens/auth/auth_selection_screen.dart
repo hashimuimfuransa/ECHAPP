@@ -941,17 +941,21 @@ class _AuthCard extends StatelessWidget {
   final bool isLoading;
   final bool isEmailLoading;
   final bool isGoogleLoading;
+  final bool isPhoneLoading;
   final String? error;
   final VoidCallback onEmail;
   final VoidCallback? onGoogle;
+  final VoidCallback? onPhone;
 
   const _AuthCard({
     required this.isLoading,
     required this.isEmailLoading,
     required this.isGoogleLoading,
+    required this.isPhoneLoading,
     required this.error,
     required this.onEmail,
     this.onGoogle,
+    this.onPhone,
   });
 
   @override
@@ -1029,8 +1033,55 @@ class _AuthCard extends StatelessWidget {
           ),
         ],
 
+        // Phone Auth - Primary Option
         _FadeInSlide(
           delay: const Duration(milliseconds: 400),
+          child: _PrimaryButton(
+            icon: Icons.phone_outlined,
+            label: 'Continue with Phone',
+            isLoading: isPhoneLoading,
+            onPressed: isLoading ? null : onPhone,
+          ),
+        ),
+
+        SizedBox(height: isSmallMobile ? 10 : 14),
+
+        // Google Auth - Secondary Option
+        if (onGoogle != null && !kIsWeb) ...[
+          _FadeInSlide(
+            delay: const Duration(milliseconds: 500),
+            child: _GoogleButton(
+              isLoading: isGoogleLoading,
+              onPressed: !isLoading ? onGoogle : null,
+            ),
+          ),
+          SizedBox(height: isSmallMobile ? 10 : 14),
+        ],
+
+        // Divider
+        _FadeInSlide(
+          delay: const Duration(milliseconds: 600),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text('OR',
+                    style: TextStyle(
+                        color: _kText3,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0)),
+              ),
+              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+            ],
+          ),
+        ),
+        SizedBox(height: isSmallMobile ? 10 : 14),
+
+        // Email Auth - Last Option
+        _FadeInSlide(
+          delay: const Duration(milliseconds: 700),
           child: _PrimaryButton(
             icon: Icons.mail_outline_rounded,
             label: 'Continue with Email',
@@ -1039,55 +1090,25 @@ class _AuthCard extends StatelessWidget {
           ),
         ),
 
-        if (!ResponsiveBreakpoints.isDesktop(context) && onGoogle != null && !kIsWeb) ...[
-          SizedBox(height: isSmallMobile ? 10 : 14),
-          _FadeInSlide(
-            delay: const Duration(milliseconds: 500),
-            child: Row(
-              children: [
-                Expanded(child: Divider(color: _kBorder, thickness: 1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text('OR',
-                      style: TextStyle(
-                          color: _kText3,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.0)),
-                ),
-                Expanded(child: Divider(color: _kBorder, thickness: 1)),
-              ],
-            ),
-          ),
-          SizedBox(height: isSmallMobile ? 10 : 14),
-          _FadeInSlide(
-            delay: const Duration(milliseconds: 600),
-            child: _GoogleButton(
-              isLoading: isGoogleLoading,
-              onPressed: !isLoading ? onGoogle : null,
-            ),
-          ),
-        ],
-
         SizedBox(height: isSmallMobile ? 12 : 20),
         
         if (!isShort || !isSmallMobile) ...[
           _FadeInSlide(
-            delay: const Duration(milliseconds: 700),
+            delay: const Duration(milliseconds: 800),
             child: const _DeviceWarningBadge(),
           ),
           SizedBox(height: isSmallMobile ? 8 : 12),
         ],
 
         _FadeInSlide(
-          delay: const Duration(milliseconds: 800),
+          delay: const Duration(milliseconds: 900),
           child: const _TermsFooter(),
         ),
 
         if (!isShort || !isSmallMobile) ...[
           SizedBox(height: isSmallMobile ? 6 : 10),
           _FadeInSlide(
-            delay: const Duration(milliseconds: 900),
+            delay: const Duration(milliseconds: 1000),
             child: const _TrustBar(),
           ),
         ],
@@ -1147,20 +1168,14 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (authState.user?.role == 'admin') {
           context.go('/admin');
-        } else {
-          // Check local storage first for faster onboarding check
-          final storageManager = StorageManager();
-          final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
-          final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
-          
-          // Skip onboarding if either source shows it's complete
-          if (hasCompletedOnboarding || userHasCompletedOnboarding) {
-            // Students who completed onboarding go to dashboard
-            context.go('/dashboard');
-          } else {
-            // Students who haven't completed onboarding go through onboarding flow
-            context.go('/interest-selection');
-          }
+        } else if (authState.user?.role != 'admin' && 
+                   (authState.user?.hasCompletedOnboarding ?? false)) {
+          // Students who completed onboarding go to dashboard
+          context.go('/dashboard');
+        } else if (authState.user?.role != 'admin') {
+          // Students who haven't completed onboarding go through onboarding flow
+          // (onboarding flow will check for phone number)
+          context.go('/interest-selection');
         }
       });
     }
@@ -1230,9 +1245,11 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                     isLoading: authState.isLoading,
                     isEmailLoading: authState.isEmailLoading,
                     isGoogleLoading: authState.isGoogleLoading,
+                    isPhoneLoading: authState.isPhoneLoading,
                     error: authState.error,
                     onEmail: () => context.push('/email-auth-option'),
                     onGoogle: null,
+                    onPhone: () => context.push('/phone-auth'),
                   ),
                 ),
               ),
@@ -1305,9 +1322,11 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                             isLoading: authState.isLoading,
                             isEmailLoading: authState.isEmailLoading,
                             isGoogleLoading: authState.isGoogleLoading,
+                            isPhoneLoading: authState.isPhoneLoading,
                             error: authState.error,
                             onEmail: () => context.push('/email-auth-option'),
                             onGoogle: _handleGoogleSignIn,
+                            onPhone: () => context.push('/phone-auth'),
                           ),
                         ),
                       ],

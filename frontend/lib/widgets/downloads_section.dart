@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
+import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'dart:io';
 
 class DownloadsSection extends ConsumerWidget {
@@ -221,7 +222,7 @@ class DownloadsSection extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CustomVideoPlayer(
+        builder: (context) => OptimizedVideoPlayer(
           videoId: download.lessonId,
           videoUrl: download.localPath,
           title: download.originalTitle,

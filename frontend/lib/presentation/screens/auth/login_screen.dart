@@ -53,28 +53,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
   void _checkAndNavigate() async {
     if (!_hasNavigated && mounted) {
-      final authState = ref.watch(authProvider);
-      if (!authState.isLoading && authState.user != null) {
+      // Use select to only watch user, not loading state
+      final user = ref.read(authProvider.select((state) => state.user));
+      final isLoading = ref.read(authProvider.select((state) => state.isLoading));
+      
+      if (!isLoading && user != null) {
         _hasNavigated = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Welcome back, ${authState.user!.fullName}!'),
+              content: Text('Welcome back, ${user.fullName}!'),
               backgroundColor: const Color(0xFF00C896),
               duration: const Duration(seconds: 2),
             ),
           );
           
-          // Check if user is student and missing phone number
-          if (authState.user?.role != 'admin' && 
-              (authState.user?.phone == null || authState.user!.phone!.trim().isEmpty)) {
-            // Redirect to phone collection screen for students without phone
-            context.go('/phone-collection');
-          } else if (authState.user?.role != 'admin') {
+          // Check if user is admin
+          if (user.role == 'admin') {
+            // Admins go directly to admin dashboard
+            context.go('/admin');
+          } else {
             // Check local storage first for faster onboarding check
             final storageManager = StorageManager();
             final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
-            final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
+            final userHasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
             
             // Skip onboarding if either local storage or user data shows it's complete
             if (hasCompletedOnboarding || userHasCompletedOnboarding) {
@@ -82,11 +84,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               context.go('/dashboard');
             } else {
               // Students who haven't completed onboarding go through onboarding flow
+              // (onboarding flow will check for phone number)
               context.go('/interest-selection');
             }
-          } else {
-            // Admins go directly to admin dashboard
-            context.go('/admin');
           }
         }
       }
@@ -121,21 +121,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         _hasNavigated = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            // Check if user is student and missing phone number
-            if (current.user?.role != 'admin' && 
-                (current.user?.phone == null || current.user!.phone!.trim().isEmpty)) {
-              // Redirect to phone collection screen for students without phone
-              context.go('/phone-collection');
+            // Check if user is admin
+            if (current.user?.role == 'admin') {
+              // Admins go directly to admin dashboard
+              context.go('/admin');
             } else if (current.user?.role != 'admin' && 
                        (current.user?.hasCompletedOnboarding ?? false)) {
               // Students who completed onboarding go to dashboard
               context.go('/dashboard');
             } else if (current.user?.role != 'admin') {
               // Students who haven't completed onboarding go through onboarding flow
+              // (onboarding flow will check for phone number)
               context.go('/interest-selection');
-            } else {
-              // Admins go directly to admin dashboard
-              context.go('/admin');
             }
           }
         });
@@ -896,5 +893,104 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       default:
         return Icons.person;
     }
+  }
+
+  Widget _buildPhoneAuthButton() {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF00C896), Color(0xFF009E76)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00C896).withOpacity(0.3),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: InkWell(
+          onTap: () => context.push('/phone-auth'),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.phone_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Continue with Phone',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleAuthButton(dynamic authState) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: authState.isGoogleLoading 
+            ? null 
+            : () => ref.read(authProvider.notifier).signInWithGoogle(),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (authState.isGoogleLoading)
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.g_mobiledata,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              const SizedBox(width: 12),
+              const Text(
+                'Continue with Google',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

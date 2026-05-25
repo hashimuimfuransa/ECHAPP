@@ -56,13 +56,16 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       _selectedCategory = widget.categoryId!;
     }
 
-    _loadPage(1, reset: true);
+    // Load initial page with debounce for better performance
+    Future.microtask(() => _loadPage(1, reset: true));
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
-      _loadNextPage();
+      if (!_isLoadingMore && _hasMore) {
+        _loadNextPage();
+      }
     }
   }
 

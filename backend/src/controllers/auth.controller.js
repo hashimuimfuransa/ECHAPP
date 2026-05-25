@@ -102,6 +102,11 @@ const login = async (req, res) => {
           role: user.role,
           phone: user.phone,
           avatar: user.avatar,
+          hasCompletedOnboarding: user.hasCompletedOnboarding,
+          interests: user.interests,
+          shortTermGoal: user.shortTermGoal,
+          midTermGoal: user.midTermGoal,
+          longTermGoal: user.longTermGoal,
           createdAt: user.createdAt.getTime()
         },
         token,
@@ -301,14 +306,16 @@ const firebaseLogin = async (req, res) => {
       console.log('Creating new user from Firebase:', decodedToken.email);
       console.log('Provided full name:', fullName);
       
-      // Get user's display name from Firebase Auth
+      // Get user's display name and phone number from Firebase Auth
       let displayName = 'Firebase User';
+      let phoneNumber = null;
       try {
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
         console.log('=== Firebase User Debug ===');
         console.log('Firebase UID:', firebaseUser.uid);
         console.log('Firebase Email:', firebaseUser.email);
         console.log('Firebase Display Name:', firebaseUser.displayName);
+        console.log('Firebase Phone Number:', firebaseUser.phoneNumber);
         console.log('Provided fullName:', fullName);
         
         // Priority order for display name:
@@ -318,6 +325,10 @@ const firebaseLogin = async (req, res) => {
         // 4. Default fallback
         displayName = fullName || firebaseUser.displayName || firebaseUser.email.split('@')[0] || 'Firebase User';
         console.log('Final displayName selected:', displayName);
+        
+        // Get phone number from Firebase (for phone auth users)
+        phoneNumber = firebaseUser.phoneNumber;
+        console.log('Phone number from Firebase:', phoneNumber);
       } catch (firebaseError) {
         console.log('Could not get user display name from Firebase Auth, using provided name or default');
         displayName = fullName || 'Firebase User';
@@ -333,6 +344,8 @@ const firebaseLogin = async (req, res) => {
         isActive: true,
         // Firebase users don't need password
         password: undefined,
+        // Save phone number if available (from phone auth)
+        ...(phoneNumber && { phone: phoneNumber }),
         // Bind device ID if provided
         ...(deviceId && { deviceId })
       });
@@ -366,13 +379,29 @@ const firebaseLogin = async (req, res) => {
       try {
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
         const newDisplayName = firebaseUser.displayName || firebaseUser.email.split('@')[0];
+        const newPhoneNumber = firebaseUser.phoneNumber;
+        
+        let needsSave = false;
+        
+        // Update display name if changed
         if (newDisplayName && user.fullName !== newDisplayName) {
           user.fullName = newDisplayName;
-          await user.save();
+          needsSave = true;
           console.log('Updated user display name to:', newDisplayName);
         }
+        
+        // Update phone number if available and different
+        if (newPhoneNumber && user.phone !== newPhoneNumber) {
+          user.phone = newPhoneNumber;
+          needsSave = true;
+          console.log('Updated user phone number to:', newPhoneNumber);
+        }
+        
+        if (needsSave) {
+          await user.save();
+        }
       } catch (firebaseError) {
-        console.log('Could not update user display name from Firebase Auth');
+        console.log('Could not update user info from Firebase Auth');
       }
 
       // Update last active status
@@ -394,6 +423,11 @@ const firebaseLogin = async (req, res) => {
         phone: user.phone,
         avatar: user.avatar,
         provider: user.provider,
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
+        interests: user.interests,
+        shortTermGoal: user.shortTermGoal,
+        midTermGoal: user.midTermGoal,
+        longTermGoal: user.longTermGoal,
         createdAt: user.createdAt.getTime()  // Convert to milliseconds for Dart DateTime
       },
       token,

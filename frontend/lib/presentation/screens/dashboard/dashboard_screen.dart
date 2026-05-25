@@ -72,6 +72,8 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.2,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -397,7 +399,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               userEnrollmentsAsync.when(
                 data: (enrollments) {
                   final enrolledCourses = enrollments.map((e) => e.course).where((course) => course != null).cast<Course>().toList();
-                  final coursesToShow = recommendedCourses.isNotEmpty ? recommendedCourses : popularCourses;
+                  // Only show recommended courses if user has completed onboarding
+                  final hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
+                  final coursesToShow = (hasCompletedOnboarding && recommendedCourses.isNotEmpty) 
+                      ? recommendedCourses 
+                      : popularCourses;
                   return _buildRecommendedCourses(
                     context, 
                     coursesToShow, 
@@ -454,7 +460,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         userEnrollmentsAsync.when(
           data: (enrollments) {
             final enrolledCourses = enrollments.map((e) => e.course).where((course) => course != null).cast<Course>().toList();
-            final coursesToShow = recommendedCourses.isNotEmpty ? recommendedCourses : popularCourses;
+            // Only show recommended courses if user has completed onboarding
+            final hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
+            final coursesToShow = (hasCompletedOnboarding && recommendedCourses.isNotEmpty) 
+                ? recommendedCourses 
+                : popularCourses;
             return _buildRecommendedCourses(
               context, 
               coursesToShow, 

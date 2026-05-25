@@ -64,6 +64,7 @@ class _SettingsDeviceBindingPolicy extends StatelessWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
+    // Use selective watching to minimize rebuilds
     final isDarkMode = ref.watch(darkModeProvider);
     final notificationsEnabled = ref.watch(notificationsProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);

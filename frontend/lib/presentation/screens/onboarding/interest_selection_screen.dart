@@ -246,13 +246,24 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   }
 
   void _handleContinue() async {
-    // Store selected interests and navigate to personalization screen
+    // Store selected interests and check phone number
     try {
       await ref.read(authProvider.notifier).updateProfile(
         interests: _selectedInterests.toList(),
       );
+      
       if (mounted) {
-        context.push('/personalization');
+        final authState = ref.read(authProvider);
+        final user = authState.user;
+        
+        // Check if user has phone number
+        if (user?.phone == null || user!.phone!.trim().isEmpty) {
+          // Navigate to phone collection screen
+          context.push('/phone-collection');
+        } else {
+          // Complete onboarding and go to dashboard
+          await _completeOnboarding();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -266,8 +277,41 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
     }
   }
 
-  void _handleSkip() {
-    // Skip and navigate to personalization screen
-    context.push('/personalization');
+  void _handleSkip() async {
+    // Skip interests and check phone number
+    if (mounted) {
+      final authState = ref.read(authProvider);
+      final user = authState.user;
+      
+      // Check if user has phone number
+      if (user?.phone == null || user!.phone!.trim().isEmpty) {
+        // Navigate to phone collection screen
+        context.push('/phone-collection');
+      } else {
+        // Complete onboarding and go to dashboard
+        await _completeOnboarding();
+      }
+    }
+  }
+
+  Future<void> _completeOnboarding() async {
+    try {
+      await ref.read(authProvider.notifier).updateProfile(
+        hasCompletedOnboarding: true,
+      );
+      
+      if (mounted) {
+        context.go('/dashboard');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing onboarding: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

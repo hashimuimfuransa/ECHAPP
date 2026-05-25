@@ -18,9 +18,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   void initState() {
     super.initState();
     // Load notifications when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationProvider.notifier).loadNotifications();
-    });
+    Future.microtask(() => ref.read(notificationProvider.notifier).loadNotifications());
   }
 
   String _getTimeAgo(DateTime timestamp) {

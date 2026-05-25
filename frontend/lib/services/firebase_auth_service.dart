@@ -379,6 +379,83 @@ class FirebaseAuthService {
     }
   }
 
+  // Phone Authentication - Send OTP
+  static Future<firebase_auth.ConfirmationResult?> verifyPhoneNumber({
+    required String phoneNumber,
+    required firebase_auth.PhoneCodeSent? codeSent,
+    required firebase_auth.PhoneVerificationFailed? verificationFailed,
+    firebase_auth.PhoneCodeAutoRetrievalTimeout? codeAutoRetrievalTimeout,
+  }) async {
+    try {
+      debugPrint('FirebaseAuthService: Sending OTP to $phoneNumber');
+      
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (firebase_auth.PhoneAuthCredential credential) {
+          debugPrint('FirebaseAuthService: Auto-verification completed');
+          // This callback is invoked when verification is done automatically
+          // Handle auto-retrieval scenario if needed
+        },
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+        timeout: const Duration(seconds: 60),
+      );
+      
+      return null; // The result is handled via callbacks
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Phone Auth Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Phone Auth Error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Failed to send verification code. Please try again.');
+    }
+  }
+
+  // Phone Authentication - Verify OTP and Sign In
+  static Future<firebase_auth.UserCredential?> signInWithPhoneCredential(
+    firebase_auth.PhoneAuthCredential credential,
+  ) async {
+    try {
+      debugPrint('FirebaseAuthService: Verifying OTP and signing in');
+      final userCredential = await _auth.signInWithCredential(credential);
+      debugPrint('FirebaseAuthService: Phone sign-in successful');
+      return userCredential;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Phone Sign-In Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Phone Sign-In Error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Failed to verify code. Please try again.');
+    }
+  }
+
+  // Phone Authentication - Link with existing account
+  static Future<firebase_auth.UserCredential?> linkPhoneCredential(
+    firebase_auth.PhoneAuthCredential credential,
+  ) async {
+    try {
+      debugPrint('FirebaseAuthService: Linking phone credential to existing account');
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user signed in. Please sign in first.');
+      }
+      
+      final userCredential = await user.linkWithCredential(credential);
+      debugPrint('FirebaseAuthService: Phone credential linked successfully');
+      return userCredential;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      debugPrint('Link Phone Error: ${e.code} - ${e.message}');
+      throw _mapFirebaseAuthException(e);
+    } catch (e) {
+      debugPrint('Link Phone Error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Failed to link phone number. Please try again.');
+    }
+  }
+
   // Map exceptions to user-friendly messages
   static Exception _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
     debugPrint('Auth Exception - Code: ${e.code}, Message: ${e.message}');
@@ -429,9 +506,21 @@ class FirebaseAuthService {
       case 'account-exists-with-different-credential':
         return Exception('An account already exists with a different sign-in method.');
       
+      // Phone auth specific errors
+      case 'invalid-phone-number':
+        return Exception('The phone number is invalid. Please enter a valid phone number.');
+      case 'quota-exceeded':
+        return Exception('Too many SMS requests. Please try again later.');
+      case 'session-expired':
+        return Exception('The SMS code has expired. Please request a new code.');
+      case 'code-expired':
+        return Exception('The verification code has expired. Please request a new code.');
+      case 'invalid-verification-code':
+        return Exception('The verification code is invalid. Please check and try again.');
+      case 'missing-client-identifier':
+        return Exception('Phone authentication is not properly configured. Please contact support.');
+      
       // Additional error codes
-      case 'invalid-credential':
-        return Exception('Incorrect email or password. Please try again.');
       case 'requires-recent-login':
         return Exception('Please sign in again to perform this action.');
       case 'unknown-error':

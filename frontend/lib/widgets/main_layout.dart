@@ -18,6 +18,7 @@ import 'package:excellencecoachinghub/models/user.dart' as app_models;
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/services/notification_service.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class MainLayout extends ConsumerWidget {
   final Widget child;
@@ -48,9 +49,9 @@ class MainLayout extends ConsumerWidget {
     
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
-    // Global listener for authentication state changes
-    ref.listen(authProvider, (previous, next) {
-      if (next.user == null && !next.isLoading) {
+    // Global listener for authentication state changes - use select to minimize rebuilds
+    ref.listen(authProvider.select((state) => state.user), (previous, next) {
+      if (next == null) {
         final currentRoute = GoRouterState.of(context).uri.path;
         final bool isAuthRoute = currentRoute == '/login' || 
                                  currentRoute == '/register' || 
@@ -63,7 +64,6 @@ class MainLayout extends ConsumerWidget {
                                  currentRoute == '/';
         
         if (!isAuthRoute) {
-          debugPrint('MainLayout: User logged out, redirecting to auth screen');
           if (isDesktop) {
             context.go('/email-auth-option');
           } else {
@@ -405,8 +405,6 @@ class MainLayout extends ConsumerWidget {
       currentIndex = 3;
     } else if (currentRoute.contains('/my-courses')) {
       currentIndex = 4;
-    } else if (currentRoute.contains('/personalization')) {
-      currentIndex = 5;
     }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -445,7 +443,6 @@ class MainLayout extends ConsumerWidget {
       {'icon': Icons.menu_book_rounded, 'label': 'Library'},
       {'icon': Icons.download_rounded, 'label': 'Downloads'},
       {'icon': Icons.bookmark_rounded, 'label': 'Enrolled'},
-      {'icon': Icons.tune_rounded, 'label': 'Personalize'},
     ];
     
     return navItems.asMap().entries.map<Widget>((entry) {
