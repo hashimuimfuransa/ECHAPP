@@ -52,29 +52,81 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
 
   Widget _buildDesktopLayout(dynamic authState) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F4C75), Color(0xFF041B2D)],
-                stops: [0.0, 0.3, 0.7, 1.0],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+              Color(0xFF0F4C75),
+              Color(0xFF041B2D),
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -150,
+              right: -150,
+              child: Container(
+                width: 500,
+                height: 500,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00C896).withOpacity(0.1),
+                      const Color(0xFF00C896).withOpacity(0.0),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          Positioned(top: -100, right: -100, child: Container(width: 400, height: 400, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF00C896).withOpacity(0.08)))),
-          Positioned(bottom: -50, left: -50, child: Container(width: 350, height: 350, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFFFBF00).withOpacity(0.05)))),
-          SafeArea(
-            child: Row(
-              children: [
-                Expanded(child: _buildLeftPanel()),
-                Expanded(child: _buildRightPanel(authState)),
-              ],
+            Positioned(
+              bottom: -100,
+              left: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00C896).withOpacity(0.08),
+                      const Color(0xFF00C896).withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            Center(
+              child: Container(
+                width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 30,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: _emailSent ? _buildSuccessMessage() : _buildRightPanel(authState),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,43 +351,93 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
 
   Widget _buildMobileLayout(dynamic authState) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F4C75)]))),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: const Color(0xFF00C896),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
                 children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)), const SizedBox(width: 8)]),
-                  const SizedBox(height: 30),
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: Padding(
-                        padding: const EdgeInsets.all(15),
-                        child: Image.asset(
-                          'assets/logo.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                   ),
-                  const SizedBox(height: 30),
-                  _emailSent ? _buildMobileSuccessMessage() : _buildMobileResetForm(authState),
+                  const Spacer(),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Logo
+            Center(
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Reset Password',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            const Text(
+              'Enter your email to receive a reset link',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // White card
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: _emailSent ? _buildMobileSuccessMessage() : _buildMobileResetForm(authState),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -344,36 +446,47 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Reset Password', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
         const SizedBox(height: 8),
-        const Text('Enter your email to receive a reset link', style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5)),
-        const SizedBox(height: 28),
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _emailController,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Enter your email',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                  prefixIcon: Icon(Icons.email_outlined, color: Colors.white.withOpacity(0.6)),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.08),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00C896), width: 2)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _sendReset(),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Email required';
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';
-                  return null;
-                },
+                child: TextFormField(
+                  controller: _emailController,
+                  style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Enter your email',
+                    hintStyle: const TextStyle(color: Color(0xFF8899AA)),
+                    prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF8899AA)),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _sendReset(),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Email required';
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Invalid email';
+                    return null;
+                  },
+                ),
               ),
               const SizedBox(height: 20),
               Material(
@@ -388,20 +501,44 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                     onTap: authState.isLoading ? null : _sendReset,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       child: authState.isLoading
-                          ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.9))))
-                          : const Text('Send Reset Link', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                          ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                          : const Text('Send Reset Link', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
                     ),
                   ),
                 ),
               ),
               if (authState.error != null && !_emailSent) ...[
                 const SizedBox(height: 12),
-                Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withOpacity(0.3))), child: Text(authState.error, style: TextStyle(color: Colors.red.shade400, fontSize: 11))),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red.shade400, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(authState.error, style: TextStyle(color: Colors.red.shade600, fontSize: 12))),
+                    ],
+                  ),
+                ),
               ],
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('Remember password? ', style: TextStyle(color: Colors.white70, fontSize: 12)), TextButton(onPressed: () => context.push('/login'), child: const Text('Sign in', style: TextStyle(color: Color(0xFF00C896), fontSize: 12, fontWeight: FontWeight.w700)))]),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Remember password? ', style: TextStyle(color: Color(0xFF4A5568), fontSize: 13)),
+                  TextButton(
+                    onPressed: () => context.push('/login'),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    child: const Text('Sign in', style: TextStyle(color: Color(0xFF00C896), fontSize: 13, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -413,23 +550,47 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 10),
-        const Text('Check Your Email', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 20),
+        Center(
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
+              boxShadow: [BoxShadow(color: const Color(0xFF00C896).withOpacity(0.3), blurRadius: 20, spreadRadius: 4)],
+            ),
+            child: const Icon(Icons.check_rounded, size: 40, color: Colors.white),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Check Your Email',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF1A2433), fontSize: 22, fontWeight: FontWeight.w900),
+        ),
         const SizedBox(height: 8),
         const Text(
           "We've sent a reset link to your email. Click it to create a new password.",
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.6),
+          style: TextStyle(color: Color(0xFF4A5568), fontSize: 13, height: 1.6),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 32),
         Material(
           color: Colors.transparent,
           child: Ink(
-            decoration: BoxDecoration(border: Border.all(color: const Color(0xFF00C896), width: 2), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: const Color(0xFF00C896).withOpacity(0.3), blurRadius: 20, spreadRadius: 2)],
+            ),
             child: InkWell(
               onTap: () => context.push('/login'),
               borderRadius: BorderRadius.circular(12),
-              child: Container(padding: const EdgeInsets.symmetric(vertical: 12), child: const Text('Back to Sign In', style: TextStyle(color: Color(0xFF00C896), fontSize: 14, fontWeight: FontWeight.w700), textAlign: TextAlign.center)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: const Text('Back to Sign In', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+              ),
             ),
           ),
         ),

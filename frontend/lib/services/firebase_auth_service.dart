@@ -382,9 +382,9 @@ class FirebaseAuthService {
   // Phone Authentication - Send OTP
   static Future<firebase_auth.ConfirmationResult?> verifyPhoneNumber({
     required String phoneNumber,
-    required firebase_auth.PhoneCodeSent? codeSent,
-    required firebase_auth.PhoneVerificationFailed? verificationFailed,
-    firebase_auth.PhoneCodeAutoRetrievalTimeout? codeAutoRetrievalTimeout,
+    required firebase_auth.PhoneCodeSent codeSent,
+    required firebase_auth.PhoneVerificationFailed verificationFailed,
+    required firebase_auth.PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout,
   }) async {
     try {
       debugPrint('FirebaseAuthService: Sending OTP to $phoneNumber');

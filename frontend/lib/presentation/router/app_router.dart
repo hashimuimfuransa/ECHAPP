@@ -151,10 +151,6 @@ class AppRouter {
                 builder: (context, state) => const LoginScreen(),
               ),
               GoRoute(
-                path: '/phone-auth',
-                builder: (context, state) => const PhoneAuthScreen(),
-              ),
-              GoRoute(
                 path: '/register',
                 builder: (context, state) => const RegisterScreen(),
               ),
@@ -179,6 +175,12 @@ class AppRouter {
                 },
               ),
               ],
+          ),
+
+          // Phone Auth - Outside MainLayout to prevent layout duplication
+          GoRoute(
+            path: '/phone-auth',
+            builder: (context, state) => const PhoneAuthScreen(),
           ),
 
           // Phone Collection - Outside MainLayout to prevent layout duplication

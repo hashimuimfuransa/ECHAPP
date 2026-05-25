@@ -9,28 +9,32 @@ class PhoneValidator {
     // Remove any non-digit characters except + for validation
     final cleanPhone = value.replaceAll(RegExp(r'[^\d+]'), '');
     
-    if (cleanPhone.length < 10) {
-      return 'Please enter a valid phone number (at least 10 digits)';
-    }
+    // Allow numbers with or without country code (validates as local number)
+    final digitsOnly = cleanPhone.replaceAll(RegExp(r'[^\d]'), '');
     
-    // Basic international phone format validation
-    if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('0')) {
-      return 'Please enter a valid phone number with country code (e.g., +1234567890)';
-    }
-    
-    // Additional validation for specific patterns
-    if (cleanPhone.startsWith('+')) {
-      // International format: +[country_code][number]
-      final countryCode = cleanPhone.substring(1, cleanPhone.length - 9);
-      final phoneNumber = cleanPhone.substring(cleanPhone.length - 9);
-      
-      if (countryCode.isEmpty || phoneNumber.length != 9) {
-        return 'Please enter a valid international phone number';
+    // Check for specific country code requirements
+    if (cleanPhone.startsWith('+7')) {
+      // Kazakhstan and Russia require exactly 10 digits after +7
+      final digitsAfterCountry = cleanPhone.substring(2);
+      if (digitsAfterCountry.length != 10) {
+        return 'Phone number must have exactly 10 digits for Kazakhstan/Russia (+7).';
       }
-    } else if (cleanPhone.startsWith('0')) {
-      // Local format: 0[number]
-      if (cleanPhone.length < 10) {
-        return 'Please enter a valid local phone number';
+    } else if (cleanPhone.startsWith('+')) {
+      // Other countries: generally 9-12 digits after country code
+      final digitsAfterCountry = cleanPhone.substring(1);
+      if (digitsAfterCountry.length < 9) {
+        return 'Phone number is too short. Most countries require 9-12 digits after the country code.';
+      }
+      if (digitsAfterCountry.length > 12) {
+        return 'Phone number is too long. Maximum 12 digits after country code.';
+      }
+    } else {
+      // Local format (no country code): 7-12 digits
+      if (digitsOnly.length < 7) {
+        return 'Phone number is too short. Please enter a valid phone number.';
+      }
+      if (digitsOnly.length > 12) {
+        return 'Phone number is too long. Maximum 12 digits allowed.';
       }
     }
     
@@ -41,15 +45,17 @@ class PhoneValidator {
     // Remove any non-digit characters except +
     String cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
     
-    // If it doesn't have a country code and starts with 0, keep as is
-    if (cleanPhone.startsWith('0')) {
-      return cleanPhone;
+    // If it has a country code (+)
+    if (cleanPhone.startsWith('+')) {
+      // Strip leading zeros after the country code (common user mistake)
+      // E.g., +0793... becomes +793...
+      String afterPlus = cleanPhone.substring(1);
+      afterPlus = afterPlus.replaceFirst(RegExp(r'^0+'), '');
+      return '+$afterPlus';
     }
     
-    // If it has a country code, ensure it starts with +
-    if (!cleanPhone.startsWith('+') && cleanPhone.length >= 10) {
-      // Assume it's a local number, add common country code if needed
-      // This can be customized based on the target region
+    // If it starts with 0, keep as local format
+    if (cleanPhone.startsWith('0')) {
       return cleanPhone;
     }
     
@@ -58,5 +64,23 @@ class PhoneValidator {
   
   static bool isValidPhoneNumber(String phone) {
     return validatePhone(phone) == null;
+  }
+  
+  static String? getPhoneFormatError(String phone) {
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    if (cleanPhone.startsWith('+')) {
+      final digitsAfterPlus = cleanPhone.substring(1);
+      final digitsWithoutLeadingZero = digitsAfterPlus.replaceFirst(RegExp(r'^0+'), '');
+      
+      if (digitsWithoutLeadingZero.length < 8) {
+        return 'Phone number is too short. Most countries require 9-12 digits after the country code.';
+      }
+      if (digitsWithoutLeadingZero.length > 15) {
+        return 'Phone number is too long. E.164 format requires max 15 digits.';
+      }
+    }
+    
+    return null;
   }
 }

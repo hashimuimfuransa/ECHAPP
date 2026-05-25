@@ -53,161 +53,81 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
 
   Widget _buildDesktopLayout() {
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0F172A),
-                  Color(0xFF1E293B),
-                  Color(0xFF0F4C75),
-                  Color(0xFF041B2D),
-                ],
-                stops: [0.0, 0.3, 0.7, 1.0],
-              ),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+              Color(0xFF0F4C75),
+              Color(0xFF041B2D),
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
           ),
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF00C896).withOpacity(0.08),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 350,
-              height: 350,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFFBF00).withOpacity(0.05),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildLeftPanel(),
-                ),
-                Expanded(
-                  child: _buildRightPanel(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeftPanel() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF00C896).withOpacity(0.15),
-            const Color(0xFF0A4A5A).withOpacity(0.1),
-          ],
         ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Column(
-                children: [
-                  Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00C896).withOpacity(0.3),
-                          blurRadius: 40,
-                          spreadRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Padding(
-                        padding: const EdgeInsets.all(25),
-                        child: Image.asset(
-                          'assets/logo.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  const Text(
-                    'Excellence Coaching Hub',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF00C896),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: 50,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00C896),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  const Text(
-                    'Unlock your full potential with expert-led courses and personalized mentorship. Choose your path to success.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      height: 1.6,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _StatItem('5,200+', 'Active Learners'),
-                      const SizedBox(width: 60),
-                      _StatItem('98%', 'Satisfaction'),
-                      const SizedBox(width: 60),
-                      _StatItem('120+', 'Expert Coaches'),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -150,
+              right: -150,
+              child: Container(
+                width: 500,
+                height: 500,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00C896).withOpacity(0.1),
+                      const Color(0xFF00C896).withOpacity(0.0),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              bottom: -100,
+              left: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00C896).withOpacity(0.08),
+                      const Color(0xFF00C896).withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 30,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: _buildRightPanel(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -331,125 +251,135 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   Widget _buildMobileLayout() {
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF041B2D),
-                  Color(0xFF072A3E),
-                  Color(0xFF0A4A5A),
+      backgroundColor: const Color(0xFF00C896),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                  ),
+                  const Spacer(),
                 ],
               ),
             ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallMobile ? 20 : 24, 
-                vertical: isSmallMobile ? 20 : 32
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+            
+            // Content
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallMobile ? 20 : 24, 
+                    vertical: isSmallMobile ? 24 : 32
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      SizedBox(height: isSmallMobile ? 20 : 30),
+                      
+                      // Logo
+                      Center(
+                        child: Container(
+                          width: isSmallMobile ? 80 : 100,
+                          height: isSmallMobile ? 80 : 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00C896).withOpacity(0.3),
+                                blurRadius: 20,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Padding(
+                              padding: EdgeInsets.all(isSmallMobile ? 12 : 15),
+                              child: Image.asset(
+                                'assets/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
+                      
+                      SizedBox(height: isSmallMobile ? 20 : 30),
+                      
+                      Text(
+                        'Choose Your Path',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFF1A2433),
+                          fontSize: isSmallMobile ? 24 : 28,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      
+                      SizedBox(height: isSmallMobile ? 6 : 8),
+                      
+                      Text(
+                        'Select how you\'d like to proceed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFF4A5568),
+                          fontSize: isSmallMobile ? 13 : 14,
+                          height: 1.5,
+                        ),
+                      ),
+                      
+                      SizedBox(height: isSmallMobile ? 24 : 32),
+                      
+                      _AuthOptionButton(
+                        icon: Icons.login_rounded,
+                        title: 'Sign In',
+                        subtitle: 'Access your account',
+                        color: const Color(0xFF4CAF50),
+                        onTap: () => context.push('/login'),
+                        compact: isSmallMobile,
+                      ),
+                      SizedBox(height: isSmallMobile ? 12 : 16),
+                      _AuthOptionButton(
+                        icon: Icons.person_add_rounded,
+                        title: 'Create Account',
+                        subtitle: 'Join our community',
+                        color: const Color(0xFF2196F3),
+                        onTap: () => context.push('/register'),
+                        compact: isSmallMobile,
+                      ),
+                      SizedBox(height: isSmallMobile ? 12 : 16),
+                      _AuthOptionButton(
+                        icon: Icons.lock_reset_rounded,
+                        title: 'Reset Password',
+                        subtitle: 'Recover your access',
+                        color: const Color(0xFFFF9800),
+                        onTap: () => context.push('/forgot-password'),
+                        compact: isSmallMobile,
+                      ),
+                      SizedBox(height: isSmallMobile ? 24 : 32),
+                      const _TermsFooter(),
                     ],
                   ),
-                  SizedBox(height: isSmallMobile ? 12 : 30),
-                  Center(
-                    child: Container(
-                      width: isSmallMobile ? 100 : 140,
-                      height: isSmallMobile ? 100 : 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF047857)],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.4),
-                            blurRadius: isSmallMobile ? 24 : 40,
-                            spreadRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Padding(
-                          padding: EdgeInsets.all(isSmallMobile ? 15 : 20),
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: isSmallMobile ? 24 : 40),
-                  Text(
-                    'Choose Your Path',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: isSmallMobile ? 28 : 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.0,
-                    ),
-                  ),
-                  SizedBox(height: isSmallMobile ? 6 : 8),
-                  Text(
-                    'Select how you\'d like to proceed',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: isSmallMobile ? 14 : 16,
-                      height: 1.5,
-                    ),
-                  ),
-                  SizedBox(height: isSmallMobile ? 30 : 50),
-                  _AuthOptionButton(
-                    icon: Icons.login_rounded,
-                    title: 'Sign In',
-                    subtitle: 'Access your account',
-                    color: const Color(0xFF4CAF50),
-                    onTap: () => context.push('/login'),
-                    compact: isSmallMobile,
-                  ),
-                  SizedBox(height: isSmallMobile ? 12 : 16),
-                  _AuthOptionButton(
-                    icon: Icons.person_add_rounded,
-                    title: 'Create Account',
-                    subtitle: 'Join our community',
-                    color: const Color(0xFF2196F3),
-                    onTap: () => context.push('/register'),
-                    compact: isSmallMobile,
-                  ),
-                  SizedBox(height: isSmallMobile ? 12 : 16),
-                  _AuthOptionButton(
-                    icon: Icons.lock_reset_rounded,
-                    title: 'Reset Password',
-                    subtitle: 'Recover your access',
-                    color: const Color(0xFFFF9800),
-                    onTap: () => context.push('/forgot-password'),
-                    compact: isSmallMobile,
-                  ),
-                  SizedBox(height: isSmallMobile ? 24 : 40),
-                  const _TermsFooter(),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -507,37 +437,29 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.all(widget.compact ? 16 : 24),
+          padding: EdgeInsets.all(widget.compact ? 16 : 20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: _isHovered
-                  ? [
-                      widget.color.withOpacity(0.15),
-                      widget.color.withOpacity(0.08),
-                    ]
-                  : [
-                      Colors.white.withOpacity(0.08),
-                      Colors.white.withOpacity(0.05),
-                    ],
-            ),
-            borderRadius: BorderRadius.circular(widget.compact ? 16 : 20),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(widget.compact ? 12 : 16),
             border: Border.all(
               color: _isHovered
                   ? widget.color.withOpacity(0.5)
-                  : Colors.white.withOpacity(0.1),
-              width: _isHovered ? 2 : 1,
+                  : const Color(0xFFE2E8F0),
+              width: _isHovered ? 2 : 1.5,
             ),
-            boxShadow: _isHovered
-                ? [
-                    BoxShadow(
-                      color: widget.color.withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : [],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+              if (_isHovered)
+                BoxShadow(
+                  color: widget.color.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4),
+                ),
+            ],
           ),
           child: Row(
             children: [
@@ -576,7 +498,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                     Text(
                       widget.title,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: const Color(0xFF1A2433),
                         fontSize: widget.compact ? 16 : 18,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
@@ -586,7 +508,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                     Text(
                       widget.subtitle,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: const Color(0xFF4A5568),
                         fontSize: widget.compact ? 12 : 13,
                         fontWeight: FontWeight.w400,
                       ),
@@ -597,7 +519,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
               const SizedBox(width: 12),
               Icon(
                 Icons.arrow_forward_rounded,
-                color: _isHovered ? widget.color : Colors.white.withOpacity(0.5),
+                color: _isHovered ? widget.color : const Color(0xFF8899AA),
                 size: widget.compact ? 20 : 24,
               ),
             ],
@@ -650,7 +572,7 @@ class _TermsFooter extends StatelessWidget {
     return Text.rich(
       TextSpan(
         style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: const Color(0xFF8899AA),
             fontSize: isDesktop ? 12.5 : 11.5,
             height: 1.5),
         children: [

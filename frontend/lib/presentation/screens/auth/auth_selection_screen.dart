@@ -313,18 +313,20 @@ class _BrandBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: isMobile 
-            ? [const Color(0xFF02101A), const Color(0xFF041B2D), const Color(0xFF083A49)]
-            : [const Color(0xFF010A12), const Color(0xFF031422), const Color(0xFF072A3E)],
-          stops: const [0.0, 0.45, 1.0],
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E293B),
+            Color(0xFF0F4C75),
+            Color(0xFF041B2D),
+          ],
+          stops: [0.0, 0.3, 0.7, 1.0],
         ),
       ),
       child: Stack(
@@ -620,6 +622,114 @@ class _GoogleGPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
+// ─── Phone Auth Button with attractive gradient ─────────────────────────────────
+
+class _PhoneAuthButton extends StatefulWidget {
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+  const _PhoneAuthButton({
+    required this.label,
+    this.isLoading = false,
+    this.onPressed,
+  });
+  @override
+  State<_PhoneAuthButton> createState() => _PhoneAuthButtonState();
+}
+
+class _PhoneAuthButtonState extends State<_PhoneAuthButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween<double>(begin: 1, end: 0.97).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: isSmallMobile ? 52 : 56,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFE2E8F0),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.isLoading)
+                  const SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation(Color(0xFF00C896)),
+                  ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00C896).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF00C896), size: 22),
+                  ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(widget.label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Color(0xFF1A2433),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1)),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C896).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF00C896), size: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Email / primary button ───────────────────────────────────────────────────
 
 class _PrimaryButton extends StatefulWidget {
@@ -667,18 +777,18 @@ class _PrimaryButtonState extends State<_PrimaryButton>
         child: Container(
           height: isSmallMobile ? 52 : 56,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFE2E8F0),
+              width: 1.5,
             ),
-            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                  color: const Color(0xFF059669).withOpacity(0.3),
-                  blurRadius: 12,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 4)),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
           child: Padding(
@@ -691,21 +801,22 @@ class _PrimaryButtonState extends State<_PrimaryButton>
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation(Colors.white)),
+                        valueColor: AlwaysStoppedAnimation(Color(0xFF2196F3)),
+                  ),
                   )
                 else
-                  const Icon(Icons.mail_outline_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.mail_outline_rounded, color: Color(0xFF2196F3), size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(widget.label,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF1A2433),
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.1)),
                 ),
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2196F3), size: 20),
               ],
             ),
           ),
@@ -804,7 +915,7 @@ class _TermsFooter extends StatelessWidget {
 
 // ─── Fade in slide animation ────────────────────────────────────────────────
 
-class _FadeInSlide extends StatelessWidget {
+class _FadeInSlide extends StatefulWidget {
   final Widget child;
   final Duration delay;
   final Offset offset;
@@ -816,12 +927,25 @@ class _FadeInSlide extends StatelessWidget {
   });
 
   @override
+  State<_FadeInSlide> createState() => _FadeInSlideState();
+}
+
+class _FadeInSlideState extends State<_FadeInSlide> {
+  late final Future<void> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = Future.delayed(widget.delay);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: Future.delayed(delay),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return Opacity(opacity: 0, child: child);
+          return Opacity(opacity: 0, child: widget.child);
         }
         return TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
@@ -831,12 +955,12 @@ class _FadeInSlide extends StatelessWidget {
             return Opacity(
               opacity: value,
               child: Transform.translate(
-                offset: Offset(offset.dx * (1 - value), offset.dy * (1 - value)),
+                offset: Offset(widget.offset.dx * (1 - value), widget.offset.dy * (1 - value)),
                 child: child,
               ),
             );
           },
-          child: child,
+          child: widget.child,
         );
       },
     );
@@ -1036,8 +1160,7 @@ class _AuthCard extends StatelessWidget {
         // Phone Auth - Primary Option
         _FadeInSlide(
           delay: const Duration(milliseconds: 400),
-          child: _PrimaryButton(
-            icon: Icons.phone_outlined,
+          child: _PhoneAuthButton(
             label: 'Continue with Phone',
             isLoading: isPhoneLoading,
             onPressed: isLoading ? null : onPhone,
@@ -1129,6 +1252,7 @@ class AuthSelectionScreen extends ConsumerStatefulWidget {
 class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     with SingleTickerProviderStateMixin {
   bool _hasNavigated = false;
+  bool _listenerRegistered = false;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -1153,6 +1277,15 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_hasNavigated) _checkAndNavigate();
+    if (!_listenerRegistered) {
+      _listenerRegistered = true;
+      ref.listenManual(authProvider, (_, current) {
+        if (current.user != null && !current.isLoading && !_hasNavigated) {
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _checkAndNavigate());
+        }
+      });
+    }
   }
 
   @override
@@ -1162,7 +1295,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   }
 
   void _checkAndNavigate() async {
-    final authState = ref.watch(authProvider);
+    final authState = ref.read(authProvider);
     if (authState.user != null && !authState.isLoading && !_hasNavigated) {
       _hasNavigated = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -1195,13 +1328,6 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-
-    ref.listen(authProvider, (_, current) {
-      if (current.user != null && !current.isLoading && !_hasNavigated) {
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => _checkAndNavigate());
-      }
-    });
 
     return Scaffold(
       backgroundColor: _kSurface,
@@ -1264,89 +1390,120 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
 
   Widget _mobileLayout(dynamic authState) {
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    final size = MediaQuery.of(context).size;
-    final isShort = size.height < 680;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background layer
-          const _BrandBackground(compact: true),
-          
-          // Content
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: isShort ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallMobile ? 16 : 20, 
-                    vertical: isSmallMobile ? 10 : 16
+      backgroundColor: const Color(0xFF00C896),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  if (context.canPop())
+                    IconButton(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    ),
+                  const Spacer(),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight - (isSmallMobile ? 20 : 32)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Logo & Branding at top
-                        const _BrandingSection(isMobile: true),
-                        
-                        SizedBox(height: isSmallMobile ? 12 : 18),
-                        
-                        // Solid Bottom-Sheet style card
-                        Container(
-                          width: double.infinity,
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallMobile ? 20 : 24, 
+                    vertical: isSmallMobile ? 24 : 32
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 20),
+                      
+                      // Logo
+                      Center(
+                        child: Container(
+                          width: isSmallMobile ? 80 : 100,
+                          height: isSmallMobile ? 80 : 100,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9), // Very light gray-blue
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(40),
-                              topRight: Radius.circular(40),
-                              bottomLeft: Radius.circular(32),
-                              bottomRight: Radius.circular(32),
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 40,
-                                offset: const Offset(0, -10),
+                                color: const Color(0xFF00C896).withOpacity(0.3),
+                                blurRadius: 20,
+                                spreadRadius: 4,
                               ),
                             ],
                           ),
-                          padding: EdgeInsets.fromLTRB(
-                            isSmallMobile ? 20 : 28, 
-                            isSmallMobile ? 24 : 32, 
-                            isSmallMobile ? 20 : 28, 
-                            isSmallMobile ? 20 : 28
-                          ),
-                          child: _AuthCard(
-                            isLoading: authState.isLoading,
-                            isEmailLoading: authState.isEmailLoading,
-                            isGoogleLoading: authState.isGoogleLoading,
-                            isPhoneLoading: authState.isPhoneLoading,
-                            error: authState.error,
-                            onEmail: () => context.push('/email-auth-option'),
-                            onGoogle: _handleGoogleSignIn,
-                            onPhone: () => context.push('/phone-auth'),
+                          child: ClipOval(
+                            child: Padding(
+                              padding: EdgeInsets.all(isSmallMobile ? 12 : 15),
+                              child: Image.asset(
+                                'assets/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      
+                      SizedBox(height: isSmallMobile ? 20 : 30),
+                      
+                      const Text(
+                        'Choose Your Path',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF1A2433),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      const Text(
+                        'Select how you\'d like to proceed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF4A5568),
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                      ),
+                      
+                      SizedBox(height: isSmallMobile ? 24 : 32),
+                      
+                      _AuthCard(
+                        isLoading: authState.isLoading,
+                        isEmailLoading: authState.isEmailLoading,
+                        isGoogleLoading: authState.isGoogleLoading,
+                        isPhoneLoading: authState.isPhoneLoading,
+                        error: authState.error,
+                        onEmail: () => context.push('/email-auth-option'),
+                        onGoogle: _handleGoogleSignIn,
+                        onPhone: () => context.push('/phone-auth'),
+                      ),
+                    ],
                   ),
-                );
-              }
-            ),
-          ),
-          
-          if (context.canPop())
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: 10,
-              child: IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

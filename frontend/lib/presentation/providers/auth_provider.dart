@@ -180,6 +180,53 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Offline login using cached credentials
+  Future<void> loginOffline() async {
+    debugPrint('AuthProvider: Starting offline login');
+    state = state.copyWith(isLoading: true, isEmailLoading: true, error: null);
+    
+    try {
+      // Check if we have cached user data
+      final userId = await _storageManager.getUserId();
+      final userRole = await _storageManager.getUserRole();
+      final userPhone = await _storageManager.getUserPhone();
+      final hasCompletedOnboarding = await _storageManager.hasCompletedOnboarding();
+      
+      if (userId == null || userRole == null) {
+        throw Exception('No cached credentials found. Please login with internet connection first.');
+      }
+      
+      debugPrint('AuthProvider: Found cached credentials for user: $userId');
+      
+      // Create a minimal user object from cached data
+      final cachedUser = User(
+        id: userId,
+        email: '', // Email not cached for privacy
+        fullName: 'User',
+        role: userRole,
+        phone: userPhone,
+        hasCompletedOnboarding: hasCompletedOnboarding,
+        createdAt: DateTime.now(), // Use current time for offline login
+      );
+      
+      state = state.copyWith(
+        isLoading: false,
+        isEmailLoading: false,
+        user: cachedUser,
+        error: 'You are offline. Using cached credentials. Some features may be limited.'
+      );
+      
+      debugPrint('AuthProvider: Offline login successful');
+    } catch (e) {
+      debugPrint('AuthProvider: Offline login error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        isEmailLoading: false,
+        error: 'No cached credentials found. Please connect to internet and login first.'
+      );
+    }
+  }
+
   // Phone Authentication - Send OTP
   Future<void> sendPhoneOTP(String phoneNumber) async {
     debugPrint('AuthProvider: Sending OTP to $phoneNumber');

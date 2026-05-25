@@ -323,7 +323,7 @@ const firebaseLogin = async (req, res) => {
         // 2. Firebase display name (if available)
         // 3. Email username
         // 4. Default fallback
-        displayName = fullName || firebaseUser.displayName || firebaseUser.email.split('@')[0] || 'Firebase User';
+        displayName = fullName || firebaseUser.displayName || (firebaseUser.email && firebaseUser.email.split('@')[0]) || 'Firebase User';
         console.log('Final displayName selected:', displayName);
         
         // Get phone number from Firebase (for phone auth users)
@@ -336,7 +336,7 @@ const firebaseLogin = async (req, res) => {
       
       user = await User.create({
         firebaseUid: decodedToken.uid,
-        email: decodedToken.email,
+        ...(decodedToken.email && { email: decodedToken.email }),
         fullName: displayName,
         role: 'student',
         provider: 'firebase',
@@ -378,7 +378,7 @@ const firebaseLogin = async (req, res) => {
       // Update user info from Firebase Auth
       try {
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
-        const newDisplayName = firebaseUser.displayName || firebaseUser.email.split('@')[0];
+        const newDisplayName = firebaseUser.displayName || (firebaseUser.email && firebaseUser.email.split('@')[0]);
         const newPhoneNumber = firebaseUser.phoneNumber;
         
         let needsSave = false;

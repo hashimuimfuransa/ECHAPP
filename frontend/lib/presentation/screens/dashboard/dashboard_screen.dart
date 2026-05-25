@@ -392,6 +392,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 loading: () => _buildLoadingCard(context, 'Continue Learning'),
                 error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
               ),
+              const SizedBox(height: 24),
+              const DownloadsSection(),
               const SizedBox(height: 32),
               // Modern Category Section
               _buildModernCategorySection(context),
@@ -453,6 +455,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           loading: () => _buildLoadingCard(context, 'Continue Learning'),
           error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
         ),
+        const SizedBox(height: 24),
+        const DownloadsSection(),
         const SizedBox(height: 32),
         // Modern Category Section
         _buildModernCategorySection(context),

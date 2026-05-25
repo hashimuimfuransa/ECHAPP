@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class EnterResetCodeScreen extends ConsumerStatefulWidget {
   const EnterResetCodeScreen({super.key});
@@ -36,250 +34,232 @@ class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientBackground(
-        colors: AppTheme.oceanGradient,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 50),
-                      
-                      // Header with icon and title
-                      Column(
-                        children: [
-                          Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF00C896).withOpacity(0.3),
-                                  blurRadius: 40,
-                                  spreadRadius: 8,
-                                )
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Padding(
-                                padding: const EdgeInsets.all(25),
-                                child: Image.asset(
-                                  'assets/logo.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          const Text(
-                            'Excellence Coaching Hub',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF00C896),
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 25),
-                          Text(
-                            'Enter Reset Code',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Enter the code sent to your email to reset your password',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white70,
-                                  height: 1.5,
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 45),
-                        ],
-                      ),
-    
-                      // Code Entry Form Card
-                      GlassContainer(
-                        child: Padding(
-                          padding: const EdgeInsets.all(28.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Code Field
-                              TextFormField(
-                                controller: _codeController,
-                                decoration: InputDecoration(
-                                  labelText: 'Reset Code',
-                                  hintText: 'Enter the 6-digit code',
-                                  prefixIcon: const Icon(Icons.vpn_key_outlined, color: Colors.white70),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Color(0xFF4facfe), width: 2),
-                                  ),
-                                  labelStyle: const TextStyle(color: Colors.white70),
-                                  hintStyle: const TextStyle(color: Colors.white30),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.1),
-                                ),
-                                style: const TextStyle(color: Colors.white),
-                                keyboardType: TextInputType.text,
-                                textInputAction: TextInputAction.done,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter the reset code';
-                                  }
-                                  if (value.length < 6) {
-                                    return 'Code must be at least 6 characters';
-                                  }
-                                  return null;
-                                },
-                                onFieldSubmitted: (_) => _submitCode(),
-                              ),
-    
-                              const SizedBox(height: 25),
-    
-                              // Submit Button
-                              AnimatedButton(
-                                text: 'Submit Code',
-                                onPressed: _isLoading ? () {} : _submitCode,
-                                isLoading: _isLoading,
-                                color: const Color(0xFF4facfe),
-                              ),
-    
-                              const SizedBox(height: 20),
-    
-                              // Instructions
-                              Container(
-                                padding: const EdgeInsets.all(15),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Instructions:',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      '• Check your email for the reset code',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      '• The code expires in 1 hour',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      '• If you don\'t see the email, check spam folder',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-    
-                      const SizedBox(height: 40),
-    
-                      // Back to login
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Remember your password? ",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context.go('/login');
-                            },
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-    
-                      const SizedBox(height: 20),
-    
-                      // Didn't receive code?
-                      TextButton(
-                        onPressed: () {
-                          context.go('/forgot-password');
-                        },
-                        child: const Text(
-                          'Didn\'t receive the code? Request again',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
+      backgroundColor: const Color(0xFF00C896),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  if (context.canPop())
+                    IconButton(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    ),
+                  const Spacer(),
+                ],
+              ),
+            ),
+
+            // Logo
+            Center(
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset('assets/logo.png', fit: BoxFit.contain),
                   ),
                 ),
               ),
-              if (context.canPop())
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Enter Reset Code',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            const Text(
+              'Enter the code sent to your email',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+
+            const SizedBox(height: 20),
+
+            // White card
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
                 ),
-            ],
-          ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Code Field
+                        Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextFormField(
+                            controller: _codeController,
+                            style: const TextStyle(
+                              color: Color(0xFF1A2433),
+                              fontSize: 16,
+                              letterSpacing: 4,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.done,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter reset code',
+                              hintStyle: TextStyle(
+                                color: Color(0xFF8899AA),
+                                letterSpacing: 0,
+                                fontWeight: FontWeight.w400,
+                                fontSize: 14,
+                              ),
+                              prefixIcon: Icon(Icons.vpn_key_outlined, color: Color(0xFF8899AA)),
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Please enter the reset code';
+                              if (value.length < 6) return 'Code must be at least 6 characters';
+                              return null;
+                            },
+                            onFieldSubmitted: (_) => _submitCode(),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Submit Button
+                        Material(
+                          color: Colors.transparent,
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFF00C896), Color(0xFF009E76)]),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [BoxShadow(color: const Color(0xFF00C896).withOpacity(0.3), blurRadius: 20, spreadRadius: 2)],
+                            ),
+                            child: InkWell(
+                              onTap: _isLoading ? null : _submitCode,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                child: _isLoading
+                                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                                    : const Text('Submit Code', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.red.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade400, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(_errorMessage!, style: TextStyle(color: Colors.red.shade600, fontSize: 12))),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 20),
+
+                        // Instructions
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFBBF7D0), width: 1),
+                          ),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Instructions:', style: TextStyle(color: Color(0xFF065F46), fontWeight: FontWeight.bold, fontSize: 13)),
+                              SizedBox(height: 8),
+                              Text('• Check your email for the reset code', style: TextStyle(color: Color(0xFF047857), fontSize: 12)),
+                              SizedBox(height: 3),
+                              Text('• The code expires in 1 hour', style: TextStyle(color: Color(0xFF047857), fontSize: 12)),
+                              SizedBox(height: 3),
+                              Text('• If you don\'t see it, check spam folder', style: TextStyle(color: Color(0xFF047857), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Remember password? ', style: TextStyle(color: Color(0xFF4A5568), fontSize: 13)),
+                            TextButton(
+                              onPressed: () => context.go('/login'),
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                              child: const Text('Sign In', style: TextStyle(color: Color(0xFF00C896), fontSize: 13, fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+
+                        TextButton(
+                          onPressed: () => context.go('/forgot-password'),
+                          child: const Text(
+                            'Didn\'t receive the code? Request again',
+                            style: TextStyle(color: Color(0xFF4A5568), fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
