@@ -889,7 +889,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
               Positioned.fill(
                 child: Center(
                   child: Text(
-                    '${(progress * 100).toInt()}%',
+                    '${(progress.isFinite ? (progress * 100) : 0).toInt()}%',
                     style: const TextStyle(
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
@@ -946,7 +946,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                           style: TextStyle(
                             color: isCurrent || isAnswered 
                               ? Colors.white 
-                              : AppTheme.blackColor,
+                              : AppTheme.getTextColor(context),
                             fontWeight: FontWeight.bold,
                             fontSize: 10,
                           ),
@@ -1084,12 +1084,12 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                         border: Border.all(
                           color: isSelected 
                             ? AppTheme.primary 
-                            : Colors.grey.shade300,
+                            : AppTheme.getBorderColor(context),
                           width: isSelected ? 2 : 1,
                         ),
                         color: isSelected 
                           ? AppTheme.primary.withOpacity(0.08) 
-                          : Colors.white,
+                          : AppTheme.getCardColor(context),
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -1107,12 +1107,12 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                                   decoration: BoxDecoration(
                                     color: isSelected 
                                       ? AppTheme.primary 
-                                      : Colors.grey.shade100,
+                                      : AppTheme.getBorderColor(context).withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(11),
                                     border: Border.all(
                                       color: isSelected 
                                         ? AppTheme.primary 
-                                        : Colors.grey.shade300,
+                                        : AppTheme.getBorderColor(context),
                                       width: 1.5,
                                     ),
                                   ),
@@ -1137,7 +1137,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
                                         : FontWeight.normal,
                                       color: isSelected 
                                         ? AppTheme.primary 
-                                        : AppTheme.blackColor,
+                                        : AppTheme.getTextColor(context),
                                       height: 1.3,
                                     ),
                                   ),
@@ -1316,7 +1316,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> with WidgetsBinding
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.getCardColor(context),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1673,7 +1673,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.blackColor
+                color: AppTheme.getTextColor(context)
               ),
             ),
             const SizedBox(height: 16),
@@ -1684,7 +1684,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor
+                color: AppTheme.getTextColor(context)
               ),
             ),
             
@@ -1717,7 +1717,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                 Container(
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: AppTheme.getBorderColor(context).withOpacity(0.4),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -1778,7 +1778,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor
+                color: AppTheme.getTextColor(context)
               ),
             ),
             const SizedBox(height: 16),
@@ -1818,9 +1818,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppTheme.greyColor
+              color: AppTheme.getSecondaryTextColor(context)
             ),
           ),
         ),
@@ -1829,7 +1829,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: valueColor ?? AppTheme.blackColor,
+            color: valueColor ?? AppTheme.getTextColor(context),
           ),
         ),
       ],

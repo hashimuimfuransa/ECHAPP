@@ -190,7 +190,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.getCardColor(context),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -210,7 +210,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                       ),
                     ),
                     Text(
@@ -232,7 +232,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                       ),
                     ),
                     Text(
@@ -254,7 +254,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.blackColor,
+                        color: AppTheme.getTextColor(context),
                       ),
                     ),
                     Container(
@@ -295,7 +295,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.getCardColor(context),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _getScoreColor(isCorrect).withOpacity(0.2),
@@ -350,7 +350,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                                     _getQuestionTypeLabel(questionType),
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: AppTheme.greyColor,
+                                      color: AppTheme.getSecondaryTextColor(context),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -389,7 +389,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.blackColor,
+                                color: AppTheme.getTextColor(context),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -398,9 +398,9 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                                color: AppTheme.getCardColor(context),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade200),
+                                border: Border.all(color: AppTheme.getBorderColor(context)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,7 +409,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                                     'Your Answer:',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: AppTheme.greyColor,
+                                      color: AppTheme.getSecondaryTextColor(context),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -428,7 +428,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                                         formattedAnswer,
                                         style: TextStyle(
                                           fontSize: 14,
-                                          color: AppTheme.blackColor,
+                                          color: AppTheme.getTextColor(context),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       );

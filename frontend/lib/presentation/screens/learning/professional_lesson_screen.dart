@@ -122,7 +122,7 @@ class _ProfessionalLessonScreenState
   List<Map<String, dynamic>> _courseFeedback = [];
 
   // ── Services ──────────────────────────────────────────────────────────────
-  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey();
+  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   final RealAIChatService _aiChatService = RealAIChatService();
   final String _conversationId =
       'conversation_${DateTime.now().millisecondsSinceEpoch}';
@@ -180,8 +180,9 @@ class _ProfessionalLessonScreenState
     } else if (_downloadProgress >= 1.0) {
       return 'Complete!';
     } else {
-      return '${(_downloadProgress * 100).toInt()}%';
+      return '${(_downloadProgress.isFinite ? (_downloadProgress * 100).clamp(0, 100) : 0).toInt()}%';
     }
+
   }
 
   Future<void> _loadLessonData() async {

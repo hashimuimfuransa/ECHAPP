@@ -53,7 +53,7 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
         title: const Text('Certificate Verification'),
         backgroundColor: AppTheme.primaryGreen,
@@ -85,12 +85,12 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
               color: Colors.redAccent,
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Verification Failed',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
               ),
             ),
             const SizedBox(height: 12),
@@ -99,7 +99,7 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                color: AppTheme.greyColor,
+                color: AppTheme.getSecondaryTextColor(context),
               ),
             ),
             const SizedBox(height: 32),
@@ -173,7 +173,7 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: AppTheme.greyColor,
+                  color: AppTheme.getSecondaryTextColor(context),
                 ),
               ),
               const SizedBox(height: 40),
@@ -242,7 +242,7 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.getCardColor(context),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -266,17 +266,17 @@ class _CertificateVerificationScreenState extends ConsumerState<CertificateVerif
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.greyColor,
+                    color: AppTheme.getSecondaryTextColor(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.blackColor,
+                    color: AppTheme.getTextColor(context),
                   ),
                 ),
               ],

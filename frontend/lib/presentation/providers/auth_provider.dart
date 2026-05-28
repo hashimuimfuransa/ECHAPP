@@ -865,43 +865,85 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> checkAuthStatus() async {
+    // IMPORTANT: drive splash navigation using isLoading.
+    state = state.copyWith(isLoading: true, error: null);
     try {
       final firebaseUser = FirebaseAuthService.getCurrentUser();
-      
+
       if (firebaseUser != null) {
         debugPrint('AuthProvider: Firebase user found: ${firebaseUser.email}');
-        
+
         // Check if we have stored tokens and user data
         final storedUserId = await _storageManager.getUserId();
         final storedUserRole = await _storageManager.getUserRole();
         final storedToken = await _storageManager.getAccessToken();
         final storedPhone = await _storageManager.getUserPhone();
-        
-        if (storedUserId != null && 
-            storedUserRole != null && 
-            storedToken != null && 
-            storedUserId == firebaseUser.uid) {
-          
-          debugPrint('AuthProvider: Valid session found for user: $storedUserId');
-          // Recreate user from stored data
-          final user = User(
-            id: firebaseUser.uid,
-            fullName: firebaseUser.displayName ?? '',
-            email: firebaseUser.email ?? '',
-            phone: storedPhone,
-            role: storedUserRole,
-            createdAt: DateTime.fromMillisecondsSinceEpoch(firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch),
-          );
-          
-          // Initialize and sync FCM token
+        final hasCompletedOnboarding = await _storageManager.hasCompletedOnboarding();
+
+        // If we have a valid token and role, restore the session
+        // Note: storedUserId is backend MongoDB ID, firebaseUser.uid is Firebase UID
+        // They may differ, so we check for presence of valid stored data instead
+        if (storedUserRole != null && storedToken != null) {
+          debugPrint('AuthProvider: Valid session found for user: ${firebaseUser.uid}');
+
+          // Try to refresh user data from backend to ensure it's up to date
+          try {
+            final freshUser = await _fetchUserProfileFromBackend(storedToken);
+            if (freshUser != null) {
+              debugPrint('AuthProvider: Restored user from backend: ${freshUser.email}');
+              state = state.copyWith(
+                user: freshUser,
+                isEmailLoading: false,
+                isGoogleLoading: false,
+              );
+            } else {
+              // Fallback: recreate user from stored data + Firebase data
+              final user = User(
+                id: storedUserId ?? firebaseUser.uid,
+                fullName: firebaseUser.displayName ?? 'User',
+                email: firebaseUser.email ?? '',
+                phone: storedPhone,
+                role: storedUserRole,
+                hasCompletedOnboarding: hasCompletedOnboarding,
+                createdAt: DateTime.fromMillisecondsSinceEpoch(
+                  firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ??
+                      DateTime.now().millisecondsSinceEpoch,
+                ),
+              );
+              state = state.copyWith(
+                user: user,
+                isEmailLoading: false,
+                isGoogleLoading: false,
+              );
+            }
+          } catch (e) {
+            debugPrint('AuthProvider: Failed to fetch fresh user data, using cached: $e');
+            // Use cached data if backend fetch fails (e.g., offline)
+            final user = User(
+              id: storedUserId ?? firebaseUser.uid,
+              fullName: firebaseUser.displayName ?? 'User',
+              email: firebaseUser.email ?? '',
+              phone: storedPhone,
+              role: storedUserRole,
+              hasCompletedOnboarding: hasCompletedOnboarding,
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ??
+                    DateTime.now().millisecondsSinceEpoch,
+              ),
+            );
+            state = state.copyWith(
+              user: user,
+              isEmailLoading: false,
+              isGoogleLoading: false,
+            );
+          }
+
+          // Initialize and sync FCM token in background
           FCMTokenService.initializeAndSyncToken();
-          
-          state = state.copyWith(user: user, isEmailLoading: false, isGoogleLoading: false);
         } else {
-          debugPrint('AuthProvider: Incomplete session data. storedUserId: $storedUserId, storedUserRole: $storedUserRole, storedToken: ${storedToken != null}');
+          debugPrint('AuthProvider: Incomplete session data. storedUserRole: $storedUserRole, storedToken: ${storedToken != null}');
           // User is signed in to Firebase but we don't have complete backend tokens
-          // This could happen if app was closed after Firebase login but before backend auth
-          // For now, we'll clear the state and require re-authentication
+          // Clear the state and require re-authentication
           await _storageManager.clearAll();
           await FirebaseAuthService.signOut();
           state = AuthState();
@@ -914,8 +956,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Clear storage if there's an error
       await _storageManager.clearAll();
       state = AuthState();
+    } finally {
+      // Always end loading so splash can route.
+      state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, isPhoneLoading: false);
     }
   }
+
+
+  /// Fetch fresh user profile from backend using stored token
+  Future<User?> _fetchUserProfileFromBackend(String token) async {
+    try {
+      return await _authRepository.getUserProfile(token);
+    } catch (e) {
+      debugPrint('AuthProvider: Error fetching user profile: $e');
+      // Do not force logout on profile fetch failure.
+      return null;
+    }
+  }
+
 
   bool get isAuthenticated => state.user != null && FirebaseAuthService.isSignedIn();
   bool get isAdmin => state.user?.role == 'admin';

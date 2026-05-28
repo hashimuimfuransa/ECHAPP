@@ -216,12 +216,21 @@ class BackendCategoriesCache {
 
 // Optimized provider with immediate cache access and background refresh
 final backendCategoriesProvider = FutureProvider<List<Category>>((ref) async {
-  // Return cached categories immediately if available
-  if (BackendCategoriesCache.isCacheValid) {
+  // 1) Fast path: in-memory cache
+  if (BackendCategoriesCache.isCacheValid && BackendCategoriesCache.cachedCategories != null) {
     return BackendCategoriesCache.cachedCategories!;
   }
-  
-  // Fetch fresh data
+
+  // 2) Fast fallback: use the already-loaded local categories (hardcoded/mock) from categoriesProvider
+  //    This matches your request: show categories loaded in main.dart.
+  try {
+    final local = ref.watch(categoriesProvider);
+    if (local.isNotEmpty) return local;
+  } catch (_) {
+    // ignore
+  }
+
+  // 3) Slow path: fetch from backend
   final repository = ref.read(categoryRepositoryProvider);
   final categories = await repository.getAllCategories();
   BackendCategoriesCache.cacheCategories(categories);

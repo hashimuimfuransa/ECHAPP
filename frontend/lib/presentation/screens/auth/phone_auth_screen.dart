@@ -127,10 +127,16 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
           if (mounted) {
             if (current.user?.role == 'admin') {
               context.go('/admin');
-            } else if (current.user?.hasCompletedOnboarding ?? false) {
-              context.go('/dashboard');
             } else {
-              context.go('/interest-selection');
+              final name = current.user?.fullName ?? '';
+              final needsName = name.isEmpty || name == 'Unknown User';
+              if (needsName) {
+                context.go('/name-collection');
+              } else if (current.user?.hasCompletedOnboarding ?? false) {
+                context.go('/dashboard');
+              } else {
+                context.go('/interest-selection');
+              }
             }
           }
         });

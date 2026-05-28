@@ -527,7 +527,11 @@ class PaymentListResponse {
   static int _safeIntParse(dynamic value, int defaultValue) {
     if (value == null) return defaultValue;
     if (value is int) return value;
-    if (value is num) return value.toInt();
+    if (value is num) {
+      final d = value.toDouble();
+      if (d.isNaN || d.isInfinite) return defaultValue;
+      return d.toInt();
+    }
     if (value is String) {
       try {
         return int.parse(value);

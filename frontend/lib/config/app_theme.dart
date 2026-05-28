@@ -28,7 +28,7 @@ class AppTheme {
   static const Color black = Color(0xFF0A0A0A); // Rich black
   static const Color grey = Color(0xFF6B7280); // Stone gray
   static const Color borderGrey = Color(0xFFD1D5DB); // Light border
-  static const Color surface = Color(0xFFF8FAFC); // Soft surface
+  static const Color surface = Color(0xFFF0FDF9); // Soft green-tinted surface
   static const Color card = Color(0xFFFFFFFF); // Card background
 
   // Theme-aware color getters
@@ -154,7 +154,7 @@ class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    scaffoldBackgroundColor: surface,
+    scaffoldBackgroundColor: const Color(0xFFF0FDF9),
 
     colorScheme: const ColorScheme.light(
       primary: primary,
@@ -399,7 +399,7 @@ class AppTheme {
   );
 
   static const List<Color> secondaryGradient = [
-    Color(0xFF8B5CF6), // Purple 500
-    Color(0xFF7C3AED), // Purple 600
+    Color(0xFF10B981), // Emerald 500
+    Color(0xFF059669), // Emerald 600
   ];
 }

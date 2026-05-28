@@ -86,6 +86,15 @@ Future<void> saveHasCompletedOnboarding(bool completed) async {
     await _storage.delete(key: _userPhoneKey);
   }
 
+  // Generic key-value helpers
+  Future<String?> getItem(String key) async {
+    return await _storage.read(key: key);
+  }
+
+  Future<void> saveItem(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
     final userId = await getUserId();

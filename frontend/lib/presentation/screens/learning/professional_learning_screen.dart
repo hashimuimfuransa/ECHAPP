@@ -100,7 +100,7 @@ class _ProfessionalLearningScreenState
   int _currentSectionIndex = 0;
   bool _isChatExpanded = false;
   bool _isLoading = false;
-  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey();
+  final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   List<Certificate>? _courseCertificates;
   Map<String, dynamic>? _courseAccessData;
 
@@ -115,13 +115,18 @@ class _ProfessionalLearningScreenState
   int _completedLessonsCount = 0;
   int _totalDurationMinutes = 0;
   int _completedDurationMinutes = 0;
+  int _xpPoints = 0;
+  int _completedChaptersCount = 0;
+  final Set<String> _celebratedChapters = {};
 
   late TabController _tabController;
   late AnimationController _heroAnimCtrl;
   late AnimationController _fabAnimCtrl;
+  late AnimationController _fabPulseCtrl;
   late Animation<double> _heroFade;
   late Animation<Offset> _heroSlide;
   late Animation<double> _fabScale;
+  Animation<double>? _fabPulse;
 
   @override
   void initState() {
@@ -132,14 +137,20 @@ class _ProfessionalLearningScreenState
         vsync: this, duration: const Duration(milliseconds: 700));
     _fabAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 400));
+    _fabPulseCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1800))
+      ..repeat(reverse: true);
 
     _heroFade  = CurvedAnimation(parent: _heroAnimCtrl, curve: Curves.easeOut);
     _heroSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
         .animate(CurvedAnimation(parent: _heroAnimCtrl, curve: Curves.easeOut));
     _fabScale  = CurvedAnimation(parent: _fabAnimCtrl,  curve: Curves.elasticOut);
+    _fabPulse = Tween<double>(begin: 1.0, end: 1.08)
+        .animate(CurvedAnimation(parent: _fabPulseCtrl, curve: Curves.easeInOut));
 
     _searchController.addListener(_onSearchChanged);
     _loadCourseData();
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -147,6 +158,7 @@ class _ProfessionalLearningScreenState
     _tabController.dispose();
     _heroAnimCtrl.dispose();
     _fabAnimCtrl.dispose();
+    _fabPulseCtrl.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -218,6 +230,72 @@ class _ProfessionalLearningScreenState
     }
   }
 
+  // ── Mark chapter complete ─────────────────────
+  void _markChapterComplete(Section chapter, int chapterIndex) {
+    if (_celebratedChapters.contains(chapter.id)) return;
+    _celebratedChapters.add(chapter.id);
+    final lessons = _chapterLessons[chapter.id] ?? [];
+
+    setState(() {
+      // Mark all lessons done
+      for (final l in lessons) {
+        if (_lessonCompletionStatus[l.id] != true) {
+          _lessonCompletionStatus[l.id] = true;
+          _completedLessonsCount++;
+          _completedDurationMinutes += l.duration;
+        }
+      }
+      // Mark chapter done
+      _chapterCompletionStatus[chapter.id] = true;
+      _completedChaptersCount = _chapterCompletionStatus.values.where((v) => v).length;
+
+      // Unlock next chapter
+      if (_chapters != null && chapterIndex + 1 < _chapters!.length) {
+        final nextChapter = _chapters![chapterIndex + 1];
+        _chapterCompletionStatus[nextChapter.id] = true;
+        _currentSectionIndex = chapterIndex + 1;
+      }
+
+      // XP reward: 100 chapter bonus (lesson XP already counted per lesson)
+      _xpPoints += 100;
+    });
+
+    _showChapterCompletionCelebration(chapter, chapterIndex, lessons.length);
+  }
+
+  void _showChapterCompletionCelebration(Section chapter, int chapterIndex, int lessonCount) {
+    final xpEarned = 100 + (lessonCount * 10);
+    final totalChapters = _chapters?.length ?? 1;
+    final isLastChapter = chapterIndex + 1 >= totalChapters;
+    final nextChapterName = (!isLastChapter && _chapters != null)
+        ? _chapters![chapterIndex + 1].displayName
+        : null;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'dismiss',
+      barrierColor: Colors.black.withOpacity(0.65),
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (ctx, anim, _, child) => ScaleTransition(
+        scale: CurvedAnimation(parent: anim, curve: Curves.elasticOut),
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      pageBuilder: (ctx, _, __) => _ChapterCompletionDialog(
+        chapterName: chapter.displayName,
+        chapterNumber: chapterIndex + 1,
+        xpEarned: xpEarned,
+        totalXp: _xpPoints,
+        lessonCount: lessonCount,
+        isLastChapter: isLastChapter,
+        nextChapterName: nextChapterName,
+        overallProgress: _progress,
+        isDark: _isDark,
+        onContinue: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
   void _initializeCompletionStatus() {
     if (_chapters == null) return;
     if (_chapters!.isNotEmpty) {
@@ -256,6 +334,12 @@ class _ProfessionalLearningScreenState
           }
         }
       }
+    }
+    _completedChaptersCount = _chapterCompletionStatus.values.where((v) => v).length;
+    _xpPoints = (_completedLessonsCount * 10) + (_completedChaptersCount * 100);
+    // Pre-mark already-completed chapters so no stale celebration fires
+    for (final entry in _chapterCompletionStatus.entries) {
+      if (entry.value) _celebratedChapters.add(entry.key);
     }
   }
 
@@ -361,7 +445,8 @@ class _ProfessionalLearningScreenState
             if (_isChatExpanded) _buildAIChatOverlay(),
           ],
         ),
-        floatingActionButton: _buildAIChatFAB(),
+        floatingActionButton: _isChatExpanded ? null : _buildAIChatFAB(),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
@@ -431,7 +516,7 @@ class _ProfessionalLearningScreenState
   Widget _buildSliverAppBar(bool innerScrolled) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     return SliverAppBar(
-      expandedHeight: isMobile ? 200 : 240,
+      expandedHeight: isMobile ? 240 : 270,
       pinned: true,
       backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
       elevation: 0,
@@ -536,7 +621,7 @@ class _ProfessionalLearningScreenState
             bottom: false,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                  isMobile ? 16 : 24, 56, isMobile ? 16 : 24, 16),
+                  isMobile ? 16 : 24, 60, isMobile ? 16 : 24, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -573,9 +658,9 @@ class _ProfessionalLearningScreenState
                     _course?.title ?? '',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isMobile ? 20 : 24,
+                      fontSize: isMobile ? 18 : 22,
                       fontWeight: FontWeight.w800,
-                      height: 1.2,
+                      height: 1.25,
                       letterSpacing: -0.3,
                     ),
                     maxLines: 2,
@@ -584,23 +669,37 @@ class _ProfessionalLearningScreenState
                   const SizedBox(height: 12),
                   // Stats row
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _HeroStat(
-                          icon: Icons.library_books_rounded,
-                          value: '$completedChapters/${_chapters?.length ?? 0}',
-                          label: 'Chapters'),
-                      const SizedBox(width: 16),
-                      _HeroStat(
-                          icon: Icons.play_circle_rounded,
-                          value:
-                              '$_completedLessonsCount/$_totalLessons',
-                          label: 'Lessons'),
-                      const SizedBox(width: 16),
-                      _HeroStat(
-                          icon: Icons.trending_up_rounded,
-                          value: '${(_progress * 100).toInt()}%',
-                          label: 'Done'),
-                      const Spacer(),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _HeroStat(
+                                  icon: Icons.library_books_rounded,
+                                  value: '$completedChapters/${_chapters?.length ?? 0}',
+                                  label: 'Chapters'),
+                              const SizedBox(width: 14),
+                              _HeroStat(
+                                  icon: Icons.play_circle_rounded,
+                                  value: '$_completedLessonsCount/$_totalLessons',
+                                  label: 'Lessons'),
+                              const SizedBox(width: 14),
+                              _HeroStat(
+                                  icon: Icons.trending_up_rounded,
+                                  value: '${(_progress.isFinite ? (_progress * 100).clamp(0, 100) : 0).toInt()}%',
+                                  label: 'Done'),
+                              const SizedBox(width: 14),
+                              _HeroStat(
+                                  icon: Icons.bolt_rounded,
+                                  value: '$_xpPoints',
+                                  label: 'XP'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       // Mini circular progress
                       SizedBox(
                         width: 40,
@@ -610,15 +709,13 @@ class _ProfessionalLearningScreenState
                           children: [
                             CircularProgressIndicator(
                               value: _progress,
-                              backgroundColor:
-                                  Colors.white.withOpacity(0.3),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                              backgroundColor: Colors.white.withOpacity(0.3),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.white),
                               strokeWidth: 3.5,
                             ),
                             Text(
-                              '${(_progress * 100).toInt()}',
+                              '${(_progress.isFinite ? (_progress * 100).clamp(0, 100) : 0).toInt()}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -641,7 +738,7 @@ class _ProfessionalLearningScreenState
 
   Widget _buildTabBar() {
     return Container(
-      color: _isDark ? _DT.bgDark : _DT.bg,
+      color: _isDark ? _DT.bgDark : Colors.white,
       child: Column(
         children: [
           // Search bar (expanded when active)
@@ -701,12 +798,12 @@ class _ProfessionalLearningScreenState
             labelColor: _DT.primary,
             unselectedLabelColor: _textSecondary,
             indicatorColor: _DT.primary,
-            indicatorWeight: 2.5,
-            indicatorSize: TabBarIndicatorSize.label,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.tab,
             labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700, fontSize: 13),
+                fontWeight: FontWeight.w700, fontSize: 14),
             unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w500, fontSize: 13),
+                fontWeight: FontWeight.w500, fontSize: 14),
             dividerColor: _borderColor,
             dividerHeight: 0.5,
             tabs: const [
@@ -748,7 +845,7 @@ class _ProfessionalLearningScreenState
     final screenW = MediaQuery.of(context).size.width;
     final crossCount = screenW > 1600 ? 3 : 2;
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 120),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossCount,
         childAspectRatio: 1.7,
@@ -760,6 +857,7 @@ class _ProfessionalLearningScreenState
         final s = chapters[i];
         return _ChapterCard(
           section: s,
+          chapterIndex: i,
           lessons: _chapterLessons[s.id] ?? [],
           isUnlocked: _chapterCompletionStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
@@ -768,6 +866,7 @@ class _ProfessionalLearningScreenState
           isCompact: true,
           onLessonTap: _openLesson,
           onMoreTap: () => _openChapterDetails(s),
+          onMarkComplete: () => _markChapterComplete(s, i),
         );
       },
     );
@@ -777,16 +876,17 @@ class _ProfessionalLearningScreenState
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(
         ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
-        16,
+        20,
         ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
-        100,
+        120,
       ),
       itemCount: chapters.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, __) => const SizedBox(height: 20),
       itemBuilder: (ctx, i) {
         final s = chapters[i];
         return _ChapterCard(
           section: s,
+          chapterIndex: i,
           lessons: _chapterLessons[s.id] ?? [],
           isUnlocked: _chapterCompletionStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
@@ -795,6 +895,7 @@ class _ProfessionalLearningScreenState
           isCompact: false,
           onLessonTap: _openLesson,
           onMoreTap: () => _openChapterDetails(s),
+          onMarkComplete: () => _markChapterComplete(s, i),
         );
       },
     );
@@ -804,9 +905,12 @@ class _ProfessionalLearningScreenState
   //  PROGRESS TAB
   // ─────────────────────────────────────────────
   Widget _buildProgressTab() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      padding: EdgeInsets.fromLTRB(isMobile ? 12 : 20, 16, isMobile ? 12 : 20, 100),
       children: [
+        _buildXpLevelBanner(),
+        const SizedBox(height: 16),
         _buildProgressHeroCard(),
         const SizedBox(height: 16),
         _buildChapterProgressList(),
@@ -816,13 +920,151 @@ class _ProfessionalLearningScreenState
     );
   }
 
+  Widget _buildXpLevelBanner() {
+    final level = (_xpPoints ~/ 500) + 1;
+    final xpInLevel = _xpPoints % 500;
+    final xpToNextLevel = 500;
+    final levelPct = xpInLevel / xpToNextLevel;
+    final levelTitles = ['Beginner', 'Explorer', 'Learner', 'Achiever', 'Expert', 'Master'];
+    final levelTitle = levelTitles[(level - 1).clamp(0, levelTitles.length - 1)];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7C4DFF), Color(0xFF5C35E0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: _DT.r20,
+        boxShadow: [
+          BoxShadow(
+              color: _DT.accent.withOpacity(0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    'Lv$level',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      levelTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$_xpPoints XP  •  ${xpToNextLevel - xpInLevel} to next',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 11),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: _DT.r32,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bolt_rounded,
+                        color: Colors.white, size: 13),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$_xpPoints XP',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Level $level progress',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.8), fontSize: 11)),
+                  Text('$xpInLevel / $xpToNextLevel XP',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: _DT.r32,
+                child: LinearProgressIndicator(
+                  value: levelPct,
+                  minHeight: 8,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProgressHeroCard() {
     final completedChapters =
         _chapterCompletionStatus.values.where((v) => v).length;
     final totalChapters = _chapters?.length ?? 0;
+    final screenW = MediaQuery.of(context).size.width;
+    final isNarrow = screenW < 380;
+    final ringSize = isNarrow ? 80.0 : 96.0;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: _DT.r20,
@@ -831,23 +1073,24 @@ class _ProfessionalLearningScreenState
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Big ring
               SizedBox(
-                width: 100,
-                height: 100,
+                width: ringSize,
+                height: ringSize,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox(
-                      width: 100,
-                      height: 100,
+                      width: ringSize,
+                      height: ringSize,
                       child: CircularProgressIndicator(
                         value: _progress,
                         backgroundColor: _borderColor,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             _DT.primary),
-                        strokeWidth: 8,
+                        strokeWidth: 7,
                         strokeCap: StrokeCap.round,
                       ),
                     ),
@@ -857,39 +1100,39 @@ class _ProfessionalLearningScreenState
                         Text(
                           '${(_progress * 100).toInt()}%',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: isNarrow ? 18 : 20,
                             fontWeight: FontWeight.w800,
                             color: _DT.primary,
                           ),
                         ),
                         Text('Done',
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10,
                                 color: _textSecondary)),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _ProgressStatRow(
-                      label: 'Lessons completed',
+                      label: 'Lessons done',
                       value: '$_completedLessonsCount / $_totalLessons',
                       color: _DT.primary,
                       isDark: _isDark,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _ProgressStatRow(
                       label: 'Chapters done',
                       value: '$completedChapters / $totalChapters',
                       color: _DT.accent,
                       isDark: _isDark,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _ProgressStatRow(
                       label: 'Time invested',
                       value: '${_completedDurationMinutes}m',
@@ -984,6 +1227,8 @@ class _ProfessionalLearningScreenState
   }
 
   Widget _buildAchievementsGrid() {
+    final completedChaptersCount =
+        _chapterCompletionStatus.values.where((v) => v).length;
     final achievements = [
       _Achievement(
         title: 'First Steps',
@@ -991,29 +1236,51 @@ class _ProfessionalLearningScreenState
         icon: Icons.emoji_events_rounded,
         unlocked: _completedLessonsCount > 0,
         color: const Color(0xFFFFC107),
+        xp: 10,
       ),
       _Achievement(
-        title: 'Halfway',
+        title: 'Quick Learner',
+        desc: 'Complete 5 lessons',
+        icon: Icons.flash_on_rounded,
+        unlocked: _completedLessonsCount >= 5,
+        color: const Color(0xFFFF7043),
+        xp: 50,
+      ),
+      _Achievement(
+        title: 'Chapter Hero',
+        desc: 'Complete your first chapter',
+        icon: Icons.book_rounded,
+        unlocked: completedChaptersCount >= 1,
+        color: _DT.accent,
+        xp: 100,
+      ),
+      _Achievement(
+        title: 'Halfway There',
         desc: '50% course completion',
         icon: Icons.trending_up_rounded,
         unlocked: _progress >= 0.5,
         color: _DT.primary,
+        xp: 200,
       ),
       _Achievement(
-        title: 'Chapter Pro',
-        desc: 'Complete any chapter',
-        icon: Icons.book_rounded,
-        unlocked: _chapterCompletionStatus.values.any((v) => v),
-        color: _DT.accent,
+        title: 'Dedicated',
+        desc: 'Complete 3 chapters',
+        icon: Icons.workspace_premium_rounded,
+        unlocked: completedChaptersCount >= 3,
+        color: const Color(0xFF00ACC1),
+        xp: 300,
       ),
       _Achievement(
         title: 'Graduate',
         desc: 'Finish the entire course',
         icon: Icons.military_tech_rounded,
         unlocked: _completedLessonsCount == _totalLessons && _totalLessons > 0,
-        color: const Color(0xFF00ACC1),
+        color: const Color(0xFFFFD700),
+        xp: 500,
       ),
     ];
+
+    final unlockedCount = achievements.where((a) => a.unlocked).length;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1025,23 +1292,52 @@ class _ProfessionalLearningScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Achievements',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _textPrimary)),
+          Row(
+            children: [
+              Text('Achievements',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _DT.accent.withOpacity(0.1),
+                  borderRadius: _DT.r32,
+                ),
+                child: Text(
+                  '$unlockedCount / ${achievements.length} unlocked',
+                  style: const TextStyle(
+                    color: _DT.accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.6,
-            ),
-            itemCount: achievements.length,
-            itemBuilder: (context, index) {
-              final a = achievements[index];
-              return _AchievementCard(a: a, isDark: _isDark);
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final crossCount = w < 300 ? 1 : (w < 500 ? 2 : 3);
+              final aspectRatio = w < 300 ? 3.5 : (w < 500 ? 1.55 : 1.7);
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossCount,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: aspectRatio,
+                ),
+                itemCount: achievements.length,
+                itemBuilder: (context, index) {
+                  final a = achievements[index];
+                  return _AchievementCard(a: a, isDark: _isDark);
+                },
+              );
             },
           ),
         ],
@@ -1322,42 +1618,113 @@ class _ProfessionalLearningScreenState
   Widget _buildAIChatFAB() {
     return ScaleTransition(
       scale: _fabScale,
-      child: GestureDetector(
-        onTap: () => setState(() => _isChatExpanded = !_isChatExpanded),
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: _DT.purpleGrad,
+      child: AnimatedBuilder(
+        animation: _fabPulse ?? const AlwaysStoppedAnimation(1.0),
+        builder: (context, child) => Transform.scale(
+          scale: _isChatExpanded ? 1.0 : (_fabPulse?.value ?? 1.0),
+          child: child,
+        ),
+        child: GestureDetector(
+          onTap: () => setState(() => _isChatExpanded = !_isChatExpanded),
+          child: Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _isChatExpanded
+                    ? [const Color(0xFF6E35F5), const Color(0xFF4A1FCC)]
+                    : [const Color(0xFF7C4DFF), const Color(0xFF5C35E0)],
                 begin: Alignment.topLeft,
-                end: Alignment.bottomRight),
-            borderRadius: _DT.r20,
-            boxShadow: [
-              BoxShadow(
-                  color: _DT.accent.withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8)),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              const Icon(Icons.smart_toy_rounded,
-                  color: Colors.white, size: 26),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: _DT.primary,
-                    shape: BoxShape.circle,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: _DT.r20,
+              boxShadow: [
+                BoxShadow(
+                    color: _DT.accent.withOpacity(0.5),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8)),
+                BoxShadow(
+                    color: _DT.accent.withOpacity(0.15),
+                    blurRadius: 48,
+                    spreadRadius: 8,
+                    offset: const Offset(0, 16)),
+              ],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Outer glow ring
+                if (!_isChatExpanded)
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _fabPulse ?? const AlwaysStoppedAnimation(1.0),
+                      builder: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          borderRadius: _DT.r20,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(
+                                ((_fabPulse?.value ?? 1.0) - 1.0) * 3.5),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                // Brain icon
+                const Icon(Icons.psychology_rounded,
+                    color: Colors.white, size: 30),
+                // Sparkle top-right
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: _DT.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                            color: _DT.primary.withOpacity(0.6),
+                            blurRadius: 6),
+                      ],
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Colors.white, size: 10),
                   ),
                 ),
-              ),
-            ],
+                // "AI" label bottom
+                Positioned(
+                  bottom: -8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF00C853), Color(0xFF00897B)]),
+                      borderRadius: _DT.r32,
+                      boxShadow: [
+                        BoxShadow(
+                            color: _DT.primary.withOpacity(0.4),
+                            blurRadius: 8),
+                      ],
+                    ),
+                    child: const Text(
+                      'AI Teacher',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1468,7 +1835,81 @@ class _ProfessionalLearningScreenState
     return materials;
   }
 
-  void _openLesson(Lesson lesson) => context.push('/lesson/${lesson.id}');
+  Future<void> _openLesson(Lesson lesson) async {
+    // Snapshot completion before navigating
+    final wasCompleted = _lessonCompletionStatus[lesson.id] == true;
+
+    await context.push('/lesson/${lesson.id}');
+
+    if (!mounted) return;
+
+    // Find which chapter this lesson belongs to
+    String? chapterId;
+    int? chapterIndex;
+    for (int i = 0; i < (_chapters?.length ?? 0); i++) {
+      final ch = _chapters![i];
+      final lessons = _chapterLessons[ch.id] ?? [];
+      if (lessons.any((l) => l.id == lesson.id)) {
+        chapterId = ch.id;
+        chapterIndex = i;
+        break;
+      }
+    }
+    if (chapterId == null || chapterIndex == null) return;
+
+    // Refresh completion status from server for this chapter's lessons
+    try {
+      final accessData = await ref
+          .read(enrollmentRepositoryProvider)
+          .checkCourseAccess(widget.courseId);
+      if (!mounted) return;
+
+      final completedList =
+          (accessData?['completedLessons'] as List?)?.map((e) => e.toString()).toSet() ?? {};
+
+      final chapterLessons = _chapterLessons[chapterId] ?? [];
+      bool anyNewlyCompleted = false;
+
+      setState(() {
+        for (final l in chapterLessons) {
+          final nowDone = completedList.contains(l.id);
+          if (nowDone && _lessonCompletionStatus[l.id] != true) {
+            _lessonCompletionStatus[l.id] = true;
+            _completedLessonsCount++;
+            _completedDurationMinutes += l.duration;
+            anyNewlyCompleted = true;
+          }
+        }
+        // Recompute XP
+        _xpPoints = (_completedLessonsCount * 10) +
+            (_chapterCompletionStatus.values.where((v) => v).length * 100);
+      });
+
+      // Check if this lesson being completed finishes the whole chapter
+      final allDone = chapterLessons.isNotEmpty &&
+          chapterLessons.every((l) => _lessonCompletionStatus[l.id] == true);
+
+      if (anyNewlyCompleted && allDone) {
+        _markChapterComplete(_chapters![chapterIndex], chapterIndex);
+      }
+    } catch (e) {
+      // Fallback: optimistically mark the lesson done if it wasn't before
+      if (!wasCompleted && mounted) {
+        setState(() {
+          _lessonCompletionStatus[lesson.id] = true;
+          _completedLessonsCount++;
+          _xpPoints += 10;
+        });
+
+        final chapterLessons = _chapterLessons[chapterId] ?? [];
+        final allDone = chapterLessons.isNotEmpty &&
+            chapterLessons.every((l) => _lessonCompletionStatus[l.id] == true);
+        if (allDone) {
+          _markChapterComplete(_chapters![chapterIndex], chapterIndex);
+        }
+      }
+    }
+  }
 
   void _openMaterial(Map<String, dynamic> m) {
     switch (m['type'] as String) {
@@ -1546,6 +1987,7 @@ class _ProfessionalLearningScreenState
 // ═════════════════════════════════════════════
 class _ChapterCard extends StatelessWidget {
   final Section section;
+  final int chapterIndex;
   final List<Lesson> lessons;
   final bool isUnlocked;
   final bool isCurrent;
@@ -1554,9 +1996,11 @@ class _ChapterCard extends StatelessWidget {
   final bool isCompact;
   final void Function(Lesson) onLessonTap;
   final VoidCallback onMoreTap;
+  final VoidCallback onMarkComplete;
 
   const _ChapterCard({
     required this.section,
+    required this.chapterIndex,
     required this.lessons,
     required this.isUnlocked,
     required this.isCurrent,
@@ -1565,6 +2009,7 @@ class _ChapterCard extends StatelessWidget {
     required this.isCompact,
     required this.onLessonTap,
     required this.onMoreTap,
+    required this.onMarkComplete,
   });
 
   int get completedCount =>
@@ -1572,6 +2017,9 @@ class _ChapterCard extends StatelessWidget {
 
   double get chapterProgress =>
       lessons.isEmpty ? 0.0 : completedCount / lessons.length;
+
+  bool get isFullyCompleted =>
+      lessons.isNotEmpty && lessons.every((l) => lessonCompletionStatus[l.id] == true);
 
   Color get _cardBg => isDark ? _DT.cardDark : _DT.card;
   Color get _textPrimary => isDark ? Colors.white : _DT.textPrimary;
@@ -1584,10 +2032,19 @@ class _ChapterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: _DT.r20,
-        border: isCurrent
+        border: isFullyCompleted
             ? Border.all(color: _DT.primary, width: 2)
-            : Border.all(color: _borderColor, width: 0.5),
-        boxShadow: _DT.cardShadow,
+            : isCurrent
+                ? Border.all(color: _DT.primary.withOpacity(0.5), width: 1.5)
+                : Border.all(color: _borderColor, width: 0.5),
+        boxShadow: isFullyCompleted
+            ? [
+                BoxShadow(
+                    color: _DT.primary.withOpacity(0.18),
+                    blurRadius: 28,
+                    offset: const Offset(0, 8)),
+              ]
+            : _DT.cardShadow,
       ),
       clipBehavior: Clip.hardEdge,
       child: Column(
@@ -1596,6 +2053,7 @@ class _ChapterCard extends StatelessWidget {
         children: [
           _buildHeader(),
           if (isUnlocked && lessons.isNotEmpty) _buildLessonsSection(),
+          if (isUnlocked) _buildMarkCompleteFooter(),
           if (!isUnlocked) _buildLockedFooter(),
         ],
       ),
@@ -1604,7 +2062,7 @@ class _ChapterCard extends StatelessWidget {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.all(isCompact ? 14 : 18),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isUnlocked
@@ -1618,9 +2076,10 @@ class _ChapterCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: EdgeInsets.all(isCompact ? 6 : 8),
+                padding: EdgeInsets.all(isCompact ? 6 : 9),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: _DT.r8,
@@ -1637,12 +2096,12 @@ class _ChapterCard extends StatelessWidget {
                   section.displayName,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: isCompact ? 13 : 16,
+                    fontSize: isCompact ? 13 : 17,
                     fontWeight: FontWeight.w700,
-                    height: 1.2,
+                    height: 1.3,
                   ),
-                  maxLines: isCompact ? 1 : 2,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
               ),
               // Count badge
@@ -1665,12 +2124,12 @@ class _ChapterCard extends StatelessWidget {
               ),
             ],
           ),
-          if (!isCompact && section.description != null) ...[
-            const SizedBox(height: 6),
+          if (section.description != null && section.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
               section.description!,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-              maxLines: 1,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -1696,10 +2155,27 @@ class _ChapterCard extends StatelessWidget {
   Widget _buildLessonsSection() {
     final displayLessons = isCompact ? _getVisibleLessons() : lessons;
     return Padding(
-      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 14, isCompact ? 12 : 16, isCompact ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!isCompact) ...[
+            Row(
+              children: [
+                Icon(Icons.list_rounded, size: 15, color: _DT.textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  '${lessons.length} ${lessons.length == 1 ? "Lesson" : "Lessons"}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _DT.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           ...displayLessons.map((l) {
             final done = lessonCompletionStatus[l.id] == true;
             return _LessonRow(
@@ -1787,24 +2263,143 @@ class _ChapterCard extends StatelessWidget {
   }
 
   Widget _buildLockedFooter() {
-    return Padding(
-      padding: EdgeInsets.all(isCompact ? 12 : 16),
+    return Container(
+      margin: EdgeInsets.all(isCompact ? 10 : 14),
+      padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 14 : 16, vertical: isCompact ? 10 : 14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: _DT.r12,
+        border: Border.all(color: Colors.grey.shade300, width: 0.5),
+      ),
       child: Row(
         children: [
-          Icon(Icons.lock_outline_rounded,
-              size: 16, color: Colors.grey.shade400),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.lock_outline_rounded,
+                size: isCompact ? 14 : 16, color: Colors.grey.shade500),
+          ),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              'Complete the previous chapter to unlock',
-              style: TextStyle(
-                  fontSize: isCompact ? 11 : 13,
-                  color: Colors.grey.shade400),
-              maxLines: isCompact ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Chapter Locked',
+                  style: TextStyle(
+                      fontSize: isCompact ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Complete the previous chapter to unlock this one',
+                  style: TextStyle(
+                      fontSize: isCompact ? 10 : 12,
+                      color: Colors.grey.shade400),
+                  maxLines: 2,
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMarkCompleteFooter() {
+    if (isFullyCompleted) {
+      return Container(
+        margin: EdgeInsets.fromLTRB(isCompact ? 10 : 14, 0, isCompact ? 10 : 14, isCompact ? 10 : 14),
+        padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 12 : 16, vertical: isCompact ? 10 : 12),
+        decoration: BoxDecoration(
+          color: _DT.primary.withOpacity(0.08),
+          borderRadius: _DT.r12,
+          border: Border.all(color: _DT.primary.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                  color: _DT.primary, shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded,
+                  color: Colors.white, size: 12),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Chapter Completed!',
+              style: TextStyle(
+                fontSize: isCompact ? 11 : 13,
+                fontWeight: FontWeight.w700,
+                color: _DT.primary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '🏆',
+              style: TextStyle(fontSize: isCompact ? 13 : 16),
+            ),
+          ],
+        ),
+      );
+    }
+    // Show "Mark Complete" button when chapter is unlocked but not yet done
+    return Padding(
+      padding: EdgeInsets.fromLTRB(isCompact ? 10 : 14, 0, isCompact ? 10 : 14, isCompact ? 10 : 14),
+      child: GestureDetector(
+        onTap: onMarkComplete,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+              vertical: isCompact ? 10 : 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+                colors: _DT.heroGrad,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight),
+            borderRadius: _DT.r12,
+            boxShadow: [
+              BoxShadow(
+                color: _DT.primary.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.emoji_events_rounded,
+                  color: Colors.white, size: isCompact ? 14 : 16),
+              const SizedBox(width: 8),
+              Text(
+                'Mark Chapter Complete',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isCompact ? 11 : 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '+100 XP',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.85),
+                  fontSize: isCompact ? 10 : 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1857,30 +2452,31 @@ class _LessonRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: isCompact ? 6 : 10),
-        padding: EdgeInsets.all(isCompact ? 10 : 12),
+        margin: EdgeInsets.only(bottom: isCompact ? 6 : 12),
+        padding: EdgeInsets.all(isCompact ? 10 : 14),
         decoration: BoxDecoration(
           color: isCompleted ? _DT.primary.withOpacity(0.06) : _surface,
           borderRadius: _DT.r12,
           border: Border.all(
             color: isCompleted
-                ? _DT.primary.withOpacity(0.25)
+                ? _DT.primary.withOpacity(0.3)
                 : _border,
-            width: 0.5,
+            width: isCompleted ? 1.0 : 0.5,
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.all(isCompact ? 5 : 7),
+              padding: EdgeInsets.all(isCompact ? 5 : 8),
               decoration: BoxDecoration(
                 color: _typeColor.withOpacity(0.12),
                 borderRadius: _DT.r8,
               ),
               child: Icon(_typeIcon,
-                  color: _typeColor, size: isCompact ? 13 : 16),
+                  color: _typeColor, size: isCompact ? 13 : 17),
             ),
-            SizedBox(width: isCompact ? 8 : 10),
+            SizedBox(width: isCompact ? 8 : 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1888,36 +2484,36 @@ class _LessonRow extends StatelessWidget {
                   Text(
                     lesson.title,
                     style: TextStyle(
-                      fontSize: isCompact ? 11 : 13,
+                      fontSize: isCompact ? 12 : 14,
                       fontWeight: FontWeight.w600,
                       color: _text,
+                      height: 1.3,
                       decoration:
                           isCompleted ? TextDecoration.lineThrough : null,
                       decorationColor: _DT.textSecondary,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
                   ),
-                  if (!isCompact) ...[
-                    const SizedBox(height: 3),
-                    Text('${lesson.duration} min',
-                        style: TextStyle(
-                            fontSize: 11, color: _DT.textSecondary)),
-                  ],
+                  const SizedBox(height: 4),
+                  Text('${lesson.duration} min',
+                      style: TextStyle(
+                          fontSize: isCompact ? 10 : 12, color: _DT.textSecondary)),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             if (isCompleted)
               Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
                     color: _DT.primary, shape: BoxShape.circle),
                 child: const Icon(Icons.check_rounded,
-                    color: Colors.white, size: 10),
+                    color: Colors.white, size: 11),
               )
             else
               Icon(Icons.chevron_right_rounded,
-                  size: 18, color: _DT.textSecondary),
+                  size: 20, color: _DT.textSecondary),
           ],
         ),
       ),
@@ -1977,7 +2573,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? _DT.cardDark : Colors.white;
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
         color: bg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -2025,7 +2621,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
                               color: Colors.white,
                               fontSize: 17,
                               fontWeight: FontWeight.w700)),
-                      Text('${lessons.length} lessons',
+                      Text('${lessons.length} ${lessons.length == 1 ? "lesson" : "lessons"}',
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 13)),
                     ],
@@ -2048,11 +2644,11 @@ class _ChapterDetailsSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-              itemCount: _getVisibleLessons().length,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+              itemCount: lessons.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (ctx, i) {
-                final l = _getVisibleLessons()[i];
+                final l = lessons[i];
                 return _LessonRow(
                   lesson: l,
                   isCompleted: lessonCompletionStatus[l.id] == true,
@@ -2461,12 +3057,14 @@ class _Achievement {
   final IconData icon;
   final bool unlocked;
   final Color color;
+  final int xp;
   const _Achievement(
       {required this.title,
       required this.desc,
       required this.icon,
       required this.unlocked,
-      required this.color});
+      required this.color,
+      this.xp = 0});
 }
 
 class _AchievementCard extends StatelessWidget {
@@ -2479,42 +3077,494 @@ class _AchievementCard extends StatelessWidget {
     final bg = isDark ? _DT.surfaceDk : _DT.surface;
     final textPrimary = isDark ? Colors.white : _DT.textPrimary;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: a.unlocked ? a.color.withOpacity(0.08) : bg,
-        borderRadius: _DT.r16,
-        border: Border.all(
-          color: a.unlocked
-              ? a.color.withOpacity(0.3)
-              : (isDark ? _DT.borderDark : _DT.border),
-          width: 0.5,
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: a.unlocked ? a.color.withOpacity(0.09) : bg,
+            borderRadius: _DT.r16,
+            border: Border.all(
+              color: a.unlocked
+                  ? a.color.withOpacity(0.35)
+                  : (isDark ? _DT.borderDark : _DT.border),
+              width: a.unlocked ? 1.5 : 0.5,
+            ),
+            boxShadow: a.unlocked
+                ? [BoxShadow(color: a.color.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: a.unlocked ? a.color.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(a.icon,
+                        color: a.unlocked ? a.color : _DT.textHint,
+                        size: 20),
+                  ),
+                  if (!a.unlocked)
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                          color: _DT.textSecondary, shape: BoxShape.circle),
+                      child: const Icon(Icons.lock_rounded,
+                          color: Colors.white, size: 7),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(a.title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      color: a.unlocked ? a.color : _DT.textSecondary),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text(a.desc,
+                  style: TextStyle(
+                      fontSize: 9,
+                      color: a.unlocked
+                          ? a.color.withOpacity(0.75)
+                          : _DT.textHint),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+        if (a.xp > 0)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: a.unlocked ? a.color : Colors.grey.shade300,
+                borderRadius: _DT.r32,
+              ),
+              child: Text(
+                '+${a.xp} XP',
+                style: TextStyle(
+                  color: a.unlocked ? Colors.white : Colors.grey.shade500,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════
+//  CHAPTER COMPLETION DIALOG
+// ═════════════════════════════════════════════
+class _ChapterCompletionDialog extends StatefulWidget {
+  final String chapterName;
+  final int chapterNumber;
+  final int xpEarned;
+  final int totalXp;
+  final int lessonCount;
+  final bool isLastChapter;
+  final String? nextChapterName;
+  final double overallProgress;
+  final bool isDark;
+  final VoidCallback onContinue;
+
+  const _ChapterCompletionDialog({
+    required this.chapterName,
+    required this.chapterNumber,
+    required this.xpEarned,
+    required this.totalXp,
+    required this.lessonCount,
+    required this.isLastChapter,
+    required this.nextChapterName,
+    required this.overallProgress,
+    required this.isDark,
+    required this.onContinue,
+  });
+
+  @override
+  State<_ChapterCompletionDialog> createState() => _ChapterCompletionDialogState();
+}
+
+class _ChapterCompletionDialogState extends State<_ChapterCompletionDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _progressCtrl;
+  late Animation<double> _progressAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _progressCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _progressAnim = Tween<double>(begin: 0, end: widget.overallProgress)
+        .animate(CurvedAnimation(parent: _progressCtrl, curve: Curves.easeOut));
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _progressCtrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isDark ? _DT.cardDark : Colors.white;
+    final textPrimary = widget.isDark ? Colors.white : _DT.textPrimary;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: _DT.r24,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 40,
+                    offset: const Offset(0, 16))
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Green gradient header ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _DT.heroGrad,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    children: [
+                      // Trophy icon
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text('🏆', style: TextStyle(fontSize: 36)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Chapter Complete!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.chapterName,
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            height: 1.3),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── XP + stats ──
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // XP earned pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C4DFF), Color(0xFF5C35E0)],
+                          ),
+                          borderRadius: _DT.r32,
+                          boxShadow: [
+                            BoxShadow(
+                                color: _DT.accent.withOpacity(0.35),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6))
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bolt_rounded,
+                                color: Colors.white, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '+${widget.xpEarned} XP earned!',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Stats row
+                      Row(
+                        children: [
+                          _DialogStat(
+                            icon: Icons.play_lesson_rounded,
+                            value: '${widget.lessonCount}',
+                            label: 'Lessons done',
+                            color: _DT.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          _DialogStat(
+                            icon: Icons.bolt_rounded,
+                            value: '${widget.totalXp}',
+                            label: 'Total XP',
+                            color: _DT.accent,
+                          ),
+                          const SizedBox(width: 12),
+                          _DialogStat(
+                            icon: Icons.percent_rounded,
+                            value: '${(widget.overallProgress * 100).toInt()}%',
+                            label: 'Course done',
+                            color: const Color(0xFF00ACC1),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Overall progress bar
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Overall progress',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: _DT.textSecondary,
+                                      fontWeight: FontWeight.w500)),
+                              AnimatedBuilder(
+                                animation: _progressAnim,
+                                builder: (_, __) => Text(
+                                  '${(_progressAnim.value * 100).toInt()}%',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: _DT.primary,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          AnimatedBuilder(
+                            animation: _progressAnim,
+                            builder: (_, __) => ClipRRect(
+                              borderRadius: _DT.r32,
+                              child: LinearProgressIndicator(
+                                value: _progressAnim.value,
+                                minHeight: 8,
+                                backgroundColor: _DT.primary.withOpacity(0.12),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                    _DT.primary),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Next chapter info
+                      if (!widget.isLastChapter &&
+                          widget.nextChapterName != null) ...
+                        [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _DT.primary.withOpacity(0.07),
+                              borderRadius: _DT.r12,
+                              border: Border.all(
+                                  color: _DT.primary.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: _DT.primary.withOpacity(0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                      Icons.lock_open_rounded,
+                                      color: _DT.primary,
+                                      size: 14),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Next chapter unlocked!',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: _DT.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        widget.nextChapterName!,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: textPrimary,
+                                            fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ]
+                      else if (widget.isLastChapter) ...
+                        [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  colors: [Color(0xFFFFD700), Color(0xFFFF8F00)]),
+                              borderRadius: _DT.r12,
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('🎓',
+                                    style: TextStyle(fontSize: 20)),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Course Complete! Congratulations!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                      // Continue button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: widget.onContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _DT.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            widget.isLastChapter
+                                ? 'View My Progress 🎉'
+                                : 'Continue Learning →',
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(a.icon,
-              color: a.unlocked ? a.color : _DT.textSecondary,
-              size: 26),
-          const SizedBox(height: 6),
-          Text(a.title,
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  color: a.unlocked ? a.color : _DT.textSecondary),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 3),
-          Text(a.desc,
-              style: TextStyle(
-                  fontSize: 9,
-                  color: a.unlocked
-                      ? a.color.withOpacity(0.8)
-                      : _DT.textSecondary),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis),
-        ],
+    );
+  }
+}
+
+class _DialogStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+  const _DialogStat(
+      {required this.icon,
+      required this.value,
+      required this.label,
+      required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: _DT.r12,
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 4),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 9, color: _DT.textSecondary),
+                textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

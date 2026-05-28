@@ -310,7 +310,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                       ),
                     ),
                     Text(
-                      '${((_score / _totalPossibleScore) * 100).toInt()}%',
+                      '${(_totalPossibleScore > 0 ? ((_score / _totalPossibleScore) * 100) : 0).isFinite ? (_totalPossibleScore > 0 ? ((_score / _totalPossibleScore) * 100) : 0).toInt() : 0}%',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -471,7 +471,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                 ),
               ),
               Text(
-                '${((_currentQuestionIndex / _questions.length) * 100).toInt()}% Complete',
+                '${(_questions.isNotEmpty ? ((_currentQuestionIndex / _questions.length) * 100) : 0).isFinite ? (_questions.isNotEmpty ? ((_currentQuestionIndex / _questions.length) * 100) : 0).toInt() : 0}% Complete',
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppTheme.greyColor,

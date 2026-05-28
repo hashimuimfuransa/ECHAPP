@@ -15,6 +15,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   bool _isInitializing = true;
   String _loadingMessage = 'Initializing app...';
+  bool _didNavigate = false;
   
   @override
   void initState() {
@@ -28,19 +29,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       _checkAuthAndNavigate();
     });
     
-    // Simple navigation after reasonable delay as fallback
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-          _loadingMessage = 'Almost ready...';
-        });
-        // Delay navigation to ensure build is complete
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _navigateBasedOnAuth();
-        });
-      }
-    });
+    // NOTE: no navigation fallback timer.
+    // Routing must wait for auth restoration to finish to avoid racing
+    // against the async session restore.
+
   }
   
   void _checkInitializationStatus() {
@@ -63,11 +55,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
   
   void _navigateBasedOnAuth() {
+    if (_didNavigate) return;
+
     final authState = ref.read(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    
-    if (authState.user != null && !authState.isLoading) {
-      context.go('/dashboard');
+
+    // Only route when auth restoration is done.
+    if (authState.isLoading) return;
+
+    _didNavigate = true;
+
+    if (authState.user != null) {
+      final name = authState.user!.fullName;
+      final needsName = name.isEmpty || name == 'Unknown User';
+      if (needsName) {
+        context.go('/name-collection');
+      } else {
+        context.go('/dashboard');
+      }
     } else {
       if (isDesktop) {
         context.go('/email-auth-option');
@@ -78,48 +83,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _checkAuthAndNavigate() {
-    // Check initial auth state
-    final authState = ref.read(authProvider);
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    debugPrint('Splash: Initial auth check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
-    
-    // Navigate based on current state (delayed to avoid build conflicts)
-    if (!authState.isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (authState.user != null) {
-          debugPrint('Splash: Navigating to dashboard');
-          context.go('/dashboard');
-        } else {
-          if (isDesktop) {
-            debugPrint('Splash: Navigating to email auth option (desktop)');
-            context.go('/email-auth-option');
-          } else {
-            debugPrint('Splash: Navigating to auth selection (mobile)');
-            context.go('/auth-selection');
-          }
-        }
-      });
-    }
-    
-    // Also check initial state after delay
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (!mounted) return; // Check if widget is still mounted
-      final authState = ref.read(authProvider);
-      debugPrint('Splash: Initial check - User: ${authState.user != null}, Loading: ${authState.isLoading}');
-      
-      if (!authState.isLoading) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return; // Check again before navigation
-          if (authState.user != null) {
-            context.go('/dashboard');
-          } else {
-            if (isDesktop) {
-              context.go('/email-auth-option');
-            } else {
-              context.go('/auth-selection');
-            }
-          }
-        });
+    debugPrint('Splash: checkAuthAndNavigate');
+
+    // Poll after first frame and then rely on authState.isLoading.
+    // We also update the UI spinner independent of routing.
+    Future.microtask(() {
+      if (!mounted) return;
+      _navigateBasedOnAuth();
+    });
+
+    // Listen to provider changes so navigation happens immediately
+    // when auth restoration completes.
+    ref.listenManual<AuthState>(authProvider, (previous, current) {
+      if (!mounted) return;
+      _isInitializing = current.isLoading;
+      if (!current.isLoading) {
+        _navigateBasedOnAuth();
       }
     });
   }
@@ -141,8 +120,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF6A11CB),
-                Color(0xFF2575FC),
+                Color(0xFF00C896),
+                Color(0xFF059669),
               ],
             ),
           ),
@@ -160,13 +139,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         Container(
                           padding: const EdgeInsets.all(40),
                           decoration: BoxDecoration(
-                            color: AppTheme.whiteColor.withOpacity(0.1),
+                            color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          child: const Icon(
-                            Icons.school,
-                            size: 100,
-                            color: Colors.white,
+                          child: Image.asset(
+                            'assets/logo.png',
+                            width: 120,
+                            height: 120,
                           ),
                         ),
                         const SizedBox(height: 40),
@@ -204,7 +183,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         Container(
                           padding: const EdgeInsets.all(30),
                           decoration: BoxDecoration(
-                            color: AppTheme.whiteColor.withOpacity(0.1),
+                            color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Column(
@@ -217,8 +196,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                                 SizedBox(height: 20),
                                 Text(
                                   _loadingMessage,
-                                  style: TextStyle(
-                                    color: AppTheme.getTextColor(context),
+                                  style: const TextStyle(
+                                    color: Colors.white,
                                     fontSize: 18,
                                   ),
                                 ),
@@ -229,10 +208,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                                   size: 48,
                                 ),
                                 SizedBox(height: 20),
-                                Text(
+                                const Text(
                                   'Ready to go!',
                                   style: TextStyle(
-                                    color: AppTheme.getTextColor(context),
+                                    color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -248,7 +227,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         Container(
                           padding: const EdgeInsets.all(25),
                           decoration: BoxDecoration(
-                            color: AppTheme.whiteColor.withOpacity(0.05),
+                            color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: Colors.white.withOpacity(0.2),
@@ -305,74 +284,107 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       );
     } else {
-      // Mobile layout (enhanced original design)
+      // Mobile layout with modern design matching auth screens
       return Scaffold(
-        backgroundColor: Color(0xFF6A11CB),
-        body: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo or icon
-                Icon(
-                  Icons.school,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                
-                SizedBox(height: 20),
-                
-                // App name
-                Text(
-                  'Excellence Coaching Hub',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                
-                SizedBox(height: 30),
-                
-                if (_isInitializing) ...[
-                  // Loading indicator
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Loading message
-                  Text(
-                    _loadingMessage,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF00C896),
+                Color(0xFF059669),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ] else ...[
-                  // Success indicator
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.white,
-                    size: 48,
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 100,
+                      height: 100,
+                    ),
                   ),
                   
-                  SizedBox(height: 20),
+                  const SizedBox(height: 30),
                   
-                  Text(
-                    'Ready to go!',
+                  // App name
+                  const Text(
+                    'Excellence Coaching Hub',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  const Text(
+                    'Transforming Education Through Technology',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 50),
+                  
+                  if (_isInitializing) ...[
+                    // Loading indicator
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 3,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Loading message
+                    Text(
+                      _loadingMessage,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ] else ...[
+                    // Success indicator
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 56,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    const Text(
+                      'Ready to go!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

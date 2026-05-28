@@ -312,18 +312,60 @@ class AuthRepository {
     }
   }
 
-  Future<User> getProfile() async {
+  /// Fetch user profile from backend using a bearer token.
+  /// Used by AuthProvider to restore session on app restart.
+  Future<User?> getUserProfile(String token) async {
     try {
-      // This would typically use a stored token to fetch user profile
-      // For Firebase-only auth, we could return a placeholder or throw an exception
-      // since we're handling this differently in the auth provider
-      await Future.delayed(const Duration(milliseconds: 100)); // Simulate API call
-      throw Exception('Not implemented - would fetch user profile with token');
+      final response = await _client.get(
+        Uri.parse('${ApiConfig.baseUrl}/auth/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Expected shapes:
+        // 1) { data: { ...user } }
+        // 2) { user: { ...user } }
+        // 3) { ...user } (fallback)
+        final userJson =
+            (data is Map<String, dynamic> && data['data'] is Map<String, dynamic>)
+                ? (data['data'] as Map<String, dynamic>)
+                : (data is Map<String, dynamic> && data['user'] is Map<String, dynamic>)
+                    ? (data['user'] as Map<String, dynamic>)
+                    : (data is Map<String, dynamic>)
+                        ? data
+                        : null;
+
+        if (userJson == null) {
+          throw Exception('Invalid profile response from server');
+        }
+
+        return User.fromJson(userJson);
+      }
+
+      // If unauthorized/expired token, just return null (do not hard-fail logout here)
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        return null;
+      }
+
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['message'] ?? 'Failed to fetch user profile');
     } catch (e) {
       _handleError(e);
       rethrow;
     }
   }
+
+  // Kept for backward compatibility with older code paths.
+  // Prefer getUserProfile(token).
+  @deprecated
+  Future<User> getProfile() async {
+    throw Exception('Not implemented - use getUserProfile(token) instead');
+  }
+
 
   Future<AuthResponse> refreshToken(String refreshToken) async {
     try {

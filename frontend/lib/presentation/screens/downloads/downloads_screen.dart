@@ -55,7 +55,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: context.canPop() ? IconButton(
           icon: const Icon(Icons.arrow_back_ios_rounded),
@@ -63,13 +63,14 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           tooltip: 'Back',
         ) : null,
         title: const Text('My Downloads'),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.getTextColor(context),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: AppTheme.primaryGreen,
+          unselectedLabelColor: AppTheme.greyColor,
+          indicatorColor: AppTheme.primaryGreen,
           tabs: const [
             Tab(text: 'Videos', icon: Icon(Icons.video_file)),
             Tab(text: 'Notes', icon: Icon(Icons.description)),
@@ -444,8 +445,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     return Scaffold(
       appBar: AppBar(
         title: Text(download.originalTitle),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Container(
         padding: const EdgeInsets.all(16),
@@ -470,8 +471,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     return Scaffold(
       appBar: AppBar(
         title: Text(download.originalTitle),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: SfPdfViewer.network(download.url),
     );

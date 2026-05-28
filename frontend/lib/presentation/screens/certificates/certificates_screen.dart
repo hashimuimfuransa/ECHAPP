@@ -14,10 +14,11 @@ class CertificatesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('My Certificates'),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.getTextColor(context),
         elevation: 0,
         actions: [
           IconButton(
@@ -81,12 +82,12 @@ class CertificatesScreen extends ConsumerWidget {
               color: AppTheme.greyColor.withOpacity(0.3),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Your Achievements Await!',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.blackColor,
+                color: AppTheme.getTextColor(context),
                 letterSpacing: -0.5,
               ),
             ),
@@ -148,7 +149,7 @@ class CertificatesScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: isDesktop ? 32 : 24,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context),
                       letterSpacing: -1,
                     ),
                   ),
@@ -186,12 +187,17 @@ class CertificatesScreen extends ConsumerWidget {
 
   Widget _buildCertificateCard(BuildContext context, Certificate certificate) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.15), width: 1.5),
+        border: Border.all(
+            color: isDark
+                ? AppTheme.primaryGreen.withOpacity(0.25)
+                : AppTheme.primaryGreen.withOpacity(0.15),
+            width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -230,12 +236,12 @@ class CertificatesScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     'OFFICIAL CERTIFICATE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF9CA3AF),
+                      color: AppTheme.getSecondaryTextColor(context),
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -245,7 +251,7 @@ class CertificatesScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.blackColor,
+                      color: AppTheme.getTextColor(context),
                       height: 1.2,
                     ),
                     maxLines: 2,
@@ -313,9 +319,9 @@ class CertificatesScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: AppTheme.primaryGreen.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDCFCE7)),
+        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -350,11 +356,14 @@ class CertificatesScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetBg = isDark ? AppTheme.darkSurface : Colors.white;
+        return Container(
         height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        decoration: BoxDecoration(
+          color: sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
           children: [
@@ -363,7 +372,7 @@ class CertificatesScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: isDark ? AppTheme.darkTextSecondary.withOpacity(0.3) : Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -372,7 +381,7 @@ class CertificatesScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -381,13 +390,14 @@ class CertificatesScreen extends ConsumerWidget {
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
+                          color: AppTheme.getTextColor(context),
                         ),
                       ),
                       Text(
                         'Official Document',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey,
+                          color: AppTheme.getSecondaryTextColor(context),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -397,7 +407,9 @@ class CertificatesScreen extends ConsumerWidget {
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.grey[100],
+                      backgroundColor: isDark
+                          ? AppTheme.darkCard
+                          : Colors.grey[100],
                     ),
                   ),
                 ],
@@ -413,7 +425,7 @@ class CertificatesScreen extends ConsumerWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? AppTheme.darkCard : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2), width: 2),
                         boxShadow: [
@@ -445,23 +457,23 @@ class CertificatesScreen extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildDetailItem('Grade', '${certificate.percentage.toInt()}%'),
+                              _buildDetailItem(context, 'Grade', '${certificate.percentage.toInt()}%'),
                               const SizedBox(width: 40),
-                              _buildDetailItem('Date', DateFormat('MM/dd/yyyy').format(certificate.issuedDate)),
+                              _buildDetailItem(context, 'Date', DateFormat('MM/dd/yyyy').format(certificate.issuedDate)),
                             ],
                           ),
                           const SizedBox(height: 32),
                           Text(
                             'Serial Number: ${certificate.serialNumber}',
-                            style: TextStyle(fontSize: 10, color: Colors.grey[400], letterSpacing: 1),
+                            style: TextStyle(fontSize: 10, color: AppTheme.getSecondaryTextColor(context), letterSpacing: 1),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _buildInfoRow(Icons.verified_outlined, 'Status', 'Verified & Valid'),
-                    _buildInfoRow(Icons.score_outlined, 'Final Score', '${certificate.score.toStringAsFixed(1)} Points'),
-                    _buildInfoRow(Icons.numbers_outlined, 'Serial No.', certificate.serialNumber),
+                    _buildInfoRow(context, Icons.verified_outlined, 'Status', 'Verified & Valid'),
+                    _buildInfoRow(context, Icons.score_outlined, 'Final Score', '${certificate.score.toStringAsFixed(1)} Points'),
+                    _buildInfoRow(context, Icons.numbers_outlined, 'Serial No.', certificate.serialNumber),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -507,30 +519,31 @@ class CertificatesScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+      );
+      }  // end builder
     );
   }
 
-  Widget _buildDetailItem(String label, String value) {
+  Widget _buildDetailItem(BuildContext context, String label, String value) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppTheme.getSecondaryTextColor(context))),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.getTextColor(context))),
       ],
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey),
+          Icon(icon, size: 20, color: AppTheme.getSecondaryTextColor(context)),
           const SizedBox(width: 12),
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: TextStyle(color: AppTheme.getSecondaryTextColor(context))),
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.getTextColor(context))),
         ],
       ),
     );

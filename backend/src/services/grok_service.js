@@ -505,17 +505,31 @@ ${contentPreview}
       return "AI is not currently available. Please contact support.";
     }
 
+    // Use the fastest Groq model for real-time chat; fall back to the main model if unavailable
+    const CHAT_MODEL = 'llama-3.1-8b-instant';
+
     try {
       const completion = await this.groq.chat.completions.create({
-        model: await this.resolveModel(),
+        model: CHAT_MODEL,
         messages,
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 800,
       });
       return completion.choices[0]?.message?.content ?? "I'm not sure how to respond to that.";
-    } catch (error) {
-      console.error("generateChatResponse error:", error.message);
-      return "I encountered an error. Please try again.";
+    } catch (fastModelErr) {
+      console.warn(`Fast chat model (${CHAT_MODEL}) failed: ${fastModelErr.message} — falling back to ${this.currentModel}`);
+      try {
+        const completion = await this.groq.chat.completions.create({
+          model: await this.resolveModel(),
+          messages,
+          temperature: 0.7,
+          max_tokens: 800,
+        });
+        return completion.choices[0]?.message?.content ?? "I'm not sure how to respond to that.";
+      } catch (error) {
+        console.error("generateChatResponse fallback error:", error.message);
+        return "I encountered an error. Please try again.";
+      }
     }
   }
 

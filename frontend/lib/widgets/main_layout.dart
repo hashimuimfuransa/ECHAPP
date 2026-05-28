@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/navigation_optimizer.dart';
 import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
@@ -51,7 +52,7 @@ class MainLayout extends ConsumerWidget {
 
     // Global listener for authentication state changes - use select to minimize rebuilds
     ref.listen(authProvider.select((state) => state.user), (previous, next) {
-      if (next == null) {
+      if (next == null && context.mounted) {
         final currentRoute = GoRouterState.of(context).uri.path;
         final bool isAuthRoute = currentRoute == '/login' || 
                                  currentRoute == '/register' || 
@@ -89,12 +90,14 @@ class MainLayout extends ConsumerWidget {
     
     // Use addPostFrameCallback to avoid updating state during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isCurrentlyCollapsed = ref.read(sidebarProvider);
-      if (shouldBeCollapsed && !isCurrentlyCollapsed) {
-        ref.read(sidebarProvider.notifier).setCollapsed(true);
-      } else if (screenWidth >= 1100 && isCurrentlyCollapsed) {
-        // Optional: auto-expand on larger screens if previously auto-collapsed
-        // ref.read(sidebarProvider.notifier).setCollapsed(false);
+      if (context.mounted) {
+        final isCurrentlyCollapsed = ref.read(sidebarProvider);
+        if (shouldBeCollapsed && !isCurrentlyCollapsed) {
+          ref.read(sidebarProvider.notifier).setCollapsed(true);
+        } else if (screenWidth >= 1100 && isCurrentlyCollapsed) {
+          // Optional: auto-expand on larger screens if previously auto-collapsed
+          // ref.read(sidebarProvider.notifier).setCollapsed(false);
+        }
       }
     });
 
@@ -143,36 +146,9 @@ class MainLayout extends ConsumerWidget {
       );
     } else {
       return Scaffold(
-        appBar: isAuthRoute ? null : AppBar(
-          leading: (context.canPop() || currentRoute != '/dashboard') 
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_rounded),
-                  onPressed: () {
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/dashboard');
-                    }
-                  },
-                  tooltip: 'Back',
-                ) 
-              : null,
-          title: Text(title ?? _getPageTitle(currentPage)),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              onPressed: () => _handleGlobalRefresh(ref, context),
-              tooltip: 'Refresh App',
-            ),
-            if (user != null) _buildNotificationBadge(context, ref),
-            const SizedBox(width: 8),
-          ],
-        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawer: isAuthRoute ? null : ResponsiveNavigationDrawer(currentPage: currentPage),
-        body: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: child,
-        ),
+        body: child,
         bottomNavigationBar: (isAuthRoute || user == null) ? null : _buildBottomNavBar(context, currentRoute),
       );
     }
@@ -226,16 +202,24 @@ class MainLayout extends ConsumerWidget {
     final bool isRootRoute = currentRoute == '/dashboard' || currentRoute == '/admin' || currentRoute == '/';
     final bool showBackButton = context.canPop() || !isRootRoute;
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withOpacity(0.05),
-            width: 1,
+            color: const Color(0xFF00C896).withOpacity(0.15),
+            width: 1.5,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00C896).withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -247,14 +231,16 @@ class MainLayout extends ConsumerWidget {
                 color: AppTheme.getTextColor(context).withOpacity(0.7),
               ),
               onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  // If we can't pop, go to the logical parent
-                  if (currentRoute.startsWith('/admin')) {
-                    context.go('/admin');
+                if (context.mounted) {
+                  if (context.canPop()) {
+                    context.pop();
                   } else {
-                    context.go('/dashboard');
+                    // If we can't pop, go to the logical parent
+                    if (currentRoute.startsWith('/admin')) {
+                      context.go('/admin');
+                    } else {
+                      context.go('/dashboard');
+                    }
                   }
                 }
               },
@@ -413,13 +399,20 @@ class MainLayout extends ConsumerWidget {
     return Container(
       height: _getResponsiveNavBarHeight(context),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? const Color(0xFF374151).withOpacity(0.3) : const Color(0xFFE5E7EB).withOpacity(0.5),
-            width: 1,
+            color: const Color(0xFF00C896).withOpacity(0.15),
+            width: 1.5,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -571,13 +564,13 @@ class MainLayout extends ConsumerWidget {
   double _getResponsiveNavBarHeight(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     if (screenHeight < 600) {
-      return 110; // Very small screens - significantly increased
+      return 100; // Very small screens - compact but fits larger icons/text
     } else if (screenHeight < 700) {
-      return 120; // Small screens - significantly increased
+      return 110; // Small screens - compact but fits larger icons/text
     } else if (screenHeight < 800) {
-      return 130; // Medium screens - significantly increased
+      return 120; // Medium screens - compact but fits larger icons/text
     } else {
-      return 140; // Large screens - significantly increased
+      return 130; // Large screens - compact but fits larger icons/text
     }
   }
 
@@ -595,33 +588,33 @@ class MainLayout extends ConsumerWidget {
   double _getResponsiveNavIconSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 16; // Keep small for very small screens
+      return 24; // Increased for very small screens
     } else if (screenWidth < 400) {
-      return 19; // Slightly increased for small screens
+      return 28; // Increased for small screens
     } else {
-      return 21; // Slightly increased for medium/large screens
+      return 32; // Increased for medium/large screens
     }
   }
 
   double _getResponsiveNavIconRadius(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 8; // Very small screens
+      return 10; // Very small screens - increased
     } else if (screenWidth < 400) {
-      return 10; // Small screens
+      return 12; // Small screens - increased
     } else {
-      return 12; // Medium and large screens
+      return 14; // Medium and large screens - increased
     }
   }
 
   double _getResponsiveNavTextSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 8; // Very small screens - increased for readability
+      return 11; // Very small screens - increased for readability
     } else if (screenWidth < 400) {
-      return 9; // Small screens - increased for readability
+      return 12; // Small screens - increased for readability
     } else {
-      return 10; // Medium and large screens - increased for readability
+      return 14; // Medium and large screens - increased for readability
     }
   }
 
@@ -639,19 +632,19 @@ class MainLayout extends ConsumerWidget {
   VoidCallback _getNavigationAction(int index, BuildContext context) {
     switch (index) {
       case 0:
-        return () => context.go('/dashboard');
+        return () => NavigationOptimizer.navigateToTab(context, '/dashboard');
       case 1:
-        return () => context.go('/courses');
+        return () => NavigationOptimizer.navigateToTab(context, '/courses');
       case 2:
-        return () => context.go('/library');
+        return () => NavigationOptimizer.navigateToTab(context, '/library');
       case 3:
-        return () => context.go('/downloads');
+        return () => NavigationOptimizer.navigateToTab(context, '/downloads');
       case 4:
-        return () => context.go('/my-courses');
+        return () => NavigationOptimizer.navigateToTab(context, '/my-courses');
       case 5:
-        return () => context.go('/personalization');
+        return () => NavigationOptimizer.navigateToTab(context, '/personalization');
       default:
-        return () => context.go('/dashboard');
+        return () => NavigationOptimizer.navigateToTab(context, '/dashboard');
     }
   }
 

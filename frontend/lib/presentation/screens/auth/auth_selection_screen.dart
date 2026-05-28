@@ -1296,6 +1296,8 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
 
   void _checkAndNavigate() async {
     final authState = ref.read(authProvider);
+    // Gate navigation behind full auth restoration.
+    // Prevents onboarding/home routing from firing while user is still null/loading.
     if (authState.user != null && !authState.isLoading && !_hasNavigated) {
       _hasNavigated = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {

@@ -10,6 +10,7 @@ import 'package:excellencecoachinghub/presentation/screens/auth/auth_selection_s
 import 'package:excellencecoachinghub/presentation/screens/auth/email_auth_option_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/enter_reset_code_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_collection_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/auth/name_collection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_auth_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/interest_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/personalization_screen.dart';
@@ -52,19 +53,23 @@ import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_qui
 import 'package:excellencecoachinghub/presentation/screens/notifications/notifications_screen.dart';
 import 'package:excellencecoachinghub/widgets/main_layout.dart';
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 
-/// Custom page transition for smooth navigation
+/// Custom page transition for smooth navigation with performance monitoring
 class _FadeTransitionPage extends CustomTransitionPage<void> {
   _FadeTransitionPage({
     required super.child,
     required super.name,
   }) : super(
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            NavigationPerformanceMonitor.startNavigation(name ?? 'unknown');
             return FadeTransition(
               opacity: animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeInOut))),
               child: child,
@@ -75,13 +80,14 @@ class _FadeTransitionPage extends CustomTransitionPage<void> {
         );
 }
 
-/// Slide transition for modal-style navigation
+/// Slide transition for modal-style navigation with performance monitoring
 class _SlideUpTransitionPage extends CustomTransitionPage<void> {
   _SlideUpTransitionPage({
     required super.child,
     required super.name,
   }) : super(
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            NavigationPerformanceMonitor.startNavigation(name ?? 'unknown');
             const begin = Offset(0.0, 0.05);
             const end = Offset.zero;
             final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeOutCubic));
@@ -109,10 +115,13 @@ class AppRouter {
   // Private internal constructor
   AppRouter._internal();
 
-  // Lazy-loaded GoRouter
+  // Lazy-loaded GoRouter (created once per app)
   late final GoRouter _router = _buildRouter();
 
+  static GoRouter get routerInstance => _instance._router;
+
   GoRouter get router => _router;
+
 
   GoRouter _buildRouter() => GoRouter(
         initialLocation: '/',
@@ -187,6 +196,12 @@ class AppRouter {
           GoRoute(
             path: '/phone-collection',
             builder: (context, state) => const PhoneCollectionScreen(),
+          ),
+
+          // Name Collection - for phone sign-in users without a name
+          GoRoute(
+            path: '/name-collection',
+            builder: (context, state) => const NameCollectionScreen(),
           ),
 
           // Onboarding Screens - Outside MainLayout for full-screen experience
@@ -581,6 +596,17 @@ class AppRouter {
           ),
         ],
         redirect: (context, state) {
+          // Auth guard: prevent landing on auth selection when a valid session exists.
+          if (state.matchedLocation == '/auth-selection') {
+            // Using Riverpod directly from GoRouter redirect is not reliable because
+            // BuildContext here is not tied to a ProviderScope.
+            // So we rely on a lightweight check: if auth restoration has already
+            // populated backend tokens, the user should not stay on auth-selection.
+            // (If needed, replace this with an async redirect that waits for authProvider.)
+            // TODO: implement auth-aware redirect using an async redirect or a
+            // provider-backed listener outside the redirect callback.
+            return null;
+          }
           return null;
         },
       );

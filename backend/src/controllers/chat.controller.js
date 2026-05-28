@@ -5,8 +5,49 @@ const Result = require('../models/Result');
 const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const TTSService = require('../services/tts.service');
 const GrokService = require('../services/grok_service');
+const s3Service = require('../services/s3.service');
+
+// Multer storage for file uploads (memory, max 20 MB)
+const _uploadStorage = multer.memoryStorage();
+const _upload = multer({
+  storage: _uploadStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+const uploadSingle = _upload.single('file');
+
+// ─── In-process caches ───────────────────────────────────────────────────────
+// AI response cache: key = sha256(systemPrompt + lastUserMsg), TTL 10 min, max 200 entries
+const _aiCache = new Map();
+const AI_CACHE_TTL = 10 * 60 * 1000;   // 10 minutes
+const AI_CACHE_MAX = 200;
+
+// Document text-extraction cache: key = sha256(fileBuffer), TTL 30 min, max 50 entries
+const _docCache = new Map();
+const DOC_CACHE_TTL = 30 * 60 * 1000;  // 30 minutes
+const DOC_CACHE_MAX = 50;
+
+function _sha256(data) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+function _cacheGet(map, key) {
+  const entry = map.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > entry.ttl) { map.delete(key); return null; }
+  return entry.value;
+}
+
+function _cacheSet(map, key, value, ttl, max) {
+  if (map.size >= max) {
+    // Evict the oldest entry
+    map.delete(map.keys().next().value);
+  }
+  map.set(key, { value, ts: Date.now(), ttl });
+}
 
 class ChatController {
   // Get user's conversation history
@@ -149,21 +190,30 @@ class ChatController {
       const userId = req.user?._id.toString();
 
       if (!userId) {
-        return res.status(401).json({ 
-          error: 'User authentication required' 
-        });
+        return res.status(401).json({ error: 'User authentication required' });
       }
 
       if (!message || message.trim().length === 0) {
-        return res.status(400).json({ 
-          error: 'Message is required' 
-        });
+        return res.status(400).json({ error: 'Message is required' });
       }
 
-      // Get student performance data for richer context
-      const enrollments = await Enrollment.find({ userId }).populate('courseId');
-      const results = await Result.find({ userId }).populate('examId');
-      const user = await User.findById(userId);
+      // Run all independent DB lookups in parallel
+      const [enrollments, results, user, conversation] = await Promise.all([
+        Enrollment.find({ userId }).populate('courseId', 'title').lean(),
+        Result.find({ userId }).populate('examId', 'title').lean(),
+        User.findById(userId).select('fullName role').lean(),
+        conversationId
+          ? Conversation.findById(conversationId)
+          : Conversation.getOrCreateConversation(userId, safeContext),
+      ]);
+
+      if (!conversation || (conversationId && conversation.userId !== userId)) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      if (!conversationId && conversation.isNew) {
+        await conversation.save();
+      }
 
       const performanceContext = {
         studentName: user?.fullName || 'Student',
@@ -182,24 +232,7 @@ class ChatController {
         }))
       };
 
-      // Get or create conversation
-      let conversation;
-      if (conversationId) {
-        conversation = await Conversation.findById(conversationId);
-        
-        if (!conversation || conversation.userId !== userId) {
-          return res.status(404).json({ 
-            error: 'Conversation not found' 
-          });
-        }
-      } else {
-        conversation = await Conversation.getOrCreateConversation(userId, safeContext);
-        if (conversation.isNew) {
-          await conversation.save();
-        }
-      }
-
-      // Save user message
+      // Save user message and fetch history in parallel
       const userMessage = new ChatMessage({
         conversationId: conversation._id,
         sender: 'user',
@@ -207,20 +240,15 @@ class ChatController {
         messageType: 'text',
         context: safeContext,
         isContextAware: !!context,
-        metadata: {
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        }
+        metadata: { ipAddress: req.ip, userAgent: req.get('User-Agent') }
       });
 
-      await userMessage.save();
-      await conversation.incrementMessageCount();
+      const [, recentMessages] = await Promise.all([
+        userMessage.save(),
+        ChatMessage.getConversationHistory(conversation._id, 10),
+      ]);
 
-      // Prepare messages for AI (including context)
-      const recentMessages = await ChatMessage.getConversationHistory(
-        conversation._id, 
-        10
-      );
+      await conversation.incrementMessageCount();
 
       const messagesForAI = [
         {
@@ -240,47 +268,24 @@ class ChatController {
       // Generate AI response
       const aiResponse = await ChatController.generateAIResponse(messagesForAI, safeContext);
 
-      // Save AI response
+      // Save AI message
       const aiMessage = new ChatMessage({
         conversationId: conversation._id,
         sender: 'ai',
         message: aiResponse,
         messageType: 'text',
         isContextAware: true,
-        context: context || {}
+        context: safeContext
       });
 
-      await aiMessage.save();
-      await conversation.incrementMessageCount();
+      // Save AI message and bump counter in parallel
+      await Promise.all([aiMessage.save(), conversation.incrementMessageCount()]);
 
-      // Generate audio response
-      let audioUrl = null;
-      try {
-        const audioDir = path.join(__dirname, '../../uploads/voice');
-        if (!fs.existsSync(audioDir)) {
-          fs.mkdirSync(audioDir, { recursive: true });
-        }
-        
-        const audioFileName = `chat-response-${Date.now()}.mp3`;
-        const audioFilePath = path.join(audioDir, audioFileName);
-        
-        const generatedAudio = await TTSService.generateSpeech(aiResponse, audioFilePath);
-        if (generatedAudio) {
-          const protocol = req.protocol;
-          const host = req.get('host');
-          audioUrl = `${protocol}://${host}/uploads/voice/${audioFileName}`;
-        }
-      } catch (ttsError) {
-        console.error("Error generating TTS for chat:", ttsError);
-      }
-
+      // Respond immediately — TTS runs in background
       res.json({
         success: true,
-        conversation: {
-          id: conversation._id,
-          title: conversation.title
-        },
-        audioUrl: audioUrl,
+        conversation: { id: conversation._id, title: conversation.title },
+        audioUrl: null,
         messages: [
           {
             id: userMessage._id,
@@ -295,17 +300,195 @@ class ChatController {
             message: aiMessage.message,
             timestamp: aiMessage.timestamp,
             formattedTimestamp: aiMessage.formattedTimestamp,
-            audioUrl: audioUrl
+            audioUrl: null
           }
         ]
       });
+
+      // Fire TTS async — does not block the response
+      ChatController._generateTTSBackground(aiResponse, aiMessage._id, req.protocol, req.get('host'));
+
     } catch (error) {
       console.error('Error sending message:', error);
-      res.status(500).json({ 
-        error: 'Failed to send message',
-        details: error.message 
-      });
+      res.status(500).json({ error: 'Failed to send message', details: error.message });
     }
+  }
+
+  // Background TTS generation — fire-and-forget
+  static _generateTTSBackground(text, messageId, protocol, host) {
+    try {
+      const audioDir = path.join(__dirname, '../../uploads/voice');
+      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+      const audioFileName = `chat-response-${Date.now()}.mp3`;
+      const audioFilePath = path.join(audioDir, audioFileName);
+      TTSService.generateSpeech(text, audioFilePath)
+        .then(generated => {
+          if (generated) {
+            const audioUrl = `${protocol}://${host}/uploads/voice/${audioFileName}`;
+            ChatMessage.findByIdAndUpdate(messageId, { audioUrl }).catch(() => {});
+          }
+        })
+        .catch(err => console.error('Background TTS error:', err));
+    } catch (e) {
+      console.error('TTS setup error:', e);
+    }
+  }
+
+  // Send message with file attachment (document or image)
+  static sendMessageWithFile(req, res) {
+    uploadSingle(req, res, async (multerErr) => {
+      if (multerErr) {
+        return res.status(400).json({ error: 'File upload failed', details: multerErr.message });
+      }
+
+      try {
+        const { conversationId, message, fileType } = req.body;
+        let safeContext = {};
+        try { safeContext = JSON.parse(req.body.context || '{}'); } catch (_) {}
+        const userId = req.user?._id.toString();
+
+        if (!userId) return res.status(401).json({ error: 'User authentication required' });
+        if (!req.file) return res.status(400).json({ error: 'No file provided' });
+
+        // Parallel: resolve conversation + user
+        const [user, conversation] = await Promise.all([
+          User.findById(userId).select('fullName role').lean(),
+          conversationId
+            ? Conversation.findById(conversationId)
+            : Conversation.getOrCreateConversation(userId, safeContext),
+        ]);
+
+        if (!conversation || (conversationId && conversation.userId !== userId)) {
+          return res.status(404).json({ error: 'Conversation not found' });
+        }
+        if (!conversationId && conversation.isNew) await conversation.save();
+
+        // Detect file type
+        const detectedType = fileType || (req.file.mimetype.startsWith('image/') ? 'image' : 'document');
+
+        // ── S3 upload + text extraction run in parallel ──────────────────────
+        const bufferHash = _sha256(req.file.buffer);
+
+        const [s3Result, fileContent] = await Promise.all([
+          // Upload to S3 under chat-attachments/ folder
+          s3Service.uploadFile(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype,
+            'chat-attachments'
+          ).catch(err => { console.error('S3 chat upload error:', err.message); return null; }),
+
+          // Extract text (with cache for repeated docs)
+          (async () => {
+            if (detectedType !== 'document') return '';
+            const cached = _cacheGet(_docCache, bufferHash);
+            if (cached !== null) { console.log('[doc cache] HIT'); return cached; }
+            try {
+              const pdfParse = require('pdf-parse');
+              const mammoth = require('mammoth');
+              const mime = req.file.mimetype;
+              let text = '';
+              if (mime === 'application/pdf' || req.file.originalname?.endsWith('.pdf')) {
+                const pdfData = await pdfParse(req.file.buffer);
+                text = pdfData.text?.substring(0, 8000) || '';
+              } else if (mime.includes('word') || req.file.originalname?.match(/\.docx?$/)) {
+                const r = await mammoth.extractRawText({ buffer: req.file.buffer });
+                text = r.value?.substring(0, 8000) || '';
+              } else {
+                text = req.file.buffer.toString('utf8').substring(0, 8000);
+              }
+              _cacheSet(_docCache, bufferHash, text, DOC_CACHE_TTL, DOC_CACHE_MAX);
+              return text;
+            } catch (e) {
+              console.error('Text extraction error:', e.message);
+              return '';
+            }
+          })(),
+        ]);
+
+        const s3Url = s3Result?.url || null;
+        const userPrompt = message?.trim() || `Please analyze this ${detectedType} and help me understand it.`;
+        const systemContext = ChatController.createContextAwareSystemPrompt({
+          studentName: user?.fullName || 'Student',
+          studentLevel: user?.role || 'student',
+          ...safeContext
+        });
+
+        let userMessageContent = userPrompt;
+        if (detectedType === 'image') {
+          userMessageContent = `${userPrompt}\n\n[The user has uploaded an image: ${req.file.originalname}${s3Url ? ` (stored at ${s3Url})` : ''}. Acknowledge that you can see it and offer analysis based on the question.]`;
+        } else if (fileContent) {
+          userMessageContent = `${userPrompt}\n\nDOCUMENT CONTENT:\n${fileContent}`;
+        } else {
+          userMessageContent = `${userPrompt}\n\n[User uploaded a file: ${req.file.originalname}. The content could not be extracted automatically. Ask them to paste the key text if needed.]`;
+        }
+
+        const messagesForAI = [
+          { role: 'system', content: systemContext },
+          { role: 'user', content: userMessageContent }
+        ];
+
+        // Save user message (parallel with AI call start is not possible but we
+        // can at least not block on conversation.incrementMessageCount)
+        const userMessage = new ChatMessage({
+          conversationId: conversation._id,
+          sender: 'user',
+          message: userPrompt,
+          messageType: detectedType === 'image' ? 'image' : 'text',
+          context: safeContext,
+          isContextAware: true,
+          metadata: { ipAddress: req.ip, userAgent: req.get('User-Agent') }
+        });
+        await userMessage.save();
+        await conversation.incrementMessageCount();
+
+        // Generate AI response
+        const aiResponse = await ChatController.generateAIResponse(messagesForAI, safeContext);
+
+        const aiMessage = new ChatMessage({
+          conversationId: conversation._id,
+          sender: 'ai',
+          message: aiResponse,
+          messageType: 'text',
+          isContextAware: true,
+          context: safeContext
+        });
+        // Save AI message and bump counter in parallel
+        await Promise.all([aiMessage.save(), conversation.incrementMessageCount()]);
+
+        res.json({
+          success: true,
+          conversation: { id: conversation._id, title: conversation.title },
+          audioUrl: null,
+          messages: [
+            {
+              id: userMessage._id,
+              sender: 'user',
+              message: userMessage.message,
+              timestamp: userMessage.timestamp,
+              formattedTimestamp: userMessage.formattedTimestamp,
+              s3Url: s3Url,           // hosted URL for display
+              fileType: detectedType,
+            },
+            {
+              id: aiMessage._id,
+              sender: 'ai',
+              message: aiMessage.message,
+              timestamp: aiMessage.timestamp,
+              formattedTimestamp: aiMessage.formattedTimestamp,
+              audioUrl: null
+            }
+          ]
+        });
+
+        // Background TTS
+        ChatController._generateTTSBackground(aiResponse, aiMessage._id, req.protocol, req.get('host'));
+
+      } catch (error) {
+        console.error('Error sending message with file:', error);
+        res.status(500).json({ error: 'Failed to process file message', details: error.message });
+      }
+    });
   }
 
   // Archive conversation
@@ -423,11 +606,23 @@ class ChatController {
     return prompt;
   }
 
-  // Helper method to generate AI response using Grok AI
+  // Helper method to generate AI response using Grok AI (with in-process cache)
   static async generateAIResponse(messages, context) {
     try {
-      // Return response from Grok Service
-      return await GrokService.generateChatResponse(messages, context);
+      // Build cache key from system prompt + last user message only
+      const systemContent = messages.find(m => m.role === 'system')?.content ?? '';
+      const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
+      const cacheKey = _sha256(systemContent.substring(0, 500) + '||' + lastUser);
+
+      const cached = _cacheGet(_aiCache, cacheKey);
+      if (cached) {
+        console.log('[AI cache] HIT');
+        return cached;
+      }
+
+      const response = await GrokService.generateChatResponse(messages, context);
+      _cacheSet(_aiCache, cacheKey, response, AI_CACHE_TTL, AI_CACHE_MAX);
+      return response;
     } catch (error) {
       console.error("Error in generateAIResponse:", error);
       return "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";

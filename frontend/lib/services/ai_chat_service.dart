@@ -17,6 +17,9 @@ class AIChatMessage {
   final DateTime timestamp;
   final bool isContextAware; // Whether this message uses learning context
   final String? audioUrl; // URL for audio response
+  final String? attachmentPath; // Local path of attached file/image
+  final String? attachmentType; // 'image' | 'document'
+  final String? attachmentName; // Display name
 
   AIChatMessage({
     required this.id,
@@ -25,6 +28,9 @@ class AIChatMessage {
     required this.timestamp,
     this.isContextAware = false,
     this.audioUrl,
+    this.attachmentPath,
+    this.attachmentType,
+    this.attachmentName,
   });
 
   AIChatMessage copyWith({
@@ -34,6 +40,9 @@ class AIChatMessage {
     DateTime? timestamp,
     bool? isContextAware,
     String? audioUrl,
+    String? attachmentPath,
+    String? attachmentType,
+    String? attachmentName,
   }) {
     return AIChatMessage(
       id: id ?? this.id,
@@ -42,6 +51,9 @@ class AIChatMessage {
       timestamp: timestamp ?? this.timestamp,
       isContextAware: isContextAware ?? this.isContextAware,
       audioUrl: audioUrl ?? this.audioUrl,
+      attachmentPath: attachmentPath ?? this.attachmentPath,
+      attachmentType: attachmentType ?? this.attachmentType,
+      attachmentName: attachmentName ?? this.attachmentName,
     );
   }
 }
@@ -87,6 +99,7 @@ class AIChatContext {
 abstract class AIChatService {
   Future<List<AIChatMessage>> getConversation(String conversationId);
   Future<AIChatMessage> sendMessage(String conversationId, String message, AIChatContext context);
+  Future<AIChatMessage> sendMessageWithFile(String conversationId, String message, File file, String fileType, AIChatContext context);
   Future<AIChatMessage> sendVoiceMessage(String conversationId, File audioFile, AIChatContext context);
   Future<void> createConversation(AIChatContext context);
   Future<void> updateContext(String conversationId, AIChatContext context);
@@ -193,6 +206,89 @@ class RealAIChatService implements AIChatService {
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
         sender: 'ai',
         message: 'I\'m having trouble connecting to my AI brain. Could you try asking again?',
+        timestamp: DateTime.now(),
+        isContextAware: false,
+      );
+    }
+  }
+
+  @override
+  Future<AIChatMessage> sendMessageWithFile(
+    String conversationId,
+    String message,
+    File file,
+    String fileType, // 'image' or 'document'
+    AIChatContext context,
+  ) async {
+    try {
+      String actualConversationId = conversationId;
+      if (conversationId.startsWith('conversation_')) {
+        actualConversationId = await createConversation(context);
+      }
+
+      final token = await _getAuthToken();
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/chat/send-with-file'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['conversationId'] = actualConversationId;
+      request.fields['message'] = message.isNotEmpty ? message : 'Please analyze this $fileType and help me understand it.';
+      request.fields['fileType'] = fileType;
+      request.fields['context'] = jsonEncode({
+        'courseTitle': context.currentCourse?.title ?? '',
+        'lessonTitle': context.currentLesson?.title ?? '',
+        'studentName': context.studentName ?? '',
+        'studentLevel': context.studentLevel ?? '',
+        'currentLessonNotes': context.currentLesson?.notes ?? '',
+      });
+
+      // Resolve MIME type from actual file extension for accurate Content-Type
+      final ext = file.path.split('.').last.toLowerCase();
+      final mimeMap = {
+        'jpg': MediaType('image', 'jpeg'),
+        'jpeg': MediaType('image', 'jpeg'),
+        'png': MediaType('image', 'png'),
+        'webp': MediaType('image', 'webp'),
+        'gif': MediaType('image', 'gif'),
+        'pdf': MediaType('application', 'pdf'),
+        'doc': MediaType('application', 'msword'),
+        'docx': MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document'),
+        'txt': MediaType('text', 'plain'),
+      };
+      final mimeType = mimeMap[ext] ?? (fileType == 'image' ? MediaType('image', 'jpeg') : MediaType('application', 'octet-stream'));
+      request.files.add(await http.MultipartFile.fromPath('file', file.path, contentType: mimeType));
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(responseBody);
+        // S3 URL returned by the backend — prefer it over local path for display
+        final s3Url = jsonData['messages']?[0]?['s3Url'] as String? ??
+            jsonData['s3Url'] as String?;
+        return AIChatMessage(
+          id: jsonData['messages']?[1]?['id'] ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          sender: 'ai',
+          message: jsonData['messages']?[1]?['message'] ??
+              jsonData['response'] ??
+              'I\'ve received your $fileType. Let me analyze it for you.',
+          timestamp: DateTime.now(),
+          isContextAware: true,
+          // Pass s3Url back so the chat bubble can display the hosted file
+          attachmentPath: s3Url,
+          attachmentType: s3Url != null ? fileType : null,
+          attachmentName: file.path.split(RegExp(r'[/\\]')).last,
+        );
+      } else {
+        throw Exception('Failed to send file: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error sending message with file: $e');
+      return AIChatMessage(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'ai',
+        message: 'I received your ${fileType == 'image' ? 'image' : 'document'}. I\'m having trouble processing it right now — please try asking your question again.',
         timestamp: DateTime.now(),
         isContextAware: false,
       );

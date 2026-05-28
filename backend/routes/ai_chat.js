@@ -18,6 +18,9 @@ router.delete('/conversations/:conversationId', protect, ChatController.archiveC
 // Endpoint to send a message and get AI response
 router.post('/chat/send', protect, ChatController.sendMessage);
 
+// Endpoint to send a message with a file attachment (document/image)
+router.post('/chat/send-with-file', protect, ChatController.sendMessageWithFile);
+
 // Endpoint to update conversation context
 router.put('/conversations/:conversationId/context', protect, async (req, res) => {
   try {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class CourseListingScreen extends StatefulWidget {
@@ -76,11 +75,10 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GradientBackground(
-        colors: AppTheme.secondaryGradient,
-        child: SafeArea(
-          child: Column(
-            children: [
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Column(
+          children: [
               // Header
               _buildHeader(),
               
@@ -94,35 +92,33 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 
   Widget _buildHeader() {
+    final textColor = AppTheme.getTextColor(context);
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+            icon: Icon(Icons.arrow_back_ios_rounded, color: textColor),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'All Courses',
               style: TextStyle(
-                color: Colors.white,
+                color: textColor,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: () {
-              // Show filter sheet
-            },
+            icon: Icon(Icons.filter_list, color: textColor),
+            onPressed: () {},
           ),
         ],
       ),
@@ -148,13 +144,13 @@ class _CourseListingScreenState extends State<CourseListingScreen> {
               label: Text(
                 level,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white70,
+                  color: isSelected ? Colors.white : AppTheme.greyColor,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
               selected: isSelected,
-              selectedColor: Colors.white.withOpacity(0.3),
-              backgroundColor: Colors.white.withOpacity(0.1),
+              selectedColor: AppTheme.primaryGreen,
+              backgroundColor: AppTheme.surface,
               onSelected: (selected) {
                 setState(() {
                   selectedLevel = level;

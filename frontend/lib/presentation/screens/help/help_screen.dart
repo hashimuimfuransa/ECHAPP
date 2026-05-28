@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class HelpScreen extends StatelessWidget {
@@ -31,16 +30,16 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = AppTheme.getTextColor(context);
+    final textSecondary = AppTheme.getSecondaryTextColor(context);
+    final cardColor = AppTheme.getCardColor(context);
+
     return Scaffold(
-      body: GradientBackground(
-        colors: AppTheme.primaryGradient,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Column(
+          children: [
               _buildHeader(context),
-              
-              // Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -48,63 +47,37 @@ class HelpScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Help Overview
-                      GlassContainer(
-                        child: Padding(
-                          padding: const EdgeInsets.all(25),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.help_outline, color: Colors.white, size: 26),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF4facfe),
-                                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.help_outline,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Help Center',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        SizedBox(height: 5),
-                                        Text(
-                                          'How can we help you today?',
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  Text('Help Center',
+                                      style: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 4),
+                                  Text('Find answers or contact our support team.',
+                                      style: TextStyle(color: textSecondary, fontSize: 13, height: 1.4)),
                                 ],
                               ),
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Find answers to common questions or get in touch with our support team.',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 15,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                       
@@ -175,26 +148,28 @@ class HelpScreen extends StatelessWidget {
                       const SizedBox(height: 25),
                       
                       // Contact Support
-                      GlassContainer(
+                      Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Need More Help?',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: textPrimary,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 15),
-                              const Text(
+                              const SizedBox(height: 10),
+                              Text(
                                 'Our support team is here to help you 24/7:',
                                 style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 15,
+                                  color: textSecondary,
+                                  fontSize: 14,
                                   height: 1.5,
                                 ),
                               ),
@@ -229,34 +204,36 @@ class HelpScreen extends StatelessWidget {
                       
                       const SizedBox(height: 25),
                       
-                      // Emergency Contact
-                      GlassContainer(
+                      // Alternative Contact
+                      Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Alternative Contact',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: textPrimary,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 15),
-                              const Text(
+                              const SizedBox(height: 10),
+                              Text(
                                 'You can also reach us through our secondary line:',
                                 style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 15,
+                                  color: textSecondary,
+                                  fontSize: 14,
                                   height: 1.5,
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _buildContactInfo('Secondary Line:', '+250 793 828 834'),
+                              _buildContactInfo(context, 'Secondary Line:', '+250 793 828 834'),
                               const SizedBox(height: 10),
-                              _buildContactInfo('Website:', 'excellencecoachinghub.com'),
+                              _buildContactInfo(context, 'Website:', 'excellencecoachinghub.com'),
                             ],
                           ),
                         ),
@@ -268,50 +245,51 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
+    final textPrimary = AppTheme.getTextColor(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(8, 12, 20, 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 24),
+            icon: Icon(Icons.arrow_back_ios_rounded, color: textPrimary, size: 20),
           ),
-          const Text(
+          Text(
             'Help & Support',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+              color: textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(width: 40),
         ],
       ),
     );
   }
 
   Widget _buildFAQSection(BuildContext context, String title, List<Map<String, String>> faqs) {
-    return GlassContainer(
+    final textPrimary = AppTheme.getTextColor(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 8),
             ...faqs.map((faq) => _buildFAQItem(context, faq['question']!, faq['answer']!)),
           ],
         ),
@@ -320,27 +298,27 @@ class HelpScreen extends StatelessWidget {
   }
 
   Widget _buildFAQItem(BuildContext context, String question, String answer) {
+    final textPrimary = AppTheme.getTextColor(context);
+    final textSecondary = AppTheme.getSecondaryTextColor(context);
     return ExpansionTile(
       title: Text(
         question,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
+        style: TextStyle(
+          color: textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      iconColor: Colors.white,
-      collapsedIconColor: Colors.white70,
-      textColor: Colors.white,
-      collapsedTextColor: Colors.white,
+      iconColor: const Color(0xFF10B981),
+      collapsedIconColor: textSecondary,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Text(
             answer,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 13,
               height: 1.5,
             ),
           ),
@@ -356,79 +334,57 @@ class HelpScreen extends StatelessWidget {
     required String subtitle,
     required Function onTap,
   }) {
+    final textPrimary = AppTheme.getTextColor(context);
+    final textSecondary = AppTheme.getSecondaryTextColor(context);
     return InkWell(
       onTap: () => onTap(),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: const Color(0xFF10B981).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: Colors.white70, size: 24),
+              child: Icon(icon, color: const Color(0xFF10B981), size: 22),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
-                    ),
-                  ),
+                  Text(title,
+                      style: TextStyle(color: textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(color: textSecondary, fontSize: 13)),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white54,
-              size: 16,
-            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: textSecondary, size: 14),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContactInfo(String label, String value) {
+  Widget _buildContactInfo(BuildContext context, String label, String value) {
+    final textPrimary = AppTheme.getTextColor(context);
+    final textSecondary = AppTheme.getSecondaryTextColor(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 150,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          width: 140,
+          child: Text(label,
+              style: TextStyle(color: textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
-          ),
+          child: Text(value,
+              style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
         ),
       ],
     );

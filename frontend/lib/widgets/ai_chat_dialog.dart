@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -210,6 +211,62 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     await _flutterTts.speak(aiMessage.message);
   }
 
+  Future<void> _handleSendWithFile(String message, File file, String fileType, String fileName) async {
+    final userMessage = AIChatMessage(
+      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      sender: 'user',
+      message: message.isNotEmpty ? message : 'Please analyze this $fileType.',
+      timestamp: DateTime.now(),
+      isContextAware: false,
+      attachmentPath: file.path,
+      attachmentType: fileType,
+      attachmentName: fileName,
+    );
+
+    setState(() {
+      _messages.add(userMessage);
+      _isLoading = true;
+      _isTyping = true;
+    });
+
+    if (widget.guideKey?.currentState != null) {
+      widget.guideKey!.currentState!.updateState(StudentGuideState.thinking);
+    }
+
+    try {
+      final context = AIChatContext(
+        currentCourse: widget.currentCourse,
+        currentLesson: widget.currentLesson,
+        allSections: widget.allSections,
+        sectionLessons: widget.sectionLessons,
+      );
+
+      final aiResponse = await widget.chatService.sendMessageWithFile(
+        widget.conversationId,
+        userMessage.message,
+        file,
+        fileType,
+        context,
+      );
+
+      setState(() {
+        _messages.add(aiResponse);
+        _isLoading = false;
+        _isTyping = false;
+      });
+
+      _updateGuideState(aiResponse.message);
+      await _flutterTts.speak(aiResponse.message);
+    } catch (e) {
+      print('Error sending file message: $e');
+      setState(() {
+        _isLoading = false;
+        _isTyping = false;
+      });
+      _showErrorMessage('Failed to send attachment');
+    }
+  }
+
   Future<void> _handleSendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
@@ -237,8 +294,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
         currentCourse: widget.currentCourse,
         currentLesson: widget.currentLesson,
       );
-
-      await Future.delayed(const Duration(milliseconds: 500));
 
       final aiResponse = await widget.chatService.sendMessage(
         widget.conversationId,
@@ -563,6 +618,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                   if (!_showVoiceChat)
                     AIChatInputWidget(
                       onSendMessage: _handleSendMessage,
+                      onSendWithFile: _handleSendWithFile,
                       isLoading: _isLoading,
                     ),
                 ],

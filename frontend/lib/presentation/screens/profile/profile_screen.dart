@@ -203,10 +203,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildHeader(user) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final avatarSize = isDesktop ? 160.0 : 130.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
     
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: isDesktop ? 40 : 30, horizontal: 20),
+      padding: EdgeInsets.symmetric(vertical: isDesktop ? 40 : 30, horizontal: isSmallScreen ? 16 : 20),
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(32),
@@ -220,6 +222,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
+          // Back Button Row
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.getBackgroundColor(context).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppTheme.getTextColor(context),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           GestureDetector(
             onTap: _pickImage,
             child: Stack(
@@ -462,6 +490,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildStatsSection() {
     final stats = ref.watch(userProfileStatsSimpleProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Responsive grid columns based on screen width
+    int crossAxisCount;
+    if (screenWidth >= 1200) {
+      crossAxisCount = 4;
+    } else if (screenWidth >= 800) {
+      crossAxisCount = 4;
+    } else if (screenWidth >= 600) {
+      crossAxisCount = 4;
+    } else if (screenWidth >= 400) {
+      crossAxisCount = 2;
+    } else {
+      crossAxisCount = 2;
+    }
+    
+    // Calculate responsive child aspect ratio to prevent overflow
+    // Lower ratio = taller cards = more vertical space for content
+    final double childAspectRatio = screenWidth < 360 ? 0.9 : (screenWidth < 400 ? 0.95 : 1.0);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,73 +518,100 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Text(
             'Your Progress',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: screenWidth < 360 ? 18 : 22,
               fontWeight: FontWeight.w800,
               color: AppTheme.getTextColor(context),
               letterSpacing: -0.5,
             ),
           ),
         ),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: isDesktop ? 4 : 2,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 20,
-          childAspectRatio: 1.1,
-          children: [
-            _buildStatCard('Enrolled', stats.enrolledCourses.toString(), Icons.book_rounded, Colors.blue),
-            _buildStatCard('Completed', stats.completedCourses.toString(), Icons.check_circle_rounded, Colors.green),
-            _buildStatCard('Certificates', stats.certificatesEarned.toString(), Icons.emoji_events_rounded, Colors.orange),
-            _buildStatCard('Quizzes', stats.quizzesTaken.toString(), Icons.quiz_rounded, Colors.purple),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: screenWidth < 360 ? 12 : 16,
+              crossAxisSpacing: screenWidth < 360 ? 12 : 16,
+              childAspectRatio: childAspectRatio,
+              children: [
+                _buildStatCard('Enrolled', stats.enrolledCourses.toString(), Icons.book_rounded, Colors.blue, constraints),
+                _buildStatCard('Completed', stats.completedCourses.toString(), Icons.check_circle_rounded, Colors.green, constraints),
+                _buildStatCard('Certificates', stats.certificatesEarned.toString(), Icons.emoji_events_rounded, Colors.orange, constraints),
+                _buildStatCard('Quizzes', stats.quizzesTaken.toString(), Icons.quiz_rounded, Colors.purple, constraints),
+              ],
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, BoxConstraints constraints) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmallScreen = screenWidth < 320;
+    
+    // Responsive sizing - ensure text fits within card
+    final double iconSize = isVerySmallScreen ? 20 : (isSmallScreen ? 22 : 26);
+    final double iconPadding = isVerySmallScreen ? 10 : (isSmallScreen ? 12 : 14);
+    final double valueFontSize = isVerySmallScreen ? 20 : (isSmallScreen ? 24 : 28);
+    final double titleFontSize = isVerySmallScreen ? 11 : (isSmallScreen ? 12 : 13);
+    final double containerPadding = isVerySmallScreen ? 16 : (isSmallScreen ? 20 : 24);
+    final double verticalSpacing = isVerySmallScreen ? 8 : (isSmallScreen ? 10 : 12);
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 28),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: color.withOpacity(0.15),
+            blurRadius: isSmallScreen ? 10 : 15,
+            offset: const Offset(0, 6),
           ),
         ],
-        border: Border.all(color: color.withOpacity(0.05), width: 1),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(iconPadding),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: iconSize),
           ),
-          const SizedBox(height: 15),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.getTextColor(context),
+          SizedBox(height: verticalSpacing),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: valueFontSize,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.getTextColor(context),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.getSecondaryTextColor(context),
+          SizedBox(height: isVerySmallScreen ? 4 : 6),
+          Flexible(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: titleFontSize,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.getSecondaryTextColor(context),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

@@ -9,15 +9,11 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
-import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
-import 'package:excellencecoachinghub/presentation/providers/course_payment_providers.dart';
-import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
-import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
@@ -25,6 +21,7 @@ import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
+import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -36,7 +33,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 // Device binding policy widget for dashboard
 class _DashboardDeviceBindingPolicy extends StatelessWidget {
   const _DashboardDeviceBindingPolicy();
-  
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -44,14 +41,16 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 20, 
-        vertical: isMobile ? 10 : 16
-      ),
+          horizontal: isMobile ? 12 : 20, vertical: isMobile ? 10 : 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF431407).withOpacity(0.2) : const Color(0xFFFFF7ED),
+        color: isDark
+            ? AppTheme.primaryDark.withOpacity(0.18)
+            : AppTheme.primarySoft.withOpacity(0.7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? const Color(0xFF7C2D12).withOpacity(0.3) : const Color(0xFFFFEDD5),
+          color: isDark
+              ? AppTheme.primaryLight.withOpacity(0.18)
+              : AppTheme.primary.withOpacity(0.16),
           width: 1,
         ),
       ),
@@ -59,7 +58,7 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
         children: [
           Icon(
             Icons.security_rounded,
-            color: isDark ? const Color(0xFFFB923C) : const Color(0xFFF97316),
+            color: isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
             size: isMobile ? 18 : 22,
           ),
           SizedBox(width: isMobile ? 10 : 16),
@@ -67,7 +66,9 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
             child: Text(
               'Account secured to this device. Contact support to change.',
               style: TextStyle(
-                color: isDark ? const Color(0xFFFFEDD5).withOpacity(0.8) : const Color(0xFF92400E),
+                color: isDark
+                    ? AppTheme.darkTextPrimary.withOpacity(0.84)
+                    : AppTheme.primaryDark,
                 fontSize: isMobile ? 12 : 14,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.2,
@@ -88,14 +89,14 @@ class _StatItem extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  
+
   const _StatItem({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -136,14 +137,79 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTickerProviderStateMixin {
+// Custom painter for a subtle woven dashboard edge.
+class _CurvedEdgePainter extends CustomPainter {
+  final bool isDark;
+
+  _CurvedEdgePainter({this.isDark = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wavePaint = Paint()
+      ..color = (isDark ? AppTheme.primaryLight : AppTheme.primary)
+          .withOpacity(isDark ? 0.18 : 0.16)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, size.height);
+    path.lineTo(0, size.height * 0.3);
+    path.quadraticBezierTo(
+      size.width * 0.25,
+      size.height * 0.1,
+      size.width * 0.5,
+      size.height * 0.3,
+    );
+    path.quadraticBezierTo(
+      size.width * 0.75,
+      size.height * 0.5,
+      size.width,
+      size.height * 0.2,
+    );
+
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawPath(path, wavePaint);
+
+    final stripePaint = Paint()
+      ..color = Colors.white.withOpacity(isDark ? 0.08 : 0.18)
+      ..strokeWidth = 2;
+
+    for (var x = -size.height; x < size.width; x += 26) {
+      canvas.drawLine(
+        Offset(x, size.height),
+        Offset(x + size.height, 0),
+        stripePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   bool _hasCheckedRole = false;
   Timer? _autoRefreshTimer;
+  Timer? _phraseTimer;
   AnimationController? _animationController;
   final TextEditingController _searchController = TextEditingController();
   String? _selectedCategoryId;
   String? _selectedCategoryName;
   bool _showCategoryDropdown = false;
+
+  // Gamification
+  int _phraseIndex = 0;
+  static const _motivationalPhrases = [
+    'Build skills for your next opportunity.',
+    'Every lesson brings you closer to your goal.',
+    'Keep going — consistency beats talent.',
+    'Champions learn daily. You are one.',
+    'Small steps, massive results.',
+    'Your future self is watching. Make it count.',
+    'Top performers never stop learning.',
+  ];
 
   @override
   void didChangeDependencies() {
@@ -154,18 +220,136 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    // Clear notifications and badges when app is opened
     PushNotificationService.clearNotifications();
-    
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    // Start auto-refresh timer to check payment status periodically
     _startAutoRefresh();
-    
-    // Play entrance animation
     _animationController?.forward();
+
+    // Rotate motivational phrase every 5 seconds
+    _phraseTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        setState(() => _phraseIndex =
+            (_phraseIndex + 1) % _motivationalPhrases.length);
+      }
+    });
+
+    // Show welcome-back popup after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowWelcomePopup();
+    });
+  }
+
+  Future<void> _maybeShowWelcomePopup() async {
+    if (!mounted) return;
+    final storage = StorageManager();
+    final lastSeen = await storage.getItem('dashboard_last_seen');
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    await storage.saveItem('dashboard_last_seen', today);
+
+    if (!mounted) return;
+
+    // First ever open — show "welcome" toast
+    if (lastSeen == null) {
+      _showDashboardToast(
+        icon: '👋',
+        title: 'Welcome to Excellence Hub!',
+        message: 'Start your first lesson today and earn XP.',
+        color: AppTheme.primary,
+      );
+      return;
+    }
+
+    // Returning user on a new day — show motivational toast
+    if (lastSeen != today) {
+      final hour = DateTime.now().hour;
+      final greeting = hour < 12
+          ? 'Good morning'  
+          : hour < 17
+              ? 'Good afternoon'
+              : 'Good evening';
+      _showDashboardToast(
+        icon: '🔥',
+        title: '$greeting! Keep the streak alive.',
+        message: 'Your consistency is your superpower.',
+        color: const Color(0xFFFF7043),
+      );
+    }
+  }
+
+  void _showDashboardToast({
+    required String icon,
+    required String title,
+    required String message,
+    required Color color,
+  }) {
+    if (!mounted) return;
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'toast',
+      barrierColor: Colors.black.withOpacity(0.35),
+      transitionDuration: const Duration(milliseconds: 350),
+      transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+        position: Tween<Offset>(
+                begin: const Offset(0, 0.18), end: Offset.zero)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      pageBuilder: (ctx, _, __) => _DashboardToast(
+        icon: icon,
+        title: title,
+        message: message,
+        color: color,
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _checkProgressMilestone(List<Enrollment> enrollments) {
+    if (enrollments.isEmpty) return;
+    final avg = enrollments.fold(0.0, (s, e) => s + e.progress) /
+        enrollments.length;
+    final milestones = [25, 50, 75, 100];
+    for (final m in milestones) {
+      if (avg >= m) {
+        _maybeShowMilestone(m, avg);
+        return;
+      }
+    }
+  }
+
+  Future<void> _maybeShowMilestone(int milestone, double progress) async {
+    if (!mounted) return;
+    final storage = StorageManager();
+    final key = 'milestone_shown_$milestone';
+    final already = await storage.getItem(key);
+    if (already == 'true') return;
+    await storage.saveItem(key, 'true');
+    if (!mounted) return;
+
+    final messages = {
+      25: ('🚀', 'Quarter way there!', 'You have hit 25% — momentum is building!'),
+      50: ('⚡', 'Halfway champion!', 'You are at 50% — the finish line is real.'),
+      75: ('🏅', 'Almost there!', '75% done — you are nearly unstoppable.'),
+      100: ('🎓', 'Course completed!', 'You finished a course. Incredible effort!'),
+    };
+    final data = messages[milestone];
+    if (data == null) return;
+
+    _showDashboardToast(
+      icon: data.$1,
+      title: data.$2,
+      message: data.$3,
+      color: milestone == 100
+          ? const Color(0xFFFFD700)
+          : milestone >= 75
+              ? AppTheme.accent
+              : AppTheme.primary,
+    );
   }
 
   void _startAutoRefresh() {
@@ -185,6 +369,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _phraseTimer?.cancel();
     _animationController?.dispose();
     _searchController.dispose();
     super.dispose();
@@ -193,7 +378,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   // Handle search submission with category filtering
   void _performSearch(String query) {
     if (query.trim().isEmpty && _selectedCategoryId == null) return;
-    
+
     context.push('/courses', extra: {
       'searchQuery': query.trim().isEmpty ? null : query.trim(),
       'categoryId': _selectedCategoryId,
@@ -214,6 +399,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     if (!_hasCheckedRole) {
       final authState =
           ref.read(authProvider); // use read, not watch, outside build
+
+      // Prevent onboarding redirect during initial auth restoration.
+      // This avoids a bounce right after login when onboarding flags are not yet stable.
       if (authState.user != null && !authState.isLoading) {
         _hasCheckedRole = true;
         debugPrint(
@@ -226,17 +414,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             if (mounted) context.go('/admin');
           });
         } else {
-          // Check local storage first for faster onboarding check
-          final storageManager = StorageManager();
-          final hasCompletedOnboarding = await storageManager.hasCompletedOnboarding();
-          final userHasCompletedOnboarding = authState.user?.hasCompletedOnboarding ?? false;
-          
-          debugPrint('DashboardScreen: hasCompletedOnboarding (storage) = $hasCompletedOnboarding');
-          debugPrint('DashboardScreen: userHasCompletedOnboarding (user data) = $userHasCompletedOnboarding');
-          
-          // Only redirect if both sources show onboarding is incomplete
-          final shouldRedirect = !hasCompletedOnboarding && !userHasCompletedOnboarding;
-          
+          final userHasCompletedOnboarding =
+              authState.user?.hasCompletedOnboarding ?? false;
+
+          // Only redirect based on backend/profile value.
+          // Avoid local-storage race conditions during login/session restoration.
+          final shouldRedirect = !userHasCompletedOnboarding;
+
+
           if (shouldRedirect) {
             debugPrint(
                 'DashboardScreen: Student has not completed onboarding, redirecting to onboarding');
@@ -254,19 +439,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final user = ref.watch(authProvider).user;
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
     final userEnrollmentsAsync = ref.watch(userEnrollmentsProvider);
-    
-    // Use .read for providers that don't need rebuilds on every change
-    final popularCoursesAsync = ref.read(popularCoursesProvider);
-    final recommendedCoursesAsync = ref.read(recommendedCoursesProvider);
 
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final popularCoursesAsync = ref.watch(popularCoursesProvider);
+    final recommendedCoursesAsync = ref.watch(recommendedCoursesProvider);
+
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final padding = isDesktop 
-        ? const EdgeInsets.fromLTRB(32, 24, 32, 40)
-        : isTablet
-        ? const EdgeInsets.fromLTRB(24, 20, 24, 32)
-        : ResponsiveBreakpoints.getPadding(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Cache resolved values to prevent repeated when() calls
     final List<Course> popularCourses = popularCoursesAsync.when(
@@ -274,7 +452,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       loading: () => <Course>[],
       error: (_, __) => <Course>[],
     );
-    
+
     final List<Course> recommendedCourses = recommendedCoursesAsync.when(
       data: (courses) => courses,
       loading: () => <Course>[],
@@ -282,82 +460,97 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _refreshDashboard,
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: padding,
-                  sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: Container(
-                        constraints: BoxConstraints(
-                          maxWidth: isDesktop ? 1200 : (isTablet ? 800 : double.infinity), // Wider for desktop, medium for tablet
-                        ),
-                        child: isDesktop 
-                          ? _buildDesktopLayout(context, user, userEnrollmentsAsync, popularCourses, recommendedCourses)
-                          : _buildMobileLayout(context, user, userEnrollmentsAsync, popularCourses, recommendedCourses)
-                      ),
-                    ),
-                  ),
-                ),
-                if (ref.watch(authProvider.notifier).isAdmin)
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: padding.left),
-                    sliver: SliverToBoxAdapter(
-                      child: Center(
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: isDesktop ? 1200 : (isTablet ? 800 : double.infinity),
-                          ),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 32),
-                              _buildAdminAccessButton(context),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+      backgroundColor:
+          isDark ? const Color(0xFF07111D) : const Color(0xFFF6F8FB),
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // Modern Header with Gradient
+          SliverToBoxAdapter(
+            child: _buildModernHeader(context, user),
           ),
-        ],
-      ),
-      floatingActionButton: !isDesktop ? FloatingActionButton(
-        onPressed: () => _showContactInfoDialog(context),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-        elevation: 6,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(Icons.contact_support, size: 22),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
+          // Main Content
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
+            sliver: SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1180),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 18),
+                      _buildModernSearchBar(context),
+                      const SizedBox(height: 24),
+                      userEnrollmentsAsync.when(
+                        data: (enrollments) {
+                          // Check milestones whenever enrollments load
+                          WidgetsBinding.instance.addPostFrameCallback(
+                              (_) => _checkProgressMilestone(enrollments));
+                          return _buildContinueLearningCard(
+                              context, enrollments);
+                        },
+                        loading: () =>
+                            _buildLoadingCard(context, 'Continue Learning'),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildQuickActions(context),
+                      const SizedBox(height: 24),
+                      userEnrollmentsAsync.when(
+                        data: (enrollments) =>
+                            _buildProgressStats(context, enrollments),
+                        loading: () => _buildProgressStats(context, []),
+                        error: (_, __) => _buildProgressStats(context, []),
+                      ),
+                      const SizedBox(height: 24),
+                      userEnrollmentsAsync.when(
+                        data: (enrollments) {
+                          final enrolledCourses = enrollments
+                              .map((e) => e.course)
+                              .where((course) => course != null)
+                              .cast<Course>()
+                              .toList();
+                          final coursesToShow = recommendedCourses.isNotEmpty
+                              ? recommendedCourses
+                              : popularCourses;
+                          return _buildRecommendedCourses(
+                            context,
+                            coursesToShow,
+                            enrolledCourses,
+                          );
+                        },
+                        loading: () {
+                          final coursesToShow = recommendedCourses.isNotEmpty
+                              ? recommendedCourses
+                              : popularCourses;
+                          return _buildRecommendedCourses(
+                              context, coursesToShow, []);
+                        },
+                        error: (_, __) {
+                          final coursesToShow = recommendedCourses.isNotEmpty
+                              ? recommendedCourses
+                              : popularCourses;
+                          return _buildRecommendedCourses(
+                              context, coursesToShow, []);
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      _buildUpdateInterestsCard(context),
+                      const SizedBox(height: 24),
+                      const DownloadsSection(),
+                      const SizedBox(height: 32),
+                      if (ref.watch(authProvider.notifier).isAdmin)
+                        _buildAdminAccessButton(context),
+                      const SizedBox(height: 40),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ) : null,
-      floatingActionButtonLocation: !isDesktop ? FloatingActionButtonLocation.endFloat : null,
+          ),
+        ],
+      ),
     );
   }
 
@@ -370,115 +563,1276 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     ref.invalidate(recommendedCoursesProvider);
   }
 
-  // Desktop layout with two-column design
-  Widget _buildDesktopLayout(BuildContext context, user, AsyncValue<List<Enrollment>> userEnrollmentsAsync, List<Course> popularCourses, List<Course> recommendedCourses) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // Modern Header with Gradient, Logo, Notification and Refresh
+  Widget _buildModernHeader(BuildContext context, user) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [
+                  AppTheme.darkBg,
+                  AppTheme.primaryDark,
+                  Color(0xFF0B2530),
+                ]
+              : const [
+                  AppTheme.primary,
+                  AppTheme.primaryDark,
+                  AppTheme.accent,
+                ],
+          stops: const [0.0, 0.62, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 18,
+            right: isMobile ? -54 : 30,
+            child: Transform.rotate(
+              angle: -0.45,
+              child: Row(
+                children: List.generate(
+                  7,
+                  (index) => Container(
+                    width: isMobile ? 22 : 34,
+                    height: isMobile ? 68 : 104,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: [
+                        Colors.white.withOpacity(0.10),
+                        AppTheme.primaryLight.withOpacity(0.22),
+                        AppTheme.accent.withOpacity(0.18),
+                        AppTheme.primary.withOpacity(0.26),
+                      ][index % 4],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              height: 8,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: const [
+                    AppTheme.primaryLight,
+                    AppTheme.primary,
+                    AppTheme.primaryDark,
+                    AppTheme.accent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: CustomPaint(
+              size: Size(double.infinity, isMobile ? 30 : 40),
+              painter: _CurvedEdgePainter(isDark: isDark),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                isMobile ? 20 : 32,
+                isMobile ? 16 : 22,
+                isMobile ? 20 : 32,
+                isMobile ? 28 : 36,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1180),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(isMobile ? 6 : 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.4),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                                BoxShadow(
+                                  color: AppTheme.primary.withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(isMobile ? 4 : 6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primarySoft.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Image.asset(
+                                    'assets/logo.png',
+                                    width: isMobile ? 28 : 38,
+                                    height: isMobile ? 28 : 38,
+                                  ),
+                                ),
+                                if (!isMobile) ...[
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Excellence Hub',
+                                    style: TextStyle(
+                                      color: AppTheme.primaryDark,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              _buildHeaderIconButton(
+                                icon: Icons.refresh_rounded,
+                                tooltip: 'Refresh',
+                                onTap: _refreshDashboard,
+                              ),
+                              const SizedBox(width: 12),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final notifications = ref
+                                      .watch(notificationProvider)
+                                      .notifications;
+                                  final unreadCount = notifications
+                                      .where((n) => !n.isRead)
+                                      .length;
+
+                                  return Stack(
+                                    children: [
+                                      _buildHeaderIconButton(
+                                        icon: unreadCount > 0
+                                            ? Icons.notifications_active_rounded
+                                            : Icons.notifications_outlined,
+                                        tooltip: 'Notifications',
+                                        onTap: () {
+                                          PushNotificationService
+                                              .clearNotifications();
+                                          context.push('/notifications');
+                                        },
+                                      ),
+                                      if (unreadCount > 0)
+                                        Positioned(
+                                          right: 4,
+                                          top: 4,
+                                          child: Container(
+                                            constraints: const BoxConstraints(
+                                              minWidth: 20,
+                                              minHeight: 20,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEF4444),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2),
+                                            ),
+                                            child: Text(
+                                              unreadCount > 9
+                                                  ? '9+'
+                                                  : unreadCount.toString(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: isMobile ? 18 : 26),
+                      Container(
+                        padding: EdgeInsets.all(isMobile ? 18 : 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.24),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.14),
+                              blurRadius: 34,
+                              offset: const Offset(0, 18),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _buildProfileAvatar(context, user, isMobile),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFBBF24)
+                                          .withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: const Color(0xFFFDE68A)
+                                            .withOpacity(0.28),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Student dashboard',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Hello, ${user?.fullName?.split(" ")[0] ?? "Student"}',
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 24 : 34,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      height: 1.05,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 500),
+                                    transitionBuilder: (child, anim) =>
+                                        FadeTransition(
+                                      opacity: anim,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0, 0.15),
+                                          end: Offset.zero,
+                                        ).animate(anim),
+                                        child: child,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _motivationalPhrases[_phraseIndex],
+                                      key: ValueKey(_phraseIndex),
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 13 : 15,
+                                        color: Colors.white.withOpacity(0.90),
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.35,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!isMobile) ...[
+                              const SizedBox(width: 18),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.35),
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.bolt_rounded,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Stay ready',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.35),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white, size: 24),
+        tooltip: tooltip,
+        padding: const EdgeInsets.all(10),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(BuildContext context, dynamic user, bool isMobile) {
+    final hasProfilePicture = user?.profilePicture != null && user!.profilePicture!.isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Left column - Main content
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              userEnrollmentsAsync.when(
-                data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
-                loading: () => _buildWelcomeCard(context, user, []),
-                error: (_, __) => _buildWelcomeCard(context, user, []),
-              ),
-              const SizedBox(height: 24),
-              userEnrollmentsAsync.when(
-                data: (enrollments) => _buildLearningAndOnboarding(context, enrollments),
-                loading: () => _buildLoadingCard(context, 'Continue Learning'),
-                error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
-              ),
-              const SizedBox(height: 24),
-              const DownloadsSection(),
-              const SizedBox(height: 32),
-              // Modern Category Section
-              _buildModernCategorySection(context),
-              const SizedBox(height: 32),
-              userEnrollmentsAsync.when(
-                data: (enrollments) {
-                  final enrolledCourses = enrollments.map((e) => e.course).where((course) => course != null).cast<Course>().toList();
-                  // Only show recommended courses if user has completed onboarding
-                  final hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
-                  final coursesToShow = (hasCompletedOnboarding && recommendedCourses.isNotEmpty) 
-                      ? recommendedCourses 
-                      : popularCourses;
-                  return _buildRecommendedCourses(
-                    context, 
-                    coursesToShow, 
-                    enrolledCourses
-                  );
-                },
-                loading: () => _buildRecommendedCourses(context, [], []),
-                error: (_, __) => _buildRecommendedCourses(context, [], []),
+        Container(
+          width: isMobile ? 64 : 80,
+          height: isMobile ? 64 : 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.5),
+              width: 3,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
+          ),
+          child: InkWell(
+            onTap: () => context.go('/profile'),
+            borderRadius: BorderRadius.circular(999),
+            child: ClipOval(
+              child: hasProfilePicture
+                  ? NetworkImageWidget(
+                      imageUrl: user.profilePicture!,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: Colors.white.withOpacity(0.25),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.person_rounded,
+                            color: Colors.white,
+                            size: isMobile ? 32 : 40,
+                          ),
+                          Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFBBF24),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
           ),
         ),
-        const SizedBox(width: 32),
-        // Right column - Quick actions and stats
-        Expanded(
-          flex: 1,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              userEnrollmentsAsync.when(
-                data: (enrollments) => _buildDesktopStatsSection(context, enrollments),
-                loading: () => _buildDesktopStatsSection(context, []),
-                error: (_, __) => _buildDesktopStatsSection(context, []),
+        if (!hasProfilePicture) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => context.go('/profile'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFBBF24).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              _buildDesktopQuickActions(context),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.upload_rounded,
+                    color: AppTheme.primaryDark,
+                    size: isMobile ? 12 : 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add Photo',
+                    style: TextStyle(
+                      color: AppTheme.primaryDark,
+                      fontSize: isMobile ? 10 : 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  List<BoxShadow> _softShadows(Color color, {double opacity = 0.10}) {
+    return [
+      BoxShadow(
+        color: color.withOpacity(opacity),
+        blurRadius: 28,
+        offset: const Offset(0, 14),
+      ),
+      BoxShadow(
+        color: Colors.black.withOpacity(0.04),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ];
+  }
+
+  BoxDecoration _modernPanelDecoration(BuildContext context, {Color? accent}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF111C2E) : Colors.white;
+    final borderColor =
+        isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE6ECF3);
+
+    return BoxDecoration(
+      color: baseColor,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: borderColor),
+      boxShadow: _softShadows(accent ?? const Color(0xFF64748B),
+          opacity: isDark ? 0.16 : 0.08),
+    );
+  }
+
+  // Modern Search Bar
+  Widget _buildModernSearchBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Column(
+      children: [
+        Container(
+          height: isMobile ? 58 : 64,
+          decoration: _modernPanelDecoration(
+            context,
+            accent: const Color(0xFF2563EB),
+          ),
+          child: TextField(
+            controller: _searchController,
+            onSubmitted: _performSearch,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: _selectedCategoryName == null
+                  ? 'Search courses, skills, lessons...'
+                  : 'Search in $_selectedCategoryName...',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white60 : const Color(0xFF7C8797),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              prefixIcon: Container(
+                margin: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFF0F766E),
+                ),
+              ),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(
+                      icon: Icon(
+                        Icons.clear_rounded,
+                        color:
+                            isDark ? Colors.white54 : const Color(0xFF9A8A76),
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      _showCategoryDropdown
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.tune_rounded,
+                      color: _selectedCategoryId == null
+                          ? (isDark ? Colors.white70 : const Color(0xFF9A8A76))
+                          : const Color(0xFF0F766E),
+                    ),
+                    onPressed: () {
+                      setState(
+                          () => _showCategoryDropdown = !_showCategoryDropdown);
+                    },
+                  ),
+                ],
+              ),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            ),
+          ),
+        ),
+        if (_showCategoryDropdown)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: _buildCategoryDropdown(context),
+          ),
+      ],
+    );
+  }
+
+  // Continue Learning Card
+  Widget _buildContinueLearningCard(
+      BuildContext context, List<Enrollment> enrollments) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    if (enrollments.isEmpty) {
+      // Show Explore Courses card for users with no enrollments
+      return _buildExploreCoursesCard(context);
+    }
+
+    final lastEnrollment = enrollments.first;
+    final lastCourse = lastEnrollment.course;
+
+    if (lastCourse == null) {
+      return _buildExploreCoursesCard(context);
+    }
+
+    final progress = (lastEnrollment.progress / 100).clamp(0.0, 1.0);
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryDark,
+            AppTheme.primary,
+            AppTheme.accent,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryDark.withOpacity(0.28),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: isMobile ? 54 : 64,
+                height: isMobile ? 54 : 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: lastCourse.thumbnail != null &&
+                        lastCourse.thumbnail!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: NetworkImageWidget(
+                          imageUrl: lastCourse.thumbnail!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Continue Learning',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lastCourse.title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 16 : 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Progress Bar
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Progress',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '${lastEnrollment.progress.toInt()}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: FractionallySizedBox(
+                  widthFactor: progress,
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryLight, Colors.white],
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Continue Button
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () =>
+                  CourseNavigationUtils.navigateToCourseWithContext(
+                      context, ref, lastCourse),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primaryDark,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.play_arrow_rounded, size: 20),
+                  SizedBox(width: 6),
+                  Text(
+                    'Continue Learning',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Explore Courses Card for users with no enrollments
+  Widget _buildExploreCoursesCard(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryDark,
+            AppTheme.primary,
+            AppTheme.accent,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withOpacity(0.24),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Start Your Journey',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Find a course for your goals',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 16 : 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Discover practical lessons, exam support, and career-ready skills built for ambitious African students.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: isMobile ? 13 : 14,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Explore Button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => context.push('/courses'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primaryDark,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Explore courses',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Progress Stats
+  Widget _buildProgressStats(
+      BuildContext context, List<Enrollment> enrollments) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    final coursesEnrolled = enrollments.length;
+    final coursesCompleted = enrollments.where((e) => e.progress >= 100).length;
+    final averageProgress = enrollments.isNotEmpty
+        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) /
+            enrollments.length
+        : 0.0;
+
+    final statCards = [
+      _buildStatCard(
+        context,
+        Icons.school_rounded,
+        '$coursesEnrolled',
+        'Enrolled',
+        AppTheme.primary,
+      ),
+      _buildStatCard(
+        context,
+        Icons.verified_rounded,
+        '$coursesCompleted',
+        'Completed',
+        AppTheme.accent,
+      ),
+      _buildStatCard(
+        context,
+        Icons.auto_graph_rounded,
+        '${averageProgress.toInt()}%',
+        'Avg Progress',
+        AppTheme.primaryDark,
+      ),
+    ];
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 10 : 12),
+      decoration: _modernPanelDecoration(
+        context,
+        accent: AppTheme.primary,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final spacing = isMobile ? 10.0 : 12.0;
+          final columns = isMobile ? 2 : 3;
+          final itemWidth =
+              (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              for (var index = 0; index < statCards.length; index++)
+                SizedBox(
+                  width:
+                      isMobile && index == 2 ? constraints.maxWidth : itemWidth,
+                  child: statCards[index],
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Stat Card
+  Widget _buildStatCard(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color:
+            isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(isDark ? 0.18 : 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isMobile ? 11 : 12,
+              color: AppTheme.getSecondaryTextColor(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Quick Actions
+  Widget _buildQuickActions(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    final actions = [
+      {
+        'icon': Icons.play_lesson_rounded,
+        'label': 'My Courses',
+        'subtitle': 'Resume lessons',
+        'route': '/my-courses',
+        'color': AppTheme.primaryDark,
+      },
+      {
+        'icon': Icons.download_done_rounded,
+        'label': 'Downloads',
+        'subtitle': 'Study offline',
+        'route': '/downloads',
+        'color': AppTheme.accent,
+      },
+      {
+        'icon': Icons.verified_rounded,
+        'label': 'Certificates',
+        'subtitle': 'Show progress',
+        'route': '/certificates',
+        'color': AppTheme.primary,
+      },
+      {
+        'icon': Icons.history_edu_rounded,
+        'label': 'Exams',
+        'subtitle': 'Review results',
+        'route': '/exams/history',
+        'color': AppTheme.accent,
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Access',
+          style: TextStyle(
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.getTextColor(context),
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final spacing = isMobile ? 10.0 : 12.0;
+            final columns = isMobile ? 2 : 4;
+            final itemWidth =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final itemHeight = isMobile ? 116.0 : 128.0;
+
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: actions.map((action) {
+                final color = action['color'] as Color;
+                return SizedBox(
+                  width: itemWidth,
+                  height: itemHeight,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.push(action['route'] as String),
+                      borderRadius: BorderRadius.circular(18),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          color:
+                              isDark ? const Color(0xFF111C2F) : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: color.withOpacity(0.16)),
+                          boxShadow: _softShadows(
+                            color,
+                            opacity: isDark ? 0.18 : 0.10,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(isMobile ? 10 : 14),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: isMobile ? 34 : 44,
+                                height: isMobile ? 34 : 44,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      color,
+                                      color.withOpacity(0.72),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color.withOpacity(0.24),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  action['icon'] as IconData,
+                                  color: Colors.white,
+                                  size: isMobile ? 18 : 22,
+                                ),
+                              ),
+                              SizedBox(height: isMobile ? 8 : 10),
+                              Flexible(
+                                child: Text(
+                                  action['label'] as String,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.getTextColor(context),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Flexible(
+                                child: Text(
+                                  action['subtitle'] as String,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 10 : 12,
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        AppTheme.getSecondaryTextColor(context),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
         ),
       ],
     );
   }
 
-  // Mobile/Tablet layout - single column
-  Widget _buildMobileLayout(BuildContext context, user, AsyncValue<List<Enrollment>> userEnrollmentsAsync, List<Course> popularCourses, List<Course> recommendedCourses) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        userEnrollmentsAsync.when(
-          data: (enrollments) => _buildWelcomeCard(context, user, enrollments),
-          loading: () => _buildWelcomeCard(context, user, []),
-          error: (_, __) => _buildWelcomeCard(context, user, []),
+  Widget _buildUpdateInterestsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/interest-selection'),
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: _modernPanelDecoration(
+            context,
+            accent: AppTheme.primary,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: isMobile ? 42 : 50,
+                height: isMobile ? 42 : 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AppTheme.primaryGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Update your interests',
+                      style: TextStyle(
+                        fontSize: isMobile ? 15 : 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Refresh recommendations based on what you want to learn next.',
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      maxLines: isMobile ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
+                size: 16,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 24),
-        userEnrollmentsAsync.when(
-          data: (enrollments) => _buildLearningAndOnboarding(context, enrollments),
-          loading: () => _buildLoadingCard(context, 'Continue Learning'),
-          error: (error, stack) => _buildErrorCard(context, 'Continue Learning', error.toString()),
-        ),
-        const SizedBox(height: 24),
-        const DownloadsSection(),
-        const SizedBox(height: 32),
-        // Modern Category Section
-        _buildModernCategorySection(context),
-        const SizedBox(height: 32),
-        userEnrollmentsAsync.when(
-          data: (enrollments) {
-            final enrolledCourses = enrollments.map((e) => e.course).where((course) => course != null).cast<Course>().toList();
-            // Only show recommended courses if user has completed onboarding
-            final hasCompletedOnboarding = user.hasCompletedOnboarding ?? false;
-            final coursesToShow = (hasCompletedOnboarding && recommendedCourses.isNotEmpty) 
-                ? recommendedCourses 
-                : popularCourses;
-            return _buildRecommendedCourses(
-              context, 
-              coursesToShow, 
-              enrolledCourses
-            );
-          },
-          loading: () => _buildRecommendedCourses(context, [], []),
-          error: (_, __) => _buildRecommendedCourses(context, [], []),
-        ),
-      ],
+      ),
     );
   }
 
@@ -569,7 +1923,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  color: isDark
+                      ? const Color(0xFF374151)
+                      : const Color(0xFFE5E7EB),
                   width: 1,
                 ),
               ),
@@ -630,7 +1986,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     ),
                   );
                 }
-                
+
                 return ListView(
                   shrinkWrap: true,
                   children: [
@@ -645,15 +2001,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       null,
                     ),
                     // Category Options - Add null checks
-                    ...categories.where((category) => category != null).map((category) => _buildCategoryOption(
-                      context,
-                      category.id,
-                      category.name,
-                      'Courses in ${category.name}',
-                      CategoryUtils.getCategoryIcon(category.id, name: category.name),
-                      CategoryUtils.getCategoryColor(category.id, name: category.name),
-                      category,
-                    )),
+                    ...categories
+                        .where((category) => category != null)
+                        .map((category) => _buildCategoryOption(
+                              context,
+                              category.id,
+                              category.name,
+                              'Courses in ${category.name}',
+                              CategoryUtils.getCategoryIcon(category.id,
+                                  name: category.name),
+                              CategoryUtils.getCategoryColor(category.id,
+                                  name: category.name),
+                              category,
+                            )),
                   ],
                 );
               },
@@ -705,7 +2065,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             _selectedCategoryName = name;
             _showCategoryDropdown = false;
           });
-          
+
           // Perform search immediately if category is selected to improve UX
           if (categoryId != 'all') {
             _performSearch(''); // Trigger search with selected category
@@ -716,14 +2076,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         child: Container(
           padding: EdgeInsets.all(isMobile ? 10 : 14),
           decoration: BoxDecoration(
-            color: isSelected 
+            color: isSelected
                 ? color.withOpacity(0.15)
-                : isDark ? const Color(0xFF2D3748) : const Color(0xFFF8FAFC),
+                : isDark
+                    ? const Color(0xFF2D3748)
+                    : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected 
-                    ? color.withOpacity(0.3)
-                    : isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+              color: isSelected
+                  ? color.withOpacity(0.3)
+                  : isDark
+                      ? const Color(0xFF374151)
+                      : const Color(0xFFE5E7EB),
               width: isSelected ? 2 : 1,
             ),
           ),
@@ -736,9 +2100,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 width: isMobile ? 36 : 44,
                 height: isMobile ? 36 : 44,
                 decoration: BoxDecoration(
-                  color: isSelected 
-                        ? color.withOpacity(0.2)
-                        : color.withOpacity(0.1),
+                  color: isSelected
+                      ? color.withOpacity(0.2)
+                      : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(isMobile ? 8 : 10),
                 ),
                 child: Icon(
@@ -756,9 +2120,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     Text(
                       name,
                       style: TextStyle(
-                        color: isSelected 
-                              ? color
-                              : AppTheme.getTextColor(context),
+                        color:
+                            isSelected ? color : AppTheme.getTextColor(context),
                         fontSize: isMobile ? 14 : 16,
                         fontWeight: FontWeight.w700,
                         height: 1.2,
@@ -815,9 +2178,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             final isFirst = index == 0;
             final category = isFirst ? null : categories[index - 1];
             final categoryId = isFirst ? 'all' : category!.id;
-            final color = CategoryUtils.getCategoryColor(categoryId, name: isFirst ? 'all' : category?.name);
+            final color = CategoryUtils.getCategoryColor(categoryId,
+                name: isFirst ? 'all' : category?.name);
             final name = isFirst ? 'All' : category!.name;
-            final icon = CategoryUtils.getCategoryIcon(categoryId, name: isFirst ? 'all' : category?.name);
+            final icon = CategoryUtils.getCategoryIcon(categoryId,
+                name: isFirst ? 'all' : category?.name);
 
             return Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -869,324 +2234,352 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, user, List<Enrollment> enrollments) {
+  Widget _buildWelcomeCard(
+      BuildContext context, user, List<Enrollment> enrollments) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    
+
     return Container(
       width: double.infinity,
-      child: Column(
-        children: [
-          // Profile Header Section
-          Row(
-            children: [
-              // Profile Picture
-              Container(
-                width: isMobile ? 50 : 60,
-                height: isMobile ? 50 : 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [const Color(0xFF10B981), const Color(0xFF0EA5E9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF00C896), Color(0xFF059669)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00C896).withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Column(
+          children: [
+            // Profile Header Section
+            Row(
+              children: [
+                // Profile Picture
+                Container(
+                  width: isMobile ? 50 : 60,
+                  height: isMobile ? 50 : 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF10B981).withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: user?.profilePicture != null && user!.profilePicture!.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: NetworkImageWidget(
-                          imageUrl: user.profilePicture!,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: isMobile ? 24 : 28,
-                      ),
-              ),
-              const SizedBox(width: 16),
-              // Greeting
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
-                      style: TextStyle(
-                        fontSize: isSmallMobile ? 20 : 24,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.getTextColor(context),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Ready to continue your learning journey?',
-                      style: TextStyle(
-                        fontSize: isSmallMobile ? 12 : 14,
-                        color: AppTheme.getSecondaryTextColor(context),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Enhanced Notification Bell
-              Consumer(
-                builder: (context, ref, child) {
-                  final notifications = ref.watch(notificationProvider).notifications;
-                  final unreadCount = notifications.where((n) => !n.isRead).length;
-                  final isMobile = ResponsiveBreakpoints.isMobile(context);
-                  
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          // Clear notification badge when clicked
-                          PushNotificationService.clearNotifications();
-                          context.push('/notifications');
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        splashColor: const Color(0xFF10B981).withOpacity(0.1),
-                        child: Container(
-                          width: isMobile ? 36 : 44,
-                          height: isMobile ? 36 : 44,
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                  child: user?.profilePicture != null &&
+                          user!.profilePicture!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: NetworkImageWidget(
+                            imageUrl: user.profilePicture!,
+                            fit: BoxFit.cover,
                           ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Bell Icon
-                              AnimatedScale(
-                                scale: unreadCount > 0 ? 1.1 : 1.0,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.elasticOut,
-                                child: Icon(
-                                  unreadCount > 0 
-                                      ? Icons.notifications_active_rounded
-                                      : Icons.notifications_outlined,
-                                  color: unreadCount > 0 
-                                      ? const Color(0xFF10B981)
-                                      : AppTheme.getSecondaryTextColor(context),
-                                  size: isMobile ? 18 : 22,
+                        )
+                      : Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: isMobile ? 24 : 28,
+                        ),
+                ),
+                const SizedBox(width: 16),
+                // Greeting
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hello, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
+                        style: TextStyle(
+                          fontSize: isSmallMobile ? 20 : 24,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ready to continue your learning journey?',
+                        style: TextStyle(
+                          fontSize: isSmallMobile ? 12 : 14,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Enhanced Notification Bell
+                Consumer(
+                  builder: (context, ref, child) {
+                    final notifications =
+                        ref.watch(notificationProvider).notifications;
+                    final unreadCount =
+                        notifications.where((n) => !n.isRead).length;
+                    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            // Clear notification badge when clicked
+                            PushNotificationService.clearNotifications();
+                            context.push('/notifications');
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          splashColor: const Color(0xFF10B981).withOpacity(0.1),
+                          child: Container(
+                            width: isMobile ? 36 : 44,
+                            height: isMobile ? 36 : 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                              // Notification Badge
-                              AnimatedScale(
-                                scale: unreadCount > 0 ? 1.0 : 0.0,
-                                duration: const Duration(milliseconds: 200),
-                                curve: Curves.bounceOut,
-                                child: Container(
-                                  width: isMobile ? 16 : 20,
-                                  height: isMobile ? 16 : 20,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Bell Icon
+                                AnimatedScale(
+                                  scale: unreadCount > 0 ? 1.1 : 1.0,
+                                  duration: const Duration(milliseconds: 150),
+                                  curve: Curves.elasticOut,
+                                  child: Icon(
+                                    unreadCount > 0
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: isMobile ? 18 : 22,
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      unreadCount > 99 ? '99+' : unreadCount.toString(),
-                                      style: TextStyle(
+                                ),
+                                // Notification Badge
+                                AnimatedScale(
+                                  scale: unreadCount > 0 ? 1.0 : 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.bounceOut,
+                                  child: Container(
+                                    width: isMobile ? 16 : 20,
+                                    height: isMobile ? 16 : 20,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
                                         color: Colors.white,
-                                        fontSize: isMobile ? 8 : 10,
-                                        fontWeight: FontWeight.w700,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        unreadCount > 99
+                                            ? '99+'
+                                            : unreadCount.toString(),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isMobile ? 8 : 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Enhanced Search Bar with Category Filter
-          _buildEnhancedSearchBar(context, isDark),
-          // Category Dropdown
-          if (_showCategoryDropdown)
-            GestureDetector(
-              onTap: () {
-                // Use WidgetsBinding to prevent frame callback issues
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() => _showCategoryDropdown = false);
-                  }
-                });
-              },
-              child: _buildCategoryDropdown(context),
+                    );
+                  },
+                ),
+              ],
             ),
-        ],
+            const SizedBox(height: 20),
+            // Search Bar floats on the green card
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: _buildEnhancedSearchBar(context, false),
+            ),
+            // Category Dropdown
+            if (_showCategoryDropdown)
+              GestureDetector(
+                onTap: () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _showCategoryDropdown = false);
+                    }
+                  });
+                },
+                child: _buildCategoryDropdown(context),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEnhancedSearchBar(BuildContext context, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Category Filter Button
-          GestureDetector(
-            onTap: () {
-              // Use WidgetsBinding to prevent frame callback issues
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() => _showCategoryDropdown = !_showCategoryDropdown);
-                }
-              });
-            },
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: _selectedCategoryId != null 
-                    ? const Color(0xFF10B981).withOpacity(0.1)
-                    : Colors.transparent,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                ),
-                border: Border(
-                  right: BorderSide(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-                    width: 1,
-                  ),
-                ),
+    return Row(
+      children: [
+        // Category Filter Button
+        GestureDetector(
+          onTap: () {
+            // Use WidgetsBinding to prevent frame callback issues
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() => _showCategoryDropdown = !_showCategoryDropdown);
+              }
+            });
+          },
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: _selectedCategoryId != null
+                  ? const Color(0xFF10B981).withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.category_outlined,
-                    color: _selectedCategoryId != null 
-                        ? const Color(0xFF10B981)
-                        : AppTheme.getSecondaryTextColor(context),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _selectedCategoryName ?? 'All',
-                    style: TextStyle(
-                      color: _selectedCategoryId != null 
-                            ? const Color(0xFF10B981)
-                            : AppTheme.getSecondaryTextColor(context),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    _showCategoryDropdown ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: _selectedCategoryId != null 
-                        ? const Color(0xFF10B981)
-                        : AppTheme.getSecondaryTextColor(context),
-                    size: 16,
-                  ),
-                ],
+              border: Border(
+                right: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF374151)
+                      : const Color(0xFFE5E7EB),
+                  width: 1,
+                ),
               ),
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.category_outlined,
+                  color: _selectedCategoryId != null
+                      ? const Color(0xFF10B981)
+                      : AppTheme.getSecondaryTextColor(context),
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _selectedCategoryName ?? 'All',
+                  style: TextStyle(
+                    color: _selectedCategoryId != null
+                        ? const Color(0xFF10B981)
+                        : AppTheme.getSecondaryTextColor(context),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _showCategoryDropdown
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: _selectedCategoryId != null
+                      ? const Color(0xFF10B981)
+                      : AppTheme.getSecondaryTextColor(context),
+                  size: 16,
+                ),
+              ],
+            ),
           ),
-          // Search Input
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: _performSearch,
-              onChanged: (value) {
-                if (_showCategoryDropdown) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  });
-                }
-              },
-              decoration: InputDecoration(
-                hintText: _selectedCategoryId != null 
-                    ? 'Search in ${_selectedCategoryName}...'
-                    : 'Search courses, topics, instructors...',
-                hintStyle: TextStyle(
-                  color: AppTheme.getSecondaryTextColor(context),
-                  fontSize: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.search_outlined,
-                  color: AppTheme.getSecondaryTextColor(context),
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
+        ),
+        // Search Input
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            onSubmitted: _performSearch,
+            onChanged: (value) {
+              if (_showCategoryDropdown) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {});
+                  }
+                });
+              }
+            },
+            decoration: InputDecoration(
+              hintText: _selectedCategoryId != null
+                  ? 'Search in ${_selectedCategoryName}...'
+                  : 'Search courses, topics, instructors...',
+              hintStyle: TextStyle(
+                color: AppTheme.getSecondaryTextColor(context),
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(
+                Icons.search_outlined,
+                color: AppTheme.getSecondaryTextColor(context),
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: AppTheme.greyColor),
+                      icon: const Icon(Icons.clear_rounded,
+                          color: AppTheme.greyColor),
                       onPressed: () {
                         _searchController.clear();
                       },
                     )
                   : IconButton(
-                    icon: Icon(
-                      Icons.tune,
-                      color: AppTheme.getSecondaryTextColor(context),
-                      size: 18,
+                      icon: Icon(
+                        Icons.tune,
+                        color: AppTheme.getSecondaryTextColor(context),
+                        size: 18,
+                      ),
+                      onPressed: () {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() =>
+                                _showCategoryDropdown = !_showCategoryDropdown);
+                          }
+                        });
+                      },
                     ),
-                    onPressed: () {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() => _showCategoryDropdown = !_showCategoryDropdown);
-                        }
-                      });
-                    },
-                  ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildLiveClassInfo(BuildContext context, bool isDark) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -1298,7 +2691,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   void _showContactDialog(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1407,7 +2800,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     VoidCallback onTap,
   ) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1417,7 +2810,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         child: Container(
           padding: EdgeInsets.all(isMobile ? 12 : 16),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark 
+            color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF1F2937)
                 : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(8),
@@ -1475,7 +2868,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   Widget _buildCompactContinueButton(BuildContext context, Course lastCourse) {
     return InkWell(
-      onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, lastCourse),
+      onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+          context, ref, lastCourse),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1491,7 +2885,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF10B981), size: 20),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Color(0xFF10B981), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1527,19 +2922,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildDesktopStatsOverlay(BuildContext context, List<Enrollment> enrollments, double averageProgress) {
+  Widget _buildDesktopStatsOverlay(BuildContext context,
+      List<Enrollment> enrollments, double averageProgress) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : 16),
       decoration: BoxDecoration(
-        color: !isMobile(context) ? Colors.white.withOpacity(0.12) : (isDark ? const Color(0xFF1E293B) : Colors.white),
+        color: !isMobile(context)
+            ? Colors.white.withOpacity(0.12)
+            : (isDark ? const Color(0xFF1E293B) : Colors.white),
         borderRadius: BorderRadius.circular(24),
-        border: !isMobile(context) ? Border.all(color: Colors.white.withOpacity(0.2), width: 1.5) : null,
-        boxShadow: !isMobile(context) ? [] : [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
-        ],
+        border: !isMobile(context)
+            ? Border.all(color: Colors.white.withOpacity(0.2), width: 1.5)
+            : null,
+        boxShadow: !isMobile(context)
+            ? []
+            : [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+              ],
       ),
       child: Row(
         children: [
@@ -1549,49 +2951,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildWelcomeStatItem(
-                  context, 
-                  Icons.school_rounded, 
-                  '${enrollments.length} Courses', 
-                  'Enrolled', 
-                  !isMobile(context) ? Colors.white : const Color(0xFF10B981),
-                  isDesktop: !isMobile(context)
-                ),
+                    context,
+                    Icons.school_rounded,
+                    '${enrollments.length} Courses',
+                    'Enrolled',
+                    !isMobile(context) ? Colors.white : const Color(0xFF10B981),
+                    isDesktop: !isMobile(context)),
                 SizedBox(height: isDesktop ? 16 : 12),
                 _buildWelcomeStatItem(
-                  context, 
-                  Icons.auto_graph_rounded, 
-                  '${averageProgress.toInt()}%', 
-                  'Avg. Progress', 
-                  !isMobile(context) ? Colors.white : const Color(0xFF06B6D4),
-                  isDesktop: !isMobile(context)
-                ),
+                    context,
+                    Icons.auto_graph_rounded,
+                    '${averageProgress.toInt()}%',
+                    'Avg. Progress',
+                    !isMobile(context) ? Colors.white : const Color(0xFF06B6D4),
+                    isDesktop: !isMobile(context)),
               ],
             ),
           ),
           SizedBox(width: isDesktop ? 16 : 12),
-          _buildCircularProgress(
-            context, 
-            averageProgress, 
-            mini: isMobile(context) || !isDesktop, 
-            color: !isMobile(context) ? Colors.white : null
-          ),
+          _buildCircularProgress(context, averageProgress,
+              mini: isMobile(context) || !isDesktop,
+              color: !isMobile(context) ? Colors.white : null),
         ],
       ),
     );
   }
 
-  bool isMobile(BuildContext context) => ResponsiveBreakpoints.isMobile(context);
+  bool isMobile(BuildContext context) =>
+      ResponsiveBreakpoints.isMobile(context);
 
-  Widget _buildWelcomeStatItem(BuildContext context, IconData icon, String value, String label, Color color, {bool isDesktop = false}) {
+  Widget _buildWelcomeStatItem(BuildContext context, IconData icon,
+      String value, String label, Color color,
+      {bool isDesktop = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDesktop ? Colors.white.withOpacity(0.2) : color.withOpacity(0.1), 
-            borderRadius: BorderRadius.circular(10)
-          ),
+              color: isDesktop
+                  ? Colors.white.withOpacity(0.2)
+                  : color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: isDesktop ? Colors.white : color, size: 18),
         ),
         const SizedBox(width: 12),
@@ -1599,17 +3000,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: TextStyle(
-                fontSize: 15, 
-                fontWeight: FontWeight.w800, 
-                color: isDesktop ? Colors.white : (isDark ? Colors.white : const Color(0xFF333333)), 
-                height: 1.2,
-              )),
-              Text(label, style: TextStyle(
-                fontSize: 12, 
-                color: isDesktop ? Colors.white.withOpacity(0.8) : (isDark ? Colors.white70 : const Color(0xFF9CA3AF)), 
-                height: 1.2,
-              )),
+              Text(value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: isDesktop
+                        ? Colors.white
+                        : (isDark ? Colors.white : const Color(0xFF333333)),
+                    height: 1.2,
+                  )),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDesktop
+                        ? Colors.white.withOpacity(0.8)
+                        : (isDark ? Colors.white70 : const Color(0xFF9CA3AF)),
+                    height: 1.2,
+                  )),
             ],
           ),
         ),
@@ -1617,10 +3024,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCircularProgress(BuildContext context, double progress, {bool mini = false, Color? color}) {
+  Widget _buildCircularProgress(BuildContext context, double progress,
+      {bool mini = false, Color? color}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = mini ? 54.0 : 70.0;
-    
+
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -1632,90 +3040,101 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             strokeWidth: mini ? 5 : 8,
             backgroundColor: Colors.white.withOpacity(0.15),
             valueColor: AlwaysStoppedAnimation<Color>(
-              color ?? (mini ? Colors.white : const Color(0xFF10B981))
-            ),
+                color ?? (mini ? Colors.white : const Color(0xFF10B981))),
             strokeCap: StrokeCap.round,
           ),
         ),
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('${progress.toInt()}%', style: TextStyle(
-              fontSize: mini ? 12 : 16, 
-              fontWeight: FontWeight.w900, 
-              color: Colors.white,
-            )),
+            Text('${progress.toInt()}%',
+                style: TextStyle(
+                  fontSize: mini ? 12 : 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                )),
             if (!mini)
-              Text('Completed', style: TextStyle(
-                fontSize: 8, 
-                color: Colors.white70,
-              )),
+              Text('Completed',
+                  style: TextStyle(
+                    fontSize: 8,
+                    color: Colors.white70,
+                  )),
           ],
         ),
       ],
     );
   }
 
-
   Widget _buildAdminAccessButton(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
     return Container(
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+          colors: [Color(0xFF00C896), Color(0xFF059669)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00cdac).withValues(alpha: 0.3), // FIX #8
+            color: const Color(0xFF00C896).withOpacity(0.3),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.whiteColor.withValues(alpha: 0.2), // FIX #8
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.admin_panel_settings,
-                  color: AppTheme.whiteColor, size: 28),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Admin Panel',
-                      style: TextStyle(
-                          color: AppTheme.whiteColor,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 5),
-                  Text('Manage courses, students, and platform settings',
-                      style: TextStyle(
-                          color: AppTheme.whiteColor.withValues(alpha: 0.9),
-                          fontSize: 14)), // FIX #8
-                ],
-              ),
+            child: const Icon(
+              Icons.admin_panel_settings,
+              color: Colors.white,
+              size: 24,
             ),
-            Container(
-              decoration: BoxDecoration(
-                  color: AppTheme.whiteColor,
-                  borderRadius: BorderRadius.circular(12)),
-              child: IconButton(
-                icon: Icon(Icons.arrow_forward, color: AppTheme.primaryGreen),
-                onPressed: () => context.push('/admin'),
-              ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Admin Panel',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 16 : 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage courses, students & settings',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: isMobile ? 12 : 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_forward, color: Color(0xFF00C896)),
+              onPressed: () => context.push('/admin'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1757,7 +3176,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final crossAxisCount = isDesktop ? 4 : (isMobile ? 4 : 2); // 4 in a row for mobile too to be COMPACT
+    final crossAxisCount = isDesktop
+        ? 4
+        : (isMobile ? 4 : 2); // 4 in a row for mobile too to be COMPACT
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1775,7 +3196,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
             TextButton(
               onPressed: () {}, // Optional: more actions
-              child: const Text('See All', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+              child: const Text('See All',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           ],
         ),
@@ -1816,7 +3238,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildLearningAndOnboarding(BuildContext context, List<Enrollment> enrollments) {
+  Widget _buildLearningAndOnboarding(
+      BuildContext context, List<Enrollment> enrollments) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     return Column(
@@ -1829,16 +3252,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   }
 
   // Desktop stats section for right column
-  Widget _buildDesktopStatsSection(BuildContext context, List<Enrollment> enrollments) {
+  Widget _buildDesktopStatsSection(
+      BuildContext context, List<Enrollment> enrollments) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Calculate statistics
     final coursesEnrolled = enrollments.length;
     final coursesCompleted = enrollments.where((e) => e.progress >= 100).length;
-    final averageProgress = enrollments.isNotEmpty 
-        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) / enrollments.length 
+    final averageProgress = enrollments.isNotEmpty
+        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) /
+            enrollments.length
         : 0.0;
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1849,8 +3274,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -1901,7 +3326,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
   // Desktop quick actions for right column
   Widget _buildDesktopQuickActions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final quickActions = [
       {
         'title': 'My Learning',
@@ -1950,8 +3375,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -1971,17 +3396,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
           ),
           const SizedBox(height: 16),
-          ...quickActions.map((action) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _DesktopQuickActionCard(
-              title: action['title'] as String,
-              subtitle: action['subtitle'] as String,
-              icon: action['icon'] as IconData,
-              color: action['color'] as Color,
-              onTap: action['onTap'] as Function,
-              isDark: isDark,
-            ),
-          )).toList(),
+          ...quickActions
+              .map((action) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _DesktopQuickActionCard(
+                      title: action['title'] as String,
+                      subtitle: action['subtitle'] as String,
+                      icon: action['icon'] as IconData,
+                      color: action['color'] as Color,
+                      onTap: action['onTap'] as Function,
+                      isDark: isDark,
+                    ),
+                  ))
+              .toList(),
         ],
       ),
     );
@@ -1991,14 +3418,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    
+
     // Calculate statistics
     final coursesEnrolled = enrollments.length;
     final coursesCompleted = enrollments.where((e) => e.progress >= 100).length;
-    final averageProgress = enrollments.isNotEmpty 
-        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) / enrollments.length 
+    final averageProgress = enrollments.isNotEmpty
+        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) /
+            enrollments.length
         : 0.0;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2019,10 +3447,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0FDF4),
+                  color: isDark
+                      ? const Color(0xFF1F2937)
+                      : const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFDCFCE7),
+                    color: isDark
+                        ? const Color(0xFF374151)
+                        : const Color(0xFFDCFCE7),
                   ),
                 ),
                 child: Column(
@@ -2069,10 +3501,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F2937) : const Color(0xFFEFF6FF),
+                  color: isDark
+                      ? const Color(0xFF1F2937)
+                      : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFDBEAFE),
+                    color: isDark
+                        ? const Color(0xFF374151)
+                        : const Color(0xFFDBEAFE),
                   ),
                 ),
                 child: Column(
@@ -2119,10 +3555,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFEF3C7),
+                  color: isDark
+                      ? const Color(0xFF1F2937)
+                      : const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFFDE68A),
+                    color: isDark
+                        ? const Color(0xFF374151)
+                        : const Color(0xFFFDE68A),
                   ),
                 ),
                 child: Column(
@@ -2168,11 +3608,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       ],
     );
   }
+
   Widget _buildQuickNavigationButtons(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    
+
     final quickActions = [
       {
         'title': 'Library',
@@ -2220,35 +3661,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         // Responsive grid layout
         if (isMobile)
           Column(
-            children: quickActions.map((action) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildQuickActionCard(
-                context: context,
-                title: action['title'] as String,
-                subtitle: action['subtitle'] as String,
-                icon: action['icon'] as IconData,
-                color: action['color'] as Color,
-                onTap: action['onTap'] as Function,
-                isFullWidth: true,
-              ),
-            )).toList(),
+            children: quickActions
+                .map((action) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildQuickActionCard(
+                        context: context,
+                        title: action['title'] as String,
+                        subtitle: action['subtitle'] as String,
+                        icon: action['icon'] as IconData,
+                        color: action['color'] as Color,
+                        onTap: action['onTap'] as Function,
+                        isFullWidth: true,
+                      ),
+                    ))
+                .toList(),
           )
         else
           Row(
-            children: quickActions.map((action) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: _buildQuickActionCard(
-                  context: context,
-                  title: action['title'] as String,
-                  subtitle: action['subtitle'] as String,
-                  icon: action['icon'] as IconData,
-                  color: action['color'] as Color,
-                  onTap: action['onTap'] as Function,
-                  isFullWidth: false,
-                ),
-              ),
-            )).toList(),
+            children: quickActions
+                .map((action) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _buildQuickActionCard(
+                          context: context,
+                          title: action['title'] as String,
+                          subtitle: action['subtitle'] as String,
+                          icon: action['icon'] as IconData,
+                          color: action['color'] as Color,
+                          onTap: action['onTap'] as Function,
+                          isFullWidth: false,
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
       ],
     );
@@ -2264,7 +3709,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     required bool isFullWidth,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: () => onTap(),
       child: Container(
@@ -2278,8 +3723,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark 
-                  ? Colors.black.withOpacity(0.3) 
+              color: isDark
+                  ? Colors.black.withOpacity(0.3)
                   : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
@@ -2336,13 +3781,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-
   Widget _buildContinueLearning(
       BuildContext context, List<Enrollment> enrollments) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    
+
     if (enrollments.isEmpty) {
       return const SizedBox.shrink(); // Hide if no enrollments
     }
@@ -2350,7 +3794,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final lastEnrollment = enrollments.first;
     final course = lastEnrollment.course;
     if (course == null) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2391,8 +3835,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
             boxShadow: [
               BoxShadow(
-                color: isDark 
-                    ? Colors.black.withOpacity(0.3) 
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
                     : Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
@@ -2411,19 +3855,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       color: const Color(0xFF10B981).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: NetworkImageWidget(
-                              imageUrl: course.thumbnail!,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Icon(
-                            Icons.play_circle_filled,
-                            color: const Color(0xFF10B981),
-                            size: 30,
-                          ),
+                    child:
+                        course.thumbnail != null && course.thumbnail!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: NetworkImageWidget(
+                                  imageUrl: course.thumbnail!,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Icon(
+                                Icons.play_circle_filled,
+                                color: const Color(0xFF10B981),
+                                size: 30,
+                              ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -2483,7 +3928,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                      color: isDark
+                          ? const Color(0xFF374151)
+                          : const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: FractionallySizedBox(
@@ -2504,7 +3951,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+                  onPressed: () =>
+                      CourseNavigationUtils.navigateToCourseWithContext(
+                          context, ref, course),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
@@ -2536,20 +3985,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       ],
     );
   }
-  
+
   Widget _buildEnrolledCourseCard(BuildContext context, Enrollment enrollment) {
     final course = enrollment.course;
     if (course == null) return const SizedBox.shrink();
-    
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
+
     // Adjust dimensions based on device
     final imageHeight = isDesktop ? 110.0 : 100.0;
     final cardPadding = isMobile ? 12.0 : 16.0;
     final titleSize = isDesktop ? 15.0 : 14.0;
-    
+
     return Container(
       height: 300, // Fixed height for uniform sizing
       decoration: BoxDecoration(
@@ -2557,14 +4006,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.05),
+            color: isDark
+                ? Colors.black.withOpacity(0.4)
+                : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: isDark 
-              ? Colors.white.withOpacity(0.1) 
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
               : AppTheme.borderGrey.withOpacity(0.2),
         ),
       ),
@@ -2572,7 +4023,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(context, ref, course),
+          onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+              context, ref, course),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: EdgeInsets.all(cardPadding),
@@ -2584,14 +4036,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                   child: Container(
                     height: imageHeight,
                     width: double.infinity,
-                    color: isDark ? AppTheme.primary.withOpacity(0.1) : AppTheme.primary.withOpacity(0.05),
-                    child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    color: isDark
+                        ? AppTheme.primary.withOpacity(0.1)
+                        : AppTheme.primary.withOpacity(0.05),
+                    child: course.thumbnail != null &&
+                            course.thumbnail!.isNotEmpty
                         ? NetworkImageWidget(
-                            imageUrl: course.thumbnail!, 
+                            imageUrl: course.thumbnail!,
                             fit: BoxFit.cover,
-                            errorWidget: const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
+                            errorWidget: const Icon(Icons.play_circle_filled,
+                                color: AppTheme.primary, size: 40),
                           )
-                        : const Icon(Icons.play_circle_filled, color: AppTheme.primary, size: 40),
+                        : const Icon(Icons.play_circle_filled,
+                            color: AppTheme.primary, size: 40),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -2602,8 +4059,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       Text(
                         course.title,
                         style: TextStyle(
-                          fontSize: titleSize, 
-                          fontWeight: FontWeight.w700, 
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
                           height: 1.2,
                           color: AppTheme.getTextColor(context),
@@ -2615,7 +4072,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       Text(
                         'By ${course.displayInstructor}',
                         style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context), 
+                          color: AppTheme.getSecondaryTextColor(context),
                           fontSize: isMobile ? 10 : 11,
                         ),
                         maxLines: 1,
@@ -2643,7 +4100,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                 'Progress',
                                 style: TextStyle(
                                   fontSize: isMobile ? 9 : 10,
-                                  color: AppTheme.getSecondaryTextColor(context),
+                                  color:
+                                      AppTheme.getSecondaryTextColor(context),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -2662,10 +4120,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             borderRadius: BorderRadius.circular(10),
                             child: LinearProgressIndicator(
                               value: enrollment.progress / 100,
-                              backgroundColor: isDark 
-                                  ? AppTheme.primary.withOpacity(0.15) 
+                              backgroundColor: isDark
+                                  ? AppTheme.primary.withOpacity(0.15)
                                   : AppTheme.primary.withOpacity(0.1),
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppTheme.primary),
                               minHeight: isMobile ? 3 : 5,
                             ),
                           ),
@@ -2682,15 +4141,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildRecommendedCourses(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
+  Widget _buildRecommendedCourses(BuildContext context, List<Course> courses,
+      List<Course> enrolledCourses) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    
-    // Take more courses for desktop, fewer for mobile
-    final displayCourses = isDesktop ? courses.take(5).toList() : courses.take(5).toList();
-    
+
+    final displayCourses = courses.take(4).toList();
+
     if (displayCourses.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -2702,9 +4159,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Recommended for You',
+              'Recommended for you',
               style: TextStyle(
-                fontSize: isSmallMobile ? 18 : 20,
+                fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
                 color: AppTheme.getTextColor(context),
@@ -2713,33 +4170,222 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             TextButton(
               onPressed: () => context.push('/courses'),
               child: Text(
-                'See More',
+                'See All',
                 style: TextStyle(
-                  color: const Color(0xFF10B981),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  color: const Color(0xFF0F766E),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        // Course Cards - Grid for desktop, list for mobile
-        isDesktop 
-          ? _buildRecommendedCoursesGrid(context, displayCourses, enrolledCourses)
-          : Column(
-              children: displayCourses.map((course) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildRecommendedCourseCard(context, course, enrolledCourses),
-              )).toList(),
-            ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: isMobile ? 244 : 264,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: displayCourses.length,
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _buildModernCourseCard(
+                    context, displayCourses[index], enrolledCourses),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildRecommendedCoursesGrid(BuildContext context, List<Course> courses, List<Course> enrolledCourses) {
+  // Modern Course Card
+  Widget _buildModernCourseCard(
+      BuildContext context, Course course, List<Course> enrolledCourses) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isEnrolled = enrolledCourses.any((c) => c.id == course.id);
+
+    final cardWidth = isMobile ? 178.0 : 206.0;
+    final price = course.price ?? 0;
+    final isFree = price == 0;
+
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        width: cardWidth,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111C2F) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0xFF263449) : const Color(0xFFF1E6D1),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : AppTheme.primary)
+                  .withOpacity(isDark ? 0.24 : 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Course Thumbnail
+            Expanded(
+              flex: 3,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                      ),
+                    ),
+                    child: course.thumbnail != null &&
+                            course.thumbnail!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                            child: NetworkImageWidget(
+                              imageUrl: course.thumbnail!,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.play_circle_filled,
+                              color: const Color(0xFF10B981).withOpacity(0.5),
+                              size: 40,
+                            ),
+                          ),
+                  ),
+                  if (isEnrolled)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Enrolled',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    right: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.58),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        isFree ? 'FREE' : 'RWF ${price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Course Info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    if (course.category != null)
+                      Text(
+                        course.category is String
+                            ? course.category as String
+                            : 'Category',
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 11,
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          color: const Color(0xFFF59E0B),
+                          size: isMobile ? 14 : 15,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          (course.averageRating ?? 0.0).toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: isMobile ? 10 : 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.getSecondaryTextColor(context),
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color:
+                              isDark ? Colors.white70 : const Color(0xFF0F766E),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedCoursesGrid(BuildContext context,
+      List<Course> courses, List<Course> enrolledCourses) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -2751,7 +4397,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       ),
       itemCount: courses.length,
       itemBuilder: (context, index) {
-        return _buildRecommendedCourseCard(context, courses[index], enrolledCourses);
+        return _buildRecommendedCourseCard(
+            context, courses[index], enrolledCourses);
       },
     );
   }
@@ -2794,7 +4441,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         const SizedBox(height: 16),
         categoriesAsync.when(
           data: (categories) {
-            final displayCategories = isDesktop ? categories.take(6).toList() : categories.take(4).toList();
+            final displayCategories = isDesktop
+                ? categories.take(6).toList()
+                : categories.take(4).toList();
             return isDesktop
                 ? _buildCategoryGrid(context, displayCategories)
                 : _buildCategoryHorizontalList(context, displayCategories);
@@ -2808,7 +4457,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
 
   Widget _buildCategoryGrid(BuildContext context, List<Category> categories) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -2821,9 +4470,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
-        final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
-        final icon = CategoryUtils.getCategoryIcon(category.id, name: category.name);
-        
+        final color =
+            CategoryUtils.getCategoryColor(category.id, name: category.name);
+        final icon =
+            CategoryUtils.getCategoryIcon(category.id, name: category.name);
+
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -2887,9 +4538,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCategoryHorizontalList(BuildContext context, List<Category> categories) {
+  Widget _buildCategoryHorizontalList(
+      BuildContext context, List<Category> categories) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return SizedBox(
       height: 100,
       child: ListView.builder(
@@ -2899,9 +4551,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         physics: const BouncingScrollPhysics(),
         itemBuilder: (context, index) {
           final category = categories[index];
-          final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
-          final icon = CategoryUtils.getCategoryIcon(category.id, name: category.name);
-          
+          final color =
+              CategoryUtils.getCategoryColor(category.id, name: category.name);
+          final icon =
+              CategoryUtils.getCategoryIcon(category.id, name: category.name);
+
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Material(
@@ -2997,117 +4651,166 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildRecommendedCourseCard(BuildContext context, Course course, List<Course> enrolledCourses) {
+  Widget _buildRecommendedCourseCard(
+      BuildContext context, Course course, List<Course> enrolledCourses) {
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
-    return GestureDetector(
-      onTap: () {
-        if (isEnrolled) {
-          // If enrolled, navigate to learning screen
-          context.push('/learning/${course.id}');
-        } else {
-          // If not enrolled, navigate to course description/details
-          CourseNavigationUtils.navigateToCourseWithContext(context, ref, course);
-        }
-      },
+    final price = course.price ?? 0;
+    final isFree = price == 0;
+
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1F2937) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark 
-                  ? Colors.black.withOpacity(0.3) 
-                  : Colors.black.withOpacity(0.05),
-              blurRadius: 10,
+              color: isDark
+                  ? Colors.black.withOpacity(0.25)
+                  : Colors.black.withOpacity(0.06),
+              blurRadius: 16,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Course Thumbnail
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+            // Thumbnail
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
               ),
-              child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: NetworkImageWidget(
+              child: SizedBox(
+                width: isMobile ? 90 : 100,
+                height: isMobile ? 90 : 100,
+                child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                    ? NetworkImageWidget(
                         imageUrl: course.thumbnail!,
                         fit: BoxFit.cover,
+                        width: isMobile ? 90 : 100,
+                        height: isMobile ? 90 : 100,
+                      )
+                    : Container(
+                        color: const Color(0xFF10B981).withOpacity(0.15),
+                        child: const Icon(
+                          Icons.play_circle_fill,
+                          color: Color(0xFF10B981),
+                          size: 36,
+                        ),
                       ),
-                    )
-                  : Icon(
-                      Icons.play_circle_filled,
-                      color: const Color(0xFF10B981),
-                      size: 30,
-                    ),
-            ),
-            const SizedBox(width: 16),
-            // Course Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    course.title,
-                    style: TextStyle(
-                      fontSize: isMobile ? 14 : 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'By ${course.displayInstructor}',
-                    style: TextStyle(
-                      color: AppTheme.getSecondaryTextColor(context),
-                      fontSize: isMobile ? 12 : 14,
-                    ),
-                  ),
-                ],
               ),
             ),
-            // Arrow Icon and Status Indicator
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isEnrolled)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'Enrolled',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
+            // Info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Level badge
+                    if (course.level != null && course.level!.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          course.level![0].toUpperCase() +
+                              course.level!.substring(1),
+                          style: const TextStyle(
+                            color: Color(0xFF059669),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
+                    Text(
+                      course.title,
+                      style: TextStyle(
+                        fontSize: isMobile ? 13 : 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.getTextColor(context),
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                const SizedBox(height: 4),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppTheme.getSecondaryTextColor(context),
-                  size: 20,
+                    const SizedBox(height: 4),
+                    Text(
+                      course.displayInstructor,
+                      style: TextStyle(
+                        color: AppTheme.getSecondaryTextColor(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        // Price
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isFree
+                                ? const Color(0xFF10B981).withOpacity(0.1)
+                                : const Color(0xFF3B82F6).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isFree ? 'FREE' : 'RWF ${price.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: isFree
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF2563EB),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isEnrolled)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Enrolled',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          )
+                        else
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: AppTheme.getSecondaryTextColor(context),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ],
         ),
@@ -3115,28 +4818,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildCourseCardV2(BuildContext context, Course course, List<Course> enrolledCourses) {
+  Widget _buildCourseCardV2(
+      BuildContext context, Course course, List<Course> enrolledCourses) {
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFF3F4F6)),
-        boxShadow: [BoxShadow(color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (isEnrolled) {
-              context.push('/learning/${course.id}');
-            } else {
-              CourseNavigationUtils.navigateToCourseWithContext(context, ref, course);
-            }
-          },
+
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFF3F4F6)),
+          boxShadow: [
+            BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.black.withOpacity(0.02),
+                blurRadius: 10)
+          ],
+        ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3154,9 +4858,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       ),
                       child: AspectRatio(
                         aspectRatio: 16 / 9,
-                        child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                            ? NetworkImageWidget(imageUrl: course.thumbnail!, fit: BoxFit.cover)
-                            : Icon(Icons.image_outlined, size: 40, color: isDark ? Colors.white38 : const Color(0xFF9CA3AF)),
+                        child: course.thumbnail != null &&
+                                course.thumbnail!.isNotEmpty
+                            ? NetworkImageWidget(
+                                imageUrl: course.thumbnail!, fit: BoxFit.cover)
+                            : Icon(Icons.image_outlined,
+                                size: 40,
+                                color: isDark
+                                    ? Colors.white38
+                                    : const Color(0xFF9CA3AF)),
                       ),
                     ),
                   ),
@@ -3165,7 +4875,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       top: 16,
                       right: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981),
                           borderRadius: BorderRadius.circular(8),
@@ -3173,11 +4884,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle_rounded, color: Colors.white, size: 12),
+                            Icon(Icons.check_circle_rounded,
+                                color: Colors.white, size: 12),
                             SizedBox(width: 4),
                             Text(
                               'ENROLLED',
-                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800),
                             ),
                           ],
                         ),
@@ -3188,14 +4903,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       top: 16,
                       right: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFF0F766E)).withOpacity(0.9),
+                          color: ((course.price ?? 0) == 0
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF0F766E))
+                              .withOpacity(0.9),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -3204,14 +4926,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                         top: 16,
                         left: 16,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
                             '20% OFF',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900),
                           ),
                         ),
                       ),
@@ -3227,9 +4953,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       Text(
                         course.title,
                         style: TextStyle(
-                          fontSize: 15, 
-                          fontWeight: FontWeight.w800, 
-                          color: isDark ? Colors.white : const Color(0xFF1F2937), 
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color:
+                              isDark ? Colors.white : const Color(0xFF1F2937),
                           height: 1.2,
                         ),
                         maxLines: 2,
@@ -3238,14 +4965,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                          const Icon(Icons.star_rounded,
+                              color: Colors.amber, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             (course.averageRating ?? 0.0).toStringAsFixed(1),
                             style: TextStyle(
-                              fontSize: 11, 
-                              fontWeight: FontWeight.bold, 
-                              color: isDark ? Colors.white : const Color(0xFF1F2937),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1F2937),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -3253,8 +4983,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                             child: Text(
                               '(${course.enrollmentCount ?? 0})',
                               style: TextStyle(
-                                fontSize: 11, 
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+                                fontSize: 11,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF6B7280),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -3282,7 +5014,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                 ),
                               ),
                               SizedBox(width: 6),
-                              Icon(Icons.play_circle_fill, color: Colors.white, size: 14),
+                              Icon(Icons.play_circle_fill,
+                                  color: Colors.white, size: 14),
                             ],
                           ),
                         )
@@ -3298,7 +5031,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                     'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
                                     style: TextStyle(
                                       fontSize: 9,
-                                      color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                                      color: isDark
+                                          ? Colors.white38
+                                          : const Color(0xFF9CA3AF),
                                       decoration: TextDecoration.lineThrough,
                                     ),
                                   ),
@@ -3307,7 +5042,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w900,
-                                      color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F766E),
+                                      color: isDark
+                                          ? const Color(0xFF2DD4BF)
+                                          : const Color(0xFF0F766E),
                                     ),
                                   ),
                                 ],
@@ -3322,17 +5059,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                 ),
                               ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 3),
                               decoration: BoxDecoration(
-                                color: ((course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
+                                color: ((course.price ?? 0) == 0
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFF59E0B))
+                                    .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    (course.price ?? 0) == 0 ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                                    (course.price ?? 0) == 0
+                                        ? Icons.check_circle_rounded
+                                        : Icons.monetization_on_rounded,
                                     size: 9,
-                                    color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                    color: (course.price ?? 0) == 0
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFF59E0B),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -3340,7 +5085,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,
-                                      color: (course.price ?? 0) == 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                      color: (course.price ?? 0) == 0
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFF59E0B),
                                     ),
                                   ),
                                 ],
@@ -3355,12 +5102,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ],
           ),
         ),
-      ),
     );
   }
 
-  Widget _buildResponsivePopularCourses(
-      BuildContext context, List<Course> popularCourses, List<Course> enrolledCourses) {
+  Widget _buildResponsivePopularCourses(BuildContext context,
+      List<Course> popularCourses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
@@ -3381,7 +5127,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
             TextButton(
               onPressed: () => context.push('/courses'),
-              child: const Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text('View All',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -3398,7 +5145,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             ),
             itemCount: popularCourses.take(crossAxisCount * 2).length,
             itemBuilder: (context, index) {
-              return _buildCourseCardV2(context, popularCourses[index], enrolledCourses);
+              return _buildCourseCardV2(
+                  context, popularCourses[index], enrolledCourses);
             },
           )
         else
@@ -3411,7 +5159,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 return Container(
                   width: 280,
                   margin: const EdgeInsets.only(right: 16),
-                  child: _buildCourseCardV2(context, popularCourses[index], enrolledCourses),
+                  child: _buildCourseCardV2(
+                      context, popularCourses[index], enrolledCourses),
                 );
               },
             ),
@@ -3433,7 +5182,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text('Cancel',
-                  style: TextStyle(color: AppTheme.getSecondaryTextColor(context))),
+                  style: TextStyle(
+                      color: AppTheme.getSecondaryTextColor(context))),
             ),
             TextButton(
               onPressed: () {
@@ -3587,8 +5337,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text('Close',
-                    style:
-                        TextStyle(color: AppTheme.getSecondaryTextColor(context)))),
+                    style: TextStyle(
+                        color: AppTheme.getSecondaryTextColor(context)))),
           ],
         );
       },
@@ -4166,7 +5916,7 @@ class _DesktopStatCard extends StatelessWidget {
   final String label;
   final Color color;
   final bool isDark;
-  
+
   const _DesktopStatCard({
     required this.icon,
     required this.value,
@@ -4174,7 +5924,7 @@ class _DesktopStatCard extends StatelessWidget {
     required this.color,
     required this.isDark,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -4237,7 +5987,7 @@ class _DesktopQuickActionCard extends StatelessWidget {
   final Color color;
   final Function onTap;
   final bool isDark;
-  
+
   const _DesktopQuickActionCard({
     required this.title,
     required this.subtitle,
@@ -4246,7 +5996,7 @@ class _DesktopQuickActionCard extends StatelessWidget {
     required this.onTap,
     required this.isDark,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -4254,7 +6004,9 @@ class _DesktopQuickActionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF374151).withOpacity(0.3) : const Color(0xFFF9FAFB),
+          color: isDark
+              ? const Color(0xFF374151).withOpacity(0.3)
+              : const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
@@ -4327,6 +6079,183 @@ class _QuickAccessCard extends StatefulWidget {
   State<_QuickAccessCard> createState() => _QuickAccessCardState();
 }
 
+// ═══════════════════════════════════════════════════
+//  DASHBOARD TOAST  (gamified popup)
+// ═══════════════════════════════════════════════════
+class _DashboardToast extends StatefulWidget {
+  final String icon;
+  final String title;
+  final String message;
+  final Color color;
+  final VoidCallback onDismiss;
+
+  const _DashboardToast({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.color,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_DashboardToast> createState() => _DashboardToastState();
+}
+
+class _DashboardToastState extends State<_DashboardToast>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 900),
+        lowerBound: 0.96,
+        upperBound: 1.0)
+      ..repeat(reverse: true);
+    _pulse = _pulseCtrl;
+    // Auto-dismiss after 5 s
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) widget.onDismiss();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenW = MediaQuery.of(context).size.width;
+    final isMobile = screenW < 600;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            isMobile ? 20 : 40, 0, isMobile ? 20 : 40, 48),
+        child: Material(
+          color: Colors.transparent,
+          child: ScaleTransition(
+            scale: _pulse,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C2333) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: widget.color.withOpacity(0.35), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withOpacity(0.28),
+                    blurRadius: 32,
+                    offset: const Offset(0, 12),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                child: Row(
+                  children: [
+                    // Icon circle
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            widget.color,
+                            widget.color.withOpacity(0.7)
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: widget.color.withOpacity(0.4),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6))
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(widget.icon,
+                            style: const TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Text
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0D1117),
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.message,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF6B7280),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Dismiss
+                    GestureDetector(
+                      onTap: widget.onDismiss,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.08)
+                              : const Color(0xFFF3F4F6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color:
+                              isDark ? Colors.white54 : const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _QuickAccessCardState extends State<_QuickAccessCard> {
   bool _isHovered = false;
   bool _isPressed = false;
@@ -4336,7 +6265,7 @@ class _QuickAccessCardState extends State<_QuickAccessCard> {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final scale = _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0);
-    
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -4372,7 +6301,9 @@ class _QuickAccessCardState extends State<_QuickAccessCard> {
             child: Padding(
               padding: EdgeInsets.all(isMobile ? 8.0 : 16.0),
               child: Column(
-                crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                crossAxisAlignment: isMobile
+                    ? CrossAxisAlignment.center
+                    : CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(

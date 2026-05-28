@@ -55,7 +55,7 @@ class CategoriesScreen extends ConsumerWidget {
           'Explore Categories',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w800,
-            color: AppTheme.blackColor,
+            color: AppTheme.getTextColor(context),
             letterSpacing: -0.5,
           ),
         ),
@@ -63,7 +63,7 @@ class CategoriesScreen extends ConsumerWidget {
         Text(
           'Find the perfect course to advance your career and skills.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.greyColor,
+            color: AppTheme.getSecondaryTextColor(context),
             fontSize: 15,
           ),
         ),
@@ -109,7 +109,7 @@ class CategoriesScreen extends ConsumerWidget {
     
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: AppTheme.getCardColor(context),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: cardColor.withOpacity(0.15),
@@ -151,8 +151,8 @@ class CategoriesScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Text(
                   category.name,
-                  style: const TextStyle(
-                    color: AppTheme.blackColor,
+                  style: TextStyle(
+                    color: AppTheme.getTextColor(context),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,

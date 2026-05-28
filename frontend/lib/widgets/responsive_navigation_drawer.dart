@@ -188,14 +188,21 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 24, 40, isCollapsed ? 12 : 24, 32),
+            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 24, 40, isCollapsed ? 12 : 24, 28),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C896), Color(0xFF059669)],
+              ),
+            ),
             child: Row(
               mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Image.asset(
@@ -206,8 +213,8 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                   ),
                 ),
                 if (!isCollapsed) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
+                  const SizedBox(width: 14),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -215,18 +222,18 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                           'Excellence Hub',
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.getTextColor(context),
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
                             letterSpacing: -0.5,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'PLATFORM',
+                          'LEARNING PLATFORM',
                           style: TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.primaryGreen,
+                            fontSize: 9,
+                            color: Colors.white70,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
                           ),
@@ -352,18 +359,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildMobileHeader(BuildContext context, user) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 70, 24, 32),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
-            width: 1,
-          ),
+      padding: const EdgeInsets.fromLTRB(24, 70, 24, 28),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF00C896), Color(0xFF059669)],
         ),
       ),
       child: Column(
@@ -371,20 +374,17 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Hero(
-                tag: 'app_logo_drawer_${UniqueKey().toString()}',
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.contain,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Image.asset(
+                  'assets/logo.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(width: 16),
@@ -396,13 +396,14 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
+                      color: Colors.white,
                       letterSpacing: -0.5,
                     ),
                   ),
                   Text(
                     'LEARNING PLATFORM',
                     style: TextStyle(
-                      color: AppTheme.primaryGreen,
+                      color: Colors.white70,
                       fontSize: 9,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
@@ -417,10 +418,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.03) : AppTheme.primaryGreen.withOpacity(0.03),
+                color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDark ? Colors.white.withOpacity(0.05) : AppTheme.primaryGreen.withOpacity(0.1),
+                  color: Colors.white.withOpacity(0.2),
                 ),
               ),
               child: Row(
@@ -473,6 +474,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -480,8 +482,8 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           user.email,
-                          style: TextStyle(
-                            color: isDark ? Colors.white60 : Colors.black54,
+                          style: const TextStyle(
+                            color: Colors.white70,
                             fontSize: 12,
                           ),
                           maxLines: 1,

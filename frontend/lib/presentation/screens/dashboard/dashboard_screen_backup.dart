@@ -1146,27 +1146,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildBottomNavBar(BuildContext context) {
     return Container(
-      height: 80,
+      height: 92,
+      padding: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
             AppTheme.getCardColor(context),
         border: Border(
-          top: BorderSide(color: AppTheme.greyColor.withValues(alpha: 0.2), width: 1), // FIX #8
+          top: BorderSide(
+            color: AppTheme.greyColor.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // FIX #7: 'Home' nav item now scrolls to top via ScrollController
-          // or simply stays put (already on dashboard) — replaced empty onTap.
-          _buildNavItem(context, Icons.home_filled, 'Home', true, () {
-            // Already on dashboard; no navigation needed.
-            // Optionally scroll to top if a ScrollController is wired up.
-          }),
+          _buildNavItem(context, Icons.home_filled, 'Home', true, () {}),
           _buildNavItem(context, Icons.search_outlined, 'Search', false,
               () => context.push('/courses')),
-          _buildNavItem(context, Icons.bookmark_border_outlined, 'My Courses', false,
-              () => context.push('/my-courses')),
+          _buildNavItem(context, Icons.bookmark_border_outlined, 'My Courses',
+              false, () => context.push('/my-courses')),
           _buildNavItem(context, Icons.person_outline, 'Profile', false,
               () => context.push('/profile')),
         ],
@@ -1174,34 +1173,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, IconData icon, String label, bool isSelected,
-      Function onTap) {
+  Widget _buildNavItem(BuildContext context, IconData icon, String label,
+      bool isSelected, Function onTap) {
     final theme = Theme.of(context);
+    final selectedColor =
+        theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen;
+    final unselectedColor = theme.bottomNavigationBarTheme.unselectedItemColor ??
+        AppTheme.getSecondaryTextColor(context);
+
+    final iconSize = isSelected ? 34.0 : 32.0;
+    final fontSize = isSelected ? 13.5 : 13.0;
+
     return InkWell(
       onTap: () => onTap(),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon,
-              color: isSelected
-                  ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
-                  : (theme.bottomNavigationBarTheme.unselectedItemColor ??
-                      AppTheme.getSecondaryTextColor(context)),
-              size: 28),
-          const SizedBox(height: 4),
-          Text(label,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? selectedColor : unselectedColor,
+              size: iconSize,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: isSelected
-                    ? (theme.bottomNavigationBarTheme.selectedItemColor ?? AppTheme.primaryGreen)
-                    : (theme.bottomNavigationBarTheme.unselectedItemColor ??
-                        AppTheme.getSecondaryTextColor(context)),
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              )),
-        ],
+                color: isSelected ? selectedColor : unselectedColor,
+                fontSize: fontSize,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   // FIX #1: Removed duplicate _showLogoutDialog that existed as a stub outside
   // the class at the bottom of the file. Only this single definition is kept.

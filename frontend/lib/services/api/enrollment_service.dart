@@ -91,16 +91,29 @@ class EnrollmentService {
             return Course.fromJson(courseData);
           } else {
             print('Warning: No course data found in enrollment: ${enrollmentMap['_id']}');
-            // Fallback - create a minimal course object
+            // Fallback - if backend didn't populate `courseId`, try to recover it.
+            // In backend enrollments, the course id is expected at `courseId`.
+            final rawCourseId = enrollmentMap['courseId'];
+            final recoveredCourseId = rawCourseId is Map<String, dynamic>
+                ? (rawCourseId['_id'] ?? rawCourseId['id'])
+                : rawCourseId;
+
             return Course(
-              id: enrollmentMap['courseId']?.toString() ?? '',
-              title: 'Unknown Course',
-              description: '',
-              price: 0,
-              duration: 0,
-              level: 'beginner',
-              isPublished: false,
-              createdBy: User(id: '', fullName: 'Unknown', email: '', role: 'user', createdAt: DateTime.now()),
+              id: recoveredCourseId?.toString() ?? '',
+              title: (enrollmentMap['title'])?.toString() ?? 'Unknown Course',
+              description: (enrollmentMap['description'])?.toString() ?? '',
+              price: ((enrollmentMap['price'] is num) ? (enrollmentMap['price'] as num).toDouble() : 0.0),
+              duration: ((enrollmentMap['duration'] is num) ? (enrollmentMap['duration'] as num).toInt() : 0),
+              level: (enrollmentMap['level'])?.toString() ?? 'beginner',
+              isPublished: (enrollmentMap['isPublished'] == true),
+              thumbnail: (enrollmentMap['thumbnail'])?.toString(),
+              createdBy: User(
+                id: (enrollmentMap['createdBy']?['_id'])?.toString() ?? '',
+                fullName: (enrollmentMap['createdBy']?['fullName'])?.toString() ?? 'Unknown',
+                email: (enrollmentMap['createdBy']?['email'])?.toString() ?? '',
+                role: (enrollmentMap['createdBy']?['role'])?.toString() ?? 'user',
+                createdAt: DateTime.now(),
+              ),
               createdAt: DateTime.now(),
             );
           }

@@ -275,23 +275,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     );
     
     // Manual pending payment check and refresh user payments
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      print('🕒 Manual pending payment check triggered');
-      try {
-        // Refresh user payments before checking pending status
-        await ref.read(paymentProvider.notifier).loadUserPayments();
-        
-        final hasPending = await ref.read(hasPendingPaymentProvider(widget.courseId).future);
-        print('🕒 Manual pending payment check result: $hasPending');
-        
-        // If there's a pending payment, consider auto-navigating to payment pending screen
-        if (hasPending && context.mounted && !_hasRedirected) {
-          print('🟡 Pending payment detected - should show payment pending button');
-        }
-      } catch (e) {
-        print('❌ Manual pending payment check error: $e');
-      }
-    });
+    // NOTE: Avoid forcing refresh here because this build() runs often
+    // and triggers extra network calls / rebuilds.
+    // The purchase button already reacts to hasPendingPaymentProvider.
+    // If you need a one-time refresh, move it to initState.
+
 
     return courseAsync.when(
       data: (course) {
@@ -402,9 +390,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         // Enhanced Course Image with better loading
                         Container(
                           color: Colors.black.withOpacity(0.2), // Dark background for better contrast
-                          child: course.thumbnail != null && course.thumbnail!.isNotEmpty
+                          child: course.thumbnail != null && course.thumbnail!.trim().isNotEmpty
                               ? NetworkImageWidget(
-                                  imageUrl: course.thumbnail!,
+                                  imageUrl: course.thumbnail!.trim(),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,

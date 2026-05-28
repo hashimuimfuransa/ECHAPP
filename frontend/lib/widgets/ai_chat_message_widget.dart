@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
@@ -220,6 +221,11 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Attachment preview
+                      if (widget.message.attachmentPath != null) ...[  
+                        _buildAttachmentPreview(isDarkMode),
+                        const SizedBox(height: 8),
+                      ],
                       // Message content
                       Text(
                         widget.message.message,
@@ -325,6 +331,80 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentPreview(bool isDarkMode) {
+    final isImage = widget.message.attachmentType == 'image';
+    final attachPath = widget.message.attachmentPath!;
+    final name = widget.message.attachmentName ?? attachPath.split(RegExp(r'[/\\]')).last;
+
+    if (isImage) {
+      final isRemote = attachPath.startsWith('http://') || attachPath.startsWith('https://');
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: isRemote
+            ? Image.network(
+                attachPath,
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : SizedBox(
+                        height: 160,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: progress.expectedTotalBytes != null
+                                ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                : null,
+                            strokeWidth: 2,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                errorBuilder: (_, __, ___) => _docChip(name, isDarkMode),
+              )
+            : Image.file(
+                File(attachPath),
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _docChip(name, isDarkMode),
+              ),
+      );
+    }
+
+    return _docChip(name, isDarkMode);
+  }
+
+  Widget _docChip(String name, bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.description_rounded, color: Colors.white70, size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ],
       ),
     );
   }

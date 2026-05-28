@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 
 final enrollmentFilterProvider = StateProvider<String>((ref) => 'all');
 
@@ -69,7 +70,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.blackColor
+                color: AppTheme.getTextColor(context)
               ),
             ),
             const SizedBox(height: 12),
@@ -77,7 +78,7 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               'Start learning by enrolling in courses',
               style: TextStyle(
                 fontSize: 16,
-                color: AppTheme.greyColor,
+                color: AppTheme.getSecondaryTextColor(context),
               ),
               textAlign: TextAlign.center,
             ),
@@ -106,48 +107,129 @@ class EnrolledCoursesScreen extends ConsumerWidget {
   }
 
   Widget _buildEnrolledCoursesGrid(BuildContext context, WidgetRef ref, List<Enrollment> enrollments, String activeFilter) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    
     return Padding(
       padding: ResponsiveBreakpoints.getPadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'My Learning (${enrollments.length})',
-                style: TextStyle(
-                  fontSize: ResponsiveBreakpoints.isMobile(context) ? 20 : 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.blackColor,
-                ),
+          // Header with Back Button
+          SafeArea(
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 16, horizontal: 4),
+              child: Row(
+                children: [
+                  // Back Button
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/dashboard');
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.getCardColor(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.getSecondaryTextColor(context).withOpacity(0.15),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: AppTheme.getTextColor(context),
+                          size: isMobile ? 18 : 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'My Learning',
+                          style: TextStyle(
+                            fontSize: isMobile ? 24 : 30,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.getTextColor(context),
+                            letterSpacing: -0.8,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${enrollments.length} ${enrollments.length == 1 ? 'Course' : 'Courses'}',
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           _buildFilters(ref, activeFilter),
           const SizedBox(height: 24),
           Expanded(
             child: enrollments.isEmpty 
               ? _buildNoFilteredResults(activeFilter)
-              : GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: ResponsiveBreakpoints.isDesktop(context) 
-                        ? 3 
-                        : (ResponsiveBreakpoints.isTablet(context) ? 2 : (ResponsiveBreakpoints.isSmallMobile(context) ? 1 : 2)),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: ResponsiveBreakpoints.isDesktop(context) 
-                        ? 0.75 
-                        : (ResponsiveBreakpoints.isTablet(context) 
-                            ? 0.72 
-                            : (ResponsiveBreakpoints.isSmallMobile(context) ? 0.9 : 0.6)),
+              : isMobile
+                // Use ListView for all mobile screens for better responsiveness
+                ? ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    itemCount: enrollments.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildCourseCard(context, enrollments[index], true),
+                      );
+                    },
+                  )
+                // Use GridView for tablet and desktop only
+                : GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isDesktop ? 3 : 2,
+                      crossAxisSpacing: 24,
+                      mainAxisSpacing: 24,
+                      childAspectRatio: isDesktop ? 1.0 : 0.9,
+                    ),
+                    itemCount: enrollments.length,
+                    itemBuilder: (context, index) {
+                      return _buildCourseCard(context, enrollments[index], true);
+                    },
                   ),
-                  itemCount: enrollments.length,
-                  itemBuilder: (context, index) {
-                    return _buildCourseCard(context, enrollments[index], true);
-                  },
-                ),
           ),
         ],
       ),
@@ -213,23 +295,41 @@ class EnrolledCoursesScreen extends ConsumerWidget {
     final course = enrollment.course;
     if (course == null) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final cardPadding = isMobile ? 12.0 : 16.0;
-    final imageHeight = isSmallMobile ? 150.0 : 100.0;
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final cardPadding = isMobile ? 10.0 : 14.0;
+    // Image height - compact to fit all content including button
+    final imageHeight = isSmallMobile ? 90.0 : (isTablet ? 85.0 : 80.0);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: AppTheme.greyColor.withOpacity(0.2),
-          width: 1,
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.getCardColor(context),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: AppTheme.primaryGreen.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkTextSecondary.withOpacity(0.1)
+                : AppTheme.greyColor.withOpacity(0.15),
+            width: 1,
+          ),
         ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _viewCourse(context, enrollment),
         child: Padding(
           padding: EdgeInsets.all(cardPadding),
           child: Column(
@@ -289,14 +389,14 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               // Course title
               Text(
                 course.title,
                 style: TextStyle(
-                  fontSize: isMobile ? 13 : 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.blackColor,
+                  fontSize: isMobile ? 14 : 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.getTextColor(context),
                   height: 1.2,
                 ),
                 maxLines: 2,
@@ -305,40 +405,41 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               // Instructor
               Text(
-                'By ${course.displayInstructor}',
+                course.displayInstructor,
                 style: TextStyle(
-                  fontSize: isMobile ? 10 : 11,
-                  color: AppTheme.greyColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.getSecondaryTextColor(context),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const Spacer(),
+              const SizedBox(height: 10),
               // Progress Bar
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        enrollment.isCompleted ? 'Completed' : '${enrollment.progress.toInt()}% Complete',
-                        style: TextStyle(
-                          fontSize: isMobile ? 9 : 10,
-                          fontWeight: FontWeight.w500,
-                          color: enrollment.isCompleted ? AppTheme.primaryGreen : AppTheme.greyColor,
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: enrollment.progress / 100,
+                        backgroundColor: AppTheme.greyColor.withOpacity(0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          enrollment.isCompleted ? AppTheme.primaryGreen : AppTheme.primaryGreen,
                         ),
+                        minHeight: 6,
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: enrollment.progress / 100,
-                      backgroundColor: AppTheme.greyColor.withOpacity(0.1),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        enrollment.isCompleted ? AppTheme.primaryGreen : AppTheme.primaryGreen.withOpacity(0.7),
-                      ),
-                      minHeight: 6,
+                  const SizedBox(width: 8),
+                  Text(
+                    '${enrollment.progress.toInt()}%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: enrollment.isCompleted
+                          ? AppTheme.primaryGreen
+                          : AppTheme.getTextColor(context),
                     ),
                   ),
                 ],
@@ -347,23 +448,28 @@ class EnrolledCoursesScreen extends ConsumerWidget {
               // Action Button
               SizedBox(
                 width: double.infinity,
+                height: 40,
                 child: ElevatedButton(
                   onPressed: () => _continueLearning(context, enrollment),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: enrollment.isCompleted ? Colors.white : AppTheme.primaryGreen,
+                    backgroundColor: enrollment.isCompleted
+                        ? (isDark ? AppTheme.darkCard : Colors.white)
+                        : AppTheme.primaryGreen,
                     foregroundColor: enrollment.isCompleted ? AppTheme.primaryGreen : Colors.white,
-                    elevation: 0,
-                    side: enrollment.isCompleted ? BorderSide(color: AppTheme.primaryGreen) : null,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    elevation: enrollment.isCompleted ? 0 : 2,
+                    side: enrollment.isCompleted 
+                        ? BorderSide(color: AppTheme.primaryGreen.withOpacity(0.5), width: 1.5)
+                        : null,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: Text(
                     enrollment.isCompleted ? 'Review Course' : 'Continue Learning',
                     style: TextStyle(
-                      fontSize: isMobile ? 11 : 12,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
