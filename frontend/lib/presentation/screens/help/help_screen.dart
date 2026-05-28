@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
@@ -69,10 +70,10 @@ class HelpScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Help Center',
+                                  Text(AppLocalizations.of(context)!.helpCenter,
                                       style: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
                                   const SizedBox(height: 4),
-                                  Text('Find answers or contact our support team.',
+                                  Text(AppLocalizations.of(context)!.helpCenterSubtitle,
                                       style: TextStyle(color: textSecondary, fontSize: 13, height: 1.4)),
                                 ],
                               ),
@@ -86,19 +87,19 @@ class HelpScreen extends StatelessWidget {
                       // FAQ Categories
                       _buildFAQSection(
                         context,
-                        'Getting Started',
+                        AppLocalizations.of(context)!.gettingStarted,
                         [
                           {
-                            'question': 'How do I create an account?',
-                            'answer': 'Tap "Continue with Google" or "Continue with Email" on the welcome screen to create your account.'
+                            'question': AppLocalizations.of(context)!.howToCreateAccount,
+                            'answer': AppLocalizations.of(context)!.createAccountAnswer
                           },
                           {
-                            'question': 'How do I enroll in a course?',
-                            'answer': 'Browse courses from the dashboard or courses page, then tap "Enroll" on any course you\'re interested in.'
+                            'question': AppLocalizations.of(context)!.howToEnroll,
+                            'answer': AppLocalizations.of(context)!.enrollAnswer
                           },
                           {
-                            'question': 'Can I access courses offline?',
-                            'answer': 'Yes, downloaded videos can be accessed offline. Look for the download icon on course content.'
+                            'question': AppLocalizations.of(context)!.howToAccessOffline,
+                            'answer': AppLocalizations.of(context)!.offlineAnswer
                           },
                         ],
                       ),
@@ -107,19 +108,19 @@ class HelpScreen extends StatelessWidget {
                       
                       _buildFAQSection(
                         context,
-                        'Account Management',
+                        AppLocalizations.of(context)!.accountManagement,
                         [
                           {
-                            'question': 'How do I change my password?',
-                            'answer': 'Go to Settings > Password & Security to change your password.'
+                            'question': AppLocalizations.of(context)!.howToChangePassword,
+                            'answer': AppLocalizations.of(context)!.changePasswordAnswer
                           },
                           {
-                            'question': 'How do I update my profile?',
-                            'answer': 'Tap your profile picture on the dashboard and select "Edit Profile" to update your information.'
+                            'question': AppLocalizations.of(context)!.howToUpdateProfile,
+                            'answer': AppLocalizations.of(context)!.updateProfileAnswer
                           },
                           {
-                            'question': 'How do I delete my account?',
-                            'answer': 'Contact our support team at info@excellencecoachinghub.com to request account deletion.'
+                            'question': AppLocalizations.of(context)!.howToDeleteAccount,
+                            'answer': AppLocalizations.of(context)!.deleteAccountAnswer
                           },
                         ],
                       ),
@@ -128,19 +129,19 @@ class HelpScreen extends StatelessWidget {
                       
                       _buildFAQSection(
                         context,
-                        'Technical Support',
+                        AppLocalizations.of(context)!.technicalSupport,
                         [
                           {
-                            'question': 'The app is crashing, what should I do?',
-                            'answer': 'Try closing and reopening the app. If the problem persists, restart your device and reinstall the app.'
+                            'question': AppLocalizations.of(context)!.appCrashing,
+                            'answer': AppLocalizations.of(context)!.crashingAnswer
                           },
                           {
-                            'question': 'Videos are not loading properly',
-                            'answer': 'Check your internet connection. Try switching to a different network or clearing the app cache.'
+                            'question': AppLocalizations.of(context)!.videosNotLoading,
+                            'answer': AppLocalizations.of(context)!.videosAnswer
                           },
                           {
-                            'question': 'I\'m having payment issues',
-                            'answer': 'Ensure your payment method is valid. If problems continue, contact our support team with details.'
+                            'question': AppLocalizations.of(context)!.paymentIssues,
+                            'answer': AppLocalizations.of(context)!.paymentAnswer
                           },
                         ],
                       ),
@@ -157,7 +158,7 @@ class HelpScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Need More Help?',
+                                AppLocalizations.of(context)!.needMoreHelp,
                                 style: TextStyle(
                                   color: textPrimary,
                                   fontSize: 18,
@@ -166,7 +167,7 @@ class HelpScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Our support team is here to help you 24/7:',
+                                AppLocalizations.of(context)!.support24_7,
                                 style: TextStyle(
                                   color: textSecondary,
                                   fontSize: 14,
@@ -177,7 +178,7 @@ class HelpScreen extends StatelessWidget {
                               _buildContactOption(
                                 context,
                                 icon: Icons.email_outlined,
-                                title: 'Email Support',
+                                title: AppLocalizations.of(context)!.emailSupport,
                                 subtitle: 'info@excellencecoachinghub.com',
                                 onTap: () => _launchEmail('info@excellencecoachinghub.com'),
                               ),
@@ -185,15 +186,15 @@ class HelpScreen extends StatelessWidget {
                               _buildContactOption(
                                 context,
                                 icon: Icons.chat_outlined,
-                                title: 'WhatsApp Chat',
-                                subtitle: 'Chat with our support team now',
+                                title: 'WhatsApp',
+                                subtitle: AppLocalizations.of(context)!.chatWithUs,
                                 onTap: () => _launchWhatsApp('250788535156'),
                               ),
                               const SizedBox(height: 15),
                               _buildContactOption(
                                 context,
                                 icon: Icons.phone_outlined,
-                                title: 'Phone Support',
+                                title: AppLocalizations.of(context)!.phoneSupport,
                                 subtitle: '+250 788 535 156',
                                 onTap: () => _launchPhone('250788535156'),
                               ),
@@ -214,7 +215,7 @@ class HelpScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Alternative Contact',
+                                AppLocalizations.of(context)!.alternativeContact,
                                 style: TextStyle(
                                   color: textPrimary,
                                   fontSize: 18,
@@ -223,7 +224,7 @@ class HelpScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'You can also reach us through our secondary line:',
+                                AppLocalizations.of(context)!.support24_7,
                                 style: TextStyle(
                                   color: textSecondary,
                                   fontSize: 14,
@@ -231,9 +232,9 @@ class HelpScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _buildContactInfo(context, 'Secondary Line:', '+250 793 828 834'),
+                              _buildContactInfo(context, AppLocalizations.of(context)!.secondaryLine, '+250 793 828 834'),
                               const SizedBox(height: 10),
-                              _buildContactInfo(context, 'Website:', 'excellencecoachinghub.com'),
+                              _buildContactInfo(context, AppLocalizations.of(context)!.website, 'excellencecoachinghub.com'),
                             ],
                           ),
                         ),
@@ -259,7 +260,7 @@ class HelpScreen extends StatelessWidget {
             icon: Icon(Icons.arrow_back_ios_rounded, color: textPrimary, size: 20),
           ),
           Text(
-            'Help & Support',
+            AppLocalizations.of(context)!.helpAndSupport,
             style: TextStyle(
               color: textPrimary,
               fontSize: 20,

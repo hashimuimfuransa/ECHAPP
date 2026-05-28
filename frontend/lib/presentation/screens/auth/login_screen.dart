@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -22,6 +22,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   bool _hasNavigated = false;
   bool _listenerRegistered = false;
   late AnimationController _animController;
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1F2937);
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF6B7280);
+  Color get _inputBorderColor => _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  Color get _inputFillColor => _isDark ? const Color(0xFF0F172A) : Colors.white;
+  Color get _inputTextColor => _isDark ? Colors.white : const Color(0xFF1A2433);
+  Color get _inputHintColor => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+  Color get _iconColor => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+  Color get _errorBgColor => _isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2);
+  Color get _errorBorderColor => _isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA);
+  Color get _errorTextColor => _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C);
+  Color get _warningBgColor => _isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB);
+  Color get _warningBorderColor => _isDark ? const Color(0xFF92400E) : const Color(0xFFFEF3C7);
+  Color get _warningTextColor => _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB45309);
+  Color get _linkColor => const Color(0xFF10B981);
 
   @override
   void initState() {
@@ -100,30 +119,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
+    
+    // Guard against missing localizations
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (isDesktop) {
-      return _buildDesktopLayout(authState);
+      return _buildDesktopLayout(authState, l10n);
     }
-    return _buildMobileLayout(authState);
+    return _buildMobileLayout(authState, l10n);
   }
 
-  Widget _buildDesktopLayout(dynamic authState) {
+  Widget _buildDesktopLayout(dynamic authState, AppLocalizations l10n) {
+    // Fallback strings
+    final String welcomeText = l10n.loginTitle;
+    final String subtitleText = l10n.loginSubtitle;
+    final String forgotPasswordText = l10n.forgotPassword;
+    final String noAccountText = l10n.dontHaveAccount;
+    final String signUpText = l10n.registerNow;
+    final String emailHint = l10n.email;
+    final String passwordHint = l10n.password;
+    final String loginText = l10n.loginTitle;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E293B),
-              Color(0xFF0F4C75),
-              Color(0xFF041B2D),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+          image: DecorationImage(
+            image: AssetImage('assets/onboading desktop.png'),
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
         ),
-        child: Stack(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A).withOpacity(0.5),
+                const Color(0xFF1E293B).withOpacity(0.7),
+                const Color(0xFF0F172A).withOpacity(0.9),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+          child: Stack(
           children: [
             Positioned(
               top: -150,
@@ -165,30 +209,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 constraints: const BoxConstraints(maxWidth: 500),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 40,
                       spreadRadius: 0,
                     ),
                   ],
                 ),
-                child: _buildRightPanel(authState),
+                child: _buildRightPanel(authState, l10n, welcomeText, subtitleText, forgotPasswordText, noAccountText, signUpText, emailHint, passwordHint, loginText),
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 
-  Widget _buildRightPanel(dynamic authState) {
+  Widget _buildRightPanel(dynamic authState, AppLocalizations l10n, String welcomeText, String subtitleText, String forgotPasswordText, String noAccountText, String signUpText, String emailHint, String passwordHint, String loginText) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
       child: Column(
@@ -210,9 +251,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Welcome Back!',
-                style: TextStyle(
+              Text(
+                welcomeText,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
@@ -220,9 +261,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Sign in to your account to continue',
-                style: TextStyle(
+              Text(
+                subtitleText,
+                style: const TextStyle(
                   color: Colors.white60,
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -235,18 +276,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildEmailField(),
+                    _buildEmailField(emailHint),
                     const SizedBox(height: 24),
-                    _buildPasswordField(),
+                    _buildPasswordField(passwordHint),
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => context.push('/forgot-password'),
                         style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                        child: const Text(
-                          'Forgot password?',
-                          style: TextStyle(
+                        child: Text(
+                          forgotPasswordText,
+                          style: const TextStyle(
                             color: Color(0xFF00C896),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -255,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _buildSignInButton(authState),
+                    _buildSignInButton(authState, loginText),
                     const SizedBox(height: 20),
                     if (authState.error != null && authState.error!.isNotEmpty)
                       Container(
@@ -302,9 +343,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Don\'t have an account? ',
-                          style: TextStyle(
+                        Text(
+                          noAccountText,
+                          style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
                           ),
@@ -312,9 +353,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         TextButton(
                           onPressed: () => context.push('/register'),
                           style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(
+                          child: Text(
+                            signUpText,
+                            style: const TextStyle(
                               color: Color(0xFF00C896),
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -333,216 +374,264 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildMobileLayout(dynamic authState) {
+  Widget _buildMobileLayout(dynamic authState, AppLocalizations l10n) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isShort = screenHeight < 700;
+
+    // Fallback strings
+    final String welcomeText = l10n.loginTitle;
+    final String subtitleText = l10n.loginSubtitle;
+    final String forgotPasswordText = l10n.forgotPassword;
+    final String noAccountText = l10n.dontHaveAccount;
+    final String signUpText = l10n.registerNow;
+    final String emailHint = l10n.email;
+    final String passwordHint = l10n.password;
+    final String loginText = l10n.loginTitle;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Back button at top left
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    icon: Icon(Icons.arrow_back_ios_rounded, 
+                        color: _textColor, size: 20),
                   ),
                   const Spacer(),
                 ],
               ),
             ),
-            
-            // Content
+
+            // Compact header section
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isShort ? 6 : 12),
+              child: Column(
+                children: [
+                  // Small logo
+                  Container(
+                    width: 70, height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(_isDark ? 0.5 : 0.3), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    welcomeText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitleText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _secondaryTextColor,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Main card
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isDark ? [] : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 20),
-                      
-                      // Logo
-                      Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C896).withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.contain,
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildEmailField(emailHint),
+                        const SizedBox(height: 16),
+                        _buildPasswordField(passwordHint),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => context.push('/forgot-password'),
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                            child: Text(
+                              forgotPasswordText,
+                              style: TextStyle(
+                                color: _linkColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      const Text(
-                        'Welcome Back!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 8),
-                      
-                      const Text(
-                        'Sign in to your account to continue',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF4A5568),
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildEmailField(),
-                            const SizedBox(height: 20),
-                            _buildPasswordField(),
-                            const SizedBox(height: 16),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () => context.push('/forgot-password'),
-                                child: const Text(
-                                  'Forgot password?',
-                                  style: TextStyle(
-                                    color: Color(0xFF00C896),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                        const SizedBox(height: 20),
+                        _buildSignInButton(authState, loginText),
+                        const SizedBox(height: 16),
+                        if (authState.error != null && authState.error!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: authState.error!.contains('Forgot password?') 
+                                  ? _warningBgColor
+                                  : _errorBgColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: authState.error!.contains('Forgot password?')
+                                    ? _warningBorderColor
+                                    : _errorBorderColor,
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            _buildSignInButton(authState),
-                            const SizedBox(height: 16),
-                            if (authState.error != null && authState.error!.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: authState.error!.contains('Forgot password?') 
-                                      ? Colors.orange.withOpacity(0.1) 
-                                      : Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: authState.error!.contains('Forgot password?')
-                                        ? Colors.orange.withOpacity(0.3)
-                                        : Colors.red.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      authState.error!.contains('Forgot password?') 
-                                          ? Icons.info_outline_rounded 
-                                          : Icons.error_outline, 
-                                      color: authState.error!.contains('Forgot password?')
-                                          ? Colors.orange.shade400
-                                          : Colors.red.shade400, 
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        authState.error,
-                                        style: TextStyle(
-                                          color: authState.error!.contains('Forgot password?')
-                                              ? Colors.orange.shade200
-                                              : Colors.red.shade400,
-                                          fontSize: 13,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Row(
                               children: [
-                                const Text(
-                                  'Don\'t have an account? ',
-                                  style: TextStyle(
-                                    color: Color(0xFF4A5568),
-                                    fontSize: 13,
-                                  ),
+                                Icon(
+                                  authState.error!.contains('Forgot password?') 
+                                      ? Icons.info_outline_rounded 
+                                      : Icons.error_outline, 
+                                  color: authState.error!.contains('Forgot password?')
+                                      ? const Color(0xFFF59E0B)
+                                      : const Color(0xFFEF4444), 
+                                  size: 18,
                                 ),
-                                TextButton(
-                                  onPressed: () => context.push('/register'),
-                                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                                  child: const Text(
-                                    'Sign Up',
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    authState.error!,
                                     style: TextStyle(
-                                      color: Color(0xFF00C896),
+                                      color: authState.error!.contains('Forgot password?')
+                                          ? _warningTextColor
+                                          : _errorTextColor,
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w700,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
+                          ),
+                        const SizedBox(height: 20),
+                        _buildSecurityBadge(l10n),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              noAccountText,
+                              style: TextStyle(
+                                color: _secondaryTextColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => context.push('/register'),
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                              child: Text(
+                                signUpText,
+                                style: TextStyle(
+                                  color: _linkColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmailField() {
+  Widget _buildSecurityBadge(AppLocalizations l10n) {
+    final String secureText = l10n.secureProtected;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.verified_user, color: Color(0xFF059669), size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              secureText,
+              style: TextStyle(
+                  color: _textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3),
+            ),
+          ),
+          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmailField(String hintText) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _inputFillColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: _inputBorderColor,
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: _isDark ? [] : [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -552,11 +641,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       ),
       child: TextFormField(
         controller: _emailController,
-        style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+        style: TextStyle(color: _inputTextColor, fontSize: 15),
         decoration: InputDecoration(
-          hintText: 'Enter your email',
-          hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF8899AA)),
+          hintText: hintText,
+          hintStyle: TextStyle(color: _inputHintColor),
+          prefixIcon: Icon(Icons.email_outlined, color: _iconColor),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -578,17 +667,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField(String hintText) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _inputFillColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: _inputBorderColor,
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: _isDark ? [] : [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -598,16 +687,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       ),
       child: TextFormField(
         controller: _passwordController,
-        style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+        style: TextStyle(color: _inputTextColor, fontSize: 15),
         obscureText: _obscurePassword,
         decoration: InputDecoration(
-          hintText: 'Enter your password',
-          hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-          prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF8899AA)),
+          hintText: hintText,
+          hintStyle: TextStyle(color: _inputHintColor),
+          prefixIcon: Icon(Icons.lock_outline_rounded, color: _iconColor),
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              color: const Color(0xFF8899AA),
+              color: _iconColor,
             ),
             onPressed: () {
               setState(() {
@@ -633,7 +722,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildSignInButton(dynamic authState) {
+  Widget _buildSignInButton(dynamic authState, String buttonText) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -663,9 +752,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                       valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.9)),
                     ),
                   )
-                : const Text(
-                    'Login',
-                    style: TextStyle(
+                : Text(
+                    buttonText,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

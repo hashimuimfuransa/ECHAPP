@@ -125,6 +125,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
         await _storageManager.saveUserPhone(authResponse.user.phone);
+        await _storageManager.saveUserName(authResponse.user.fullName);
+        await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+        await _storageManager.saveUserInterests(authResponse.user.interests);
+        await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+        await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+        await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
         
         debugPrint('AuthProvider: Login completed successfully');
         
@@ -336,6 +342,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
         await _storageManager.saveUserPhone(authResponse.user.phone);
+        await _storageManager.saveUserName(authResponse.user.fullName);
+        await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+        await _storageManager.saveUserInterests(authResponse.user.interests);
+        await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+        await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+        await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
         
         debugPrint('AuthProvider: Phone sign-in completed successfully');
         
@@ -450,6 +462,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserRole(authResponse.user.role);
         await _storageManager.saveUserId(authResponse.user.id);
         await _storageManager.saveUserPhone(authResponse.user.phone);
+        await _storageManager.saveUserName(authResponse.user.fullName);
+        await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+        await _storageManager.saveUserInterests(authResponse.user.interests);
+        await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+        await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+        await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
         
         // Step 5: Initialize and sync FCM token for push notifications
         FCMTokenService.initializeAndSyncToken();
@@ -741,6 +759,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
           _storageManager.saveRefreshToken(authResponse.refreshToken),
           _storageManager.saveUserRole(authResponse.user.role),
           _storageManager.saveUserId(authResponse.user.id),
+          _storageManager.saveUserName(authResponse.user.fullName),
+          _storageManager.saveUserAvatar(authResponse.user.profilePicture),
+          _storageManager.saveUserInterests(authResponse.user.interests),
+          _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal),
+          _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal),
+          _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal),
         ]);
         
         debugPrint('AuthProvider: Setting success state');
@@ -878,6 +902,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final storedUserRole = await _storageManager.getUserRole();
         final storedToken = await _storageManager.getAccessToken();
         final storedPhone = await _storageManager.getUserPhone();
+        final storedUserName = await _storageManager.getUserName();
+        final storedUserAvatar = await _storageManager.getUserAvatar();
+        final storedUserInterests = await _storageManager.getUserInterests();
+        final storedUserShortTermGoal = await _storageManager.getUserShortTermGoal();
+        final storedUserMidTermGoal = await _storageManager.getUserMidTermGoal();
+        final storedUserLongTermGoal = await _storageManager.getUserLongTermGoal();
         final hasCompletedOnboarding = await _storageManager.hasCompletedOnboarding();
 
         // If we have a valid token and role, restore the session
@@ -900,11 +930,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
               // Fallback: recreate user from stored data + Firebase data
               final user = User(
                 id: storedUserId ?? firebaseUser.uid,
-                fullName: firebaseUser.displayName ?? 'User',
+                fullName: storedUserName ?? firebaseUser.displayName ?? 'User',
                 email: firebaseUser.email ?? '',
+                profilePicture: storedUserAvatar,
                 phone: storedPhone,
                 role: storedUserRole,
                 hasCompletedOnboarding: hasCompletedOnboarding,
+                interests: storedUserInterests,
+                shortTermGoal: storedUserShortTermGoal,
+                midTermGoal: storedUserMidTermGoal,
+                longTermGoal: storedUserLongTermGoal,
                 createdAt: DateTime.fromMillisecondsSinceEpoch(
                   firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ??
                       DateTime.now().millisecondsSinceEpoch,
@@ -921,11 +956,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
             // Use cached data if backend fetch fails (e.g., offline)
             final user = User(
               id: storedUserId ?? firebaseUser.uid,
-              fullName: firebaseUser.displayName ?? 'User',
+              fullName: storedUserName ?? firebaseUser.displayName ?? 'User',
               email: firebaseUser.email ?? '',
+              profilePicture: storedUserAvatar,
               phone: storedPhone,
               role: storedUserRole,
               hasCompletedOnboarding: hasCompletedOnboarding,
+              interests: storedUserInterests,
+              shortTermGoal: storedUserShortTermGoal,
+              midTermGoal: storedUserMidTermGoal,
+              longTermGoal: storedUserLongTermGoal,
               createdAt: DateTime.fromMillisecondsSinceEpoch(
                 firebaseUser.metadata.creationTime?.millisecondsSinceEpoch ??
                     DateTime.now().millisecondsSinceEpoch,

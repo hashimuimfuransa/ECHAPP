@@ -138,12 +138,12 @@ final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
 
 // Category providers with optimized loading
 final allCategoriesProvider = Provider<List<dynamic>>((ref) {
-  // Use backend categories if available, fallback to mock
+  // Use backend categories only - no fallback to mock data
   final backendCategories = ref.watch(backendCategoriesProvider);
   return backendCategories.when(
     data: (categories) => categories.cast<dynamic>(),
-    loading: () => CategoriesService.getAllCategories(), // Fallback to mock while loading
-    error: (_, __) => CategoriesService.getAllCategories(), // Fallback to mock on error
+    loading: () => [], // Return empty list while loading
+    error: (_, __) => [], // Return empty list on error
   );
 });
 
@@ -221,16 +221,7 @@ final backendCategoriesProvider = FutureProvider<List<Category>>((ref) async {
     return BackendCategoriesCache.cachedCategories!;
   }
 
-  // 2) Fast fallback: use the already-loaded local categories (hardcoded/mock) from categoriesProvider
-  //    This matches your request: show categories loaded in main.dart.
-  try {
-    final local = ref.watch(categoriesProvider);
-    if (local.isNotEmpty) return local;
-  } catch (_) {
-    // ignore
-  }
-
-  // 3) Slow path: fetch from backend
+  // 2) Fetch from backend - no fallback to mock data
   final repository = ref.read(categoryRepositoryProvider);
   final categories = await repository.getAllCategories();
   BackendCategoriesCache.cacheCategories(categories);

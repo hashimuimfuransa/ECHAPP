@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 class PhoneAuthScreen extends ConsumerStatefulWidget {
   const PhoneAuthScreen({super.key});
@@ -49,6 +51,36 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   int _resendTimer = 60;
   bool _canResend = false;
   _Country _selectedCountry = _countries.first;
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark
+      ? const Color(0xFF0F172A)
+      : const Color(0xFFF8FAFC);
+  Color get _cardColor => _isDark
+      ? const Color(0xFF1E293B)
+      : Colors.white;
+  Color get _textColor => _isDark
+      ? Colors.white
+      : const Color(0xFF0F172A);
+  Color get _secondaryTextColor => _isDark
+      ? Colors.white70
+      : const Color(0xFF64748B);
+  Color get _inputTextColor => _isDark
+      ? Colors.white
+      : const Color(0xFF1A2433);
+  Color get _inputHintColor => _isDark
+      ? const Color(0xFF94A3B8)
+      : const Color(0xFF8899AA);
+  Color get _inputBorderColor => _isDark
+      ? const Color(0xFF334155)
+      : const Color(0xFFE2E8F0);
+  Color get _inputFillColor => _isDark
+      ? const Color(0xFF0F172A)
+      : Colors.white;
+  Color get _prefixBgColor => _isDark
+      ? const Color(0xFF1E293B)
+      : const Color(0xFFF8FAFC);
 
   @override
   void dispose() {
@@ -111,6 +143,17 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
+    
+    debugPrint('PhoneAuthScreen: l10n is ${l10n == null ? "NULL" : "available"}, locale: ${Localizations.localeOf(context)}');
+    
+    // Guard against missing localizations
+    if (l10n == null) {
+      debugPrint('PhoneAuthScreen: Returning loading indicator due to null l10n');
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     // Listen for code sent state
     ref.listen(authProvider, (previous, current) {
@@ -128,15 +171,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             if (current.user?.role == 'admin') {
               context.go('/admin');
             } else {
-              final name = current.user?.fullName ?? '';
-              final needsName = name.isEmpty || name == 'Unknown User';
-              if (needsName) {
-                context.go('/name-collection');
-              } else if (current.user?.hasCompletedOnboarding ?? false) {
-                context.go('/dashboard');
-              } else {
-                context.go('/interest-selection');
-              }
+              // Always require name collection for phone auth users
+              // Phone auth users typically don't have a name set during initial registration
+              context.go('/name-collection');
             }
           }
         });
@@ -146,7 +183,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
     if (isDesktop) {
       return _buildDesktopLayout(authState);
     }
-    return _buildMobileLayout(authState);
+    return _buildMobileLayout(authState, l10n);
   }
 
   Widget _buildDesktopLayout(dynamic authState) {
@@ -231,6 +268,12 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildLeftPanel() {
+    final l10n = AppLocalizations.of(context);
+    // Fallback strings if localization fails
+    final String phoneSignInText = l10n?.phoneSignIn ?? 'Phone Sign In';
+    final String quickSecureText = l10n?.quickAndSecure ?? 'Quick and Secure';
+    final String signInWithPhoneText = l10n?.signInWithPhone ?? 'Sign in with your phone number for a quick and secure process. No password needed.';
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
       decoration: BoxDecoration(
@@ -275,10 +318,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             ),
           ),
           const SizedBox(height: 60),
-          const Text(
-            'Phone Sign In',
+          Text(
+            phoneSignInText,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Color(0xFF00C896),
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -286,10 +329,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Quick & Secure Access',
+          Text(
+            quickSecureText,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 38,
               fontWeight: FontWeight.w900,
@@ -307,10 +350,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             ),
           ),
           const SizedBox(height: 30),
-          const Text(
-            'Sign in with your phone number for a fast and secure experience. No password required.',
+          Text(
+            signInWithPhoneText,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 16,
               height: 1.6,
@@ -323,6 +366,12 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildRightPanel(dynamic authState) {
+    final l10n = AppLocalizations.of(context);
+    // Fallback strings if localization fails
+    final String phoneAuthTitleText = l10n?.phoneAuthTitle ?? 'Phone Authentication';
+    final String enterVerifCodeText = l10n?.enterVerificationCode ?? 'Enter verification code';
+    final String enterPhoneNumText = l10n?.enterPhoneNumber ?? 'Enter your phone number';
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
       child: Column(
@@ -335,15 +384,15 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
               const SizedBox(width: 40),
               IconButton(
                 onPressed: () => context.pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+                icon: Icon(Icons.close_rounded, color: _textColor.withOpacity(0.7), size: 28),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Phone Authentication',
+          Text(
+            phoneAuthTitleText,
             style: TextStyle(
-              color: Colors.white,
+              color: _textColor,
               fontSize: 36,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
@@ -351,9 +400,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            _isCodeSent ? 'Enter the verification code' : 'Enter your phone number',
-            style: const TextStyle(
-              color: Colors.white60,
+            _isCodeSent ? enterVerifCodeText : enterPhoneNumText,
+            style: TextStyle(
+              color: _secondaryTextColor,
               fontSize: 16,
               fontWeight: FontWeight.w400,
               height: 1.5,
@@ -412,181 +461,192 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
     );
   }
 
-  Widget _buildMobileLayout(dynamic authState) {
+  Widget _buildMobileLayout(dynamic authState, AppLocalizations l10n) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isShort = screenHeight < 700;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Back button at top left
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    icon: Icon(Icons.arrow_back_ios_rounded, 
+                        color: _textColor, size: 20),
                   ),
                   const Spacer(),
                 ],
               ),
             ),
             
-            // Content
+            // Compact header section
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isShort ? 8 : 16),
+              child: Column(
+                children: [
+                  // Small logo
+                  Container(
+                    width: 70, height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(_isDark ? 0.5 : 0.3), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n?.phoneAuthTitle ?? 'Kwiyemeza ukoresheje Telefone',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n?.phoneAuthSubtitle ?? 'Injiza numero ya telefone yawe wemerwe',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _secondaryTextColor,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Main card
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isDark ? [] : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 20),
-                      
-                      // Logo
-                      Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (!_isCodeSent) _buildPhoneField(),
+                        if (_isCodeSent) _buildOTPField(),
+                        const SizedBox(height: 20),
+                        if (!_isCodeSent) _buildSendOTPButton(authState),
+                        if (_isCodeSent) _buildVerifyOTPButton(authState),
+                        const SizedBox(height: 16),
+                        if (authState.error != null && authState.error!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C896).withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      const Text(
-                        'Phone Authentication',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 8),
-                      
-                      Text(
-                        'Enter your phone number to receive\na verification code',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFF4A5568),
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (!_isCodeSent) _buildPhoneField(),
-                            if (_isCodeSent) _buildOTPField(),
-                            const SizedBox(height: 20),
-                            if (!_isCodeSent) _buildSendOTPButton(authState),
-                            if (_isCodeSent) _buildVerifyOTPButton(authState),
-                            const SizedBox(height: 16),
-                            if (authState.error != null && authState.error!.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.red.withOpacity(0.3),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    authState.error!,
+                                    style: TextStyle(
+                                      color: _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ),
-                                child: Row(
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        if (_isCodeSent) _buildResendSection(),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Privacy notice
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0), width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 32, height: 32,
+                                decoration: BoxDecoration(
+                                  color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.verified_user, color: Color(0xFF059669), size: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      color: Colors.red,
-                                      size: 18,
+                                    Text(
+                                      l10n?.secureProtected.split('.').first ?? 'Amakuru yawe arinzwe kandi ararindwa',
+                                      style: TextStyle(
+                                          color: _textColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.3),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        authState.error!,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 13,
-                                          height: 1.4,
-                                        ),
-                                      ),
+                                    Text(
+                                      'Amakuru yawe arinzwe kandi ararindwa.',
+                                      style: TextStyle(
+                                          color: _secondaryTextColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.3),
                                     ),
                                   ],
                                 ),
                               ),
-                            const SizedBox(height: 20),
-                            if (_isCodeSent) _buildResendSection(),
-                          ],
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+                            ],
+                          ),
                         ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Security badge
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.verified_user,
-                              color: Color(0xFF059669),
-                              size: 16,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Your information is secure and protected',
-                            style: TextStyle(
-                              color: Color(0xFF4A5568),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+            
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -594,10 +654,15 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildPhoneField() {
+    final l10n = AppLocalizations.of(context);
+    // Default error messages if localization fails
+    final String enterPhoneError = l10n?.enterPhoneNumber ?? 'Please enter your phone number';
+    final String enterValidPhoneError = l10n?.enterValidPhone ?? 'Please enter a valid phone number';
+    
     return TextFormField(
       controller: _phoneController,
-      style: const TextStyle(
-        color: Color(0xFF1A2433),
+      style: TextStyle(
+        color: _inputTextColor,
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.5,
@@ -607,28 +672,28 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
       onFieldSubmitted: (_) => _sendOTP(),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Please enter your phone number';
+          return enterPhoneError;
         }
         final phoneRegex = RegExp(r'^\d{7,12}$');
         if (!phoneRegex.hasMatch(value.replaceAll(RegExp(r'[\s-]'), ''))) {
-          return 'Please enter a valid phone number';
+          return enterValidPhoneError;
         }
         return null;
       },
       decoration: InputDecoration(
         hintText: '078 123 4567',
         hintStyle: TextStyle(
-          color: const Color(0xFF8899AA).withOpacity(0.6),
+          color: _inputHintColor.withOpacity(0.6),
           fontSize: 15,
           fontWeight: FontWeight.w400,
           letterSpacing: 0.5,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _inputFillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+          borderSide: BorderSide(color: _inputBorderColor, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -648,11 +713,11 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             margin: const EdgeInsets.only(right: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(10)),
+            decoration: BoxDecoration(
+              color: _prefixBgColor,
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
               border: Border(
-                right: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                right: BorderSide(color: _inputBorderColor, width: 1),
               ),
             ),
             child: Row(
@@ -661,7 +726,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C896).withOpacity(0.12),
+                    color: const Color(0xFF00C896).withOpacity(_isDark ? 0.2 : 0.12),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -677,16 +742,16 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                 const SizedBox(width: 6),
                 Text(
                   _selectedCountry.dialCode,
-                  style: const TextStyle(
-                    color: Color(0xFF1A2433),
+                  style: TextStyle(
+                    color: _inputTextColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(
+                Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF4A5568),
+                  color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF4A5568),
                   size: 18,
                 ),
               ],
@@ -698,6 +763,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   void _showCountryPicker() {
+    final l10n = AppLocalizations.of(context);
+    final String selectCountryText = l10n?.selectCountry ?? 'Select Country';
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -721,9 +789,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Select Country',
-                style: TextStyle(
+              Text(
+                selectCountryText,
+                style: const TextStyle(
                   color: Color(0xFF1A2433),
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -795,16 +863,21 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildOTPField() {
+    final l10n = AppLocalizations.of(context);
+    // Default error messages if localization fails
+    final String enterCodeError = l10n?.enterVerificationCode ?? 'Please enter verification code';
+    final String enter6DigitError = l10n?.enter6DigitCode ?? 'Please enter 6-digit code';
+    
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _inputFillColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: _inputBorderColor,
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: _isDark ? [] : [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -814,8 +887,8 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
       ),
       child: TextFormField(
         controller: _otpController,
-        style: const TextStyle(
-          color: Color(0xFF1A2433),
+        style: TextStyle(
+          color: _inputTextColor,
           fontSize: 20,
           letterSpacing: 12,
           fontWeight: FontWeight.w600,
@@ -826,7 +899,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
         decoration: InputDecoration(
           hintText: '• • • • • •',
           hintStyle: TextStyle(
-            color: const Color(0xFF8899AA).withOpacity(0.4),
+            color: _inputHintColor.withOpacity(0.4),
             letterSpacing: 6,
           ),
           border: InputBorder.none,
@@ -843,10 +916,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
         },
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Please enter the verification code';
+            return enterCodeError;
           }
           if (value.length != 6) {
-            return 'Please enter a 6-digit code';
+            return enter6DigitError;
           }
           return null;
         },
@@ -855,6 +928,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildSendOTPButton(dynamic authState) {
+    final l10n = AppLocalizations.of(context);
+    final String sendCodeText = l10n?.sendVerificationCode ?? 'Send Verification Code';
+    
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -884,14 +960,14 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                       valueColor: AlwaysStoppedAnimation(Colors.white),
                     ),
                   )
-                : const Row(
+                : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 12),
+                      const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
                       Text(
-                        'Send Verification Code',
-                        style: TextStyle(
+                        sendCodeText,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -907,6 +983,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildVerifyOTPButton(dynamic authState) {
+    final l10n = AppLocalizations.of(context);
+    final String verifyCodeText = l10n?.verifyCode ?? 'Verify Code';
+    
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -936,14 +1015,14 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                       valueColor: AlwaysStoppedAnimation(Colors.white),
                     ),
                   )
-                : const Row(
+                : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 12),
+                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
                       Text(
-                        'Verify Code',
-                        style: TextStyle(
+                        verifyCodeText,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -959,6 +1038,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   }
 
   Widget _buildResendSection() {
+    final l10n = AppLocalizations.of(context);
+    final String resendCodeText = l10n?.resendCode ?? 'Resend Code';
+    final String changePhoneText = l10n?.changePhoneNumber ?? 'Change Phone Number';
+    
     return Column(
       children: [
         if (!_canResend)
@@ -974,7 +1057,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                 const Icon(Icons.access_time_rounded, color: Color(0xFF8899AA), size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  'Resend code in $_resendTimer seconds',
+                  '$resendCodeText ($_resendTimer)s',
                   style: const TextStyle(
                     color: Color(0xFF4A5568),
                     fontSize: 14,
@@ -992,14 +1075,14 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             ),
             child: TextButton(
               onPressed: _resendOTP,
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
+                  const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
                   Text(
-                    'Resend Code',
-                    style: TextStyle(
+                    resendCodeText,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1018,14 +1101,14 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             });
             ref.read(authProvider.notifier).resetPhoneAuth();
           },
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.edit_rounded, color: Color(0xFF8899AA), size: 16),
-              SizedBox(width: 6),
+              const Icon(Icons.edit_rounded, color: Color(0xFF8899AA), size: 16),
+              const SizedBox(width: 6),
               Text(
-                'Change phone number',
-                style: TextStyle(
+                changePhoneText,
+                style: const TextStyle(
                   color: Color(0xFF4A5568),
                   fontSize: 14,
                   fontWeight: FontWeight.w500,

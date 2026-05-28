@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -77,7 +79,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.errorPickingImage}: $e')),
         );
       }
     }
@@ -98,8 +100,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.profileUpdated),
             backgroundColor: AppTheme.primaryGreen,
           ),
         );
@@ -108,7 +110,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e'),
+            content: Text('${AppLocalizations.of(context)!.profileUpdateError}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -186,14 +188,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       floatingActionButton: _isEditing ? FloatingActionButton.extended(
         onPressed: authState.isLoading ? null : _saveProfile,
-        label: Text(authState.isLoading ? 'Saving...' : 'Save Changes'),
+        label: Text(authState.isLoading ? AppLocalizations.of(context)!.saving : AppLocalizations.of(context)!.saveChanges),
         icon: authState.isLoading 
           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
           : const Icon(Icons.check_rounded),
         backgroundColor: AppTheme.primaryGreen,
       ) : FloatingActionButton.extended(
         onPressed: _toggleEdit,
-        label: const Text('Edit Profile'),
+        label: Text(AppLocalizations.of(context)!.editProfile),
         icon: const Icon(Icons.edit_rounded),
         backgroundColor: AppTheme.primaryGreen,
       ),
@@ -310,7 +312,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            user?.fullName ?? 'User Name',
+            user?.fullName ?? AppLocalizations.of(context)!.fullName,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: isDesktop ? 32 : 26,
@@ -321,7 +323,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            user?.email ?? 'email@example.com',
+            user?.email ?? AppLocalizations.of(context)!.email,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: isDesktop ? 18 : 16,
@@ -333,7 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                'Tap photo to change',
+                AppLocalizations.of(context)!.tapToChangePhoto,
                 style: TextStyle(
                   fontSize: 13,
                   color: AppTheme.primaryGreen,
@@ -353,7 +355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Text(
           user?.fullName != null && user!.fullName.isNotEmpty 
               ? user!.fullName.substring(0, 1).toUpperCase() 
-              : 'U',
+              : AppLocalizations.of(context)!.appName.substring(0,1),
           style: TextStyle(
             color: AppTheme.primaryGreen,
             fontSize: size * 0.4,
@@ -396,7 +398,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(width: 15),
               Text(
-                'Profile Information',
+                AppLocalizations.of(context)!.profileInformation,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -407,25 +409,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 30),
           _buildInfoField(
-            label: 'Full Name',
+            label: AppLocalizations.of(context)!.fullName,
             controller: _nameController,
-            hint: 'Enter your full name',
+            hint: AppLocalizations.of(context)!.enterFullName,
             isEnabled: _isEditing,
             icon: Icons.person_rounded,
           ),
           const SizedBox(height: 20),
           _buildInfoField(
-            label: 'Email Address',
+            label: AppLocalizations.of(context)!.emailAddress,
             controller: _emailController,
-            hint: 'email@example.com',
+            hint: AppLocalizations.of(context)!.enterEmail,
             isEnabled: false,
             icon: Icons.email_rounded,
           ),
           const SizedBox(height: 20),
           _buildInfoField(
-            label: 'Phone Number',
+            label: AppLocalizations.of(context)!.phoneNumber,
             controller: _phoneController,
-            hint: 'Enter your phone number',
+            hint: AppLocalizations.of(context)!.enterPhone,
             isEnabled: _isEditing,
             icon: Icons.phone_rounded,
             keyboardType: TextInputType.phone,
@@ -516,7 +518,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Padding(
           padding: const EdgeInsets.only(left: 10, bottom: 20),
           child: Text(
-            'Your Progress',
+            AppLocalizations.of(context)!.yourProgress,
             style: TextStyle(
               fontSize: screenWidth < 360 ? 18 : 22,
               fontWeight: FontWeight.w800,
@@ -535,10 +537,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               crossAxisSpacing: screenWidth < 360 ? 12 : 16,
               childAspectRatio: childAspectRatio,
               children: [
-                _buildStatCard('Enrolled', stats.enrolledCourses.toString(), Icons.book_rounded, Colors.blue, constraints),
-                _buildStatCard('Completed', stats.completedCourses.toString(), Icons.check_circle_rounded, Colors.green, constraints),
-                _buildStatCard('Certificates', stats.certificatesEarned.toString(), Icons.emoji_events_rounded, Colors.orange, constraints),
-                _buildStatCard('Quizzes', stats.quizzesTaken.toString(), Icons.quiz_rounded, Colors.purple, constraints),
+                _buildStatCard(AppLocalizations.of(context)!.enrolled, stats.enrolledCourses.toString(), Icons.book_rounded, Colors.blue, constraints),
+                _buildStatCard(AppLocalizations.of(context)!.completed, stats.completedCourses.toString(), Icons.check_circle_rounded, Colors.green, constraints),
+                _buildStatCard(AppLocalizations.of(context)!.certificates, stats.certificatesEarned.toString(), Icons.emoji_events_rounded, Colors.orange, constraints),
+                _buildStatCard(AppLocalizations.of(context)!.quizzes, stats.quizzesTaken.toString(), Icons.quiz_rounded, Colors.purple, constraints),
               ],
             );
           },
@@ -625,8 +627,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     
     return Column(
       children: [
+        _buildLanguageSwitcher(),
+        const SizedBox(height: 15),
         _buildActionButton(
-          'Settings',
+          AppLocalizations.of(context)!.settings,
           Icons.settings_rounded,
           () => context.push('/settings'),
           Colors.blueGrey,
@@ -634,7 +638,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         if (hasCompletedOnboarding) ...[
           const SizedBox(height: 15),
           _buildActionButton(
-            'Reset Onboarding',
+            AppLocalizations.of(context)!.resetOnboarding,
             Icons.refresh_rounded,
             () => _showResetOnboardingDialog(),
             Colors.orange,
@@ -642,7 +646,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
         const SizedBox(height: 15),
         _buildActionButton(
-          'Log Out',
+          AppLocalizations.of(context)!.logout,
           Icons.logout_rounded,
           () => _showLogoutDialog(),
           Colors.red,
@@ -692,24 +696,138 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _buildLanguageSwitcher() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final currentLocale = ref.watch(localeProvider);
+        final currentLang = currentLocale.languageCode;
+        
+        return Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: BoxDecoration(
+              color: AppTheme.getCardColor(context),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: PopupMenuButton<String>(
+              child: Row(
+                children: [
+                  Icon(Icons.language_rounded, color: AppTheme.primaryGreen, size: 24),
+                  const SizedBox(width: 15),
+                  Text(
+                    AppLocalizations.of(context)!.language,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.getTextColor(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        currentLang == 'en' ? '🇬🇧' : '🇷🇼',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              color: AppTheme.getCardColor(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (String languageCode) async {
+                await ref.read(localeProvider.notifier).setLanguage(languageCode);
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem<String>(
+                  value: 'en',
+                  child: Row(
+                    children: [
+                      const Text('🇬🇧', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Text(
+                        'English',
+                        style: TextStyle(
+                          color: AppTheme.getTextColor(context),
+                          fontWeight: currentLang == 'en'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      if (currentLang == 'en')
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.check, color: AppTheme.primaryGreen),
+                        ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'rw',
+                  child: Row(
+                    children: [
+                      const Text('🇷🇼', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Kinyarwanda',
+                        style: TextStyle(
+                          color: AppTheme.getTextColor(context),
+                          fontWeight: currentLang == 'rw'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      if (currentLang == 'rw')
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.check, color: AppTheme.primaryGreen),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showLogoutDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out?'),
+        title: Text(AppLocalizations.of(context)!.logOut),
+        content: Text(AppLocalizations.of(context)!.areYouSureLogout),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+            child: Text(AppLocalizations.of(context)!.logOut, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -720,13 +838,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Onboarding'),
-        content: const Text('This will reset your onboarding status and you will need to complete it again. Do you want to continue?'),
+        title: Text(AppLocalizations.of(context)!.resetOnboarding),
+        content: Text(AppLocalizations.of(context)!.resetOnboardingConfirm),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -750,14 +868,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to reset onboarding: $e'),
+                      content: Text('${AppLocalizations.of(context)!.resetOnboardingFailed}: $e'),
                       backgroundColor: Colors.red,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Reset', style: TextStyle(color: Colors.orange)),
+            child: Text(AppLocalizations.of(context)!.reset, style: const TextStyle(color: Colors.orange)),
           ),
         ],
       ),

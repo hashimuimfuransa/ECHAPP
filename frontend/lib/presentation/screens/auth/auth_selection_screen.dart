@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 const _kDeep       = Color(0xFF041B2D);
 const _kMid        = Color(0xFF072A3E);
@@ -141,9 +142,12 @@ class _GlowCircle extends StatelessWidget {
 
 class _LogoBadge extends StatelessWidget {
   final double size;
-  const _LogoBadge({this.size = 120});
+  final bool isDark;
+  const _LogoBadge({this.size = 120, this.isDark = false});
   @override
   Widget build(BuildContext context) {
+    final ringColor = isDark ? Colors.white.withOpacity(0.3) : Colors.white.withOpacity(0.4);
+    final bgColor = isDark ? const Color(0xFF1E293B) : _kDeep;
     return Container(
       width: size, height: size,
       decoration: BoxDecoration(
@@ -170,7 +174,7 @@ class _LogoBadge extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.4),
+                color: ringColor,
                 width: 2,
               ),
             ),
@@ -183,7 +187,7 @@ class _LogoBadge extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder: (c, e, s) =>
                   Container(
-                    color: _kDeep,
+                    color: bgColor,
                     child: Icon(
                       Icons.school_rounded,
                       color: _kAccentLight,
@@ -309,120 +313,131 @@ class _MiniStat extends StatelessWidget {
 class _BrandBackground extends StatelessWidget {
   final bool compact;
   final Widget? child;
-  const _BrandBackground({this.compact = false, this.child});
+  final bool isDesktop;
+  const _BrandBackground({this.compact = false, this.child, this.isDesktop = false});
 
   @override
   Widget build(BuildContext context) {
+    final useDesktop = isDesktop || ResponsiveBreakpoints.isDesktop(context);
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0F172A),
-            Color(0xFF1E293B),
-            Color(0xFF0F4C75),
-            Color(0xFF041B2D),
-          ],
-          stops: [0.0, 0.3, 0.7, 1.0],
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(
+            useDesktop ? 'assets/onboading desktop.png' : 'assets/onboardign mobile.png',
+          ),
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
         ),
       ),
-      child: Stack(
-        children: [
-          _FloatingBackground(compact: compact),
-          if (child != null) SafeArea(child: child!),
-        ],
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F172A).withOpacity(0.5),
+              const Color(0xFF1E293B).withOpacity(0.7),
+              const Color(0xFF0F172A).withOpacity(0.85),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            _FloatingBackground(compact: compact),
+            if (child != null) SafeArea(child: child!),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─── Branding section ────────────────────────────────────────────────────────
+// ─── Branding section (compact, matches image) ────────────────────────────────────────────────────────
 
 class _BrandingSection extends StatelessWidget {
   final bool isMobile;
-  const _BrandingSection({this.isMobile = true});
+  final bool isDark;
+  const _BrandingSection({this.isMobile = true, this.isDark = false});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    debugPrint('AuthSelectionScreen _BrandingSection: l10n is ${l10n == null ? "NULL" : "available"}');
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    final size = MediaQuery.of(context).size;
-    final isShort = size.height < 680;
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _LogoBadge(size: isSmallMobile ? 80 : (isMobile ? 110 : 180)),
-        SizedBox(height: isSmallMobile ? 8 : 12),
+        // Logo
+        _LogoBadge(size: isSmallMobile ? 90 : 110, isDark: isDark),
+        const SizedBox(height: 12),
+
+        // Excellence Coaching Hub
         Text('Excellence',
             textAlign: TextAlign.center,
             style: TextStyle(
-                color: Colors.white,
-                fontSize: isSmallMobile ? 22 : (isMobile ? 30 : 40),
-                fontWeight: FontWeight.w900,
+                color: textColor,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
                 height: 1.0)),
         const SizedBox(height: 2),
-        Text('Coaching Hub',
+        const Text('Coaching Hub',
             style: TextStyle(
-                color: const Color(0xFF10B981),
-                fontSize: isSmallMobile ? 12 : (isMobile ? 15 : 20),
+                color: Color(0xFF10B981),
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.5)),
-        
-        if (!isShort || !isSmallMobile) ...[
-          const SizedBox(height: 6),
-          Text('Learn • Grow • Succeed',
-              style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: isSmallMobile ? 10 : (isMobile ? 11 : 14),
-                  fontWeight: FontWeight.w500)),
-        ],
+                letterSpacing: 1.2)),
 
-        SizedBox(height: isSmallMobile ? 10 : 16),
-        _ExpertBadge(isMobile: isMobile),
-        
-        if (!isShort || !isSmallMobile) ...[
-          const SizedBox(height: 12),
-          const _SkillChipsRow(),
-        ],
+        const SizedBox(height: 6),
+        Text(l10n?.authLearnGrowSucceed ?? 'Kwiga • Kukura • Kunesha',
+            style: TextStyle(
+                color: secondaryTextColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500)),
+
+        const SizedBox(height: 14),
+        _ExpertBadgeCompact(isDark: isDark),
+        const SizedBox(height: 16),
+        _SkillChipsRow(isDark: isDark),
       ],
     );
   }
 }
 
-class _ExpertBadge extends StatelessWidget {
-  final bool isMobile;
-  const _ExpertBadge({required this.isMobile});
+class _ExpertBadgeCompact extends StatelessWidget {
+  final bool isDark;
+  const _ExpertBadgeCompact({this.isDark = false});
   @override
   Widget build(BuildContext context) {
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final l10n = AppLocalizations.of(context);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallMobile ? 14 : (isMobile ? 18 : 24),
-        vertical: isSmallMobile ? 6 : (isMobile ? 8 : 12),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF06222E),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _kAccent.withOpacity(0.6),
-          width: 1.5,
+          color: const Color(0xFF10B981).withOpacity(isDark ? 0.4 : 0.3),
+          width: 1,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle_rounded,
-              color: _kAccentLight, size: isSmallMobile ? 14 : (isMobile ? 16 : 22)),
-          SizedBox(width: isSmallMobile ? 6 : (isMobile ? 8 : 12)),
-          Text('Expert-Led Learning',
+          const Icon(Icons.check_circle_rounded,
+              color: Color(0xFF10B981), size: 16),
+          const SizedBox(width: 8),
+          Text(l10n?.authExpertLed ?? 'Kwiga n\'Abanyamwuga',
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.95),
-                  fontSize: isSmallMobile ? 12 : (isMobile ? 13 : 16),
+                  color: textColor,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.1)),
         ],
@@ -432,23 +447,19 @@ class _ExpertBadge extends StatelessWidget {
 }
 
 class _SkillChipsRow extends StatelessWidget {
-  const _SkillChipsRow();
+  final bool isDark;
+  const _SkillChipsRow({this.isDark = false});
   @override
   Widget build(BuildContext context) {
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const _SkillChip(icon: Icons.lightbulb_outline, label: 'AI Courses'),
-          SizedBox(width: isSmallMobile ? 14 : 20),
-          const _SkillChip(icon: Icons.laptop_rounded, label: 'Programming'),
-          SizedBox(width: isSmallMobile ? 14 : 20),
-          const _SkillChip(icon: Icons.trending_up_rounded, label: 'Business Skills'),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _SkillChip(icon: Icons.school_outlined, label: 'AI Courses', sublabel: 'Smart learning', isDark: isDark),
+        const SizedBox(width: 12),
+        _SkillChip(icon: Icons.code_rounded, label: 'Programming', sublabel: 'Build the future', isDark: isDark),
+        const SizedBox(width: 12),
+        _SkillChip(icon: Icons.trending_up_rounded, label: 'Business Skills', sublabel: 'Grow your career', isDark: isDark),
+      ],
     );
   }
 }
@@ -456,20 +467,46 @@ class _SkillChipsRow extends StatelessWidget {
 class _SkillChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _SkillChip({required this.icon, required this.label});
+  final String sublabel;
+  final bool isDark;
+  const _SkillChip({required this.icon, required this.label, required this.sublabel, this.isDark = false});
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: _kAccentLight, size: 16),
-        const SizedBox(width: 8),
-        Text(label,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600)),
-      ],
+    final bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final sublabelColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF10B981), size: 20),
+          const SizedBox(height: 4),
+          Text(label,
+              style: TextStyle(
+                  color: textColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600)),
+          Text(sublabel,
+              style: TextStyle(
+                  color: sublabelColor,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }
@@ -479,7 +516,8 @@ class _SkillChip extends StatelessWidget {
 class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final Function()? onPressed;
-  const _GoogleButton({this.isLoading = false, this.onPressed});
+  final bool isDark;
+  const _GoogleButton({this.isLoading = false, this.onPressed, this.isDark = false});
   @override
   State<_GoogleButton> createState() => _GoogleButtonState();
 }
@@ -516,6 +554,10 @@ class _GoogleButtonState extends State<_GoogleButton>
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final bgColor = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = widget.isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF374151);
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) => _handleTap(),
@@ -525,10 +567,10 @@ class _GoogleButtonState extends State<_GoogleButton>
         child: Container(
           height: isSmallMobile ? 52 : 56,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: bgColor,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-            boxShadow: [
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: widget.isDark ? [] : [
               BoxShadow(
                   color: Colors.black.withOpacity(0.04),
                   blurRadius: 8,
@@ -550,9 +592,11 @@ class _GoogleButtonState extends State<_GoogleButton>
                 _GoogleGIcon(size: 20),
               const SizedBox(width: 12),
               Text(
-                widget.isLoading ? 'Connecting...' : 'Continue with Google',
-                style: const TextStyle(
-                    color: Color(0xFF374151),
+                widget.isLoading
+                    ? (AppLocalizations.of(context)?.loading ?? 'Biratunganywa...')
+                    : (AppLocalizations.of(context)?.continueWithGoogle ?? 'Komeza na Google'),
+                style: TextStyle(
+                    color: textColor,
                     fontSize: 15.5,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.1),
@@ -622,17 +666,21 @@ class _GoogleGPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
-// ─── Phone Auth Button with attractive gradient ─────────────────────────────────
+// ─── Phone Auth Button (image style: white bg, green icon, arrow right) ─────────────────────────────────
 
 class _PhoneAuthButton extends StatefulWidget {
   final String label;
   final bool isLoading;
   final VoidCallback? onPressed;
+  final bool isDark;
+
   const _PhoneAuthButton({
     required this.label,
     this.isLoading = false,
     this.onPressed,
+    this.isDark = false,
   });
+
   @override
   State<_PhoneAuthButton> createState() => _PhoneAuthButtonState();
 }
@@ -656,8 +704,11 @@ class _PhoneAuthButtonState extends State<_PhoneAuthButton>
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final bgColor = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = widget.isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF1F2937);
+    final iconBgColor = widget.isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5);
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
@@ -665,62 +716,50 @@ class _PhoneAuthButtonState extends State<_PhoneAuthButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isSmallMobile ? 52 : 56,
+          height: 56,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: bgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-              width: 1.5,
-            ),
-            boxShadow: [
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: widget.isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (widget.isLoading)
                   const SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation(Color(0xFF00C896)),
+                        valueColor: AlwaysStoppedAnimation(Color(0xFF10B981)),
                   ),
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00C896).withOpacity(0.1),
+                      color: iconBgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF00C896), size: 22),
+                    child: const Icon(Icons.phone_rounded, color: Color(0xFF10B981), size: 20),
                   ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Text(widget.label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.1)),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C896).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF00C896), size: 18),
-                ),
+                const Icon(Icons.arrow_forward_rounded, color: Color(0xFF10B981), size: 20),
               ],
             ),
           ),
@@ -730,25 +769,24 @@ class _PhoneAuthButtonState extends State<_PhoneAuthButton>
   }
 }
 
-// ─── Email / primary button ───────────────────────────────────────────────────
+// ─── Email button (image style: white bg, blue icon, arrow right) ───────────────────────────────────────────────────
 
-class _PrimaryButton extends StatefulWidget {
-  final IconData icon;
+class _EmailButton extends StatefulWidget {
   final String label;
   final bool isLoading;
   final VoidCallback? onPressed;
-  const _PrimaryButton({
-    required this.icon,
+  final bool isDark;
+  const _EmailButton({
     required this.label,
     this.isLoading = false,
     this.onPressed,
+    this.isDark = false,
   });
   @override
-  State<_PrimaryButton> createState() => _PrimaryButtonState();
+  State<_EmailButton> createState() => _EmailButtonState();
 }
 
-class _PrimaryButtonState extends State<_PrimaryButton>
-    with SingleTickerProviderStateMixin {
+class _EmailButtonState extends State<_EmailButton> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
@@ -766,8 +804,11 @@ class _PrimaryButtonState extends State<_PrimaryButton>
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final bgColor = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = widget.isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF1F2937);
+    final iconBgColor = widget.isDark ? const Color(0xFF3B82F6).withOpacity(0.2) : const Color(0xFFDBEAFE);
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) { _ctrl.reverse(); widget.onPressed?.call(); },
@@ -775,48 +816,50 @@ class _PrimaryButtonState extends State<_PrimaryButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: isSmallMobile ? 52 : 56,
+          height: 56,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: bgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE2E8F0),
-              width: 1.5,
-            ),
-            boxShadow: [
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: widget.isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (widget.isLoading)
                   const SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation(Color(0xFF2196F3)),
+                        valueColor: AlwaysStoppedAnimation(Color(0xFF3B82F6)),
                   ),
                   )
                 else
-                  const Icon(Icons.mail_outline_rounded, color: Color(0xFF2196F3), size: 20),
-                const SizedBox(width: 12),
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.mail_outline_rounded, color: Color(0xFF3B82F6), size: 20),
+                  ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Text(widget.label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.1)),
                 ),
-                const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2196F3), size: 20),
+                const Icon(Icons.arrow_forward_rounded, color: Color(0xFF3B82F6), size: 20),
               ],
             ),
           ),
@@ -826,44 +869,63 @@ class _PrimaryButtonState extends State<_PrimaryButton>
   }
 }
 
-// ─── Device warning banner (amber, matches image) ─────────────────────────────
+// ─── Privacy notice (green badge, matches image bottom) ─────────────────────────────
 
-class _DeviceWarningBadge extends StatelessWidget {
-  const _DeviceWarningBadge();
+class _PrivacyNoticeBadge extends StatelessWidget {
+  final bool isDark;
+  const _PrivacyNoticeBadge({this.isDark = false});
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final bgColor = isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4);
+    final borderColor = isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0);
+    final iconBgColor = isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFEF3C7)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_outline_rounded,
-              color: Color(0xFFF59E0B), size: 16),
-          const SizedBox(width: 10),
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.lock_outline_rounded,
+                color: Color(0xFF059669), size: 18),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: RichText(
-              text: const TextSpan(
-                style: TextStyle(
-                    color: Color(0xFF4B5563),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500),
-                children: [
-                  TextSpan(text: 'Binds to first device. '),
-                  TextSpan(
-                    text: 'Contact support',
-                    style: TextStyle(
-                        color: Color(0xFFF59E0B),
-                        fontWeight: FontWeight.w700),
-                  ),
-                  TextSpan(text: ' to switch.'),
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n?.deviceWarningMessage.split('.').first ?? 'Konti yawe ihuza na telefone yawe ya mbere',
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3),
+                ),
+                Text(
+                  'Ukoresha data yawe mu buryo bw\'umutekano.',
+                  style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3),
+                ),
+              ],
             ),
           ),
+          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 22),
         ],
       ),
     );
@@ -884,9 +946,9 @@ class _TermsFooter extends StatelessWidget {
             fontSize: isMobile ? 11.5 : 12.5, 
             height: 1.5),
         children: [
-          const TextSpan(text: 'By continuing, you agree to our '),
+          TextSpan(text: '${AppLocalizations.of(context)?.byContinuing ?? "Ukomeza, wemeza"} '),
           TextSpan(
-            text: 'Terms of Service',
+            text: AppLocalizations.of(context)?.termsOfService ?? 'Amategeko ya Serivisi',
             style: const TextStyle(
                 color: _kAccentDark,
                 fontWeight: FontWeight.w700,
@@ -895,9 +957,9 @@ class _TermsFooter extends StatelessWidget {
             recognizer: TapGestureRecognizer()
               ..onTap = () => context.push('/terms'),
           ),
-          const TextSpan(text: ' and '),
+          TextSpan(text: ' ${AppLocalizations.of(context)?.and ?? "na"} '),
           TextSpan(
-            text: 'Privacy Policy',
+            text: AppLocalizations.of(context)?.privacyPolicy ?? 'Ibihishwe Bwite',
             style: const TextStyle(
                 color: _kAccentDark,
                 fontWeight: FontWeight.w700,
@@ -1049,8 +1111,8 @@ class _TrustBar extends StatelessWidget {
           size: 16, 
           color: Color(0xFF10B981)),
         const SizedBox(width: 6),
-        const Text('Secure & Encrypted',
-            style: TextStyle(
+        Text(AppLocalizations.of(context)?.authExpertLed ?? 'Kwiga n\'Abanyamwuga',
+            style: const TextStyle(
                 color: Color(0xFF6B7280), 
                 fontSize: 13,
                 fontWeight: FontWeight.w600)),
@@ -1059,7 +1121,7 @@ class _TrustBar extends StatelessWidget {
   }
 }
 
-// ─── Auth card ────────────────────────────────────────────────────────────────
+// ─── Auth card (matches image: Injira title, phone, google, OR, email, privacy) ────────────────────────────────────────────────────────────────
 
 class _AuthCard extends StatelessWidget {
   final bool isLoading;
@@ -1070,6 +1132,7 @@ class _AuthCard extends StatelessWidget {
   final VoidCallback onEmail;
   final VoidCallback? onGoogle;
   final VoidCallback? onPhone;
+  final bool isDark;
 
   const _AuthCard({
     required this.isLoading,
@@ -1080,161 +1143,153 @@ class _AuthCard extends StatelessWidget {
     required this.onEmail,
     this.onGoogle,
     this.onPhone,
+    this.isDark = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
-    final isShort = MediaQuery.of(context).size.height < 680;
-    
+    final l10n = AppLocalizations.of(context);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final orTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
+    final errorBgColor = isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2);
+    final errorBorderColor = isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA);
+    final errorTextColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Header with key icon and Injira title
         _FadeInSlide(
           delay: const Duration(milliseconds: 100),
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(isSmallMobile ? 8 : 12),
+                width: 48, height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  shape: BoxShape.circle,
+                  color: isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.vpn_key_rounded, color: const Color(0xFF059669), size: isSmallMobile ? 20 : 26),
+                child: const Icon(Icons.vpn_key_rounded, color: Color(0xFF059669), size: 24),
               ),
-              SizedBox(width: isSmallMobile ? 10 : 14),
-              Text('Sign In',
+              const SizedBox(width: 14),
+              Text(l10n?.signIn ?? 'Injira',
                   style: TextStyle(
-                      color: _kText1,
-                      fontSize: isSmallMobile ? 24 : 28,
-                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.5)),
             ],
           ),
         ),
-        
-        if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 8 : 12),
-          _FadeInSlide(
-            delay: const Duration(milliseconds: 200),
-            child: Text('Access your dashboard & courses',
-                style: TextStyle(
-                    color: _kText2, 
-                    fontSize: isSmallMobile ? 13 : 14,
-                    height: 1.3,
-                    fontWeight: FontWeight.w500)),
-          ),
-        ],
 
-        SizedBox(height: isSmallMobile ? 12 : 18),
+        const SizedBox(height: 8),
+        _FadeInSlide(
+          delay: const Duration(milliseconds: 200),
+          child: Text(l10n?.authSelectionSubtitle ?? 'Hitamo uburyo ushaka gukoresha ukomeze',
+              style: TextStyle(
+                  color: secondaryTextColor,
+                  fontSize: 14,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500)),
+        ),
+
+        const SizedBox(height: 20),
 
         if (error != null && error!.isNotEmpty) ...[
           _FadeInSlide(
             delay: const Duration(milliseconds: 300),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallMobile ? 8 : 10),
-              margin: EdgeInsets.only(bottom: isSmallMobile ? 10 : 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.shade200),
+                color: errorBgColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: errorBorderColor),
               ),
               child: Row(children: [
-                Icon(Icons.error_rounded, color: Colors.red.shade600, size: isSmallMobile ? 16 : 18),
-                const SizedBox(width: 10),
+                const Icon(Icons.error_rounded, color: Color(0xFFEF4444), size: 20),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(error!,
                       style: TextStyle(
-                          color: Colors.red.shade800,
-                          fontSize: isSmallMobile ? 11 : 14,
+                          color: errorTextColor,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          height: 1.2)),
+                          height: 1.3)),
                 ),
               ]),
             ),
           ),
         ],
 
-        // Phone Auth - Primary Option
+        // Phone Auth - First Option
         _FadeInSlide(
           delay: const Duration(milliseconds: 400),
           child: _PhoneAuthButton(
-            label: 'Continue with Phone',
+            label: l10n?.continueWithPhone ?? 'Komeza na Telefone',
             isLoading: isPhoneLoading,
             onPressed: isLoading ? null : onPhone,
+            isDark: isDark,
           ),
         ),
 
-        SizedBox(height: isSmallMobile ? 10 : 14),
+        const SizedBox(height: 12),
 
-        // Google Auth - Secondary Option
+        // Google Auth
         if (onGoogle != null && !kIsWeb) ...[
           _FadeInSlide(
             delay: const Duration(milliseconds: 500),
             child: _GoogleButton(
               isLoading: isGoogleLoading,
               onPressed: !isLoading ? onGoogle : null,
+              isDark: isDark,
             ),
           ),
-          SizedBox(height: isSmallMobile ? 10 : 14),
+          const SizedBox(height: 12),
         ],
 
-        // Divider
+        // OR Divider
         _FadeInSlide(
           delay: const Duration(milliseconds: 600),
           child: Row(
             children: [
-              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+              Expanded(child: Divider(color: dividerColor, thickness: 1)),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('OR',
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(l10n?.or ?? 'OR',
                     style: TextStyle(
-                        color: _kText3,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0)),
+                        color: orTextColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5)),
               ),
-              Expanded(child: Divider(color: _kBorder, thickness: 1)),
+              Expanded(child: Divider(color: dividerColor, thickness: 1)),
             ],
           ),
         ),
-        SizedBox(height: isSmallMobile ? 10 : 14),
+        const SizedBox(height: 12),
 
-        // Email Auth - Last Option
+        // Email Auth
         _FadeInSlide(
           delay: const Duration(milliseconds: 700),
-          child: _PrimaryButton(
-            icon: Icons.mail_outline_rounded,
-            label: 'Continue with Email',
+          child: _EmailButton(
+            label: l10n?.continueWithEmail ?? 'Komeza na Email',
             isLoading: isEmailLoading,
             onPressed: isLoading ? null : onEmail,
+            isDark: isDark,
           ),
         ),
 
-        SizedBox(height: isSmallMobile ? 12 : 20),
-        
-        if (!isShort || !isSmallMobile) ...[
-          _FadeInSlide(
-            delay: const Duration(milliseconds: 800),
-            child: const _DeviceWarningBadge(),
-          ),
-          SizedBox(height: isSmallMobile ? 8 : 12),
-        ],
+        const SizedBox(height: 20),
 
+        // Privacy notice at bottom
         _FadeInSlide(
-          delay: const Duration(milliseconds: 900),
-          child: const _TermsFooter(),
+          delay: const Duration(milliseconds: 800),
+          child: _PrivacyNoticeBadge(isDark: isDark),
         ),
-
-        if (!isShort || !isSmallMobile) ...[
-          SizedBox(height: isSmallMobile ? 6 : 10),
-          _FadeInSlide(
-            delay: const Duration(milliseconds: 1000),
-            child: const _TrustBar(),
-          ),
-        ],
       ],
     );
   }
@@ -1255,6 +1310,14 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   bool _listenerRegistered = false;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark ? const Color(0xFF0F172A) : _kSurface;
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? Colors.white : _kText1;
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : _kText2;
+  Color get _borderColor => _isDark ? const Color(0xFF334155) : _kBorder;
 
   @override
   void initState() {
@@ -1332,7 +1395,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     return Scaffold(
-      backgroundColor: _kSurface,
+      backgroundColor: _backgroundColor,
       body: FadeTransition(
         opacity: _fadeAnim,
         child: isDesktop
@@ -1351,6 +1414,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
         const Expanded(
           flex: 45,
           child: _BrandBackground(
+            isDesktop: true,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 40, vertical: 40),
               child: _BrandingSection(isMobile: false),
@@ -1362,7 +1426,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
         Expanded(
           flex: 55,
           child: Container(
-            color: Colors.white,
+            color: _cardColor,
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 440),
@@ -1388,122 +1452,80 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     );
   }
 
-  // ── Mobile layout ─────────────────────────────────────────────────────────
+  // ── Mobile layout (theme-aware background, compact) ─────────────────────────────────────────────────────────
 
   Widget _mobileLayout(dynamic authState) {
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isShort = screenHeight < 700;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Back button at top left
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
               child: Row(
                 children: [
                   if (context.canPop())
                     IconButton(
                       onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                    ),
+                      icon: Icon(Icons.arrow_back_ios_rounded, 
+                          color: _textColor, size: 20),
+                    )
+                  else
+                    const SizedBox(width: 48),
                   const Spacer(),
                 ],
               ),
             ),
-            
-            // Content
+
+            // Branding hero (compact)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isShort ? 6 : 12),
+              child: _BrandingSection(isMobile: true, isDark: _isDark),
+            ),
+
+            // Auth card (theme-aware rounded card)
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isDark ? [] : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallMobile ? 20 : 24, 
-                    vertical: isSmallMobile ? 24 : 32
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 20),
-                      
-                      // Logo
-                      Center(
-                        child: Container(
-                          width: isSmallMobile ? 80 : 100,
-                          height: isSmallMobile ? 80 : 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C896).withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: EdgeInsets.all(isSmallMobile ? 12 : 15),
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      SizedBox(height: isSmallMobile ? 20 : 30),
-                      
-                      const Text(
-                        'Choose Your Path',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 8),
-                      
-                      const Text(
-                        'Select how you\'d like to proceed',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF4A5568),
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      SizedBox(height: isSmallMobile ? 24 : 32),
-                      
-                      _AuthCard(
-                        isLoading: authState.isLoading,
-                        isEmailLoading: authState.isEmailLoading,
-                        isGoogleLoading: authState.isGoogleLoading,
-                        isPhoneLoading: authState.isPhoneLoading,
-                        error: authState.error,
-                        onEmail: () => context.push('/email-auth-option'),
-                        onGoogle: _handleGoogleSignIn,
-                        onPhone: () => context.push('/phone-auth'),
-                      ),
-                    ],
+                  child: _AuthCard(
+                    isLoading: authState.isLoading,
+                    isEmailLoading: authState.isEmailLoading,
+                    isGoogleLoading: authState.isGoogleLoading,
+                    isPhoneLoading: authState.isPhoneLoading,
+                    error: authState.error,
+                    onEmail: () => context.push('/email-auth-option'),
+                    onGoogle: _handleGoogleSignIn,
+                    onPhone: () => context.push('/phone-auth'),
+                    isDark: _isDark,
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),

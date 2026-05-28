@@ -1,0 +1,2145 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appName => 'Excellence Coaching Hub';
+
+  @override
+  String get welcome => 'Welcome';
+
+  @override
+  String get getStarted => 'Get Started';
+
+  @override
+  String get continueText => 'Continue';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get success => 'Success';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get update => 'Update';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get view => 'View';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get filter => 'Filter';
+
+  @override
+  String get sort => 'Sort';
+
+  @override
+  String get show => 'Show';
+
+  @override
+  String get hide => 'Hide';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get less => 'Less';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get none => 'None';
+
+  @override
+  String get select => 'Select';
+
+  @override
+  String get selected => 'Selected';
+
+  @override
+  String get unselect => 'Unselect';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get languageSelectionTitle => 'Choose Your Language';
+
+  @override
+  String get languageSelectionSubtitle =>
+      'Select your preferred language to continue';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get kinyarwanda => 'Kinyarwanda';
+
+  @override
+  String get continueLearning => 'Continue Learning';
+
+  @override
+  String get myLearning => 'My Learning';
+
+  @override
+  String get downloads => 'Downloads';
+
+  @override
+  String get offline => 'Offline';
+
+  @override
+  String get exams => 'Exams';
+
+  @override
+  String get history => 'History';
+
+  @override
+  String get certificates => 'Certificates';
+
+  @override
+  String get awards => 'Awards';
+
+  @override
+  String get library => 'Library';
+
+  @override
+  String get browseResources => 'Browse Resources';
+
+  @override
+  String get offlineContent => 'Offline Content';
+
+  @override
+  String get viewAwards => 'View Awards';
+
+  @override
+  String get examHistory => 'Exam History';
+
+  @override
+  String get pastResults => 'Past Results';
+
+  @override
+  String get continueCourses => 'Continue Courses';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get enrolled => 'Enrolled';
+
+  @override
+  String get dashboard => 'Dashboard';
+
+  @override
+  String get categories => 'Categories';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get excellenceHub => 'Excellence Hub';
+
+  @override
+  String get splashInitializing => 'Initializing app...';
+
+  @override
+  String get splashPreparing => 'Preparing your learning experience...';
+
+  @override
+  String get splashReady => 'Ready to go!';
+
+  @override
+  String get authTagline => 'Transforming Education Through Technology';
+
+  @override
+  String get authExpertLed => 'Expert-Led Learning';
+
+  @override
+  String get authLearnGrowSucceed => 'Learn • Grow • Succeed';
+
+  @override
+  String get authSelectionTitle => 'Welcome to Excellence Coaching Hub';
+
+  @override
+  String get authSelectionSubtitle => 'Choose how you\'d like to continue';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get continueWithPhone => 'Continue with Phone';
+
+  @override
+  String get continueWithEmail => 'Continue with Email';
+
+  @override
+  String get phoneAuthTitle => 'Phone Authentication';
+
+  @override
+  String get phoneAuthSubtitle =>
+      'Enter your phone number to receive a verification code';
+
+  @override
+  String get phoneSignIn => 'Phone Sign In';
+
+  @override
+  String get quickAndSecure => 'Quick & Secure Access';
+
+  @override
+  String get signInWithPhone =>
+      'Sign in with your phone number for a fast and secure experience. No password required.';
+
+  @override
+  String get enterVerificationCode => 'Enter the verification code';
+
+  @override
+  String get enterPhoneNumber => 'Enter your phone number';
+
+  @override
+  String get sendVerificationCode => 'Send Verification Code';
+
+  @override
+  String get verifyCode => 'Verify Code';
+
+  @override
+  String get resendCode => 'Resend Code';
+
+  @override
+  String get changePhoneNumber => 'Change phone number';
+
+  @override
+  String get selectCountry => 'Select Country';
+
+  @override
+  String get enterValidPhone => 'Please enter a valid phone number';
+
+  @override
+  String get enterVerificationCodeError => 'Please enter the verification code';
+
+  @override
+  String get enter6DigitCode => 'Please enter a 6-digit code';
+
+  @override
+  String get emailAuthOptionTitle => 'Choose Your Path';
+
+  @override
+  String get emailAuthOptionSubtitle =>
+      'Select how you\'d like to proceed with your account';
+
+  @override
+  String get signIn => 'Sign In';
+
+  @override
+  String get signInSubtitle => 'Access your existing account';
+
+  @override
+  String get signInPhoneSubtitle => 'Access your account';
+
+  @override
+  String get createAccount => 'Create Account';
+
+  @override
+  String get createAccountSubtitle => 'Join our community of learners';
+
+  @override
+  String get createAccountPhoneSubtitle => 'Join our community';
+
+  @override
+  String get resetPassword => 'Reset Password';
+
+  @override
+  String get resetPasswordSubtitle => 'Enter your new password';
+
+  @override
+  String get resetPasswordPhoneSubtitle => 'Recover your access';
+
+  @override
+  String get accessYourAccount => 'Access your existing account';
+
+  @override
+  String get joinCommunity => 'Join our community of learners';
+
+  @override
+  String get recoverAccess => 'Recover your account access';
+
+  @override
+  String get enterpriseSecurity =>
+      'Your account is protected with enterprise-grade security';
+
+  @override
+  String get secureProtected => 'Your information is secure and protected';
+
+  @override
+  String get chooseYourPath => 'Choose Your Path';
+
+  @override
+  String get selectHowToProceed =>
+      'Select how you\'d like to proceed with your account';
+
+  @override
+  String get goBack => 'Go back';
+
+  @override
+  String get loginTitle => 'Sign In';
+
+  @override
+  String get loginSubtitle => 'Welcome back! Please enter your details';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get forgotPassword => 'Forgot Password?';
+
+  @override
+  String get dontHaveAccount => 'Don\'t have an account?';
+
+  @override
+  String get alreadyHaveAccount => 'Already have an account?';
+
+  @override
+  String get registerNow => 'Register now';
+
+  @override
+  String get loginNow => 'Login now';
+
+  @override
+  String get registerTitle => 'Create Account';
+
+  @override
+  String get registerSubtitle => 'Fill in your details to get started';
+
+  @override
+  String get fullName => 'Full Name';
+
+  @override
+  String get confirmPassword => 'Confirm Password';
+
+  @override
+  String get agreeToTerms =>
+      'I agree to the Terms of Service and Privacy Policy';
+
+  @override
+  String get forgotPasswordTitle => 'Forgot Password';
+
+  @override
+  String get forgotPasswordSubtitle =>
+      'Enter your email address and we\'ll send you instructions to reset your password';
+
+  @override
+  String get sendResetLink => 'Send Reset Link';
+
+  @override
+  String get resetLinkSent => 'Password reset link sent! Check your email.';
+
+  @override
+  String get enterResetCodeTitle => 'Enter Reset Code';
+
+  @override
+  String get enterResetCodeSubtitle =>
+      'Enter the verification code sent to your email';
+
+  @override
+  String get verificationCode => 'Verification Code';
+
+  @override
+  String get verify => 'Verify';
+
+  @override
+  String get resetPasswordTitle => 'Reset Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get updatePassword => 'Update Password';
+
+  @override
+  String get passwordUpdated => 'Password updated successfully!';
+
+  @override
+  String get nameCollectionTitle => 'What\'s Your Name?';
+
+  @override
+  String get nameCollectionSubtitle => 'Help us personalize your experience';
+
+  @override
+  String get enterFullName => 'Enter your full name';
+
+  @override
+  String get continueToDashboard => 'Continue to Dashboard';
+
+  @override
+  String get phoneCollectionTitle => 'Add Phone Number';
+
+  @override
+  String get phoneCollectionSubtitle => 'This helps secure your account';
+
+  @override
+  String get phoneNumber => 'Phone Number';
+
+  @override
+  String get onboardingInterestTitle => 'What are you interested in?';
+
+  @override
+  String get onboardingInterestSubtitle =>
+      'Select topics you\'d like to learn about';
+
+  @override
+  String get onboardingPersonalizationTitle => 'Set Your Learning Goals';
+
+  @override
+  String get onboardingPersonalizationSubtitle =>
+      'Tell us your ambitions and get a personalised path';
+
+  @override
+  String get shortTermGoal => 'Short Term Goal';
+
+  @override
+  String get midTermGoal => 'Mid Term Goal';
+
+  @override
+  String get longTermGoal => 'Long Term Goal';
+
+  @override
+  String get shortTermHint => 'What do you want to achieve soon?';
+
+  @override
+  String get midTermHint => 'Where do you want to be in 1–2 years?';
+
+  @override
+  String get longTermHint => 'What is your ultimate ambition?';
+
+  @override
+  String get saveAndContinue => 'Save & Continue';
+
+  @override
+  String get skipForNow => 'Skip for now';
+
+  @override
+  String get step => 'Step';
+
+  @override
+  String get ofText => 'of';
+
+  @override
+  String get termsOfService => 'Terms of Service';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get byContinuing => 'By continuing, you agree to our';
+
+  @override
+  String get and => 'and';
+
+  @override
+  String get or => 'OR';
+
+  @override
+  String get deviceWarningTitle => 'Device Security';
+
+  @override
+  String get deviceWarningMessage =>
+      'Your account is permanently bound to your first login device. To use a different device, please contact our support team.';
+
+  @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get features => 'Features';
+
+  @override
+  String get videoCourses => 'Video Courses';
+
+  @override
+  String get interactiveQuizzes => 'Interactive Quizzes';
+
+  @override
+  String get certifications => 'Certifications';
+
+  @override
+  String get expertInstructors => 'Expert Instructors';
+
+  @override
+  String get learnAnywhere => 'Learn Anywhere';
+
+  @override
+  String get progressTracking => 'Progress Tracking';
+
+  @override
+  String get studentDashboard => 'Student Dashboard';
+
+  @override
+  String get adminDashboard => 'Admin Dashboard';
+
+  @override
+  String get adminPanel => 'Admin Panel';
+
+  @override
+  String get welcomeBack => 'Welcome back';
+
+  @override
+  String get goodMorning => 'Good morning';
+
+  @override
+  String get goodAfternoon => 'Good afternoon';
+
+  @override
+  String get goodEvening => 'Good evening';
+
+  @override
+  String get motivationalQuote1 => 'Build skills for your next opportunity.';
+
+  @override
+  String get motivationalQuote2 =>
+      'Every lesson brings you closer to your goal.';
+
+  @override
+  String get motivationalQuote3 => 'Keep going — consistency beats talent.';
+
+  @override
+  String get motivationalQuote4 => 'Champions learn daily. You are one.';
+
+  @override
+  String get motivationalQuote5 => 'Small steps, massive results.';
+
+  @override
+  String get motivationalQuote6 =>
+      'Your future self is watching. Make it count.';
+
+  @override
+  String get motivationalQuote7 => 'Top performers never stop learning.';
+
+  @override
+  String get welcomeToExcellenceHub => 'Welcome to Excellence Hub!';
+
+  @override
+  String get startFirstLesson => 'Start your first lesson today and earn XP.';
+
+  @override
+  String get keepStreakAlive => 'Keep the streak alive.';
+
+  @override
+  String get consistencyIsSuperpower => 'Your consistency is your superpower.';
+
+  @override
+  String get deviceSecurity => 'Device Security';
+
+  @override
+  String get accountBoundToDevice =>
+      'Account secured to this device. Contact support to change.';
+
+  @override
+  String get refreshApp => 'Refresh App';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get logOut => 'Log Out';
+
+  @override
+  String get signOut => 'Sign Out';
+
+  @override
+  String get searchCourses => 'Search courses...';
+
+  @override
+  String get searchHint => 'Search for courses, topics...';
+
+  @override
+  String get continueLearningSubtitle => 'Pick up where you left off';
+
+  @override
+  String get yourProgress => 'Your progress';
+
+  @override
+  String get recommendedForYou => 'Recommended for You';
+
+  @override
+  String get popularCourses => 'Popular Courses';
+
+  @override
+  String get noEnrolledCourses => 'No enrolled courses yet';
+
+  @override
+  String get startLearningToday =>
+      'Start learning today by enrolling in a course!';
+
+  @override
+  String get browseCourses => 'Browse Courses';
+
+  @override
+  String get completed => 'Completed';
+
+  @override
+  String get quizzes => 'Quizzes';
+
+  @override
+  String get courses => 'Courses';
+
+  @override
+  String get course => 'Course';
+
+  @override
+  String get myCourses => 'My Courses';
+
+  @override
+  String get allCourses => 'All Courses';
+
+  @override
+  String get courseDetails => 'Course Details';
+
+  @override
+  String get coursePrice => 'Course Price';
+
+  @override
+  String get courseCategory => 'Course Category';
+
+  @override
+  String get instructor => 'Instructor';
+
+  @override
+  String get duration => 'Duration';
+
+  @override
+  String get level => 'Level';
+
+  @override
+  String get lessons => 'Lessons';
+
+  @override
+  String get lesson => 'Lesson';
+
+  @override
+  String get free => 'Free';
+
+  @override
+  String get price => 'Price';
+
+  @override
+  String get enroll => 'Enroll';
+
+  @override
+  String get enrollNow => 'Enroll Now';
+
+  @override
+  String get enrolling => 'Enrolling...';
+
+  @override
+  String get alreadyEnrolled => 'Already Enrolled';
+
+  @override
+  String get enrolledSuccessfully => 'Enrolled successfully!';
+
+  @override
+  String get enrollmentFailed => 'Enrollment failed';
+
+  @override
+  String get enrolledInCourse => 'Enrolled in course';
+
+  @override
+  String get youAreEnrolled => 'You are enrolled';
+
+  @override
+  String get redirectingToLearning => 'Redirecting to learning...';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get courseDescription => 'Course Description';
+
+  @override
+  String get whatYouWillLearn => 'What You Will Learn';
+
+  @override
+  String get learningObjectives => 'Learning Objectives';
+
+  @override
+  String get requirements => 'Requirements';
+
+  @override
+  String get courseRequirements => 'Course Requirements';
+
+  @override
+  String get aboutInstructor => 'About Instructor';
+
+  @override
+  String get noDescription => 'No description available';
+
+  @override
+  String get noThumbnail => 'No thumbnail available';
+
+  @override
+  String get limitedTimeOffer =>
+      'Limited time offer • 30-day money back guarantee';
+
+  @override
+  String get lifetimeAccess => 'Lifetime Access';
+
+  @override
+  String get days => 'Days';
+
+  @override
+  String get months => 'Months';
+
+  @override
+  String get years => 'Years';
+
+  @override
+  String get hours => 'Hours';
+
+  @override
+  String get minutes => 'Minutes';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get uncategorized => 'Uncategorized';
+
+  @override
+  String get learning => 'Learning';
+
+  @override
+  String get learningTitle => 'Learning';
+
+  @override
+  String get startLesson => 'Start Lesson';
+
+  @override
+  String get nextLesson => 'Next lesson';
+
+  @override
+  String get previousLesson => 'Previous Lesson';
+
+  @override
+  String get completeLesson => 'Complete Lesson';
+
+  @override
+  String get markComplete => 'Mark complete';
+
+  @override
+  String get lessonCompleted => 'Lesson Completed';
+
+  @override
+  String get lessonInProgress => 'Lesson In Progress';
+
+  @override
+  String get courseContent => 'Course Content';
+
+  @override
+  String get courseOverview => 'Course Overview';
+
+  @override
+  String get notes => 'Notes';
+
+  @override
+  String get transcript => 'Transcript';
+
+  @override
+  String get resources => 'Resources';
+
+  @override
+  String get quiz => 'Quiz';
+
+  @override
+  String get quizzesTitle => 'Quizzes';
+
+  @override
+  String get takeQuiz => 'Take Quiz';
+
+  @override
+  String get quizResults => 'Quiz Results';
+
+  @override
+  String get yourScore => 'Your Score';
+
+  @override
+  String get passingScore => 'Passing Score';
+
+  @override
+  String get passed => 'Passed';
+
+  @override
+  String get failed => 'Failed';
+
+  @override
+  String get tryAgain => 'Try Again';
+
+  @override
+  String get retakeQuiz => 'Retake quiz';
+
+  @override
+  String get question => 'Question';
+
+  @override
+  String get questions => 'Questions';
+
+  @override
+  String get answer => 'Answer';
+
+  @override
+  String get answers => 'Answers';
+
+  @override
+  String get correct => 'Correct';
+
+  @override
+  String get incorrect => 'Incorrect';
+
+  @override
+  String get explanation => 'Explanation';
+
+  @override
+  String get timeRemaining => 'Time Remaining';
+
+  @override
+  String get startQuiz => 'Start quiz';
+
+  @override
+  String get submitQuiz => 'Submit Quiz';
+
+  @override
+  String get quizSubmitted => 'Quiz Submitted';
+
+  @override
+  String get quizInProgress => 'Quiz in progress';
+
+  @override
+  String get wishlist => 'Wishlist';
+
+  @override
+  String get myWishlist => 'My Wishlist';
+
+  @override
+  String get savedCourses => 'Saved Courses';
+
+  @override
+  String get addToWishlist => 'Add to Wishlist';
+
+  @override
+  String get removeFromWishlist => 'Remove from Wishlist';
+
+  @override
+  String get addedToWishlist => 'Added to wishlist';
+
+  @override
+  String get removedFromWishlist => 'Removed from wishlist';
+
+  @override
+  String get wishlistEmpty => 'Your wishlist is empty';
+
+  @override
+  String get wishlistEmptySubtitle =>
+      'Save courses you\'re interested in for later';
+
+  @override
+  String get payments => 'Payments';
+
+  @override
+  String get payment => 'Payment';
+
+  @override
+  String get paymentMethod => 'Payment Method';
+
+  @override
+  String get paymentStatus => 'Payment Status';
+
+  @override
+  String get paymentHistory => 'Payment History';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get completedPayment => 'Completed';
+
+  @override
+  String get cancelled => 'Cancelled';
+
+  @override
+  String get refunded => 'Refunded';
+
+  @override
+  String get amount => 'Amount';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get subtotal => 'Subtotal';
+
+  @override
+  String get tax => 'Tax';
+
+  @override
+  String get discount => 'Discount';
+
+  @override
+  String get transactionId => 'Transaction ID';
+
+  @override
+  String get transactionDate => 'Transaction Date';
+
+  @override
+  String get payNow => 'Pay Now';
+
+  @override
+  String get checkout => 'Checkout';
+
+  @override
+  String get orderSummary => 'Order Summary';
+
+  @override
+  String get paymentSuccessful => 'Payment successful!';
+
+  @override
+  String get paymentFailed => 'Payment failed';
+
+  @override
+  String get paymentPending => 'Payment pending';
+
+  @override
+  String get paymentProcessing => 'Payment processing';
+
+  @override
+  String get initiatePayment => 'Initiate Payment';
+
+  @override
+  String get completePayment => 'Complete Payment';
+
+  @override
+  String get verifyPayment => 'Verify Payment';
+
+  @override
+  String get mtnMomo => 'MTN Mobile Money';
+
+  @override
+  String get airtelMoney => 'Airtel Money';
+
+  @override
+  String get mobileMoney => 'Mobile Money';
+
+  @override
+  String get creditCard => 'Credit Card';
+
+  @override
+  String get bankTransfer => 'Bank Transfer';
+
+  @override
+  String get certificate => 'Certificate';
+
+  @override
+  String get myCertificates => 'My Certificates';
+
+  @override
+  String get downloadCertificate => 'Download Certificate';
+
+  @override
+  String get certificateOfCompletion => 'Certificate of Completion';
+
+  @override
+  String get thisCertifiesThat => 'This certifies that';
+
+  @override
+  String get hasCompleted => 'has successfully completed';
+
+  @override
+  String get issueDate => 'Issue Date';
+
+  @override
+  String get certificateId => 'Certificate ID';
+
+  @override
+  String get verifyCertificate => 'Verify Certificate';
+
+  @override
+  String get noCertificates => 'No certificates yet';
+
+  @override
+  String get noCertificatesSubtitle => 'Complete courses to earn certificates';
+
+  @override
+  String get help => 'Help';
+
+  @override
+  String get helpCenter => 'Help Center';
+
+  @override
+  String get helpCenterSubtitle => 'Get help with using the app';
+
+  @override
+  String get helpAndSupport => 'Help & Support';
+
+  @override
+  String get faq => 'FAQ';
+
+  @override
+  String get frequentlyAskedQuestions => 'Frequently Asked Questions';
+
+  @override
+  String get contactUs => 'Contact Us';
+
+  @override
+  String get emailSupport => 'Email Support';
+
+  @override
+  String get phoneSupport => 'Phone Support';
+
+  @override
+  String get liveChat => 'Live Chat';
+
+  @override
+  String get gettingStarted => 'Getting Started';
+
+  @override
+  String get accountManagement => 'Account Management';
+
+  @override
+  String get technicalSupport => 'Technical Support';
+
+  @override
+  String get howToCreateAccount => 'How do I create an account?';
+
+  @override
+  String get howToEnroll => 'How do I enroll in a course?';
+
+  @override
+  String get howToAccessOffline => 'Can I access courses offline?';
+
+  @override
+  String get howToChangePassword => 'How do I change my password?';
+
+  @override
+  String get howToUpdateProfile => 'How do I update my profile?';
+
+  @override
+  String get howToDeleteAccount => 'How do I delete my account?';
+
+  @override
+  String get appCrashing => 'The app is crashing, what should I do?';
+
+  @override
+  String get videosNotLoading => 'Videos are not loading properly';
+
+  @override
+  String get paymentIssues => 'I\'m having payment issues';
+
+  @override
+  String get createAccountAnswer =>
+      'Tap \"Continue with Google\" or \"Continue with Email\" on the welcome screen to create your account.';
+
+  @override
+  String get enrollAnswer =>
+      'Browse courses from the dashboard or courses page, then tap \"Enroll\" on any course you\'re interested in.';
+
+  @override
+  String get offlineAnswer =>
+      'Yes, downloaded videos can be accessed offline. Look for the download icon on course content.';
+
+  @override
+  String get changePasswordAnswer =>
+      'Go to Settings > Password & Security to change your password.';
+
+  @override
+  String get updateProfileAnswer =>
+      'Tap your profile picture on the dashboard and select \"Edit Profile\" to update your information.';
+
+  @override
+  String get deleteAccountAnswer =>
+      'Contact our support team at info@excellencecoachinghub.com to request account deletion.';
+
+  @override
+  String get crashingAnswer =>
+      'Try closing and reopening the app. If the problem persists, restart your device and reinstall the app.';
+
+  @override
+  String get videosAnswer =>
+      'Check your internet connection. Try switching to a different network or clearing the app cache.';
+
+  @override
+  String get paymentAnswer =>
+      'Ensure your payment method is valid. If problems continue, contact our support team with details.';
+
+  @override
+  String get needMoreHelp => 'Need More Help?';
+
+  @override
+  String get support24_7 => 'Our support team is here to help you 24/7:';
+
+  @override
+  String get chatWithUs => 'Chat with our support team now';
+
+  @override
+  String get alternativeContact => 'Alternative Contact';
+
+  @override
+  String get secondaryLine => 'Secondary Line:';
+
+  @override
+  String get website => 'Website';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get accountSettings => 'Account Settings';
+
+  @override
+  String get profileInformation => 'Profile Information';
+
+  @override
+  String get updatePersonalDetails => 'Update your personal details';
+
+  @override
+  String get pushNotifications => 'Push Notifications';
+
+  @override
+  String get receiveUpdates => 'Receive important updates and reminders';
+
+  @override
+  String get notificationsEnabled => 'Notifications enabled';
+
+  @override
+  String get notificationsDisabled => 'Notifications disabled';
+
+  @override
+  String get preferences => 'Preferences';
+
+  @override
+  String get darkMode => 'Dark Mode';
+
+  @override
+  String get darkTheme => 'Dark theme enabled';
+
+  @override
+  String get lightTheme => 'Light theme enabled';
+
+  @override
+  String get darkModeEnabled => 'Dark mode enabled';
+
+  @override
+  String get lightModeEnabled => 'Light mode enabled';
+
+  @override
+  String get support => 'Support';
+
+  @override
+  String get sendFeedback => 'Send Feedback';
+
+  @override
+  String get shareThoughts => 'Share your thoughts with us';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get appVersion => 'App version and information';
+
+  @override
+  String get legal => 'Legal';
+
+  @override
+  String get readPrivacyPolicy => 'Read our privacy policy';
+
+  @override
+  String get readTerms => 'Read our terms and conditions';
+
+  @override
+  String get dangerZone => 'Danger Zone';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get permanentlyDelete =>
+      'Permanently delete your account and all data';
+
+  @override
+  String get signOutAllDevices => 'Sign out from all devices';
+
+  @override
+  String get areYouSureLogout => 'Are you sure you want to log out?';
+
+  @override
+  String get areYouSureSignOut => 'Are you sure you want to sign out?';
+
+  @override
+  String get areYouSureDelete =>
+      'Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.';
+
+  @override
+  String get passwordRequired => 'Password is required';
+
+  @override
+  String get enterPasswordConfirm => 'Please enter your password to confirm:';
+
+  @override
+  String get currentPassword => 'Current Password';
+
+  @override
+  String get deleteConfirmation => 'Delete';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get resetOnboarding => 'Reset Onboarding';
+
+  @override
+  String get resetOnboardingConfirm =>
+      'This will reset your onboarding status and you will need to complete it again. Do you want to continue?';
+
+  @override
+  String get resetOnboardingFailed => 'Failed to reset onboarding';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get editProfile => 'Edit Profile';
+
+  @override
+  String get saveChanges => 'Save Changes';
+
+  @override
+  String get saving => 'Saving...';
+
+  @override
+  String get tapToChangePhoto => 'Tap photo to change';
+
+  @override
+  String get emailAddress => 'Email Address';
+
+  @override
+  String get enterEmail => 'Enter your email address';
+
+  @override
+  String get enterPhone => 'Enter your phone number';
+
+  @override
+  String get profileUpdated => 'Profile updated successfully!';
+
+  @override
+  String get profileUpdateError => 'Error updating profile';
+
+  @override
+  String get errorPickingImage => 'Error picking image';
+
+  @override
+  String get myDownloads => 'My Downloads';
+
+  @override
+  String get downloadedContent => 'Downloaded Content';
+
+  @override
+  String get downloadedCourses => 'Downloaded Courses';
+
+  @override
+  String get availableOffline => 'Available Offline';
+
+  @override
+  String get downloadCourse => 'Download Course';
+
+  @override
+  String get downloadLesson => 'Download Lesson';
+
+  @override
+  String get downloading => 'Downloading...';
+
+  @override
+  String get downloaded => 'Downloaded';
+
+  @override
+  String get downloadFailed => 'Download failed';
+
+  @override
+  String get downloadComplete => 'Download complete';
+
+  @override
+  String get noDownloads => 'No downloads yet';
+
+  @override
+  String get noDownloadsSubtitle => 'Download courses to access them offline';
+
+  @override
+  String get deleteDownload => 'Delete Download';
+
+  @override
+  String get deleteDownloadConfirm =>
+      'Are you sure you want to delete this download?';
+
+  @override
+  String get storage => 'Storage';
+
+  @override
+  String get usedStorage => 'Used Storage';
+
+  @override
+  String get freeStorage => 'Free Storage';
+
+  @override
+  String get manageStorage => 'Manage Storage';
+
+  @override
+  String get clearAllDownloads => 'Clear All Downloads';
+
+  @override
+  String get offlineMode => 'Offline Mode';
+
+  @override
+  String get termsTitle => 'Terms of Service';
+
+  @override
+  String get termsContent =>
+      'By using this application, you agree to our terms of service...\n\n• You must be at least 13 years old\n• Content is for educational purposes only\n• Payments are non-refundable after 7 days\n• We reserve the right to terminate accounts\n\nLast updated: February 1, 2026';
+
+  @override
+  String get lastUpdated => 'Last updated';
+
+  @override
+  String get privacyTitle => 'Privacy Policy';
+
+  @override
+  String get readPrivacy => 'Read our privacy policy';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get markAllRead => 'Mark All as Read';
+
+  @override
+  String get noNotifications => 'No notifications';
+
+  @override
+  String get noNotificationsSubtitle => 'You\'re all caught up!';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get unread => 'Unread';
+
+  @override
+  String get read => 'Read';
+
+  @override
+  String get admin => 'Admin';
+
+  @override
+  String get adminAccess => 'Admin Access';
+
+  @override
+  String get students => 'Students';
+
+  @override
+  String get totalStudents => 'Total Students';
+
+  @override
+  String get activeStudents => 'Active Students';
+
+  @override
+  String get newStudents => 'New Students';
+
+  @override
+  String get coursesManagement => 'Courses Management';
+
+  @override
+  String get createCourse => 'Create Course';
+
+  @override
+  String get editCourse => 'Edit Course';
+
+  @override
+  String get deleteCourse => 'Delete Course';
+
+  @override
+  String get courseCreated => 'Course created successfully';
+
+  @override
+  String get courseUpdated => 'Course updated successfully';
+
+  @override
+  String get courseDeleted => 'Course deleted successfully';
+
+  @override
+  String get content => 'Content';
+
+  @override
+  String get videos => 'Videos';
+
+  @override
+  String get uploadVideo => 'Upload Video';
+
+  @override
+  String get addLesson => 'Add Lesson';
+
+  @override
+  String get editLesson => 'Edit Lesson';
+
+  @override
+  String get deleteLesson => 'Delete Lesson';
+
+  @override
+  String get analytics => 'Analytics';
+
+  @override
+  String get courseAnalytics => 'Course Analytics';
+
+  @override
+  String get revenue => 'Revenue';
+
+  @override
+  String get enrollments => 'Enrollments';
+
+  @override
+  String get completionRate => 'Completion Rate';
+
+  @override
+  String get averageRating => 'Average Rating';
+
+  @override
+  String get userManagement => 'User Management';
+
+  @override
+  String get user => 'User';
+
+  @override
+  String get users => 'Users';
+
+  @override
+  String get role => 'Role';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get inactive => 'Inactive';
+
+  @override
+  String get adminRole => 'Admin';
+
+  @override
+  String get studentRole => 'Student';
+
+  @override
+  String get instructorRole => 'Instructor';
+
+  @override
+  String get moderatorRole => 'Moderator';
+
+  @override
+  String get feedback => 'Feedback';
+
+  @override
+  String get userFeedback => 'User Feedback';
+
+  @override
+  String get systemSettings => 'System Settings';
+
+  @override
+  String get generalSettings => 'General Settings';
+
+  @override
+  String get paymentSettings => 'Payment Settings';
+
+  @override
+  String get notificationSettingsAdmin => 'Notification Settings';
+
+  @override
+  String get contentModeration => 'Content Moderation';
+
+  @override
+  String get syncUsers => 'Sync Users';
+
+  @override
+  String get syncing => 'Syncing...';
+
+  @override
+  String get syncComplete => 'Sync completed';
+
+  @override
+  String get syncFailed => 'Sync failed';
+
+  @override
+  String get applicationRefreshed => 'Application refreshed';
+
+  @override
+  String get landingTitle => 'Master New Skills';
+
+  @override
+  String get landingSubtitle =>
+      'Access world-class courses from industry experts';
+
+  @override
+  String get getStartedFree => 'Get Started for Free';
+
+  @override
+  String get exploreCourses => 'Explore Courses';
+
+  @override
+  String get trustedBy => 'Trusted by learners worldwide';
+
+  @override
+  String get whyChooseUs => 'Why Choose Us?';
+
+  @override
+  String get enrolledCourses => 'Enrolled Courses';
+
+  @override
+  String get updateInterests => 'Update Interests';
+
+  @override
+  String get updateYourInterests => 'Update your interests';
+
+  @override
+  String get selectInterests => 'Select topics you\'re interested in';
+
+  @override
+  String get progress => 'Progress';
+
+  @override
+  String get completion => 'Completion';
+
+  @override
+  String get courseCompletion => 'Course Completion';
+
+  @override
+  String get started => 'Started';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get finished => 'Finished';
+
+  @override
+  String get quarterWay => 'Quarter way there!';
+
+  @override
+  String get momentumBuilding => 'You have hit 25% — momentum is building!';
+
+  @override
+  String get halfwayChampion => 'Halfway champion!';
+
+  @override
+  String get finishLineReal => 'You are at 50% — the finish line is real.';
+
+  @override
+  String get almostThere => 'Almost there!';
+
+  @override
+  String get nearlyUnstoppable => '75% done — you are nearly unstoppable.';
+
+  @override
+  String get courseCompleted => 'Course completed!';
+
+  @override
+  String get incredibleEffort => 'You finished a course. Incredible effort!';
+
+  @override
+  String get myLibrary => 'My Library';
+
+  @override
+  String get books => 'Books';
+
+  @override
+  String get documents => 'Documents';
+
+  @override
+  String get reading => 'Reading';
+
+  @override
+  String get exam => 'Exam';
+
+  @override
+  String get takeExam => 'Take Exam';
+
+  @override
+  String get examResults => 'Exam Results';
+
+  @override
+  String get examTime => 'Exam Time';
+
+  @override
+  String get timeLeft => 'Time Left';
+
+  @override
+  String get examInstructions => 'Exam Instructions';
+
+  @override
+  String get examSubmitted => 'Exam Submitted';
+
+  @override
+  String get examScore => 'Exam Score';
+
+  @override
+  String get pass => 'Pass';
+
+  @override
+  String get examPassed => 'Exam Passed';
+
+  @override
+  String get examFailed => 'Exam Failed';
+
+  @override
+  String get onboarding => 'Onboarding';
+
+  @override
+  String get completeOnboarding => 'Complete Onboarding';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get feedbackSent => 'Thank you for your feedback!';
+
+  @override
+  String get feedbackFailed => 'Failed to send feedback. Please try again.';
+
+  @override
+  String get howCanWeImprove => 'Tell us how we can improve...';
+
+  @override
+  String get enterFeedback => 'Please enter some feedback';
+
+  @override
+  String get aboutApp =>
+      'A premium learning platform for continuous education and skill development.';
+
+  @override
+  String get appVersionInfo => 'App Version';
+
+  @override
+  String get copyright => '© 2026 Excellence Coaching Hub';
+
+  @override
+  String get areYouSure => 'Are you sure?';
+
+  @override
+  String get actionCannotUndone => 'This action cannot be undone.';
+
+  @override
+  String get confirmDelete => 'Confirm Delete';
+
+  @override
+  String get confirmAction => 'Confirm Action';
+
+  @override
+  String get generalError => 'Something went wrong. Please try again.';
+
+  @override
+  String get networkError => 'Network error. Please check your connection.';
+
+  @override
+  String get serverError => 'Server error. Please try again later.';
+
+  @override
+  String get notFound => 'Not found';
+
+  @override
+  String get accessDenied => 'Access denied';
+
+  @override
+  String get sessionExpired => 'Session expired. Please log in again.';
+
+  @override
+  String get unauthorized => 'Unauthorized access';
+
+  @override
+  String get forbidden => 'Forbidden';
+
+  @override
+  String get invalidInput => 'Invalid input';
+
+  @override
+  String get requiredField => 'This field is required';
+
+  @override
+  String get invalidEmail => 'Please enter a valid email';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 6 characters';
+
+  @override
+  String get passwordsDontMatch => 'Passwords do not match';
+
+  @override
+  String get invalidPhone => 'Please enter a valid phone number';
+
+  @override
+  String get shareCourse => 'Check out this amazing course';
+
+  @override
+  String get shareCourseSubject => 'Course Recommendation';
+
+  @override
+  String get learnMoreAt => 'Learn more at Excellence Coaching Hub!';
+
+  @override
+  String get welcomeBackTitle => 'Welcome Back! Keep the streak alive.';
+
+  @override
+  String get yourConsistency => 'Your consistency is your superpower.';
+
+  @override
+  String get noInternet => 'No internet connection';
+
+  @override
+  String get online => 'Online';
+
+  @override
+  String get connected => 'Connected';
+
+  @override
+  String get disconnected => 'Disconnected';
+
+  @override
+  String get learningStatistics => 'Learning Statistics';
+
+  @override
+  String get coursesEnrolled => 'Courses Enrolled';
+
+  @override
+  String get lessonsCompleted => 'Lessons Completed';
+
+  @override
+  String get examsTaken => 'Exams Taken';
+
+  @override
+  String get hoursLearned => 'Hours Learned';
+
+  @override
+  String get selectCategory => 'Select Category';
+
+  @override
+  String get noCategoriesAvailable => 'No categories available';
+
+  @override
+  String get allCategories => 'All Categories';
+
+  @override
+  String get searchAcrossAllCourses => 'Search across all available courses';
+
+  @override
+  String get failedToLoadCategories => 'Failed to load categories';
+
+  @override
+  String get liveClassesAvailable => 'Live Classes Available';
+
+  @override
+  String get contactUsForLiveClasses => 'Contact Us for Live Classes';
+
+  @override
+  String get myProgress => 'My Progress';
+
+  @override
+  String get averageScore => 'Average Score';
+
+  @override
+  String get quickAccess => 'Quick Access';
+
+  @override
+  String get seeAll => 'See All';
+
+  @override
+  String get exploreCategories => 'Explore Categories';
+
+  @override
+  String get viewAll => 'View All';
+
+  @override
+  String get whatsappNotAvailable => 'WhatsApp Not Available';
+
+  @override
+  String get whatsappNotInstalled =>
+      'WhatsApp is not installed or not accessible on this device.';
+
+  @override
+  String get callNotAvailable => 'Call Not Available';
+
+  @override
+  String get phoneCallsNotSupported =>
+      'Phone calls are not supported on this device.';
+
+  @override
+  String get emailNotAvailable => 'Email Not Available';
+
+  @override
+  String get emailClientNotAvailable =>
+      'Email client is not available on this device.';
+
+  @override
+  String get refreshed => 'Refreshed';
+
+  @override
+  String get dashboardRefreshed => 'Dashboard refreshed';
+
+  @override
+  String get copiedToClipboard => 'copied to clipboard';
+
+  @override
+  String get whatsapp => 'WhatsApp';
+
+  @override
+  String get callUs => 'Call Us';
+
+  @override
+  String get emailUs => 'Email Us';
+
+  @override
+  String get callDirectly => 'Call Directly';
+
+  @override
+  String get copyNumber => 'Copy Number';
+
+  @override
+  String get copyToClipboardLabel => 'Copy to clipboard';
+
+  @override
+  String get whatsappMessage => 'WhatsApp Message';
+
+  @override
+  String get sendWhatsAppMessage => 'Send WhatsApp message';
+
+  @override
+  String get selectedCategory => 'Selected category';
+
+  @override
+  String get failedToLoadCourses => 'Failed to load courses';
+
+  @override
+  String get pleaseTryAgainLater => 'Please try again later';
+
+  @override
+  String get untitledCourse => 'Untitled Course';
+
+  @override
+  String get noCoursesFound => 'No courses found';
+
+  @override
+  String get tryAdjustingSearch =>
+      'Try adjusting your search or filter criteria';
+
+  @override
+  String get browseAllAvailableCourses => 'Browse all available courses';
+
+  @override
+  String get quizInstructions => 'Quiz Instructions';
+
+  @override
+  String get quizOnlyLesson => 'Quiz-Only Lesson';
+
+  @override
+  String get openAIChat => 'Open AI chat';
+
+  @override
+  String get certificateProcessing => 'Certificate Processing';
+
+  @override
+  String get viewCertificates => 'View Certificates';
+
+  @override
+  String get generateNow => 'Generate Now';
+
+  @override
+  String get finalExamFailed => 'Final Exam Failed';
+
+  @override
+  String get certificateAlreadyEarned => 'Certificate Already Earned';
+
+  @override
+  String get unenrollFromCourse => 'Unenroll from Course';
+
+  @override
+  String get unenroll => 'Unenroll';
+
+  @override
+  String get viewCertificate => 'View Certificate';
+
+  @override
+  String get lessonNotFound => 'Lesson not found';
+
+  @override
+  String get navigation => 'Navigation';
+
+  @override
+  String get video => 'Video';
+
+  @override
+  String get aiHelp => 'AI Help';
+
+  @override
+  String get introduction => 'Introduction';
+
+  @override
+  String get currentLesson => 'Current lesson';
+
+  @override
+  String get advancedTopics => 'Advanced topics';
+
+  @override
+  String get learningPlatform => 'Learning Platform';
+
+  @override
+  String get askAI => 'Ask AI';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get videoNotAvailable => 'Video not available';
+
+  @override
+  String get viewInDownloads => 'View in Downloads';
+
+  @override
+  String get noVideoAvailableForDownload => 'No video available for download';
+
+  @override
+  String get aboutThisLesson => 'About this lesson';
+
+  @override
+  String get comprehensiveStudyGuide => 'Comprehensive study guide';
+
+  @override
+  String get additionalLearningResource => 'Additional learning resource';
+
+  @override
+  String get learningMaterials => 'Learning materials';
+
+  @override
+  String get watchLessonVideo => 'Watch the lesson video';
+
+  @override
+  String get reviewLessonNotes => 'Review lesson notes';
+
+  @override
+  String get completeQuiz => 'Complete the quiz';
+
+  @override
+  String get markLessonComplete => 'Mark lesson complete';
+
+  @override
+  String get lessonOverview => 'Lesson overview';
+
+  @override
+  String get aiTutor => 'AI Tutor';
+
+  @override
+  String get askAnythingAboutLesson => 'Ask anything about this lesson';
+
+  @override
+  String get simplifyMainConcept => 'Try: \"Simplify the main concept for me\"';
+
+  @override
+  String get complete => 'Complete';
+
+  @override
+  String get lessonsDone => 'Lessons done';
+
+  @override
+  String get lessonNotes => 'Lesson Notes';
+
+  @override
+  String get downloadPDF => 'Download PDF';
+
+  @override
+  String get viewDownloads => 'View Downloads';
+
+  @override
+  String get pdfView => 'PDF View';
+
+  @override
+  String get textView => 'Text View';
+
+  @override
+  String get noNotesAvailable => 'No notes available';
+
+  @override
+  String get lessonNoNotesYet => 'This lesson doesn\'t have notes yet';
+
+  @override
+  String get quizQuestions => 'Quiz Questions';
+
+  @override
+  String get failedToLoadQuizQuestions => 'Failed to load quiz questions';
+
+  @override
+  String get noQuestionsAvailable => 'No questions available';
+
+  @override
+  String get quizNoQuestionsYet => 'This quiz doesn\'t have any questions yet';
+
+  @override
+  String get testUnderstanding => 'Test your understanding of this lesson';
+
+  @override
+  String get viewAttemptHistory => 'View attempt history';
+
+  @override
+  String get attemptHistory => 'Attempt history';
+
+  @override
+  String get noAttemptsYet => 'No attempts yet';
+
+  @override
+  String get completeQuizSeeResults =>
+      'Complete the quiz to see your results here';
+
+  @override
+  String get studyTips => 'Study tips';
+
+  @override
+  String get courseFeedback => 'Course Feedback';
+
+  @override
+  String get shareExperienceImprove =>
+      'Share your experience and help us improve';
+
+  @override
+  String get rateThisCourse => 'Rate this course';
+
+  @override
+  String get tapToRate => 'Tap to rate';
+
+  @override
+  String get yourFeedback => 'Your Feedback';
+
+  @override
+  String get submitFeedback => 'Submit Feedback';
+
+  @override
+  String get updateYourFeedback => 'Update Your Feedback';
+
+  @override
+  String get studentReviews => 'Student Reviews';
+
+  @override
+  String get noReviewsYet => 'No reviews yet';
+
+  @override
+  String get anonymousStudent => 'Anonymous Student';
+
+  @override
+  String get lessonMaterial => 'Lesson Material';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
+  String get understood => 'Understood';
+
+  @override
+  String get successfullyUnenrolled => 'Successfully unenrolled from course';
+
+  @override
+  String get noVideoAvailableLesson => 'No video available for this lesson';
+
+  @override
+  String get lessonBookmarked => 'Lesson bookmarked!';
+
+  @override
+  String get bookmarkRemoved => 'Bookmark removed';
+
+  @override
+  String get checkOutLesson =>
+      'Check out this lesson from Excellence Coaching Hub';
+
+  @override
+  String get askAIButton => 'Ask AI';
+
+  @override
+  String get instructions => 'Instructions';
+}

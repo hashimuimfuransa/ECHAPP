@@ -15,6 +15,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/models/user.dart' as app_models;
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
@@ -134,7 +135,7 @@ class MainLayout extends ConsumerWidget {
               child: Column(
                 children: [
                   if (!isAuthRoute && currentRoute != '/') 
-                    _buildDesktopTopBar(context, ref, user, title ?? _getPageTitle(currentPage), isCollapsed),
+                    _buildDesktopTopBar(context, ref, user, title ?? _getPageTitle(currentPage, context), isCollapsed),
                   Expanded(
                     child: ClipRect(child: child),
                   ),
@@ -182,17 +183,18 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-  String _getPageTitle(String page) {
+  String _getPageTitle(String page, BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     switch (page) {
-      case 'dashboard': return 'Dashboard';
-      case 'courses': return 'Courses';
-      case 'my-courses': return 'My Learning';
-      case 'categories': return 'Categories';
-      case 'certificates': return 'Certificates';
-      case 'downloads': return 'Downloads';
-      case 'profile': return 'Profile';
-      case 'settings': return 'Settings';
-      default: return 'Excellence Hub';
+      case 'dashboard': return l10n?.dashboard ?? 'Dashboard';
+      case 'courses': return l10n?.courses ?? 'Courses';
+      case 'my-courses': return l10n?.myLearning ?? 'My Learning';
+      case 'categories': return l10n?.categories ?? 'Categories';
+      case 'certificates': return l10n?.certificates ?? 'Certificates';
+      case 'downloads': return l10n?.downloads ?? 'Downloads';
+      case 'profile': return l10n?.profile ?? 'Profile';
+      case 'settings': return l10n?.settings ?? 'Settings';
+      default: return l10n?.excellenceHub ?? 'Excellence Hub';
     }
   }
 
@@ -430,12 +432,13 @@ class MainLayout extends ConsumerWidget {
   }
 
   List<Widget> _buildNavItems(BuildContext context, int currentIndex, double screenWidth) {
+    final l10n = AppLocalizations.of(context);
     final navItems = [
-      {'icon': Icons.home_rounded, 'label': 'Home'},
-      {'icon': Icons.school_rounded, 'label': 'Courses'},
-      {'icon': Icons.menu_book_rounded, 'label': 'Library'},
-      {'icon': Icons.download_rounded, 'label': 'Downloads'},
-      {'icon': Icons.bookmark_rounded, 'label': 'Enrolled'},
+      {'icon': Icons.home_rounded, 'label': l10n?.home ?? 'Home'},
+      {'icon': Icons.school_rounded, 'label': l10n?.courses ?? 'Courses'},
+      {'icon': Icons.menu_book_rounded, 'label': l10n?.library ?? 'Library'},
+      {'icon': Icons.download_rounded, 'label': l10n?.downloads ?? 'Downloads'},
+      {'icon': Icons.bookmark_rounded, 'label': l10n?.enrolled ?? 'Enrolled'},
     ];
     
     return navItems.asMap().entries.map<Widget>((entry) {

@@ -28,6 +28,7 @@ import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
 import 'package:excellencecoachinghub/services/api/enrollment_service.dart';
 import 'package:excellencecoachinghub/services/api/quiz_service.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:share_plus/share_plus.dart';
@@ -109,6 +110,8 @@ class _ProfessionalLessonScreenState
   bool _isChatOpen = false;
   bool _sidebarCollapsed = false;
   double _downloadProgress = 0.0;
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
   bool _isDownloading = false;
   bool _isBookmarked = false;
   String? _currentDownloadLessonId; // Track which lesson is being downloaded
@@ -601,7 +604,7 @@ class _ProfessionalLessonScreenState
             children: [
               Icon(Icons.quiz_outlined, color: _T.green, size: 24),
               const SizedBox(width: 12),
-              Text('Quiz Instructions'),
+              Text(l10n?.quizInstructions ?? 'Quiz Instructions'),
             ],
           ),
           content: SingleChildScrollView(
@@ -832,7 +835,7 @@ class _ProfessionalLessonScreenState
             children: [
               Icon(Icons.quiz_outlined, color: _T.green, size: 24),
               const SizedBox(width: 12),
-              const Text('Quiz-Only Lesson'),
+              Text(l10n?.quizOnlyLesson ?? 'Quiz-Only Lesson'),
             ],
           ),
           content: Column(
@@ -2219,7 +2222,7 @@ class _ProfessionalLessonScreenState
             child: ElevatedButton.icon(
               onPressed: () => setState(() => _activeTab = _Tab.ai),
               icon: const Icon(Icons.chat_bubble_outline, size: 16),
-              label: const Text('Open AI chat'),
+              label: Text(l10n?.openAIChat ?? 'Open AI chat'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4F46E5),
                 foregroundColor: Colors.white,
@@ -2908,7 +2911,7 @@ class _ProfessionalLessonScreenState
                 child: ElevatedButton.icon(
                   onPressed: _exam != null ? _showQuizInstructions : null,
                   icon: const Icon(Icons.info_outline, size: 16),
-                  label: const Text('Instructions'),
+                  label: Text(l10n?.instructions ?? 'Instructions'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _T.blue,
                     foregroundColor: Colors.white,
@@ -3927,7 +3930,7 @@ class _ProfessionalLessonScreenState
           children: [
             Icon(Icons.hourglass_top, color: _T.blue, size: 24),
             const SizedBox(width: 12),
-            const Text('Certificate Processing'),
+            Text(l10n?.certificateProcessing ?? 'Certificate Processing'),
           ],
         ),
         content: Column(
@@ -3987,7 +3990,7 @@ class _ProfessionalLessonScreenState
               context.push('/certificates');
             },
             icon: const Icon(Icons.visibility, size: 18),
-            label: const Text('View Certificates'),
+            label: Text(l10n?.viewCertificates ?? 'View Certificates'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _T.blue,
               foregroundColor: Colors.white,
@@ -4001,7 +4004,7 @@ class _ProfessionalLessonScreenState
                 _generateCertificateManually();
               },
               icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Generate Now'),
+              label: Text(l10n?.generateNow ?? 'Generate Now'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _T.green,
                 foregroundColor: Colors.white,
@@ -4024,7 +4027,7 @@ class _ProfessionalLessonScreenState
           children: [
             Icon(Icons.error_outline, color: Colors.red, size: 24),
             const SizedBox(width: 12),
-            const Text('Final Exam Failed'),
+            Text(l10n?.finalExamFailed ?? 'Final Exam Failed'),
           ],
         ),
         content: Column(
@@ -4095,7 +4098,7 @@ class _ProfessionalLessonScreenState
           children: [
             Icon(Icons.verified, color: _T.green, size: 24),
             const SizedBox(width: 12),
-            const Text('Certificate Already Earned'),
+            Text(l10n?.certificateAlreadyEarned ?? 'Certificate Already Earned'),
           ],
         ),
         content: Column(
@@ -4116,7 +4119,7 @@ class _ProfessionalLessonScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -4124,7 +4127,7 @@ class _ProfessionalLessonScreenState
               _showUnenrollConfirmation();
             },
             icon: const Icon(Icons.logout, size: 16),
-            label: const Text('Unenroll from Course'),
+            label: Text(l10n?.unenrollFromCourse ?? 'Unenroll from Course'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -4139,7 +4142,7 @@ class _ProfessionalLessonScreenState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Unenroll from Course'),
+        title: Text(l10n?.unenrollFromCourse ?? 'Unenroll from Course'),
         content: const Text(
           'Are you sure you want to unenroll from this course? This will:\n\n• Remove your access to course content\n• Delete your quiz attempts\n• Remove your certificate\n\nYou will need to enroll again to regain access.',
           style: TextStyle(fontSize: 14),
@@ -4147,7 +4150,7 @@ class _ProfessionalLessonScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           ElevatedButton.icon(
             onPressed: () {

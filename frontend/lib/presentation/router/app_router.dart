@@ -14,6 +14,7 @@ import 'package:excellencecoachinghub/presentation/screens/auth/name_collection_
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_auth_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/interest_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/personalization_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/language/language_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/course_detail_screen.dart';
@@ -146,6 +147,10 @@ class AppRouter {
               GoRoute(
                 path: '/landing',
                 builder: (context, state) => const LandingScreen(),
+              ),
+              GoRoute(
+                path: '/language-selection',
+                builder: (context, state) => const LanguageSelectionScreen(),
               ),
               GoRoute(
                 path: '/auth-selection',

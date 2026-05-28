@@ -8,11 +8,15 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/app_router.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:excellencecoachinghub/l10n/kinyarwanda_material_localizations.dart';
 
 
 Future<void> main() async {
@@ -134,15 +138,7 @@ class ExcellenceCoachingHubApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    
-    // Initialize categories
-    ref.listen(categoriesProvider, (_, __) {});
-    
-    // Load initial categories
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final categories = CategoriesService.getAllCategories();
-      ref.read(categoriesProvider.notifier).state = categories;
-    });
+    final locale = ref.watch(localeProvider);
     
     return MaterialApp.router(
       title: 'ExcellenceCoachingHub',
@@ -150,8 +146,28 @@ class ExcellenceCoachingHubApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       routerConfig: AppRouter.routerInstance,
-
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        const KinyarwandaMaterialLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        // Ensure localizations are loaded before showing content
+        final localizations = AppLocalizations.of(context);
+        if (localizations == null) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

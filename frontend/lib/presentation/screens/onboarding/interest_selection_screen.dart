@@ -102,6 +102,15 @@ class InterestSelectionScreen extends ConsumerStatefulWidget {
 class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScreen> {
   final Set<String> _selectedInterests = {};
 
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white.withOpacity(0.95);
+  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1A2433);
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF4A5568);
+  Color get _interestCardBg => _isDark ? const Color(0xFF0F172A) : Colors.grey.shade50;
+  Color get _interestCardBorder => _isDark ? const Color(0xFF334155) : Colors.grey.shade200;
+  Color get _selectedInterestBg => _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5);
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
@@ -125,20 +134,59 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: const Color(0xFF00C896),
-        body: Stack(
-          children: [
-            const _FloatingBg(),
-            SafeArea(child: _buildDesktopLayout()),
-          ],
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/onboading desktop.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF0F172A).withOpacity(0.5),
+                  const Color(0xFF1E293B).withOpacity(0.7),
+                  const Color(0xFF0F172A).withOpacity(0.9),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+            child: SafeArea(child: _buildDesktopLayout()),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
-      body: SafeArea(
-        child: _buildMobileLayout(),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/onboardign mobile.png'),
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A).withOpacity(0.4),
+                const Color(0xFF1E293B).withOpacity(0.6),
+                const Color(0xFF0F172A).withOpacity(0.85),
+              ],
+              stops: const [0.0, 0.4, 1.0],
+            ),
+          ),
+          child: SafeArea(
+            child: _buildMobileLayout(),
+          ),
+        ),
       ),
     );
   }
@@ -151,11 +199,10 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
         constraints: const BoxConstraints(maxHeight: 820),
         margin: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: _cardColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.09), width: 1),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 40),
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40),
           ],
         ),
         child: Column(
@@ -192,11 +239,13 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
 
   // ─── Mobile layout ───────────────────────────────────────────────────────────
   Widget _buildMobileLayout() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmall = screenHeight < 680;
     return Column(
       children: [
         // Green top section
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          padding: EdgeInsets.fromLTRB(20, isSmall ? 8 : 12, 20, isSmall ? 12 : 20),
           child: Column(
             children: [
               Row(children: [
@@ -210,26 +259,26 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                 const Spacer(),
                 _buildStepChip(),
               ]),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmall ? 8 : 16),
               _buildHeaderContent(dark: false),
             ],
           ),
         ),
-        // White card sliding up
+        // Card sliding up
         Expanded(
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: _cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(22, 28, 22, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildInterestsGrid(dark: true),
+                  _buildInterestsGrid(dark: _isDark),
                   const SizedBox(height: 28),
-                  _buildButtons(dark: true),
+                  _buildButtons(dark: _isDark),
                 ],
               ),
             ),
@@ -332,7 +381,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
           return Center(
             child: Column(
               children: [
-                Icon(Icons.category_outlined, color: dark ? Colors.grey.shade400 : Colors.white38, size: 40),
+                Icon(Icons.category_outlined, color: dark ? Colors.grey.shade600 : Colors.white38, size: 40),
                 const SizedBox(height: 12),
                 Text('No categories available',
                     style: TextStyle(color: dark ? Colors.grey.shade500 : Colors.white54, fontSize: 14)),
@@ -360,13 +409,13 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                 curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                 decoration: BoxDecoration(
-                  color: isSelected ? color : (dark ? Colors.grey.shade50 : Colors.white.withOpacity(0.08)),
+                  color: isSelected ? color : (dark ? _interestCardBg : Colors.white.withOpacity(0.08)),
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(
-                    color: isSelected ? color : (dark ? Colors.grey.shade200 : Colors.white.withOpacity(0.2)),
+                    color: isSelected ? color : (dark ? _interestCardBorder : Colors.white.withOpacity(0.2)),
                     width: isSelected ? 1.8 : 1.2,
                   ),
-                  boxShadow: isSelected
+                  boxShadow: isSelected && !dark
                       ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))]
                       : [],
                 ),
@@ -382,7 +431,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                     Text(
                       interest,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : (dark ? const Color(0xFF374151) : Colors.white70),
+                        color: isSelected ? Colors.white : (dark ? _secondaryTextColor : Colors.white70),
                         fontSize: 13.5,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         letterSpacing: 0.1,
@@ -415,15 +464,15 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
       error: (_, __) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: dark ? const Color(0xFF450A0A) : Colors.red.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade200),
+          border: Border.all(color: dark ? const Color(0xFF7F1D1D) : Colors.red.shade200),
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded, color: Colors.red.shade400, size: 20),
+            Icon(Icons.error_outline_rounded, color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade400, size: 20),
             const SizedBox(width: 10),
-            Text('Failed to load categories', style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+            Text('Failed to load categories', style: TextStyle(color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade600, fontSize: 13)),
           ],
         ),
       ),

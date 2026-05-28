@@ -23,10 +23,24 @@ class CategoriesScreen extends ConsumerWidget {
         child: backendCategories.when(
           data: (categories) => _buildMainContent(context, categories, padding, spacing),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) {
-            final categories = CategoriesService.getAllCategories();
-            return _buildMainContent(context, categories, padding, spacing);
-          },
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load categories',
+                  style: TextStyle(color: AppTheme.getTextColor(context), fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please check your connection and try again',
+                  style: TextStyle(color: AppTheme.getSecondaryTextColor(context), fontSize: 14),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

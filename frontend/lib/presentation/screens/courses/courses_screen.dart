@@ -13,6 +13,7 @@ import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -44,6 +45,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   bool _showCategoryDropdown = false;
 
   final CourseRepository _repository = CourseRepository();
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -400,7 +403,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Courses',
+              l10n?.courses ?? 'Courses',
               style: TextStyle(
                 fontSize: _getResponsiveTextSize(context) * 1.45,
                 fontWeight: FontWeight.w800,
@@ -423,9 +426,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         for (final category in categories) {
           if (category.id == _selectedCategory) return category.name;
         }
-        return widget.categoryName ?? 'Selected category';
+        return widget.categoryName ?? (l10n?.selectedCategory ?? 'Selected category');
       },
-      orElse: () => widget.categoryName ?? 'Selected category',
+      orElse: () => widget.categoryName ?? (l10n?.selectedCategory ?? 'Selected category'),
     );
 
     return Padding(
@@ -682,28 +685,28 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           topRight: Radius.circular(24),
         ),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(40),
+      child: Padding(
+        padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline_rounded,
               color: Color(0xFFEF4444),
               size: 48,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Failed to load categories',
+              l10n?.failedToLoadCategories ?? 'Failed to load categories',
               style: TextStyle(
                 color: AppTheme.greyColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Please try again later',
+              l10n?.pleaseTryAgainLater ?? 'Please try again later',
               style: TextStyle(
                 color: AppTheme.greyColor,
                 fontSize: 14,
@@ -842,7 +845,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     children: [
                       // Title
                       Text(
-                        course.title ?? 'Untitled Course',
+                        course.title ?? (l10n?.untitledCourse ?? 'Untitled Course'),
                         style: TextStyle(
                           color: AppTheme.getTextColor(context),
                           fontSize: _getResponsiveTextSize(context) * 1.1,
@@ -923,7 +926,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 16),
             Text(
-              'Failed to load courses',
+              l10n?.failedToLoadCourses ?? 'Failed to load courses',
               style: TextStyle(
                 color: AppTheme.getTextColor(context),
                 fontSize: 18,
@@ -949,7 +952,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 backgroundColor: AppTheme.primaryGreen,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Try Again'),
+              child: Text(l10n?.tryAgain ?? 'Try Again'),
             ),
           ],
         ),
@@ -1916,7 +1919,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Center(
                   child: Text(
-                    'Failed to load categories',
+                    l10n?.failedToLoadCategories ?? 'Failed to load categories',
                     style: TextStyle(
                       color: AppTheme.getSecondaryTextColor(context),
                       fontSize: 14,

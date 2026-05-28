@@ -307,7 +307,7 @@ const firebaseLogin = async (req, res) => {
       console.log('Provided full name:', fullName);
       
       // Get user's display name and phone number from Firebase Auth
-      let displayName = 'Firebase User';
+      let displayName = '';
       let phoneNumber = null;
       try {
         const firebaseUser = await admin.auth().getUser(decodedToken.uid);
@@ -317,21 +317,31 @@ const firebaseLogin = async (req, res) => {
         console.log('Firebase Display Name:', firebaseUser.displayName);
         console.log('Firebase Phone Number:', firebaseUser.phoneNumber);
         console.log('Provided fullName:', fullName);
-        
-        // Priority order for display name:
-        // 1. Provided fullName (from frontend)
-        // 2. Firebase display name (if available)
-        // 3. Email username
-        // 4. Default fallback
-        displayName = fullName || firebaseUser.displayName || (firebaseUser.email && firebaseUser.email.split('@')[0]) || 'Firebase User';
-        console.log('Final displayName selected:', displayName);
-        
+
         // Get phone number from Firebase (for phone auth users)
         phoneNumber = firebaseUser.phoneNumber;
         console.log('Phone number from Firebase:', phoneNumber);
+
+        // Priority order for display name:
+        // 1. Provided fullName (from frontend - for email registration)
+        // 2. Firebase display name (if available - for Google auth)
+        // 3. Email username (for email auth)
+        // 4. Empty string for phone auth users (will trigger name collection screen)
+        // Note: Phone auth users should go through name collection screen, so we don't set a default
+        if (fullName) {
+          displayName = fullName;
+        } else if (firebaseUser.displayName) {
+          displayName = firebaseUser.displayName;
+        } else if (firebaseUser.email) {
+          displayName = firebaseUser.email.split('@')[0];
+        } else {
+          // Phone auth users without email - leave empty to trigger name collection
+          displayName = '';
+        }
+        console.log('Final displayName selected:', displayName);
       } catch (firebaseError) {
-        console.log('Could not get user display name from Firebase Auth, using provided name or default');
-        displayName = fullName || 'Firebase User';
+        console.log('Could not get user display name from Firebase Auth, using provided name or empty');
+        displayName = fullName || '';
       }
       
       user = await User.create({

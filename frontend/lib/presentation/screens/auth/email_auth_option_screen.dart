@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class EmailAuthOptionScreen extends StatefulWidget {
   const EmailAuthOptionScreen({super.key});
@@ -15,6 +16,14 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   late final AnimationController _animController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1F2937);
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF6B7280);
+  Color get _tertiaryTextColor => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF4A5568);
 
   @override
   void initState() {
@@ -43,96 +52,120 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
+    
+    // Guard against missing localizations
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (isDesktop) {
-      return _buildDesktopLayout();
+      return _buildDesktopLayout(l10n);
     }
 
     return _buildMobileLayout();
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(AppLocalizations l10n) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E293B),
-              Color(0xFF0F4C75),
-              Color(0xFF041B2D),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+          image: DecorationImage(
+            image: AssetImage('assets/onboading desktop.png'),
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -150,
-              right: -150,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.1),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A).withOpacity(0.6),
+                const Color(0xFF1E293B).withOpacity(0.75),
+                const Color(0xFF0F172A).withOpacity(0.9),
+              ],
+              stops: const [0.0, 0.5, 1.0],
             ),
-            Positioned(
-              bottom: -100,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.08),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: Container(
-                width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
-                constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
-                      spreadRadius: 0,
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -150,
+                right: -150,
+                child: Container(
+                  width: 500,
+                  height: 500,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF00C896).withOpacity(0.15),
+                        const Color(0xFF00C896).withOpacity(0.0),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                child: _buildRightPanel(),
               ),
-            ),
-          ],
+              Positioned(
+                bottom: -100,
+                left: -100,
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF00C896).withOpacity(0.12),
+                        const Color(0xFF00C896).withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: Container(
+                  width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 40,
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: _buildRightPanel(l10n),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRightPanel() {
+  Widget _buildRightPanel(AppLocalizations l10n) {
+    // Fallback strings if localization fails
+    final String goBackText = l10n.goBack;
+    final String choosePathText = l10n.chooseYourPath;
+    final String selectHowText = l10n.selectHowToProceed;
+    final String signInText = l10n.signIn;
+    final String accessAccountText = l10n.accessYourAccount;
+    final String createAccountText = l10n.createAccount;
+    final String joinCommunityText = l10n.joinCommunity;
+    final String resetPasswordText = l10n.resetPassword;
+    final String recoverAccessText = l10n.recoverAccess;
+    final String enterpriseSecurityText = l10n.enterpriseSecurity;
+    
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -147,8 +180,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
-                    tooltip: 'Go back',
+                    icon: Icon(Icons.close_rounded, color: _isDark ? Colors.white70 : Colors.black54, size: 28),
+                    tooltip: goBackText,
                   ),
                 ],
               ),
@@ -161,20 +194,20 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Choose Your Path',
+                      Text(
+                        choosePathText,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: _isDark ? Colors.white : const Color(0xFF1A2433),
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Select how you\'d like to proceed with your account',
+                      Text(
+                        selectHowText,
                         style: TextStyle(
-                          color: Colors.white60,
+                          color: _isDark ? Colors.white60 : const Color(0xFF4A5568),
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
                           height: 1.5,
@@ -183,8 +216,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       const SizedBox(height: 50),
                       _AuthOptionButton(
                         icon: Icons.login_rounded,
-                        title: 'Sign In',
-                        subtitle: 'Access your existing account',
+                        title: signInText,
+                        subtitle: accessAccountText,
                         color: const Color(0xFF4CAF50),
                         onTap: () => context.push('/login'),
                         delay: 100,
@@ -192,8 +225,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       const SizedBox(height: 20),
                       _AuthOptionButton(
                         icon: Icons.person_add_rounded,
-                        title: 'Create Account',
-                        subtitle: 'Join our community of learners',
+                        title: createAccountText,
+                        subtitle: joinCommunityText,
                         color: const Color(0xFF2196F3),
                         onTap: () => context.push('/register'),
                         delay: 200,
@@ -201,8 +234,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                       const SizedBox(height: 20),
                       _AuthOptionButton(
                         icon: Icons.lock_reset_rounded,
-                        title: 'Reset Password',
-                        subtitle: 'Recover your account access',
+                        title: resetPasswordText,
+                        subtitle: recoverAccessText,
                         color: const Color(0xFFFF9800),
                         onTap: () => context.push('/forgot-password'),
                         delay: 300,
@@ -218,15 +251,15 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                             width: 1,
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
-                            SizedBox(width: 12),
+                            const Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Your account is protected with enterprise-grade security',
+                                enterpriseSecurityText,
                                 style: TextStyle(
-                                  color: Colors.white70,
+                                  color: _isDark ? Colors.white70 : const Color(0xFF4A5568),
                                   fontSize: 13,
                                   height: 1.4,
                                 ),
@@ -236,7 +269,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
-                      const _TermsFooter(),
+                      _TermsFooter(l10n: l10n),
                     ],
                   ),
                 ),
@@ -249,138 +282,228 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   }
 
   Widget _buildMobileLayout() {
+    final l10n = AppLocalizations.of(context);
+    // Fallback strings if localization fails
+    final String choosePathText = l10n?.chooseYourPath ?? 'Choose Your Path';
+    final String selectHowText = l10n?.selectHowToProceed ?? 'Select how you want to proceed';
+    final String signInText = l10n?.signIn ?? 'Sign In';
+    final String signInSubtitleText = l10n?.signInPhoneSubtitle ?? 'Access your account';
+    final String createAccountText = l10n?.createAccount ?? 'Create Account';
+    final String createAccountSubtitleText = l10n?.createAccountPhoneSubtitle ?? 'Join our community';
+    final String resetPasswordText = l10n?.resetPassword ?? 'Reset Password';
+    final String resetPasswordSubtitleText = l10n?.resetPasswordPhoneSubtitle ?? 'Recover your access';
+    
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isShort = screenHeight < 700;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Back button at top left
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    icon: Icon(Icons.arrow_back_ios_rounded, 
+                        color: _textColor, size: 20),
                   ),
                   const Spacer(),
                 ],
               ),
             ),
-            
-            // Content
+
+            // Compact header section
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isShort ? 6 : 12),
+              child: Column(
+                children: [
+                  // Small logo
+                  Container(
+                    width: 70, height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(_isDark ? 0.5 : 0.3), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    choosePathText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    selectHowText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _secondaryTextColor,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Main card
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isDark ? [] : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallMobile ? 20 : 24, 
-                    vertical: isSmallMobile ? 24 : 32
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 20 : 24,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: isSmallMobile ? 20 : 30),
-                      
-                      // Logo
-                      Center(
-                        child: Container(
-                          width: isSmallMobile ? 80 : 100,
-                          height: isSmallMobile ? 80 : 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C896).withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: EdgeInsets.all(isSmallMobile ? 12 : 15),
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      SizedBox(height: isSmallMobile ? 20 : 30),
-                      
-                      Text(
-                        'Choose Your Path',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFF1A2433),
-                          fontSize: isSmallMobile ? 24 : 28,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      
-                      SizedBox(height: isSmallMobile ? 6 : 8),
-                      
-                      Text(
-                        'Select how you\'d like to proceed',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFF4A5568),
-                          fontSize: isSmallMobile ? 13 : 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      SizedBox(height: isSmallMobile ? 24 : 32),
-                      
                       _AuthOptionButton(
                         icon: Icons.login_rounded,
-                        title: 'Sign In',
-                        subtitle: 'Access your account',
-                        color: const Color(0xFF4CAF50),
+                        title: signInText,
+                        subtitle: signInSubtitleText,
+                        color: const Color(0xFF10B981),
                         onTap: () => context.push('/login'),
                         compact: isSmallMobile,
                       ),
-                      SizedBox(height: isSmallMobile ? 12 : 16),
+                      const SizedBox(height: 12),
                       _AuthOptionButton(
                         icon: Icons.person_add_rounded,
-                        title: 'Create Account',
-                        subtitle: 'Join our community',
-                        color: const Color(0xFF2196F3),
+                        title: createAccountText,
+                        subtitle: createAccountSubtitleText,
+                        color: const Color(0xFF3B82F6),
                         onTap: () => context.push('/register'),
                         compact: isSmallMobile,
                       ),
-                      SizedBox(height: isSmallMobile ? 12 : 16),
+                      const SizedBox(height: 12),
                       _AuthOptionButton(
                         icon: Icons.lock_reset_rounded,
-                        title: 'Reset Password',
-                        subtitle: 'Recover your access',
-                        color: const Color(0xFFFF9800),
+                        title: resetPasswordText,
+                        subtitle: resetPasswordSubtitleText,
+                        color: const Color(0xFFF59E0B),
                         onTap: () => context.push('/forgot-password'),
                         compact: isSmallMobile,
                       ),
-                      SizedBox(height: isSmallMobile ? 24 : 32),
-                      const _TermsFooter(),
+                      const SizedBox(height: 24),
+                      _buildSecurityBadge(l10n),
+                      const SizedBox(height: 20),
+                      _buildTermsFooter(l10n),
                     ],
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSecurityBadge(AppLocalizations? l10n) {
+    final String secureText = l10n?.secureProtected ?? 'Your information is secure and protected';
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.verified_user, color: Color(0xFF059669), size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              secureText,
+              style: TextStyle(
+                  color: _textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3),
+            ),
+          ),
+          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTermsFooter(AppLocalizations? l10n) {
+    final String byContinuingText = l10n?.byContinuing ?? 'By continuing, you agree to our';
+    final String termsText = l10n?.termsOfService ?? 'Terms of Service';
+    final String andText = l10n?.and ?? 'and';
+    final String privacyText = l10n?.privacyPolicy ?? 'Privacy Policy';
+
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(
+            color: _tertiaryTextColor,
+            fontSize: 11.5,
+            height: 1.5),
+        children: [
+          TextSpan(text: '$byContinuingText '),
+          TextSpan(
+            text: termsText,
+            style: const TextStyle(
+                color: Color(0xFF10B981),
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF10B981)),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push('/terms'),
+          ),
+          TextSpan(text: ' $andText '),
+          TextSpan(
+            text: privacyText,
+            style: const TextStyle(
+                color: Color(0xFF10B981),
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF10B981)),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => context.push('/privacy'),
+          ),
+        ],
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }
@@ -430,6 +553,13 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1A2433);
+    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF4A5568);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final iconColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+    
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -439,15 +569,15 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.all(widget.compact ? 16 : 20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(widget.compact ? 12 : 16),
             border: Border.all(
               color: _isHovered
                   ? widget.color.withOpacity(0.5)
-                  : const Color(0xFFE2E8F0),
+                  : borderColor,
               width: _isHovered ? 2 : 1.5,
             ),
-            boxShadow: [
+            boxShadow: isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
@@ -498,7 +628,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                     Text(
                       widget.title,
                       style: TextStyle(
-                        color: const Color(0xFF1A2433),
+                        color: textColor,
                         fontSize: widget.compact ? 16 : 18,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
@@ -508,7 +638,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
                     Text(
                       widget.subtitle,
                       style: TextStyle(
-                        color: const Color(0xFF4A5568),
+                        color: secondaryTextColor,
                         fontSize: widget.compact ? 12 : 13,
                         fontWeight: FontWeight.w400,
                       ),
@@ -519,7 +649,7 @@ class _AuthOptionButtonState extends State<_AuthOptionButton>
               const SizedBox(width: 12),
               Icon(
                 Icons.arrow_forward_rounded,
-                color: _isHovered ? widget.color : const Color(0xFF8899AA),
+                color: _isHovered ? widget.color : iconColor,
                 size: widget.compact ? 20 : 24,
               ),
             ],
@@ -565,20 +695,31 @@ class _StatItem extends StatelessWidget {
 }
 
 class _TermsFooter extends StatelessWidget {
-  const _TermsFooter();
+  final AppLocalizations? l10n;
+  const _TermsFooter({this.l10n});
+  
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final localL10n = l10n ?? AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Fallback strings
+    final String byContinuingText = localL10n?.byContinuing ?? 'By continuing, you agree to our';
+    final String termsText = localL10n?.termsOfService ?? 'Terms of Service';
+    final String andText = localL10n?.and ?? 'and';
+    final String privacyText = localL10n?.privacyPolicy ?? 'Privacy Policy';
+    
     return Text.rich(
       TextSpan(
         style: TextStyle(
-            color: const Color(0xFF8899AA),
+            color: isDark ? const Color(0xFF8899AA) : const Color(0xFF64748B),
             fontSize: isDesktop ? 12.5 : 11.5,
             height: 1.5),
         children: [
-          const TextSpan(text: 'By continuing, you agree to our '),
+          TextSpan(text: '$byContinuingText '),
           TextSpan(
-            text: 'Terms of Service',
+            text: termsText,
             style: const TextStyle(
                 color: Color(0xFF00C896),
                 fontWeight: FontWeight.w700,
@@ -587,9 +728,9 @@ class _TermsFooter extends StatelessWidget {
             recognizer: TapGestureRecognizer()
               ..onTap = () => context.push('/terms'),
           ),
-          const TextSpan(text: ' and '),
+          TextSpan(text: ' $andText '),
           TextSpan(
-            text: 'Privacy Policy',
+            text: privacyText,
             style: const TextStyle(
                 color: Color(0xFF00C896),
                 fontWeight: FontWeight.w700,

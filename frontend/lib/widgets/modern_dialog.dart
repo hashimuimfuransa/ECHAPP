@@ -199,10 +199,13 @@ Future<T?> showModernDialog<T>({
   double? maxWidth,
   Widget? icon,
 }) {
+  // Get MaterialLocalizations with fallback to avoid null errors
+  final materialLocalizations = MaterialLocalizations.of(context);
+  
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierLabel: materialLocalizations?.modalBarrierDismissLabel ?? 'Dismiss',
     barrierColor: Colors.black.withOpacity(0.5),
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (context, animation, secondaryAnimation) {

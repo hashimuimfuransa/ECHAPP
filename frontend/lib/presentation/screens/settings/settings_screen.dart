@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/feedback_provider.dart';
 import 'package:excellencecoachinghub/widgets/modern_dialog.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 // Providers for settings
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -22,9 +23,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 // Device binding policy widget for settings screen
 class _SettingsDeviceBindingPolicy extends StatelessWidget {
   const _SettingsDeviceBindingPolicy();
-  
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -35,18 +37,18 @@ class _SettingsDeviceBindingPolicy extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          const Icon(
             Icons.security,
             color: Color(0xFFF57C00), // Orange icon
             size: 20,
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Device Security: Your account is permanently bound to your first login device. To use a different device, please contact our support team.',
+              l10n.deviceWarningMessage,
               style: TextStyle(
                 color: Color(0xFF333333), // Dark text for visibility
                 fontSize: 13,
@@ -98,25 +100,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Account Settings
                   _buildSection(
                     context,
-                    'Account Settings',
+                    AppLocalizations.of(context)!.accountSettings,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.person_outline,
-                        title: 'Profile Information',
-                        subtitle: 'Update your personal details',
+                        title: AppLocalizations.of(context)!.profileInformation,
+                        subtitle: AppLocalizations.of(context)!.updatePersonalDetails,
                         onTap: () => context.push('/profile'),
                       ),
                       _buildNotificationTile(
                         context,
                         icon: Icons.notifications_outlined,
-                        title: 'Push Notifications',
-                        subtitle: 'Receive important updates and reminders',
+                        title: AppLocalizations.of(context)!.pushNotifications,
+                        subtitle: AppLocalizations.of(context)!.receiveUpdates,
                         value: notificationsEnabled,
                         onChanged: (value) {
                           ref.read(notificationsProvider.notifier).state = value;
                           _showSnackbar(context, 
-                            value ? 'Notifications enabled' : 'Notifications disabled');
+                            value ? AppLocalizations.of(context)!.notificationsEnabled : AppLocalizations.of(context)!.notificationsDisabled);
                         },
                       ),
                     ],
@@ -127,20 +129,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Preferences
                   _buildSection(
                     context,
-                    'Preferences',
+                    AppLocalizations.of(context)!.preferences,
                     [
                       _buildThemeTile(
                         context,
                         icon: Icons.dark_mode_outlined,
-                        title: 'Dark Mode',
-                        subtitle: isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
+                        title: AppLocalizations.of(context)!.darkMode,
+                        subtitle: isDarkMode ? AppLocalizations.of(context)!.darkTheme : AppLocalizations.of(context)!.lightTheme,
                         value: isDarkMode,
                         onChanged: (value) {
                           ref.read(darkModeProvider.notifier).state = value;
                           ref.read(themeModeProvider.notifier).state = 
                             value ? ThemeMode.dark : ThemeMode.light;
                           _showSnackbar(context, 
-                            value ? 'Dark mode enabled' : 'Light mode enabled');
+                            value ? AppLocalizations.of(context)!.darkModeEnabled : AppLocalizations.of(context)!.lightModeEnabled);
                         },
                       ),
                     ],
@@ -151,27 +153,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Support
                   _buildSection(
                     context,
-                    'Support',
+                    AppLocalizations.of(context)!.support,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.help_outline,
-                        title: 'Help Center',
-                        subtitle: 'Get help with using the app',
+                        title: AppLocalizations.of(context)!.helpCenter,
+                        subtitle: AppLocalizations.of(context)!.helpCenterSubtitle,
                         onTap: () => context.push('/help'),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.feedback_outlined,
-                        title: 'Send Feedback',
-                        subtitle: 'Share your thoughts with us',
+                        title: AppLocalizations.of(context)!.sendFeedback,
+                        subtitle: AppLocalizations.of(context)!.shareThoughts,
                         onTap: () => _showFeedbackDialog(context),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.info_outline,
-                        title: 'About',
-                        subtitle: 'App version and information',
+                        title: AppLocalizations.of(context)!.about,
+                        subtitle: AppLocalizations.of(context)!.appVersion,
                         onTap: () => _showAboutDialog(context),
                       ),
                     ],
@@ -182,20 +184,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Legal
                   _buildSection(
                     context,
-                    'Legal',
+                    AppLocalizations.of(context)!.legal,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        subtitle: 'Read our privacy policy',
+                        title: AppLocalizations.of(context)!.privacyPolicy,
+                        subtitle: AppLocalizations.of(context)!.readPrivacyPolicy,
                         onTap: () => context.push('/privacy'),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.description_outlined,
-                        title: 'Terms of Service',
-                        subtitle: 'Read our terms and conditions',
+                        title: AppLocalizations.of(context)!.termsOfService,
+                        subtitle: AppLocalizations.of(context)!.readTerms,
                         onTap: () => context.push('/terms'),
                       ),
                     ],
@@ -204,7 +206,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 30),
                   
                   // Danger Zone
-                  _buildDangerZone(context),
+                  _buildDangerZone(context, AppLocalizations.of(context)!),
                 ],
               ),
             );
@@ -486,7 +488,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildDangerZone(BuildContext context) {
+  Widget _buildDangerZone(BuildContext context, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark 
@@ -500,9 +502,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Danger Zone',
-              style: TextStyle(
+            Text(
+              l10n.dangerZone,
+              style: const TextStyle(
                 color: Colors.red,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -512,8 +514,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildDangerButton(
               context,
               icon: Icons.delete_outline,
-              title: 'Delete Account',
-              subtitle: 'Permanently delete your account and all data',
+              title: l10n.deleteAccount,
+              subtitle: l10n.permanentlyDelete,
               color: Colors.red,
               onTap: () => _showDeleteAccountDialog(context),
             ),
@@ -521,8 +523,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildDangerButton(
               context,
               icon: Icons.logout,
-              title: 'Sign Out',
-              subtitle: 'Sign out from all devices',
+              title: l10n.signOut,
+              subtitle: l10n.signOutAllDevices,
               color: Colors.orange,
               onTap: () => _showSignOutDialog(context),
             ),
@@ -592,6 +594,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // Dialog methods
   void _showFeedbackDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final feedbackController = TextEditingController();
     bool isSubmitting = false;
 
@@ -615,7 +618,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     controller: feedbackController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Tell us how we can improve...',
+                      hintText: AppLocalizations.of(context)!.howCanWeImprove,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -642,7 +645,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : () async {
                       final content = feedbackController.text.trim();
                       if (content.isEmpty) {
-                        _showSnackbar(context, 'Please enter some feedback');
+                        _showSnackbar(context, AppLocalizations.of(context)!.enterFeedback);
                         return;
                       }
 
@@ -653,9 +656,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (mounted) {
                         Navigator.of(context).pop();
                         if (success) {
-                          _showSnackbar(context, 'Thank you for your feedback!');
+                          _showSnackbar(context, AppLocalizations.of(context)!.feedbackSent);
                         } else {
-                          _showSnackbar(context, 'Failed to send feedback. Please try again.');
+                          _showSnackbar(context, AppLocalizations.of(context)!.feedbackFailed);
                         }
                       }
                     },
@@ -667,18 +670,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showAboutDialog(
       context: context,
-      applicationName: 'Excellence Coaching Hub',
+      applicationName: l10n.appName,
       applicationVersion: '1.0.0',
-      applicationLegalese: '© 2026 Excellence Coaching Hub',
+      applicationLegalese: l10n.copyright,
       children: [
         Flexible(
           child: Text(
-            'A premium learning platform for continuous education and skill development.',
+            l10n.aboutApp,
             style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                ? AppTheme.white70 
+              color: Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.white70
                 : AppTheme.greyColor),
           ),
         ),
@@ -731,6 +735,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final passwordController = TextEditingController();
     bool isDeleting = false;
     String? localError;
@@ -746,10 +751,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Are you sure you want to permanently delete your account? '
-                'This action cannot be undone and all your data will be lost.',
-                style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+              Text(
+                l10n.areYouSureDelete,
+                style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
               ),
               const SizedBox(height: 20),
               if (localError != null)
@@ -760,9 +764,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     style: const TextStyle(color: Colors.red, fontSize: 13),
                   ),
                 ),
-              const Text(
-                'Please enter your password to confirm:',
-                style: TextStyle(
+              Text(
+                l10n.enterPasswordConfirm,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -772,7 +776,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  hintText: 'Current Password',
+                  hintText: AppLocalizations.of(context)!.currentPassword,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -800,7 +804,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : () async {
                       final password = passwordController.text.trim();
                       if (password.isEmpty) {
-                        setDialogState(() => localError = 'Password is required');
+                        setDialogState(() => localError = AppLocalizations.of(context)!.passwordRequired);
                         return;
                       }
 
@@ -814,7 +818,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (context.mounted) {
                           Navigator.of(context).pop();
                           context.go('/splash');
-                          _showSnackbar(context, 'Account deleted successfully');
+                          _showSnackbar(context, AppLocalizations.of(context)!.deleteAccount);
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -833,13 +837,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showSignOutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showModernDialog(
       context: context,
-      title: 'Sign Out',
-      content: const Text(
-        'Are you sure you want to sign out?',
+      title: l10n.signOut,
+      content: Text(
+        l10n.areYouSureSignOut,
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
+        style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
       ),
       icon: const Icon(Icons.logout_rounded, color: Colors.orange, size: 32),
       actions: [
@@ -849,9 +854,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Navigator.of(context).pop();
             ref.read(authProvider.notifier).logout();
             context.go('/login');
-            _showSnackbar(context, 'Signed out successfully');
+            _showSnackbar(context, l10n.signOut);
           },
-          text: 'Sign Out',
+          text: l10n.signOut,
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
         ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -22,6 +24,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
   bool _obscureConfirm = true;
   bool _hasNavigated = false;
   late AnimationController _animController;
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1F2937);
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF6B7280);
+  Color get _inputBorderColor => _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  Color get _inputFillColor => _isDark ? const Color(0xFF0F172A) : Colors.white;
+  Color get _inputTextColor => _isDark ? Colors.white : const Color(0xFF1A2433);
+  Color get _inputHintColor => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+  Color get _iconColor => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+  Color get _errorBgColor => _isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2);
+  Color get _errorBorderColor => _isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA);
+  Color get _errorTextColor => _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C);
+  Color get _linkColor => const Color(0xFF10B981);
 
   @override
   void initState() {
@@ -57,6 +75,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
+    
+    // Guard against missing localizations
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     ref.listen(authProvider, (previous, current) {
       if (current.user != null && !current.isLoading && !_hasNavigated) {
@@ -70,28 +96,49 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     });
 
     if (isDesktop) {
-      return _buildDesktopLayout(authState);
+      return _buildDesktopLayout(authState, l10n);
     }
-    return _buildMobileLayout(authState);
+    return _buildMobileLayout(authState, l10n);
   }
 
-  Widget _buildDesktopLayout(dynamic authState) {
+  Widget _buildDesktopLayout(dynamic authState, AppLocalizations l10n) {
+    // Localization strings
+    final String createAccountText = l10n.createAccount;
+    final String subtitleText = l10n.createAccountSubtitle;
+    final String fullNameText = l10n.fullName;
+    final String emailText = l10n.email;
+    final String phoneText = l10n.phoneNumber;
+    final String passwordText = l10n.password;
+    final String confirmPasswordText = l10n.confirmPassword;
+    final String haveAccountText = l10n.alreadyHaveAccount;
+    final String signInText = l10n.loginNow;
+    final String requiredError = 'Required';
+    final String min6CharsError = 'Min 6 chars';
+    final String mismatchError = 'Mismatch';
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E293B),
-              Color(0xFF0F4C75),
-              Color(0xFF041B2D),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+          image: DecorationImage(
+            image: AssetImage('assets/onboading desktop.png'),
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
         ),
-        child: Stack(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A).withOpacity(0.5),
+                const Color(0xFF1E293B).withOpacity(0.7),
+                const Color(0xFF0F172A).withOpacity(0.9),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+          child: Stack(
           children: [
             Positioned(
               top: -150,
@@ -133,30 +180,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                 constraints: const BoxConstraints(maxWidth: 600),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 40,
                       spreadRadius: 0,
                     ),
                   ],
                 ),
-                child: _buildRightPanel(authState),
+                child: _buildRightPanel(authState, l10n, createAccountText, subtitleText, fullNameText, emailText, phoneText, passwordText, confirmPasswordText, haveAccountText, signInText, requiredError, min6CharsError, mismatchError),
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 
-  Widget _buildRightPanel(dynamic authState) {
+  Widget _buildRightPanel(dynamic authState, AppLocalizations l10n, String createAccountText, String subtitleText, String fullNameText, String emailText, String phoneText, String passwordText, String confirmPasswordText, String haveAccountText, String signInText, String requiredError, String min6CharsError, String mismatchError) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
       child: Column(
@@ -173,40 +217,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                Text(createAccountText, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                 const SizedBox(height: 12),
-                const Text('Fill in your details to get started', style: TextStyle(color: Colors.white60, fontSize: 16, fontWeight: FontWeight.w400, height: 1.5)),
+                Text(subtitleText, style: const TextStyle(color: Colors.white60, fontSize: 16, fontWeight: FontWeight.w400, height: 1.5)),
                 const SizedBox(height: 30),
                 Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildTextField(_nameController, 'Full Name', Icons.person_outline),
+                      _buildTextField(_nameController, fullNameText, Icons.person_outline),
                       const SizedBox(height: 16),
-                      _buildTextField(_emailController, 'Email Address', Icons.email_outlined, TextInputType.emailAddress),
+                      _buildTextField(_emailController, emailText, Icons.email_outlined, TextInputType.emailAddress),
                       const SizedBox(height: 16),
-                      _buildTextField(_phoneController, 'Phone Number (Optional)', Icons.phone_outlined, TextInputType.phone, false),
+                      _buildTextField(_phoneController, '$phoneText (Optional)', Icons.phone_outlined, TextInputType.phone, false),
                       const SizedBox(height: 16),
-                      _buildPasswordField(_passwordController, 'Password', (value) {
-                        if (value == null || value.isEmpty) return 'Password required';
-                        if (value.length < 6) return 'Min 6 characters';
+                      _buildPasswordField(_passwordController, passwordText, (value) {
+                        if (value == null || value.isEmpty) return requiredError;
+                        if (value.length < 6) return min6CharsError;
                         return null;
                       }),
                       const SizedBox(height: 16),
-                      _buildPasswordField(_confirmController, 'Confirm Password', (value) {
-                        if (value == null || value.isEmpty) return 'Confirm password';
-                        if (value != _passwordController.text) return 'Passwords don\'t match';
+                      _buildPasswordField(_confirmController, confirmPasswordText, (value) {
+                        if (value == null || value.isEmpty) return requiredError;
+                        if (value != _passwordController.text) return mismatchError;
                         return null;
                       }, TextInputAction.done, _register),
                       const SizedBox(height: 28),
-                      _buildSignUpButton(authState),
+                      _buildSignUpButton(authState, createAccountText),
                       const SizedBox(height: 16),
-                      if (authState.error != null) Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.red.withOpacity(0.3))), child: Text(authState.error, style: TextStyle(color: Colors.red.shade400, fontSize: 12))),
+                      if (authState.error != null) Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.red.withOpacity(0.3))), child: Text(authState.error!, style: TextStyle(color: Colors.red.shade400, fontSize: 12))),
                       const SizedBox(height: 16),
                       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const Text('Already have an account? ', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                        TextButton(onPressed: () => context.push('/login'), child: const Text('Sign in', style: TextStyle(color: Color(0xFF00C896), fontSize: 14, fontWeight: FontWeight.w700))),
+                        Text(haveAccountText, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                        TextButton(onPressed: () => context.push('/login'), child: Text(signInText, style: const TextStyle(color: Color(0xFF00C896), fontSize: 14, fontWeight: FontWeight.w700))),
                       ]),
                     ],
                   ),
@@ -219,129 +263,216 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     );
   }
 
-  Widget _buildMobileLayout(dynamic authState) {
+  Widget _buildMobileLayout(dynamic authState, AppLocalizations l10n) {
+    final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isShort = screenHeight < 700;
+
+    // Localization strings
+    final String createAccountText = l10n.createAccount;
+    final String subtitleText = l10n.createAccountSubtitle;
+    final String fullNameText = l10n.fullName;
+    final String emailText = l10n.email;
+    final String phoneText = l10n.phoneNumber;
+    final String passwordText = l10n.password;
+    final String confirmPasswordText = l10n.confirmPassword;
+    final String haveAccountText = l10n.alreadyHaveAccount;
+    final String signInText = l10n.loginNow;
+    final String requiredError = 'Required';
+    final String min6CharsError = 'Min 6 chars';
+    final String mismatchError = 'Mismatch';
+
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Back button at top left
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    icon: Icon(Icons.arrow_back_ios_rounded, 
+                        color: _textColor, size: 20),
                   ),
                   const Spacer(),
                 ],
               ),
             ),
-            
-            // Content
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+
+            // Compact header section
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: isShort ? 4 : 8),
+              child: Column(
+                children: [
+                  // Small logo
+                  Container(
+                    width: 60, height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(_isDark ? 0.5 : 0.3), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                      ),
+                    ),
                   ),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 20),
-                      
-                      // Logo
-                      Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF00C896), Color(0xFF009E76)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00C896).withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                'assets/logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      const Text(
-                        'Create Account',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF1A2433),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 8),
-                      
-                      const Text(
-                        'Join our community',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF4A5568),
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 30),
-                      
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildTextField(_nameController, 'Full Name', Icons.person_outline),
-                            const SizedBox(height: 14),
-                            _buildTextField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
-                            const SizedBox(height: 14),
-                        _buildTextField(_phoneController, 'Phone (Optional)', Icons.phone_outlined, TextInputType.phone, false),
-                        const SizedBox(height: 14),
-                        _buildPasswordField(_passwordController, 'Password', (value) { if (value == null || value.isEmpty) return 'Required'; if (value.length < 6) return 'Min 6 chars'; return null; }),
-                        const SizedBox(height: 14),
-                        _buildPasswordField(_confirmController, 'Confirm', (value) { if (value == null || value.isEmpty) return 'Required'; if (value != _passwordController.text) return 'Mismatch'; return null; }, TextInputAction.done, _register),
-                        const SizedBox(height: 20),
-                        _buildSignUpButton(authState),
-                        const SizedBox(height: 12),
-                        if (authState.error != null) Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withOpacity(0.3))), child: Text(authState.error, style: TextStyle(color: Colors.red.shade400, fontSize: 11))),
-                        const SizedBox(height: 12),
-                        Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('Have an account? ', style: TextStyle(color: Color(0xFF4A5568), fontSize: 12)), TextButton(onPressed: () => context.push('/login'), child: const Text('Sign in', style: TextStyle(color: Color(0xFF00C896), fontSize: 12, fontWeight: FontWeight.w700)))]),
-                      ],
+                  const SizedBox(height: 12),
+                  Text(
+                    createAccountText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitleText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _secondaryTextColor,
+                      fontSize: 12,
+                      height: 1.4,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
+
+            // Main card
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _isDark ? [] : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallMobile ? 16 : 20,
+                    isSmallMobile ? 16 : 20,
+                    isSmallMobile ? 16 : 20,
+                    isSmallMobile ? 16 : 20,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildTextField(_nameController, fullNameText, Icons.person_outline),
+                        const SizedBox(height: 10),
+                        _buildTextField(_emailController, emailText, Icons.email_outlined, TextInputType.emailAddress),
+                        const SizedBox(height: 10),
+                        _buildTextField(_phoneController, '$phoneText (Optional)', Icons.phone_outlined, TextInputType.phone, false),
+                        const SizedBox(height: 10),
+                        _buildPasswordField(_passwordController, passwordText, (value) { 
+                          if (value == null || value.isEmpty) return requiredError; 
+                          if (value.length < 6) return min6CharsError; 
+                          return null; 
+                        }),
+                        const SizedBox(height: 10),
+                        _buildPasswordField(_confirmController, confirmPasswordText, (value) { 
+                          if (value == null || value.isEmpty) return requiredError; 
+                          if (value != _passwordController.text) return mismatchError; 
+                          return null; 
+                        }, TextInputAction.done, _register),
+                        const SizedBox(height: 16),
+                        _buildSignUpButton(authState, createAccountText),
+                        const SizedBox(height: 12),
+                        if (authState.error != null) 
+                          Container(
+                            padding: const EdgeInsets.all(10), 
+                            decoration: BoxDecoration(
+                              color: _errorBgColor, 
+                              borderRadius: BorderRadius.circular(8), 
+                              border: Border.all(color: _errorBorderColor)
+                            ), 
+                            child: Text(
+                              authState.error!, 
+                              style: TextStyle(color: _errorTextColor, fontSize: 11)
+                            )
+                          ),
+                        const SizedBox(height: 12),
+                        _buildSecurityBadge(l10n),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center, 
+                          children: [
+                            Text(
+                              haveAccountText, 
+                              style: TextStyle(color: _secondaryTextColor, fontSize: 12)
+                            ), 
+                            TextButton(
+                              onPressed: () => context.push('/login'), 
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                              child: Text(
+                                signInText, 
+                                style: TextStyle(color: _linkColor, fontSize: 12, fontWeight: FontWeight.w700)
+                              )
+                            )
+                          ]
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSecurityBadge(AppLocalizations l10n) {
+    final String secureText = l10n.secureProtected;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(Icons.verified_user, color: Color(0xFF059669), size: 14),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              secureText,
+              style: TextStyle(
+                  color: _textColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3),
+            ),
+          ),
+          const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+        ],
       ),
     );
   }
@@ -350,13 +481,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _inputFillColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: _inputBorderColor,
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: _isDark ? [] : [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -366,13 +497,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
       ),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+        style: TextStyle(color: _inputTextColor, fontSize: 15),
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         decoration: InputDecoration(
           hintText: label,
-          hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-          prefixIcon: Icon(icon, color: const Color(0xFF8899AA)),
+          hintStyle: TextStyle(color: _inputHintColor),
+          prefixIcon: Icon(icon, color: _iconColor),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -396,13 +527,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _inputFillColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: _inputBorderColor,
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: _isDark ? [] : [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -412,16 +543,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
       ),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+        style: TextStyle(color: _inputTextColor, fontSize: 15),
         obscureText: obscure,
         textInputAction: textInputAction,
         onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted() : null,
         decoration: InputDecoration(
           hintText: label,
-          hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-          prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF8899AA)),
+          hintStyle: TextStyle(color: _inputHintColor),
+          prefixIcon: Icon(Icons.lock_outline_rounded, color: _iconColor),
           suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF8899AA)),
+            icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: _iconColor),
             onPressed: () => setState(() {
               if (label.contains('Confirm')) _obscureConfirm = !_obscureConfirm;
               else _obscurePassword = !_obscurePassword;
@@ -438,9 +569,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     );
   }
 
-  Widget _buildSignUpButton(dynamic authState) {
+  Widget _buildSignUpButton(dynamic authState, String buttonText) {
     return Container(
-      height: 56,
+      height: 52,
       decoration: BoxDecoration(
         color: const Color(0xFF00C896),
         borderRadius: BorderRadius.circular(12),
@@ -461,7 +592,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
             padding: const EdgeInsets.symmetric(vertical: 13),
             child: authState.isLoading
                 ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.9))))
-                : const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.5), textAlign: TextAlign.center),
+                : Text(buttonText, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.5), textAlign: TextAlign.center),
           ),
         ),
       ),

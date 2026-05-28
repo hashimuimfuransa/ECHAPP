@@ -245,20 +245,59 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: const Color(0xFF00C896),
-        body: Stack(
-          children: [
-            const _FloatingBg(),
-            SafeArea(child: _buildDesktopLayout()),
-          ],
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/onboading desktop.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF0F172A).withOpacity(0.5),
+                  const Color(0xFF1E293B).withOpacity(0.7),
+                  const Color(0xFF0F172A).withOpacity(0.9),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+            child: SafeArea(child: _buildDesktopLayout()),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
-      body: SafeArea(
-        child: _buildMobileLayout(),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/onboardign mobile.png'),
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF0F172A).withOpacity(0.4),
+                const Color(0xFF1E293B).withOpacity(0.6),
+                const Color(0xFF0F172A).withOpacity(0.85),
+              ],
+              stops: const [0.0, 0.4, 1.0],
+            ),
+          ),
+          child: SafeArea(
+            child: _buildMobileLayout(),
+          ),
+        ),
       ),
     );
   }
@@ -271,11 +310,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         constraints: const BoxConstraints(maxHeight: 840),
         margin: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withOpacity(0.95),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.09), width: 1),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 40),
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40),
           ],
         ),
         child: Column(
@@ -314,10 +352,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   // ─── Mobile layout ───────────────────────────────────────────────────────────
   Widget _buildMobileLayout() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmall = screenHeight < 680;
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          padding: EdgeInsets.fromLTRB(20, isSmall ? 8 : 12, 20, isSmall ? 12 : 20),
           child: Column(
             children: [
               Row(children: [
@@ -331,16 +371,16 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                 const Spacer(),
                 if (!_isUpdating) _buildStepChip(),
               ]),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmall ? 8 : 16),
               _buildHeaderContent(dark: false),
             ],
           ),
         ),
         Expanded(
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(22, 28, 22, 32),

@@ -10,6 +10,7 @@ import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
@@ -22,6 +23,7 @@ import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -198,6 +200,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   String? _selectedCategoryId;
   String? _selectedCategoryName;
   bool _showCategoryDropdown = false;
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
 
   // Gamification
   int _phraseIndex = 0;
@@ -491,7 +495,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                               context, enrollments);
                         },
                         loading: () =>
-                            _buildLoadingCard(context, 'Continue Learning'),
+                            _buildLoadingCard(context, l10n?.continueLearning ?? 'Continue Learning'),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 24),
@@ -711,6 +715,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ),
                           Row(
                             children: [
+                              _buildLanguageSwitcher(),
+                              const SizedBox(width: 12),
                               _buildHeaderIconButton(
                                 icon: Icons.refresh_rounded,
                                 tooltip: 'Refresh',
@@ -959,6 +965,112 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         tooltip: tooltip,
         padding: const EdgeInsets.all(10),
       ),
+    );
+  }
+
+  Widget _buildLanguageSwitcher() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final currentLocale = ref.watch(localeProvider);
+        final currentLang = currentLocale.languageCode;
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.35),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: PopupMenuButton<String>(
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  currentLang == 'en' ? '🇬🇧' : '🇷🇼',
+                  style: const TextStyle(fontSize: 20),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
+            tooltip: 'Change Language',
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B)
+                : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (String languageCode) async {
+              await ref.read(localeProvider.notifier).setLanguage(languageCode);
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'en',
+                child: Row(
+                  children: [
+                    const Text('🇬🇧', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Text(
+                      'English',
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF1A2433),
+                        fontWeight: currentLang == 'en'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    if (currentLang == 'en')
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Icon(Icons.check, color: Color(0xFF00C896)),
+                      ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'rw',
+                child: Row(
+                  children: [
+                    const Text('🇷🇼', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Kinyarwanda',
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF1A2433),
+                        fontWeight: currentLang == 'rw'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    if (currentLang == 'rw')
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Icon(Icons.check, color: Color(0xFF00C896)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1267,7 +1379,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Continue Learning',
+                      l10n?.continueLearning ?? 'Continue Learning',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: isMobile ? 12 : 13,
@@ -1355,14 +1467,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_arrow_rounded, size: 20),
-                  SizedBox(width: 6),
+                  const Icon(Icons.play_arrow_rounded, size: 20),
+                  const SizedBox(width: 6),
                   Text(
-                    'Continue Learning',
-                    style: TextStyle(
+                    l10n?.continueLearning ?? 'Continue Learning',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1649,7 +1761,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Access',
+          l10n?.quickAccess ?? 'Quick Access',
           style: TextStyle(
             fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.w800,
@@ -1837,15 +1949,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   void _showStatsDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.auto_graph, color: Color(0xFF10B981)),
-              SizedBox(width: 12),
-              Text('Learning Statistics'),
+              const Icon(Icons.auto_graph, color: Color(0xFF10B981)),
+              const SizedBox(width: 12),
+              Text(l10n?.learningStatistics ?? 'Learning Statistics'),
             ],
           ),
           content: Column(
@@ -1853,28 +1966,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             children: [
               _StatItem(
                 icon: Icons.school,
-                label: 'Courses Enrolled',
+                label: l10n?.coursesEnrolled ?? 'Courses Enrolled',
                 value: '5',
                 color: const Color(0xFF10B981),
               ),
               const SizedBox(height: 16),
               _StatItem(
                 icon: Icons.play_circle,
-                label: 'Lessons Completed',
+                label: l10n?.lessonsCompleted ?? 'Lessons Completed',
                 value: '24',
                 color: const Color(0xFF3B82F6),
               ),
               const SizedBox(height: 16),
               _StatItem(
                 icon: Icons.quiz,
-                label: 'Exams Taken',
+                label: l10n?.examsTaken ?? 'Exams Taken',
                 value: '8',
                 color: const Color(0xFF8B5CF6),
               ),
               const SizedBox(height: 16),
               _StatItem(
                 icon: Icons.access_time,
-                label: 'Hours Learned',
+                label: l10n?.hoursLearned ?? 'Hours Learned',
                 value: '12.5',
                 color: const Color(0xFFF59E0B),
               ),
@@ -1883,7 +1996,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: Text(l10n?.close ?? 'Close'),
             ),
           ],
         );
@@ -1939,7 +2052,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Select Category',
+                  l10n?.selectCategory ?? 'Select Category',
                   style: TextStyle(
                     color: AppTheme.getTextColor(context),
                     fontSize: 16,
@@ -1994,8 +2107,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     _buildCategoryOption(
                       context,
                       'all',
-                      'All Categories',
-                      'Search across all available courses',
+                      l10n?.allCategories ?? 'All Categories',
+                      l10n?.searchAcrossAllCourses ?? 'Search across all available courses',
                       Icons.grid_view_rounded,
                       const Color(0xFF10B981),
                       null,
@@ -2027,7 +2140,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 padding: const EdgeInsets.all(20),
                 child: Center(
                   child: Text(
-                    'Failed to load categories',
+                    l10n?.failedToLoadCategories ?? 'Failed to load categories',
                     style: TextStyle(
                       color: AppTheme.getSecondaryTextColor(context),
                       fontSize: 14,
@@ -2624,7 +2737,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Live Classes Available',
+                    l10n?.liveClassesAvailable ?? 'Live Classes Available',
                     style: TextStyle(
                       color: const Color(0xFF10B981),
                       fontSize: isMobile ? 14 : 16,
@@ -3145,29 +3258,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildResponsiveQuickActions(BuildContext context) {
     final actions = [
       {
-        'title': 'My Learning',
-        'subtitle': 'Continue',
+        'title': l10n?.myLearning ?? 'My Learning',
+        'subtitle': l10n?.continueText ?? 'Continue',
         'icon': Icons.play_lesson_rounded,
         'color': const Color(0xFF10B981),
         'onTap': () => context.push('/my-courses'),
       },
       {
-        'title': 'Downloads',
-        'subtitle': 'Offline',
+        'title': l10n?.downloads ?? 'Downloads',
+        'subtitle': l10n?.offline ?? 'Offline',
         'icon': Icons.file_download_done_rounded,
         'color': const Color(0xFF3B82F6),
         'onTap': () => context.go('/downloads'),
       },
       {
-        'title': 'Exams',
-        'subtitle': 'History',
+        'title': l10n?.exams ?? 'Exams',
+        'subtitle': l10n?.history ?? 'History',
         'icon': Icons.assignment_turned_in_rounded,
         'color': const Color(0xFF8B5CF6),
         'onTap': () => context.push('/exams/history'),
       },
       {
-        'title': 'Certificates',
-        'subtitle': 'Awards',
+        'title': l10n?.certificates ?? 'Certificates',
+        'subtitle': l10n?.awards ?? 'Awards',
         'icon': Icons.verified_rounded,
         'color': const Color(0xFFF59E0B),
         'onTap': () => context.push('/certificates'),
@@ -3196,7 +3309,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
             TextButton(
               onPressed: () {}, // Optional: more actions
-              child: const Text('See All',
+              child: Text(l10n?.seeAll ?? 'See All',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           ],
@@ -3286,7 +3399,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'My Progress',
+            l10n?.myProgress ?? 'My Progress',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -3298,7 +3411,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           _DesktopStatCard(
             icon: Icons.school_rounded,
             value: '$coursesEnrolled',
-            label: 'Courses Enrolled',
+            label: l10n?.coursesEnrolled ?? 'Courses Enrolled',
             color: const Color(0xFF10B981),
             isDark: isDark,
           ),
@@ -3306,7 +3419,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           _DesktopStatCard(
             icon: Icons.verified_rounded,
             value: '$coursesCompleted',
-            label: 'Completed',
+            label: l10n?.completed ?? 'Completed',
             color: const Color(0xFF3B82F6),
             isDark: isDark,
           ),
@@ -3314,7 +3427,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           _DesktopStatCard(
             icon: Icons.auto_graph_rounded,
             value: '${averageProgress.toInt()}%',
-            label: 'Average Score',
+            label: l10n?.averageScore ?? 'Average Score',
             color: const Color(0xFFF59E0B),
             isDark: isDark,
           ),
@@ -3329,36 +3442,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final quickActions = [
       {
-        'title': 'My Learning',
-        'subtitle': 'Continue Courses',
+        'title': l10n?.myLearning ?? 'My Learning',
+        'subtitle': l10n?.continueCourses ?? 'Continue Courses',
         'icon': Icons.play_lesson_rounded,
         'color': const Color(0xFF10B981),
         'onTap': () => context.push('/my-courses'),
       },
       {
-        'title': 'Library',
-        'subtitle': 'Browse Resources',
+        'title': l10n?.library ?? 'Library',
+        'subtitle': l10n?.browseResources ?? 'Browse Resources',
         'icon': Icons.local_library_rounded,
         'color': const Color(0xFF6366F1),
         'onTap': () => context.go('/library'),
       },
       {
-        'title': 'Downloads',
-        'subtitle': 'Offline Content',
+        'title': l10n?.downloads ?? 'Downloads',
+        'subtitle': l10n?.offlineContent ?? 'Offline Content',
         'icon': Icons.download_done_rounded,
         'color': const Color(0xFF3B82F6),
         'onTap': () => context.go('/downloads'),
       },
       {
-        'title': 'Certificates',
-        'subtitle': 'View Awards',
+        'title': l10n?.certificates ?? 'Certificates',
+        'subtitle': l10n?.viewAwards ?? 'View Awards',
         'icon': Icons.verified_rounded,
         'color': const Color(0xFF8B5CF6),
         'onTap': () => context.push('/certificates'),
       },
       {
-        'title': 'Exam History',
-        'subtitle': 'Past Results',
+        'title': l10n?.examHistory ?? 'Exam History',
+        'subtitle': l10n?.pastResults ?? 'Past Results',
         'icon': Icons.history_edu_rounded,
         'color': const Color(0xFFF59E0B),
         'onTap': () => context.go('/exams/history'),
@@ -3813,7 +3926,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             TextButton(
               onPressed: () => context.push('/my-courses'),
               child: Text(
-                'See All',
+                l10n?.seeAll ?? 'See All',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
@@ -3969,7 +4082,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       const Icon(Icons.play_arrow_rounded, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Continue Learning',
+                        l10n?.continueLearning ?? 'Continue Learning',
                         style: TextStyle(
                           fontSize: isSmallMobile ? 14 : 16,
                           fontWeight: FontWeight.w700,
@@ -4170,7 +4283,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             TextButton(
               onPressed: () => context.push('/courses'),
               child: Text(
-                'See All',
+                l10n?.seeAll ?? 'See All',
                 style: TextStyle(
                   color: const Color(0xFF0F766E),
                   fontWeight: FontWeight.w700,
@@ -4416,7 +4529,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Explore Categories',
+              l10n?.exploreCategories ?? 'Explore Categories',
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w800,
@@ -4428,7 +4541,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               TextButton(
                 onPressed: () => context.push('/courses'),
                 child: Text(
-                  'View All',
+                  l10n?.viewAll ?? 'View All',
                   style: TextStyle(
                     color: const Color(0xFF10B981),
                     fontWeight: FontWeight.w600,
@@ -5117,9 +5230,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Popular Courses',
-              style: TextStyle(
+            Text(
+              l10n?.popularCourses ?? 'Popular Courses',
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
@@ -5292,7 +5405,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           title: Row(children: [
             Icon(Icons.contact_support, color: AppTheme.primaryGreen),
             const SizedBox(width: 10),
-            Text('Contact Us',
+            Text(l10n?.contactUs ?? 'Contact Us',
                 style: TextStyle(color: AppTheme.getTextColor(context))),
           ]),
           content: SingleChildScrollView(
@@ -5302,31 +5415,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               children: [
                 _buildContactMethod(context,
                     icon: Icons.message,
-                    title: 'WhatsApp',
+                    title: l10n?.whatsapp ?? 'WhatsApp',
                     subtitle: '+250 793 828 834',
                     onTap: () => _launchWhatsApp('250793828834')),
                 const SizedBox(height: 8),
                 _buildContactMethod(context,
                     icon: Icons.message,
-                    title: 'WhatsApp',
+                    title: l10n?.whatsapp ?? 'WhatsApp',
                     subtitle: '+250 788 535 156',
                     onTap: () => _launchWhatsApp('250788535156')),
                 const SizedBox(height: 16),
                 _buildContactMethod(context,
                     icon: Icons.phone,
-                    title: 'Call Us',
+                    title: l10n?.callUs ?? 'Call Us',
                     subtitle: '+250 788 535 156',
                     onTap: () => _launchPhone('250788535156')),
                 const SizedBox(height: 8),
                 _buildContactMethod(context,
                     icon: Icons.phone,
-                    title: 'Call Us',
+                    title: l10n?.callUs ?? 'Call Us',
                     subtitle: '+250 793 828 834',
                     onTap: () => _launchPhone('250793828834')),
                 const SizedBox(height: 16),
                 _buildContactMethod(context,
                     icon: Icons.email,
-                    title: 'Email Us',
+                    title: l10n?.emailUs ?? 'Email Us',
                     subtitle: 'info@excellencecoachinghub.com',
                     onTap: () =>
                         _launchEmail('info@excellencecoachinghub.com')),
@@ -5336,7 +5449,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Close',
+                child: Text(l10n?.close ?? 'Close',
                     style: TextStyle(
                         color: AppTheme.getSecondaryTextColor(context)))),
           ],
@@ -5422,7 +5535,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           title: Row(children: [
             const Icon(Icons.warning, color: Colors.orange),
             const SizedBox(width: 10),
-            const Text('WhatsApp Not Available'),
+            Text(l10n?.whatsappNotAvailable ?? 'WhatsApp Not Available'),
           ]),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -5510,7 +5623,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$label copied to clipboard'),
+          content: Text('$label ${l10n?.copiedToClipboard ?? 'copied to clipboard'}'),
           backgroundColor: AppTheme.primaryGreen,
         ),
       );
@@ -5538,13 +5651,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           title: Row(children: [
             const Icon(Icons.phone_disabled, color: Colors.orange),
             const SizedBox(width: 10),
-            const Text('Call Not Available'),
+            Text(l10n?.callNotAvailable ?? 'Call Not Available'),
           ]),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Phone calls are not supported on this device.'),
+              Text(l10n?.phoneCallsNotSupported ?? 'Phone calls are not supported on this device.'),
               const SizedBox(height: 16),
               const Text('Alternative options:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -5594,13 +5707,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           title: Row(children: [
             const Icon(Icons.email_outlined, color: Colors.orange),
             const SizedBox(width: 10),
-            const Text('Email Not Available'),
+            Text(l10n?.emailNotAvailable ?? 'Email Not Available'),
           ]),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Email client is not available on this device.'),
+              Text(l10n?.emailClientNotAvailable ?? 'Email client is not available on this device.'),
               const SizedBox(height: 16),
               const Text('Alternative options:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
@@ -5695,8 +5808,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   await _refreshDashboard();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Refreshed'),
+                      SnackBar(
+                        content: Text(l10n?.refreshed ?? 'Refreshed'),
                         backgroundColor: AppTheme.primaryGreen,
                         duration: Duration(seconds: 1),
                       ),
@@ -5801,7 +5914,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               IconButton(
                 icon: const Icon(Icons.contact_support, size: 22),
                 onPressed: () => _showContactInfoDialog(context),
-                tooltip: 'Contact Us',
+                tooltip: l10n?.contactUs ?? 'Contact Us',
                 padding: const EdgeInsets.all(8),
               ),
               IconButton(
@@ -5810,8 +5923,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   await _refreshDashboard();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Dashboard refreshed'),
+                      SnackBar(
+                        content: Text(l10n?.dashboardRefreshed ?? 'Dashboard refreshed'),
                         backgroundColor: AppTheme.primaryGreen,
                         duration: Duration(seconds: 1),
                       ),
