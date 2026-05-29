@@ -46,7 +46,9 @@ class DownloadService extends ChangeNotifier {
   }
   final Map<String, Download> _downloads = {}; // Key: lessonId
   final Map<String, CancelToken> _cancelTokens = {}; // Key: lessonId
+  final Map<String, String> _filenameToLessonId = {}; // Key: filename (without ext), Value: lessonId
   static const String _downloadsKey = 'downloaded_videos';
+  static const String _filenameMapKey = 'filename_to_lesson_id_map';
 
   // Initialize the service and load persisted downloads
   Future<void> init() async {
@@ -57,53 +59,74 @@ class DownloadService extends ChangeNotifier {
       error: true,
       logPrint: (obj) => print('Dio: $obj'),
     ));
+    await _loadFilenameMap();
     await _loadDownloadsFromStorage();
     print('Loaded ${_downloads.length} downloads from storage');
     await _scanForExistingDownloads();
     print('Scan complete. Total downloads now: ${_downloads.length}');
   }
 
+  // Load the filename→lessonId map from shared prefs
+  Future<void> _loadFilenameMap() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_filenameMapKey);
+      if (json != null) {
+        final Map<String, dynamic> decoded = jsonDecode(json);
+        decoded.forEach((k, v) => _filenameToLessonId[k] = v as String);
+      }
+    } catch (e) {
+      print('DownloadService: Error loading filename map: $e');
+    }
+  }
+
+  // Save the filename→lessonId map to shared prefs
+  Future<void> _saveFilenameMap() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_filenameMapKey, jsonEncode(_filenameToLessonId));
+    } catch (e) {
+      print('DownloadService: Error saving filename map: $e');
+    }
+  }
+
   // Scan for existing downloaded files and create records for them
   Future<void> _scanForExistingDownloads() async {
     try {
-      print('Scanning for existing downloads...');
       final directory = await _getAppDirectory();
       final dir = Directory(directory);
+      int created = 0;
       
       if (await dir.exists()) {
         final files = dir.listSync();
-        print('Found ${files.length} files in download directory');
         
         for (final file in files) {
           if (file is File && file.path.endsWith('.mp4')) {
             final fileName = p.basenameWithoutExtension(file.path);
-            print('Processing file: $fileName');
             final lessonId = _extractLessonIdFromFilename(fileName);
-            print('Extracted lesson ID: $lessonId');
             
             if (lessonId != null && !_downloads.containsKey(lessonId)) {
-              print('Found existing download: $fileName for lesson: $lessonId');
-              // Create download record for existing file
               final download = Download(
                 id: lessonId,
                 lessonId: lessonId,
                 fileName: fileName,
-                originalTitle: fileName, // We don't have the original title
+                originalTitle: fileName,
                 localPath: file.path,
-                url: '', // Unknown URL for scanned files
-                type: DownloadType.video, // Default to video type for scanned files
+                url: '',
+                type: DownloadType.video,
                 downloadProgress: 1.0,
                 isDownloading: false,
                 status: DownloadStatus.completed,
               );
               _downloads[lessonId] = download;
+              created++;
             }
           }
         }
         
-        if (_downloads.isNotEmpty) {
+        if (created > 0) {
           await _saveDownloadsToStorage();
-          print('Created records for ${_downloads.length} existing downloads');
+          print('Created records for $created existing downloads');
           notifyListeners();
         }
       }
@@ -112,25 +135,23 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // Extract lesson ID from filename (simple heuristic)
+  // Extract lesson ID from filename using stored map, hex pattern, or lesson_ prefix
   String? _extractLessonIdFromFilename(String filename) {
-    print('Extracting lesson ID from filename: $filename');
-    // If filename looks like a lesson ID (hex string), use it
+    // 1. Check stored filename→lessonId map (covers arbitrary filenames)
+    if (_filenameToLessonId.containsKey(filename)) {
+      return _filenameToLessonId[filename];
+    }
+    // 2. If filename IS a 24-char hex MongoDB ObjectId, use it directly
     if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(filename)) {
-      print('Found lesson ID pattern: $filename');
       return filename;
     }
-    // If filename starts with "lesson_", extract the ID part
+    // 3. If filename starts with "lesson_" followed by a hex ID
     if (filename.startsWith('lesson_')) {
-      final idPart = filename.substring(7); // Remove "lesson_" prefix
+      final idPart = filename.substring(7);
       if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(idPart)) {
-        print('Found lesson ID in lesson_ prefix: $idPart');
         return idPart;
       }
     }
-    // For other filenames (like sanitized titles), we can't extract lesson ID
-    // In this case, we might need a different approach - perhaps maintain a mapping
-    print('Could not extract lesson ID from filename: $filename');
     return null;
   }
 
@@ -257,6 +278,9 @@ class DownloadService extends ChangeNotifier {
           status: DownloadStatus.downloading,
         );
         _downloads[lessonId] = download;
+        // Persist filename→lessonId so scans can resolve this file in the future
+        _filenameToLessonId[fileName] = lessonId;
+        await _saveFilenameMap();
         notifyListeners();
         await _saveDownloadsToStorage();
 

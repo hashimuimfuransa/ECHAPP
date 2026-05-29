@@ -70,9 +70,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     checkAuthStatus();
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String emailOrPhone, String password, {bool isEmailOrPhone = false}) async {
     debugPrint('AuthProvider: Starting email/password login');
     state = state.copyWith(isLoading: true, isEmailLoading: true, error: null);
+
+    // Detect if user entered a phone number (no @ symbol)
+    final isPhone = !emailOrPhone.contains('@');
+
+    if (isPhone) {
+      // Phone + password: use direct backend login (Firebase doesn't support phone+password)
+      await _loginWithPhoneAndPassword(emailOrPhone, password);
+      return;
+    }
     
     try {
       // Get device ID for device binding
@@ -89,7 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('AuthProvider: Step 1: Logging in with Firebase Auth...');
       final firebaseStartTime = DateTime.now();
       final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
-        email: email,
+        email: emailOrPhone,
         password: password,
       );
       final firebaseEndTime = DateTime.now();
@@ -230,6 +239,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isEmailLoading: false,
         error: 'No cached credentials found. Please connect to internet and login first.'
       );
+    }
+  }
+
+  // Phone + Password login — direct backend call, no Firebase
+  Future<void> _loginWithPhoneAndPassword(String phone, String password) async {
+    debugPrint('AuthProvider: Starting phone+password login for $phone');
+    try {
+      String? deviceId;
+      try {
+        deviceId = await DeviceIdUtils.getAppDeviceId();
+      } catch (_) {}
+
+      final authResponse = await _authRepository.login(phone, password, deviceId: deviceId);
+
+      await _storageManager.saveAccessToken(authResponse.token);
+      await _storageManager.saveRefreshToken(authResponse.refreshToken);
+      await _storageManager.saveUserRole(authResponse.user.role);
+      await _storageManager.saveUserId(authResponse.user.id);
+      await _storageManager.saveUserPhone(authResponse.user.phone);
+      await _storageManager.saveUserName(authResponse.user.fullName);
+      await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+      await _storageManager.saveUserInterests(authResponse.user.interests);
+      await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+      await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+      await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+
+      debugPrint('AuthProvider: Phone+password login successful');
+      state = state.copyWith(
+        isLoading: false,
+        isEmailLoading: false,
+        user: authResponse.user,
+        error: 'Welcome back! Login successful.',
+      );
+      FCMTokenService.initializeAndSyncToken();
+    } catch (e) {
+      debugPrint('AuthProvider: Phone+password login error: $e');
+      String errorMessage = e.toString().replaceFirst('Exception: ', '');
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('invalid') || msgLower.contains('unauthorized') || msgLower.contains('password')) {
+        errorMessage = 'Oops! It looks like the phone number or password you entered isn\'t correct.';
+      } else if (msgLower.contains('network') || msgLower.contains('connection') || msgLower.contains('socket')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      }
+      state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }
 
@@ -407,9 +460,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
-  Future<void> register(String fullName, String email, String password, String? phone) async {
+  Future<void> register(String fullName, String? email, String password, String? phone) async {
     debugPrint('AuthProvider: Starting registration process');
     state = state.copyWith(isLoading: true, isEmailLoading: true, error: null);
+
+    // Phone-only registration: bypass Firebase (requires email), use backend directly
+    final hasEmail = email != null && email.trim().isNotEmpty;
+    if (!hasEmail) {
+      await _registerWithPhoneAndPassword(fullName, phone ?? '', password);
+      return;
+    }
     
     try {
       // Get device ID for device binding
@@ -507,6 +567,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       }
       
+      state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
+    }
+  }
+
+  // Phone-only registration — direct backend call, no Firebase
+  Future<void> _registerWithPhoneAndPassword(String fullName, String phone, String password) async {
+    debugPrint('AuthProvider: Starting phone-only registration for $phone');
+    try {
+      String? deviceId;
+      try {
+        deviceId = await DeviceIdUtils.getAppDeviceId();
+      } catch (_) {}
+
+      final authResponse = await _authRepository.register(fullName, null, password, phone);
+
+      await _storageManager.saveAccessToken(authResponse.token);
+      await _storageManager.saveRefreshToken(authResponse.refreshToken);
+      await _storageManager.saveUserRole(authResponse.user.role);
+      await _storageManager.saveUserId(authResponse.user.id);
+      await _storageManager.saveUserPhone(authResponse.user.phone);
+      await _storageManager.saveUserName(authResponse.user.fullName);
+      await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+      await _storageManager.saveUserInterests(authResponse.user.interests);
+      await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+      await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+      await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+
+      FCMTokenService.initializeAndSyncToken();
+      debugPrint('AuthProvider: Phone registration successful');
+      state = state.copyWith(
+        isLoading: false,
+        isEmailLoading: false,
+        user: authResponse.user,
+        error: 'Registration successful! Welcome to ExcellenceCoachingHub.',
+      );
+    } catch (e) {
+      debugPrint('AuthProvider: Phone registration error: $e');
+      String errorMessage = e.toString().replaceFirst('Exception: ', '');
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('already exists')) {
+        errorMessage = 'An account with this phone number already exists. Please sign in instead.';
+      } else if (msgLower.contains('network') || msgLower.contains('connection') || msgLower.contains('socket')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      }
       state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }

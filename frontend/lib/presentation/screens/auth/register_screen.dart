@@ -103,7 +103,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
   }
 
   Widget _buildDesktopLayout(dynamic authState, AppLocalizations l10n) {
-    // Localization strings
     final String createAccountText = l10n.createAccount;
     final String subtitleText = l10n.createAccountSubtitle;
     final String fullNameText = l10n.fullName;
@@ -118,30 +117,86 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     final String mismatchError = 'Mismatch';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       body: Row(
         children: [
           // Left branding panel (45%)
           const Expanded(
             flex: 45,
             child: DesktopBrandPanel(
-              headline: 'Welcome to',
+              headline: 'Join Us Today',
               title: 'Excellence\nCoaching Hub',
-              tagline: 'Empowering Growth.\nInspiring Excellence.',
+              tagline: 'Start your learning journey\nand reach new heights.',
             ),
           ),
-          // Right white form panel (55%)
+          // Right form panel (55%)
           Expanded(
             flex: 55,
             child: Container(
-              color: Colors.white,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
-                    child: _buildRightPanel(authState, l10n, createAccountText, subtitleText, fullNameText, emailText, phoneText, passwordText, confirmPasswordText, haveAccountText, signInText, requiredError, min6CharsError, mismatchError),
+              color: const Color(0xFFF9FAFB),
+              child: Column(
+                children: [
+                  // Top branded header bar
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C896).withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF00C896).withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF00C896), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  color: Color(0xFF00C896),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Excellence Coaching Hub',
+                          style: TextStyle(
+                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  // Form content
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                          child: _buildRightPanel(authState, l10n, createAccountText, subtitleText, fullNameText, emailText, phoneText, passwordText, confirmPasswordText, haveAccountText, signInText, requiredError, min6CharsError, mismatchError),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -151,65 +206,156 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
   }
 
   Widget _buildRightPanel(dynamic authState, AppLocalizations l10n, String createAccountText, String subtitleText, String fullNameText, String emailText, String phoneText, String passwordText, String confirmPasswordText, String haveAccountText, String signInText, String requiredError, String min6CharsError, String mismatchError) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const SizedBox(width: 40),
-            IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28)),
-          ]),
-          const SizedBox(height: 20),
-          const SizedBox(height: 20),
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Page title section
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C896),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(createAccountText, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                const SizedBox(height: 12),
-                Text(subtitleText, style: const TextStyle(color: Colors.white60, fontSize: 16, fontWeight: FontWeight.w400, height: 1.5)),
-                const SizedBox(height: 30),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildTextField(_nameController, fullNameText, Icons.person_outline),
-                      const SizedBox(height: 16),
-                      _buildTextField(_emailController, emailText, Icons.email_outlined, TextInputType.emailAddress),
-                      const SizedBox(height: 16),
-                      _buildTextField(_phoneController, '$phoneText (Optional)', Icons.phone_outlined, TextInputType.phone, false),
-                      const SizedBox(height: 16),
-                      _buildPasswordField(_passwordController, passwordText, (value) {
-                        if (value == null || value.isEmpty) return requiredError;
-                        if (value.length < 6) return min6CharsError;
-                        return null;
-                      }),
-                      const SizedBox(height: 16),
-                      _buildPasswordField(_confirmController, confirmPasswordText, (value) {
-                        if (value == null || value.isEmpty) return requiredError;
-                        if (value != _passwordController.text) return mismatchError;
-                        return null;
-                      }, TextInputAction.done, _register),
-                      const SizedBox(height: 28),
-                      _buildSignUpButton(authState, createAccountText),
-                      const SizedBox(height: 16),
-                      if (authState.error != null) Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.red.withOpacity(0.3))), child: Text(authState.error!, style: TextStyle(color: Colors.red.shade400, fontSize: 12))),
-                      const SizedBox(height: 16),
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Text(haveAccountText, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                        TextButton(onPressed: () => context.push('/login'), child: Text(signInText, style: const TextStyle(color: Color(0xFF00C896), fontSize: 14, fontWeight: FontWeight.w700))),
-                      ]),
-                    ],
+                Text(
+                  createAccountText,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitleText,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
                   ),
                 ),
               ],
             ),
+          ],
+        ),
+        const SizedBox(height: 28),
+        // Form card
+        Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTextField(_nameController, fullNameText, Icons.person_outline),
+                const SizedBox(height: 14),
+                _buildTextField(_emailController, '$emailText (or use phone below)', Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress, required: false,
+                  extraValidator: (value) {
+                    if ((value == null || value.trim().isEmpty) && _phoneController.text.trim().isEmpty) {
+                      return 'Email or phone number is required';
+                    }
+                    if (value != null && value.trim().isNotEmpty) {
+                      if (!RegExp(r'^[\w.-]+@[\w-]+\.[\w.]{2,}$').hasMatch(value.trim())) {
+                        return 'Enter a valid email address';
+                      }
+                    }
+                    return null;
+                  }),
+                const SizedBox(height: 14),
+                _buildTextField(_phoneController, '$phoneText (or use email above)', Icons.phone_outlined,
+                  keyboardType: TextInputType.phone, required: false,
+                  extraValidator: (value) {
+                    if ((value == null || value.trim().isEmpty) && _emailController.text.trim().isEmpty) {
+                      return 'Phone or email is required';
+                    }
+                    return null;
+                  }),
+                const SizedBox(height: 14),
+                _buildPasswordField(_passwordController, passwordText, (value) {
+                  if (value == null || value.isEmpty) return requiredError;
+                  if (value.length < 6) return min6CharsError;
+                  return null;
+                }),
+                const SizedBox(height: 14),
+                _buildPasswordField(_confirmController, confirmPasswordText, (value) {
+                  if (value == null || value.isEmpty) return requiredError;
+                  if (value != _passwordController.text) return mismatchError;
+                  return null;
+                }, TextInputAction.done, _register),
+                const SizedBox(height: 24),
+                _buildSignUpButton(authState, createAccountText),
+                if (authState.error != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            authState.error!,
+                            style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Sign in link
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              haveAccountText,
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+            ),
+            TextButton(
+              onPressed: () => context.push('/login'),
+              style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 4)),
+              child: Text(
+                signInText,
+                style: const TextStyle(color: Color(0xFF00C896), fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildSecurityBadge(l10n),
+      ],
     );
   }
 
@@ -325,9 +471,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
                       children: [
                         _buildTextField(_nameController, fullNameText, Icons.person_outline),
                         const SizedBox(height: 10),
-                        _buildTextField(_emailController, emailText, Icons.email_outlined, TextInputType.emailAddress),
+                        _buildTextField(_emailController, '$emailText (or use phone)', Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress, required: false,
+                          extraValidator: (value) {
+                            if ((value == null || value.trim().isEmpty) && _phoneController.text.trim().isEmpty) {
+                              return 'Email or phone number is required';
+                            }
+                            if (value != null && value.trim().isNotEmpty) {
+                              if (!RegExp(r'^[\w.-]+@[\w-]+\.[\w.]{2,}$').hasMatch(value.trim())) {
+                                return 'Enter a valid email address';
+                              }
+                            }
+                            return null;
+                          }),
                         const SizedBox(height: 10),
-                        _buildTextField(_phoneController, '$phoneText (Optional)', Icons.phone_outlined, TextInputType.phone, false),
+                        _buildTextField(_phoneController, '$phoneText (or use email)', Icons.phone_outlined,
+                          keyboardType: TextInputType.phone, required: false,
+                          extraValidator: (value) {
+                            if ((value == null || value.trim().isEmpty) && _emailController.text.trim().isEmpty) {
+                              return 'Phone or email is required';
+                            }
+                            return null;
+                          }),
                         const SizedBox(height: 10),
                         _buildPasswordField(_passwordController, passwordText, (value) { 
                           if (value == null || value.isEmpty) return requiredError; 
@@ -427,7 +592,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, [TextInputType? keyboardType, bool required = true, TextInputAction textInputAction = TextInputAction.next]) {
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType? keyboardType, bool required = true, TextInputAction textInputAction = TextInputAction.next, String? Function(String?)? extraValidator}) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -461,6 +626,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
         validator: (value) {
+          if (extraValidator != null) return extraValidator(value);
           if (!required) return null;
           if (value == null || value.isEmpty) return '$label required';
           if (keyboardType == TextInputType.emailAddress && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {

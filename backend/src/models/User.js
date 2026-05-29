@@ -34,7 +34,9 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    trim: true
+    trim: true,
+    unique: true,
+    sparse: true  // Allows multiple null values but enforces uniqueness for non-null values
   },
   googleId: {
     type: String,

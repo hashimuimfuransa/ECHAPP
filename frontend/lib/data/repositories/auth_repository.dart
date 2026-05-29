@@ -50,10 +50,10 @@ class AuthRepository {
     }
   }
 
-  Future<AuthResponse> login(String email, String password, {String? deviceId}) async {
+  Future<AuthResponse> login(String emailOrPhone, String password, {String? deviceId}) async {
     try {
       final body = {
-        'email': email,
+        'emailOrPhone': emailOrPhone,
         'password': password,
       };
       
@@ -90,17 +90,18 @@ class AuthRepository {
     }
   }
 
-  Future<AuthResponse> register(String fullName, String email, String password, String? phone) async {
+  Future<AuthResponse> register(String fullName, String? email, String password, String? phone) async {
     try {
+      final body = <String, dynamic>{
+        'fullName': fullName,
+        'password': password,
+      };
+      if (email != null && email.trim().isNotEmpty) body['email'] = email.trim();
+      if (phone != null && phone.trim().isNotEmpty) body['phone'] = phone.trim();
       final response = await _client.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'fullName': fullName,
-          'email': email,
-          'password': password,
-          'phone': phone,
-        }),
+        body: jsonEncode(body),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 201) {

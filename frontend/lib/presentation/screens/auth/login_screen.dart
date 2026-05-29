@@ -136,17 +136,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   }
 
   Widget _buildDesktopLayout(dynamic authState, AppLocalizations l10n) {
-    // Fallback strings
     final String welcomeText = l10n.loginTitle;
     final String subtitleText = l10n.loginSubtitle;
     final String forgotPasswordText = l10n.forgotPassword;
     final String noAccountText = l10n.dontHaveAccount;
     final String signUpText = l10n.registerNow;
-    final String emailHint = l10n.email;
+    final String emailHint = 'Email or Phone Number';
     final String passwordHint = l10n.password;
     final String loginText = l10n.loginTitle;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       body: Row(
         children: [
           // Left branding panel (45%)
@@ -158,19 +158,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          // Right white form panel (55%)
+          // Right form panel (55%)
           Expanded(
             flex: 55,
             child: Container(
-              color: Colors.white,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
-                    child: _buildRightPanel(authState, l10n, welcomeText, subtitleText, forgotPasswordText, noAccountText, signUpText, emailHint, passwordHint, loginText),
+              color: const Color(0xFFF9FAFB),
+              child: Column(
+                children: [
+                  // Top branded header bar
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C896).withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF00C896).withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.login_rounded, color: Color(0xFF00C896), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Sign In',
+                                style: TextStyle(
+                                  color: Color(0xFF00C896),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Excellence Coaching Hub',
+                          style: TextStyle(
+                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  // Form content
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                          child: _buildRightPanel(authState, l10n, welcomeText, subtitleText, forgotPasswordText, noAccountText, signUpText, emailHint, passwordHint, loginText),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -180,147 +235,167 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   }
 
   Widget _buildRightPanel(dynamic authState, AppLocalizations l10n, String welcomeText, String subtitleText, String forgotPasswordText, String noAccountText, String signUpText, String emailHint, String passwordHint, String loginText) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const SizedBox(width: 40),
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 28),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Page title section
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C896),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  welcomeText,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitleText,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 36),
+        // Form card
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          const SizedBox(height: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                welcomeText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                subtitleText,
-                style: const TextStyle(
-                  color: Colors.white60,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 40),
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildEmailField(emailHint),
-                    const SizedBox(height: 24),
-                    _buildPasswordField(passwordHint),
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => context.push('/forgot-password'),
-                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                        child: Text(
-                          forgotPasswordText,
-                          style: const TextStyle(
-                            color: Color(0xFF00C896),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildEmailField(emailHint),
+                const SizedBox(height: 16),
+                _buildPasswordField(passwordHint),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push('/forgot-password'),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    child: Text(
+                      forgotPasswordText,
+                      style: const TextStyle(
+                        color: Color(0xFF00C896),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    _buildSignInButton(authState, loginText),
-                    const SizedBox(height: 20),
-                    if (authState.error != null && authState.error!.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: authState.error!.contains('Forgot password?') 
-                              ? Colors.orange.withOpacity(0.1) 
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: authState.error!.contains('Forgot password?')
-                                ? Colors.orange.withOpacity(0.3)
-                                : Colors.red.withOpacity(0.3)
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              authState.error!.contains('Forgot password?') 
-                                  ? Icons.info_outline_rounded 
-                                  : Icons.error_outline, 
-                              color: authState.error!.contains('Forgot password?')
-                                  ? Colors.orange.shade400
-                                  : Colors.red.shade400, 
-                              size: 20
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                authState.error,
-                                style: TextStyle(
-                                  color: authState.error!.contains('Forgot password?')
-                                      ? Colors.orange.shade200
-                                      : Colors.red.shade400,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildSignInButton(authState, loginText),
+                if (authState.error != null && authState.error!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: authState.error!.contains('Forgot password?')
+                          ? const Color(0xFFFFFBEB)
+                          : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: authState.error!.contains('Forgot password?')
+                            ? const Color(0xFFFEF3C7)
+                            : const Color(0xFFFECACA),
                       ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          noAccountText,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                        Icon(
+                          authState.error!.contains('Forgot password?')
+                              ? Icons.info_outline_rounded
+                              : Icons.error_outline,
+                          color: authState.error!.contains('Forgot password?')
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFFEF4444),
+                          size: 18,
                         ),
-                        TextButton(
-                          onPressed: () => context.push('/register'),
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Text(
-                            signUpText,
-                            style: const TextStyle(
-                              color: Color(0xFF00C896),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                          ),
+                            authState.error!,
+                            style: TextStyle(
+                              color: authState.error!.contains('Forgot password?')
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFFB91C1C),
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Sign up link
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              noAccountText,
+              style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 14,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.push('/register'),
+              style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 4)),
+              child: Text(
+                signUpText,
+                style: const TextStyle(
+                  color: Color(0xFF00C896),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Security badge
+        _buildSecurityBadge(l10n),
+      ],
     );
   }
 
@@ -335,7 +410,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final String forgotPasswordText = l10n.forgotPassword;
     final String noAccountText = l10n.dontHaveAccount;
     final String signUpText = l10n.registerNow;
-    final String emailHint = l10n.email;
+    final String emailHint = 'Email or Phone Number';
     final String passwordHint = l10n.password;
     final String loginText = l10n.loginTitle;
 
@@ -595,7 +670,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: _inputHintColor),
-          prefixIcon: Icon(Icons.email_outlined, color: _iconColor),
+          prefixIcon: Icon(
+            _emailController.text.trim().contains('@')
+                ? Icons.email_outlined
+                : Icons.phone_outlined,
+            color: _iconColor,
+          ),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -604,12 +684,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         ),
         textInputAction: TextInputAction.next,
         keyboardType: TextInputType.emailAddress,
+        onChanged: (_) => setState(() {}),
         validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your email';
+          if (value == null || value.trim().isEmpty) {
+            return 'Please enter your email or phone number';
           }
-          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-            return 'Please enter a valid email';
+          final v = value.trim();
+          final isEmail = v.contains('@');
+          final isPhone = RegExp(r'^\+?[0-9]{7,15}$').hasMatch(v);
+          if (!isEmail && !isPhone) {
+            return 'Enter a valid email or phone number';
           }
           return null;
         },

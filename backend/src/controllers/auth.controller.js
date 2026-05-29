@@ -15,10 +15,23 @@ const register = async (req, res) => {
   try {
     const { fullName, email, password, phone } = req.body;
 
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return sendError(res, 'User already exists with this email', 400);
+    // Either email or phone is required
+    if (!email && !phone) {
+      return sendError(res, 'Either email or phone number is required', 400);
+    }
+
+    // Check if user already exists by email or phone
+    if (email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return sendError(res, 'User already exists with this email', 400);
+      }
+    }
+    if (phone) {
+      const phoneExists = await User.findOne({ phone });
+      if (phoneExists) {
+        return sendError(res, 'User already exists with this phone number', 400);
+      }
     }
 
     // Create user
@@ -66,10 +79,17 @@ const register = async (req, res) => {
 // Login user
 const login = async (req, res) => {
   try {
-    const { email, password, deviceId } = req.body;
+    const { email, emailOrPhone, password, deviceId } = req.body;
+    const identifier = (emailOrPhone || email || '').trim();
 
-    // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
+    if (!identifier) {
+      return sendError(res, 'Email or phone number is required', 400);
+    }
+
+    // Find user by email or phone and include password for comparison
+    const isEmail = identifier.includes('@');
+    const query = isEmail ? { email: identifier.toLowerCase() } : { phone: identifier };
+    const user = await User.findOne(query).select('+password');
 
     if (user && (await user.comparePassword(password))) {
       if (!user.isActive) {
@@ -113,7 +133,7 @@ const login = async (req, res) => {
         refreshToken
       }, 'Login successful');
     } else {
-      sendUnauthorized(res, 'Invalid email or password');
+      sendUnauthorized(res, 'Invalid email/phone or password');
     }
   } catch (error) {
     sendError(res, 'Login failed', 500, error.message);
