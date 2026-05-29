@@ -63,7 +63,9 @@ class MainLayout extends ConsumerWidget {
                                  currentRoute == '/enter-reset-code' ||
                                  currentRoute == '/reset-password' ||
                                  currentRoute == '/landing' ||
-                                 currentRoute == '/';
+                                 currentRoute == '/' ||
+                                 currentRoute == '/language-selection' ||
+                                 currentRoute == '/phone-auth';
         
         if (!isAuthRoute) {
           if (isDesktop) {
@@ -112,7 +114,9 @@ class MainLayout extends ConsumerWidget {
                              currentRoute == '/enter-reset-code' ||
                              currentRoute == '/reset-password' ||
                              currentRoute == '/landing' ||
-                             currentRoute == '/';
+                             currentRoute == '/' ||
+                             currentRoute == '/language-selection' ||
+                             currentRoute == '/phone-auth';
     
     // Map routes to keys for ResponsiveNavigationDrawer
     String currentPage = 'dashboard';

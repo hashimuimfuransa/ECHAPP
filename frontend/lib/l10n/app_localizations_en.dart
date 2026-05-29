@@ -297,6 +297,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enter6DigitCode => 'Please enter a 6-digit code';
 
   @override
+  String get phoneAuthBrowserWarning =>
+      'Phone authentication may open a browser for verification. Please allow the process to complete.';
+
+  @override
   String get emailAuthOptionTitle => 'Choose Your Path';
 
   @override
@@ -2142,4 +2146,134 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get instructions => 'Instructions';
+
+  @override
+  String get resumeLessons => 'Resume lessons';
+
+  @override
+  String get studyOffline => 'Study offline';
+
+  @override
+  String get showProgress => 'Show progress';
+
+  @override
+  String get reviewResults => 'Review results';
+
+  @override
+  String get hello => 'Hello';
+
+  @override
+  String get professionalLearningFailedToLoadCourse => 'Failed to load course';
+
+  @override
+  String get professionalLearningCheckConnectionTryAgain =>
+      'Please check your connection and try again';
+
+  @override
+  String get professionalLearningCourseInformation => 'Course Information';
+
+  @override
+  String get professionalLearningYourProgress => 'Your Progress';
+
+  @override
+  String get professionalLearningComplete => 'Complete';
+
+  @override
+  String get professionalLearningContinueLearning => 'Continue Learning';
+
+  @override
+  String get professionalLearningViewContent => 'View Content';
+
+  @override
+  String get professionalLearningNoContentAvailable => 'No content available';
+
+  @override
+  String get professionalLearningOverview => 'Overview';
+
+  @override
+  String get professionalLearningContent => 'Content';
+
+  @override
+  String get professionalLearningResources => 'Resources';
+
+  @override
+  String get professionalLearningRefresh => 'Refresh';
+
+  @override
+  String get professionalLearningCertificates => 'Certificates';
+
+  @override
+  String get professionalLearningYourCertificates => 'Your Certificates';
+
+  @override
+  String get professionalLearningCertificate => 'Certificate';
+
+  @override
+  String get professionalLearningIssued => 'Issued';
+
+  @override
+  String get professionalLearningAdditionalResources => 'Additional Resources';
+
+  @override
+  String get professionalLearningStudentGuide => 'Student Guide';
+
+  @override
+  String get professionalLearningStudentGuideSubtitle =>
+      'Get help with navigation and features';
+
+  @override
+  String get professionalLearningAiAssistant => 'AI Assistant';
+
+  @override
+  String get professionalLearningAiAssistantSubtitle =>
+      'Get help with course content';
+
+  @override
+  String get professionalLearningContinue => 'Continue';
+
+  @override
+  String get professionalLearningNoLessonsAvailable => 'No lessons available';
+
+  @override
+  String get professionalLearningLessonsCount => 'lessons';
+
+  @override
+  String get lessonScreenLessonNotFound => 'Lesson not found';
+
+  @override
+  String get lessonScreenLessonNotFoundMessage =>
+      'The lesson you\'re looking for doesn\'t exist or has been removed.';
+
+  @override
+  String get lessonScreenGoBack => 'Go Back';
+
+  @override
+  String get lessonScreenCompleted => 'Completed';
+
+  @override
+  String get lessonScreenAiAssistant => 'AI Assistant';
+
+  @override
+  String get lessonScreenReportIssue => 'Report Issue';
+
+  @override
+  String get lessonScreenNoVideoAvailable => 'No video available';
+
+  @override
+  String get lessonScreenLessonOverview => 'Lesson Overview';
+
+  @override
+  String get lessonScreenNoDuration => 'No duration';
+
+  @override
+  String get lessonScreenPrevious => 'Previous';
+
+  @override
+  String get lessonScreenNext => 'Next';
+
+  @override
+  String get lessonScreenMarkComplete => 'Mark Complete';
+
+  @override
+  String get lessonScreenMarkLessonComplete => 'Mark lesson complete';
 }

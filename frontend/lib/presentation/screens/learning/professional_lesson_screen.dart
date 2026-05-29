@@ -1345,53 +1345,59 @@ class _ProfessionalLessonScreenState
         color: _surfaceColor,
         border: Border(bottom: BorderSide(color: _borderColor)),
       ),
-      child: Row(
-        children: tabs.map((tabData) {
-          final (tab, icon, label) = tabData;
-          final active = _activeTab == tab;
-          return GestureDetector(
-            onTap: () {
-              // Check if this is a quiz-only lesson and user is trying to navigate away from quiz
-              if (_isQuizOnlyLesson() && _activeTab == _Tab.quiz && tab != _Tab.quiz) {
-                _showQuizOnlyNotification();
-              } else {
-                setState(() => _activeTab = tab);
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: active ? _T.green : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: active ? _T.green : _mutedColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: active
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: active ? _T.green : _mutedColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: tabs.map((tabData) {
+            final (tab, icon, label) = tabData;
+            final active = _activeTab == tab;
+            return GestureDetector(
+              onTap: () {
+                // Check if this is a quiz-only lesson and user is trying to navigate away from quiz
+                if (_isQuizOnlyLesson() && _activeTab == _Tab.quiz && tab != _Tab.quiz) {
+                  _showQuizOnlyNotification();
+                } else {
+                  setState(() => _activeTab = tab);
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: active ? _T.green : Colors.transparent,
+                      width: 2,
                     ),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: active ? _T.green : _mutedColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: active
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: active ? _T.green : _mutedColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -1724,9 +1730,9 @@ class _ProfessionalLessonScreenState
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 2, child: _buildVideoLeft()),
+                Expanded(flex: 3, child: _buildVideoLeft()),
                 const SizedBox(width: 24),
-                SizedBox(width: 320, child: _buildVideoRight()),
+                SizedBox(width: 280, child: _buildVideoRight()),
               ],
             )
           : Column(children: [_buildVideoLeft(), const SizedBox(height: 16), _buildVideoRight()]),
@@ -1766,29 +1772,33 @@ class _ProfessionalLessonScreenState
 
   Widget _buildVideoPlayer() {
     final videoUrl = _extractVideoUrl();
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: _lesson!.videoId != null && videoUrl.isNotEmpty
-            ? OptimizedVideoPlayer(
-                videoId: _lesson!.videoId!,
-                videoUrl: videoUrl,
-                title: _lesson!.title,
-                description: _lesson!.description ?? '',
-              )
-            : _buildVideoPlaceholder(),
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: _lesson!.videoId != null && videoUrl.isNotEmpty
+              ? OptimizedVideoPlayer(
+                  videoId: _lesson!.videoId!,
+                  videoUrl: videoUrl,
+                  title: _lesson!.title,
+                  description: _lesson!.description ?? '',
+                  showAppBar: true,
+                )
+              : _buildVideoPlaceholder(),
+        ),
       ),
     );
   }
@@ -2409,13 +2419,33 @@ class _ProfessionalLessonScreenState
         border: Border.all(color: _borderColor),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SfPdfViewer.network(
-        _lesson!.notesPdfUrl!,
-        canShowScrollHead: true,
-        canShowScrollStatus: true,
-        onDocumentLoadFailed: (details) {
-          _showSnack('Failed to load PDF: ${details.error}', isError: true);
-        },
+      child: Stack(
+        children: [
+          SfPdfViewer.network(
+            _lesson!.notesPdfUrl!,
+            canShowScrollHead: true,
+            canShowScrollStatus: true,
+            onDocumentLoadFailed: (details) {
+              _showSnack('Failed to load PDF: ${details.error}', isError: true);
+            },
+          ),
+          // Full screen button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.fullscreen, color: Colors.white),
+                onPressed: () => _openPdfFullScreen(_lesson!.notesPdfUrl!),
+                tooltip: 'Full screen',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3770,6 +3800,15 @@ class _ProfessionalLessonScreenState
                         ),
                       ),
                     ),
+                    if (isPdf)
+                      IconButton(
+                        icon: Icon(Icons.fullscreen, color: _mutedColor),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _openPdfFullScreen(url);
+                        },
+                        tooltip: 'Full screen',
+                      ),
                     IconButton(
                       icon: Icon(Icons.close, color: _mutedColor),
                       onPressed: () => Navigator.pop(context),
@@ -3821,6 +3860,61 @@ class _ProfessionalLessonScreenState
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _openPdfFullScreen(String url) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text(
+              'PDF Viewer',
+              style: TextStyle(color: Colors.white),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.info_outline, color: Colors.white),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pinch to zoom in/out. Use scroll to navigate.'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                },
+                tooltip: 'Help',
+              ),
+            ],
+          ),
+          body: SfPdfViewer.network(
+            url,
+            canShowScrollHead: true,
+            canShowScrollStatus: true,
+            canShowPaginationDialog: true,
+            onDocumentLoadFailed: (details) {
+              _showSnack('Failed to load PDF: ${details.error}', isError: true);
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+        },
       ),
     );
   }

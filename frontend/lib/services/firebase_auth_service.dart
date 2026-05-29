@@ -82,7 +82,7 @@ class FirebaseAuthService {
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Registration Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Registration Error: $e');
       if (e is Exception) rethrow;
@@ -114,7 +114,7 @@ class FirebaseAuthService {
       );
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Login Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Login Error: $e');
       if (e is Exception) rethrow;
@@ -188,7 +188,7 @@ class FirebaseAuthService {
       debugPrint('FirebaseAuthService: Password updated successfully');
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Password Update Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Password Update Error: $e');
       if (e is Exception) rethrow;
@@ -278,7 +278,7 @@ class FirebaseAuthService {
       debugPrint('FirebaseAuthService: Account deleted successfully from Firebase');
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Account Deletion Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Account Deletion Error: $e');
       if (e is Exception) rethrow;
@@ -340,7 +340,7 @@ class FirebaseAuthService {
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Google Sign-In Firebase Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Google Sign-In Error: $e');
       // For web-specific errors, provide more descriptive messages
@@ -372,7 +372,7 @@ class FirebaseAuthService {
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Firebase Auth Service: Desktop Sign-In Firebase Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Firebase Auth Service: Desktop Sign-In Error: $e');
       throw Exception('Google Sign-In failed. Please check your internet connection and try again.');
@@ -386,6 +386,11 @@ class FirebaseAuthService {
     required firebase_auth.PhoneVerificationFailed verificationFailed,
     required firebase_auth.PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout,
   }) async {
+    // Firebase phone auth via verifyPhoneNumber is not supported on Windows desktop.
+    // The underlying plugin throws a type cast error (bool is not Map) on Windows.
+    if (defaultTargetPlatform == TargetPlatform.windows && !kIsWeb) {
+      throw Exception('phone-auth-not-supported-on-desktop');
+    }
     try {
       debugPrint('FirebaseAuthService: Sending OTP to $phoneNumber');
       
@@ -413,7 +418,7 @@ class FirebaseAuthService {
         throw Exception('Phone authentication failed due to a browser state issue. Please try again. If the problem persists, try using a different browser or ensure your browser allows cookies and site data.');
       }
       
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Phone Auth Error: $e');
       if (e is Exception) rethrow;
@@ -432,7 +437,7 @@ class FirebaseAuthService {
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Phone Sign-In Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Phone Sign-In Error: $e');
       if (e is Exception) rethrow;
@@ -456,7 +461,7 @@ class FirebaseAuthService {
       return userCredential;
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Link Phone Error: ${e.code} - ${e.message}');
-      throw _mapFirebaseAuthException(e);
+      throw mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Link Phone Error: $e');
       if (e is Exception) rethrow;
@@ -465,7 +470,7 @@ class FirebaseAuthService {
   }
 
   // Map exceptions to user-friendly messages
-  static Exception _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
+  static Exception mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
     debugPrint('Auth Exception - Code: ${e.code}, Message: ${e.message}');
     
     switch (e.code) {
@@ -500,7 +505,7 @@ class FirebaseAuthService {
       
       // Rate limiting and security
       case 'too-many-requests':
-        return Exception('Too many failed login attempts. Please try again later or reset your password.');
+        return Exception('Too many attempts. Please wait about 5-10 minutes before trying again.');
       
       // Network errors
       case 'network-request-failed':

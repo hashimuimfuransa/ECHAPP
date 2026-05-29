@@ -12,6 +12,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/widgets/video_player_widget.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 /// Optimized Lesson Screen with instant loading
 class OptimizedLessonScreen extends ConsumerStatefulWidget {
@@ -46,6 +47,8 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
   bool _isCompleted = false;
   bool _isVideoLoading = false;
   String? _videoError;
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -377,13 +380,13 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Lesson not found',
+                l10n?.lessonScreenLessonNotFound ?? 'Lesson not found',
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'The lesson you\'re looking for doesn\'t exist or has been removed.',
+                l10n?.lessonScreenLessonNotFoundMessage ?? 'The lesson you\'re looking for doesn\'t exist or has been removed.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).brightness == Brightness.dark 
                       ? Colors.grey[400] 
@@ -398,7 +401,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                   backgroundColor: const Color(0xFF00C853),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Go Back'),
+                child: Text(l10n?.lessonScreenGoBack ?? 'Go Back'),
               ),
             ],
           ),
@@ -441,13 +444,13 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                       color: Colors.green,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.check_circle, color: Colors.white, size: 16),
                         SizedBox(width: 4),
                         Text(
-                          'Completed',
+                          l10n?.lessonScreenCompleted ?? 'Completed',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -482,23 +485,23 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'ai_chat',
               child: Row(
                 children: [
                   Icon(Icons.chat),
                   SizedBox(width: 8),
-                  Text('AI Assistant'),
+                  Text(l10n?.lessonScreenAiAssistant ?? 'AI Assistant'),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'report',
               child: Row(
                 children: [
                   Icon(Icons.report),
                   SizedBox(width: 8),
-                  Text('Report Issue'),
+                  Text(l10n?.lessonScreenReportIssue ?? 'Report Issue'),
                 ],
               ),
             ),
@@ -607,7 +610,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
             ),
             const SizedBox(width: 4),
             Text(
-              _lesson!.duration ?? 'No duration',
+              _lesson!.duration ?? l10n?.lessonScreenNoDuration ?? 'No duration',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).brightness == Brightness.dark 
                     ? Colors.grey[400] 
@@ -659,7 +662,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -670,7 +673,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'No video available',
+                  l10n?.lessonScreenNoVideoAvailable ?? 'No video available',
                   style: TextStyle(color: Colors.grey),
                 ),
               ],
@@ -734,7 +737,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Lesson Overview',
+              l10n?.lessonScreenLessonOverview ?? 'Lesson Overview',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -766,7 +769,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                 child: ElevatedButton.icon(
                   onPressed: () => _navigateToLesson(_previousLesson!),
                   icon: const Icon(Icons.arrow_back),
-                  label: const Text('Previous'),
+                  label: Text(l10n?.lessonScreenPrevious ?? 'Previous'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[300],
                     foregroundColor: Colors.black,
@@ -780,7 +783,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
                 child: ElevatedButton.icon(
                   onPressed: () => _navigateToLesson(_nextLesson!),
                   icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Next'),
+                  label: Text(l10n?.lessonScreenNext ?? 'Next'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
                     foregroundColor: Colors.white,
@@ -799,7 +802,7 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
       backgroundColor: _isCompleted ? Colors.green : const Color(0xFF00C853),
       foregroundColor: Colors.white,
       icon: Icon(_isCompleted ? Icons.check : Icons.check_circle_outline),
-      label: Text(_isCompleted ? 'Completed' : 'Mark Complete'),
+      label: Text(_isCompleted ? l10n?.lessonScreenCompleted ?? 'Completed' : l10n?.lessonScreenMarkComplete ?? 'Mark Complete'),
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
 
 class LanguageSelectionScreen extends ConsumerStatefulWidget {
   final bool isFirstTime;
@@ -30,12 +31,12 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   // Theme-aware getters
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white.withOpacity(0.95);
-  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1A2433);
-  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF4A5568);
-  Color get _languageCardBg => _isDark ? const Color(0xFF0F172A) : Colors.grey.shade50;
-  Color get _languageCardBorder => _isDark ? const Color(0xFF334155) : Colors.grey.shade200;
-  Color get _flagBgColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
-  Color get _selectionBorderColor => _isDark ? const Color(0xFF334155) : Colors.grey.shade300;
+  Color get _textColor => const Color(0xFF0F172A);
+  Color get _secondaryTextColor => const Color(0xFF64748B);
+  Color get _languageCardBg => const Color(0xFFF8FAFC);
+  Color get _languageCardBorder => const Color(0xFFE2E8F0);
+  Color get _flagBgColor => Colors.white;
+  Color get _selectionBorderColor => const Color(0xFFCBD5E1);
 
   final List<Map<String, dynamic>> _languages = [
     {
@@ -109,7 +110,8 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
     } else {
       // Navigate to appropriate next screen
       if (widget.isFirstTime) {
-        context.go('/auth-selection');
+        final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+        context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
       } else {
         if (context.canPop()) {
           context.pop();
@@ -128,7 +130,8 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
     if (widget.onComplete != null) {
       widget.onComplete!();
     } else {
-      context.go('/auth-selection');
+      final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+      context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
     }
   }
 
@@ -175,26 +178,35 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   }
 
   Widget _buildDesktopLayout() {
-    return Center(
-      child: Container(
-        width: 500,
-        constraints: const BoxConstraints(maxHeight: 600),
-        margin: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 40,
-              spreadRadius: 0,
+    return Scaffold(
+      body: Row(
+        children: [
+          // Left panel — branded background (45%)
+          const Expanded(
+            flex: 45,
+            child: DesktopBrandPanel(
+              headline: 'Welcome to',
+              title: 'Excellence\nCoaching Hub',
+              tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: _buildContent(isDesktop: true),
-        ),
+          ),
+          // Right panel — white form area (55%)
+          Expanded(
+            flex: 55,
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
+                    child: _buildContent(isDesktop: true),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -377,25 +389,27 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
         ),
         child: Row(
           children: [
-            // Flag emoji
+            // Language code badge
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _flagBgColor,
+                color: isSelected
+                    ? const Color(0xFF00C896).withOpacity(0.12)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: _isDark ? [] : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Center(
                 child: Text(
-                  language['flag'],
-                  style: const TextStyle(fontSize: 28),
+                  (language['code'] as String).toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: isSelected
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -520,6 +534,131 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shared left branding panel used across all desktop auth/onboarding screens.
+class _DesktopBrandPanel extends StatelessWidget {
+  final String? headline;
+  final String title;
+  final String tagline;
+
+  const _DesktopBrandPanel({
+    required this.title,
+    required this.tagline,
+    this.headline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background image
+        Image.asset(
+          'assets/onboading desktop.png',
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+        ),
+        // Light green tint overlay
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFDFF5EE).withOpacity(0.55),
+                const Color(0xFF9ED8C6).withOpacity(0.30),
+                const Color(0xFF0D4A38).withOpacity(0.40),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        ),
+        // Content
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 52, vertical: 60),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Logo circle
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(
+                    color: const Color(0xFF00C896).withOpacity(0.25),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              if (headline != null) ...[
+                Text(
+                  headline!,
+                  style: const TextStyle(
+                    color: Color(0xFF1A3A2A),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF0D3B2A),
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  height: 1.15,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Accent line
+              Container(
+                width: 40,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00C896),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                tagline,
+                style: const TextStyle(
+                  color: Color(0xFF2D5A46),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w400,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

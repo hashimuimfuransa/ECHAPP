@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -146,86 +147,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final String loginText = l10n.loginTitle;
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/onboading desktop.png'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF0F172A).withOpacity(0.5),
-                const Color(0xFF1E293B).withOpacity(0.7),
-                const Color(0xFF0F172A).withOpacity(0.9),
-              ],
-              stops: const [0.0, 0.5, 1.0],
+      body: Row(
+        children: [
+          // Left branding panel (45%)
+          const Expanded(
+            flex: 45,
+            child: DesktopBrandPanel(
+              headline: 'Welcome to',
+              title: 'Excellence\nCoaching Hub',
+              tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          child: Stack(
-          children: [
-            Positioned(
-              top: -150,
-              right: -150,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.1),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
+          // Right white form panel (55%)
+          Expanded(
+            flex: 55,
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
+                    child: _buildRightPanel(authState, l10n, welcomeText, subtitleText, forgotPasswordText, noAccountText, signUpText, emailHint, passwordHint, loginText),
                   ),
                 ),
               ),
             ),
-            Positioned(
-              bottom: -100,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.08),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: Container(
-                width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
-                constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 40,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: _buildRightPanel(authState, l10n, welcomeText, subtitleText, forgotPasswordText, noAccountText, signUpText, emailHint, passwordHint, loginText),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    ),
     );
   }
 

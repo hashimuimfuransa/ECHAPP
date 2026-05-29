@@ -668,6 +668,12 @@ abstract class AppLocalizations {
   /// **'Please enter a 6-digit code'**
   String get enter6DigitCode;
 
+  /// No description provided for @phoneAuthBrowserWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone authentication may open a browser for verification. Please allow the process to complete.'**
+  String get phoneAuthBrowserWarning;
+
   /// No description provided for @emailAuthOptionTitle.
   ///
   /// In en, this message translates to:
@@ -4285,6 +4291,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Instructions'**
   String get instructions;
+
+  /// No description provided for @resumeLessons.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume lessons'**
+  String get resumeLessons;
+
+  /// No description provided for @studyOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Study offline'**
+  String get studyOffline;
+
+  /// No description provided for @showProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Show progress'**
+  String get showProgress;
+
+  /// No description provided for @reviewResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Review results'**
+  String get reviewResults;
+
+  /// No description provided for @hello.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello'**
+  String get hello;
+
+  /// No description provided for @professionalLearningFailedToLoadCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load course'**
+  String get professionalLearningFailedToLoadCourse;
+
+  /// No description provided for @professionalLearningCheckConnectionTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your connection and try again'**
+  String get professionalLearningCheckConnectionTryAgain;
+
+  /// No description provided for @professionalLearningCourseInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Course Information'**
+  String get professionalLearningCourseInformation;
+
+  /// No description provided for @professionalLearningYourProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Progress'**
+  String get professionalLearningYourProgress;
+
+  /// No description provided for @professionalLearningComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get professionalLearningComplete;
+
+  /// No description provided for @professionalLearningContinueLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Learning'**
+  String get professionalLearningContinueLearning;
+
+  /// No description provided for @professionalLearningViewContent.
+  ///
+  /// In en, this message translates to:
+  /// **'View Content'**
+  String get professionalLearningViewContent;
+
+  /// No description provided for @professionalLearningNoContentAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No content available'**
+  String get professionalLearningNoContentAvailable;
+
+  /// No description provided for @professionalLearningOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get professionalLearningOverview;
+
+  /// No description provided for @professionalLearningContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get professionalLearningContent;
+
+  /// No description provided for @professionalLearningResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Resources'**
+  String get professionalLearningResources;
+
+  /// No description provided for @professionalLearningRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get professionalLearningRefresh;
+
+  /// No description provided for @professionalLearningCertificates.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificates'**
+  String get professionalLearningCertificates;
+
+  /// No description provided for @professionalLearningYourCertificates.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Certificates'**
+  String get professionalLearningYourCertificates;
+
+  /// No description provided for @professionalLearningCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate'**
+  String get professionalLearningCertificate;
+
+  /// No description provided for @professionalLearningIssued.
+  ///
+  /// In en, this message translates to:
+  /// **'Issued'**
+  String get professionalLearningIssued;
+
+  /// No description provided for @professionalLearningAdditionalResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional Resources'**
+  String get professionalLearningAdditionalResources;
+
+  /// No description provided for @professionalLearningStudentGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'Student Guide'**
+  String get professionalLearningStudentGuide;
+
+  /// No description provided for @professionalLearningStudentGuideSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get help with navigation and features'**
+  String get professionalLearningStudentGuideSubtitle;
+
+  /// No description provided for @professionalLearningAiAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get professionalLearningAiAssistant;
+
+  /// No description provided for @professionalLearningAiAssistantSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get help with course content'**
+  String get professionalLearningAiAssistantSubtitle;
+
+  /// No description provided for @professionalLearningContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get professionalLearningContinue;
+
+  /// No description provided for @professionalLearningNoLessonsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No lessons available'**
+  String get professionalLearningNoLessonsAvailable;
+
+  /// No description provided for @professionalLearningLessonsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'lessons'**
+  String get professionalLearningLessonsCount;
+
+  /// No description provided for @lessonScreenLessonNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson not found'**
+  String get lessonScreenLessonNotFound;
+
+  /// No description provided for @lessonScreenLessonNotFoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The lesson you\'re looking for doesn\'t exist or has been removed.'**
+  String get lessonScreenLessonNotFoundMessage;
+
+  /// No description provided for @lessonScreenGoBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Back'**
+  String get lessonScreenGoBack;
+
+  /// No description provided for @lessonScreenCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get lessonScreenCompleted;
+
+  /// No description provided for @lessonScreenAiAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get lessonScreenAiAssistant;
+
+  /// No description provided for @lessonScreenReportIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Issue'**
+  String get lessonScreenReportIssue;
+
+  /// No description provided for @lessonScreenNoVideoAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No video available'**
+  String get lessonScreenNoVideoAvailable;
+
+  /// No description provided for @lessonScreenLessonOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Overview'**
+  String get lessonScreenLessonOverview;
+
+  /// No description provided for @lessonScreenNoDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'No duration'**
+  String get lessonScreenNoDuration;
+
+  /// No description provided for @lessonScreenPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get lessonScreenPrevious;
+
+  /// No description provided for @lessonScreenNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get lessonScreenNext;
+
+  /// No description provided for @lessonScreenMarkComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Complete'**
+  String get lessonScreenMarkComplete;
+
+  /// No description provided for @lessonScreenMarkLessonComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark lesson complete'**
+  String get lessonScreenMarkLessonComplete;
 }
 
 class _AppLocalizationsDelegate

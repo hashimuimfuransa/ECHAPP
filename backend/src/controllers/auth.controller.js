@@ -292,7 +292,7 @@ const firebaseLogin = async (req, res) => {
     console.log('Request body (sanitized):', JSON.stringify(logBody, null, 2));
     
     if (!idToken) {
-      return sendError(res, 'Firebase ID token is required', 400);
+      return sendError(res, 'Authentication token is required', 400);
     }
 
     // Verify Firebase ID token
@@ -447,7 +447,7 @@ const firebaseLogin = async (req, res) => {
   } catch (error) {
     console.error('Firebase login error:', error);
     if (error.code === 'auth/argument-error') {
-      return sendError(res, 'Invalid Firebase ID token', 401);
+      return sendError(res, 'Invalid authentication token', 401);
     }
     return sendError(res, 'Authentication failed', 500, error.message);
   }

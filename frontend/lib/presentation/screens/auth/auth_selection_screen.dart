@@ -10,6 +10,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
 
 const _kDeep       = Color(0xFF041B2D);
 const _kMid        = Color(0xFF072A3E);
@@ -1408,44 +1409,70 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   // ── Desktop layout ────────────────────────────────────────────────────────
 
   Widget _desktopLayout(dynamic authState) {
-    return Row(
-      children: [
-        // Left brand panel — 45% width
-        const Expanded(
-          flex: 45,
-          child: _BrandBackground(
-            isDesktop: true,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-              child: _BrandingSection(isMobile: false),
+    return Scaffold(
+      body: Row(
+        children: [
+          // Left branding panel (45%)
+          const Expanded(
+            flex: 45,
+            child: DesktopBrandPanel(
+              headline: 'Welcome to',
+              title: 'Excellence\nCoaching Hub',
+              tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-        ),
-
-        // Right auth panel — 55% width
-        Expanded(
-          flex: 55,
-          child: Container(
-            color: _cardColor,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 44, vertical: 52),
-                  child: _AuthCard(
-                    isLoading: authState.isLoading,
-                    isEmailLoading: authState.isEmailLoading,
-                    isGoogleLoading: authState.isGoogleLoading,
-                    isPhoneLoading: authState.isPhoneLoading,
-                    error: authState.error,
-                    onEmail: () => context.push('/email-auth-option'),
-                    onGoogle: null,
-                    onPhone: () => context.push('/phone-auth'),
+          // Right white auth panel (55%)
+          Expanded(
+            flex: 55,
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 48, vertical: 60),
+                    child: _AuthCard(
+                      isLoading: authState.isLoading,
+                      isEmailLoading: authState.isEmailLoading,
+                      isGoogleLoading: authState.isGoogleLoading,
+                      isPhoneLoading: authState.isPhoneLoading,
+                      error: authState.error,
+                      onEmail: () => context.push('/email-auth-option'),
+                      onGoogle: null,
+                      onPhone: () => context.push('/phone-auth'),
+                    ),
                   ),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopStat(String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF00C896),
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.5,
           ),
         ),
       ],

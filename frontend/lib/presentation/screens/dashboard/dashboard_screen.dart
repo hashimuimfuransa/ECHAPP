@@ -40,6 +40,7 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -66,7 +67,7 @@ class _DashboardDeviceBindingPolicy extends StatelessWidget {
           SizedBox(width: isMobile ? 10 : 16),
           Expanded(
             child: Text(
-              'Account secured to this device. Contact support to change.',
+              l10n?.accountBoundToDevice ?? 'Account secured to this device. Contact support to change.',
               style: TextStyle(
                 color: isDark
                     ? AppTheme.darkTextPrimary.withOpacity(0.84)
@@ -205,14 +206,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   // Gamification
   int _phraseIndex = 0;
-  static const _motivationalPhrases = [
-    'Build skills for your next opportunity.',
-    'Every lesson brings you closer to your goal.',
-    'Keep going — consistency beats talent.',
-    'Champions learn daily. You are one.',
-    'Small steps, massive results.',
-    'Your future self is watching. Make it count.',
-    'Top performers never stop learning.',
+  List<String> get _motivationalPhrases => [
+    l10n?.motivationalQuote1 ?? 'Build skills for your next opportunity.',
+    l10n?.motivationalQuote2 ?? 'Every lesson brings you closer to your goal.',
+    l10n?.motivationalQuote3 ?? 'Keep going — consistency beats talent.',
+    l10n?.motivationalQuote4 ?? 'Champions learn daily. You are one.',
+    l10n?.motivationalQuote5 ?? 'Small steps, massive results.',
+    l10n?.motivationalQuote6 ?? 'Your future self is watching. Make it count.',
+    l10n?.motivationalQuote7 ?? 'Top performers never stop learning.',
   ];
 
   @override
@@ -260,8 +261,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (lastSeen == null) {
       _showDashboardToast(
         icon: '👋',
-        title: 'Welcome to Excellence Hub!',
-        message: 'Start your first lesson today and earn XP.',
+        title: l10n?.welcomeToExcellenceHub ?? 'Welcome to Excellence Hub!',
+        message: l10n?.startFirstLesson ?? 'Start your first lesson today and earn XP.',
         color: AppTheme.primary,
       );
       return;
@@ -271,14 +272,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (lastSeen != today) {
       final hour = DateTime.now().hour;
       final greeting = hour < 12
-          ? 'Good morning'  
+          ? l10n?.goodMorning ?? 'Good morning'
           : hour < 17
-              ? 'Good afternoon'
-              : 'Good evening';
+              ? l10n?.goodAfternoon ?? 'Good afternoon'
+              : l10n?.goodEvening ?? 'Good evening';
       _showDashboardToast(
         icon: '🔥',
-        title: '$greeting! Keep the streak alive.',
-        message: 'Your consistency is your superpower.',
+        title: '$greeting! ${l10n?.keepStreakAlive ?? 'Keep the streak alive.'}',
+        message: l10n?.consistencyIsSuperpower ?? 'Your consistency is your superpower.',
         color: const Color(0xFFFF7043),
       );
     }
@@ -336,10 +337,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (!mounted) return;
 
     final messages = {
-      25: ('🚀', 'Quarter way there!', 'You have hit 25% — momentum is building!'),
-      50: ('⚡', 'Halfway champion!', 'You are at 50% — the finish line is real.'),
-      75: ('🏅', 'Almost there!', '75% done — you are nearly unstoppable.'),
-      100: ('🎓', 'Course completed!', 'You finished a course. Incredible effort!'),
+      25: ('🚀', l10n?.quarterWay ?? 'Quarter way there!', l10n?.momentumBuilding ?? 'You have hit 25% — momentum is building!'),
+      50: ('⚡', l10n?.halfwayChampion ?? 'Halfway champion!', l10n?.finishLineReal ?? 'You are at 50% — the finish line is real.'),
+      75: ('🏅', l10n?.almostThere ?? 'Almost there!', l10n?.nearlyUnstoppable ?? '75% done — you are nearly unstoppable.'),
+      100: ('🎓', l10n?.courseCompleted ?? 'Course completed!', l10n?.incredibleEffort ?? 'You finished a course. Incredible effort!'),
     };
     final data = messages[milestone];
     if (data == null) return;
@@ -702,7 +703,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 if (!isMobile) ...[
                                   const SizedBox(width: 10),
                                   Text(
-                                    'Excellence Hub',
+                                    l10n?.excellenceHub ?? 'Excellence Hub',
                                     style: TextStyle(
                                       color: AppTheme.primaryDark,
                                       fontSize: 15,
@@ -719,7 +720,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                               const SizedBox(width: 12),
                               _buildHeaderIconButton(
                                 icon: Icons.refresh_rounded,
-                                tooltip: 'Refresh',
+                                tooltip: l10n?.refresh ?? 'Refresh',
                                 onTap: _refreshDashboard,
                               ),
                               const SizedBox(width: 12),
@@ -738,7 +739,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                         icon: unreadCount > 0
                                             ? Icons.notifications_active_rounded
                                             : Icons.notifications_outlined,
-                                        tooltip: 'Notifications',
+                                        tooltip: l10n?.notifications ?? 'Notifications',
                                         onTap: () {
                                           PushNotificationService
                                               .clearNotifications();
@@ -823,9 +824,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                             .withOpacity(0.28),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Student dashboard',
-                                      style: TextStyle(
+                                    child: Text(
+                                      l10n?.studentDashboard ?? 'Student dashboard',
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
@@ -834,7 +835,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    'Hello, ${user?.fullName?.split(" ")[0] ?? "Student"}',
+                                    '${l10n?.hello ?? 'Hello'}, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
                                     style: TextStyle(
                                       fontSize: isMobile ? 24 : 34,
                                       fontWeight: FontWeight.w900,
@@ -1241,7 +1242,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: _selectedCategoryName == null
-                  ? 'Search courses, skills, lessons...'
+                  ? l10n?.searchHint ?? 'Search courses, skills, lessons...'
                   : 'Search in $_selectedCategoryName...',
               hintStyle: TextStyle(
                 color: isDark ? Colors.white60 : const Color(0xFF7C8797),
@@ -1563,7 +1564,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'Discover practical lessons, exam support, and career-ready skills built for ambitious African students.',
+            l10n?.authLearnGrowSucceed ?? 'Discover practical lessons, exam support, and career-ready skills built for ambitious African students.',
             style: TextStyle(
               color: Colors.white.withOpacity(0.85),
               fontSize: isMobile ? 13 : 14,
@@ -1586,9 +1587,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Explore courses',
-                style: TextStyle(
+              child: Text(
+                l10n?.exploreCourses ?? 'Explore courses',
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
@@ -1729,29 +1730,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final actions = [
       {
         'icon': Icons.play_lesson_rounded,
-        'label': 'My Courses',
-        'subtitle': 'Resume lessons',
+        'label': l10n?.myCourses ?? 'My Courses',
+        'subtitle': l10n?.resumeLessons ?? 'Resume lessons',
         'route': '/my-courses',
         'color': AppTheme.primaryDark,
       },
       {
         'icon': Icons.download_done_rounded,
-        'label': 'Downloads',
-        'subtitle': 'Study offline',
+        'label': l10n?.downloads ?? 'Downloads',
+        'subtitle': l10n?.studyOffline ?? 'Study offline',
         'route': '/downloads',
         'color': AppTheme.accent,
       },
       {
         'icon': Icons.verified_rounded,
-        'label': 'Certificates',
-        'subtitle': 'Show progress',
+        'label': l10n?.certificates ?? 'Certificates',
+        'subtitle': l10n?.showProgress ?? 'Show progress',
         'route': '/certificates',
         'color': AppTheme.primary,
       },
       {
         'icon': Icons.history_edu_rounded,
-        'label': 'Exams',
-        'subtitle': 'Review results',
+        'label': l10n?.exams ?? 'Exams',
+        'subtitle': l10n?.reviewResults ?? 'Review results',
         'route': '/exams/history',
         'color': AppTheme.accent,
       },
@@ -1913,7 +1914,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Update your interests',
+                      l10n?.updateInterests ?? 'Update your interests',
                       style: TextStyle(
                         fontSize: isMobile ? 15 : 17,
                         fontWeight: FontWeight.w800,
@@ -1922,7 +1923,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Refresh recommendations based on what you want to learn next.',
+                      l10n?.updateYourInterests ?? 'Refresh recommendations based on what you want to learn next.',
                       style: TextStyle(
                         fontSize: isMobile ? 12 : 13,
                         height: 1.35,
@@ -3006,9 +3007,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'CONTINUE LEARNING',
-                    style: TextStyle(
+                  Text(
+                    (l10n?.continueLearning ?? 'CONTINUE LEARNING').toUpperCase(),
+                    style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -3218,7 +3219,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Admin Panel',
+                  l10n?.adminPanel ?? 'Admin Panel',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isMobile ? 16 : 18,
@@ -3227,7 +3228,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Manage courses, students & settings',
+                  l10n?.coursesManagement ?? 'Manage courses, students & settings',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: isMobile ? 12 : 13,
@@ -3544,7 +3545,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'My Progress',
+          l10n?.myProgress ?? 'My Progress',
           style: TextStyle(
             fontSize: isSmallMobile ? 18 : 20,
             fontWeight: FontWeight.w800,
@@ -3597,7 +3598,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Courses Enrolled',
+                      l10n?.coursesEnrolled ?? 'Courses Enrolled',
                       style: TextStyle(
                         fontSize: isSmallMobile ? 11 : 12,
                         color: AppTheme.getSecondaryTextColor(context),
@@ -3651,7 +3652,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Completed',
+                      l10n?.completed ?? 'Completed',
                       style: TextStyle(
                         fontSize: isSmallMobile ? 11 : 12,
                         color: AppTheme.getSecondaryTextColor(context),
@@ -3705,7 +3706,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Average Score',
+                      l10n?.averageScore ?? 'Average Score',
                       style: TextStyle(
                         fontSize: isSmallMobile ? 11 : 12,
                         color: AppTheme.getSecondaryTextColor(context),
@@ -3915,7 +3916,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Continue Learning',
+              l10n?.continueLearning ?? 'Continue Learning',
               style: TextStyle(
                 fontSize: isSmallMobile ? 18 : 20,
                 fontWeight: FontWeight.w800,
@@ -4272,7 +4273,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Recommended for you',
+              l10n?.recommendedForYou ?? 'Recommended for you',
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
                 fontWeight: FontWeight.w800,

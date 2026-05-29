@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
@@ -14,9 +15,12 @@ class DownloadService extends ChangeNotifier {
   DownloadService._internal();
 
   final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(minutes: 60),
-    sendTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 30), // Reduced for faster connection
+    receiveTimeout: const Duration(minutes: 60), // Reduced for faster downloads
+    sendTimeout: const Duration(seconds: 30), // Reduced for faster uploads
+    headers: {
+      'Accept-Encoding': 'gzip', // Enable compression for faster transfers
+    },
   ));
 
   /// Get authorization header with Firebase ID token
@@ -209,8 +213,8 @@ class DownloadService extends ChangeNotifier {
     print('Filename: $fileName');
     print('Lesson ID: $lessonId');
       
-    int maxRetries = 3;
-    int retryDelay = 2000; // 2 seconds
+    int maxRetries = 5; // Increased from 3 to 5 for slow connections
+    int retryDelay = 3000; // Increased from 2 to 3 seconds
 
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -265,71 +269,49 @@ class DownloadService extends ChangeNotifier {
           // Get auth headers for the request
           final authHeaders = await _getAuthHeaders();
           
-          final response = await _dio.get<ResponseBody>(
-            url,
-            options: Options(
-              responseType: ResponseType.stream,
-              followRedirects: true,
-              validateStatus: (status) => status == 200 || status == 206,
-              headers: {
-                ...authHeaders,
-                if (downloadedBytes > 0) 'range': 'bytes=$downloadedBytes-',
-              },
-            ),
-            cancelToken: cancelToken,
-          );
-
-          final File file = File(filePath);
-          
-          // If we requested a range but got 200 (Full Content), it means the server 
-          // doesn't support Range or the file changed. We must restart from 0.
-          bool isResuming = downloadedBytes > 0 && response.statusCode == 206;
-          int currentReceived = isResuming ? downloadedBytes : 0;
-          
-          final IOSink raf = file.openWrite(mode: isResuming ? FileMode.append : FileMode.write);
-
+          // First, get the file size to enable chunked downloading
+          int? totalFileSize;
           try {
-            int? contentLength = int.tryParse(response.headers.value('content-length') ?? '-1');
-            int actualTotal = (contentLength != null && contentLength != -1) ? (contentLength + currentReceived) : -1;
+            final headResponse = await _dio.head(
+              url,
+              options: Options(
+                headers: authHeaders,
+                validateStatus: (status) => status == 200 || status == 206,
+              ),
+              cancelToken: cancelToken,
+            );
+            totalFileSize = int.tryParse(headResponse.headers.value('content-length') ?? '-1');
+            print('Total file size: $totalFileSize bytes');
+          } catch (e) {
+            print('Could not get file size, falling back to single stream: $e');
+          }
 
-            await response.data!.stream.listen(
-              (List<int> chunk) {
-                raf.add(chunk);
-                currentReceived += chunk.length;
-
-                if (actualTotal != -1) {
-                  double progress = currentReceived / actualTotal;
-                  
-                  // Update progress more frequently for smoother UI (every 1% instead of 2%)
-                  if (progress > (download.downloadProgress + 0.01) || progress >= 1.0 || progress < download.downloadProgress) {
-                    download.downloadProgress = progress;
-                    _downloads[lessonId] = download.copyWith(downloadProgress: progress);
-                    onProgress?.call(progress);
-                    notifyListeners();
-                    
-                    // Save to storage on major milestones (every 5%) or completion for better performance
-                    if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
-                      _saveDownloadsToStorage(); 
-                    }
-                  }
-                } else {
-                  // Indeterminate progress - use a pulsing pattern to show activity
-                  if (download.downloadProgress != -1.0) {
-                    download.downloadProgress = -1.0;
-                    _downloads[lessonId] = download.copyWith(downloadProgress: -1.0);
-                    onProgress?.call(-1.0);
-                    notifyListeners();
-                  }
-                }
-              },
-              onError: (e) {
-                if (CancelToken.isCancel(e)) return;
-                throw e;
-              },
-              cancelOnError: true,
-            ).asFuture();
-          } finally {
-            await raf.close();
+          // Use chunked download if we got the file size and it's large enough (> 2MB)
+          if (totalFileSize != null && totalFileSize > 2 * 1024 * 1024) {
+            print('Using chunked download for large file');
+            await _downloadWithChunks(
+              url: url,
+              filePath: filePath,
+              totalSize: totalFileSize,
+              downloadedBytes: downloadedBytes,
+              authHeaders: authHeaders,
+              cancelToken: cancelToken,
+              download: download,
+              lessonId: lessonId,
+              onProgress: onProgress,
+            );
+          } else {
+            // Fall back to single stream download for small files or when size is unknown
+            await _downloadSingleStream(
+              url: url,
+              filePath: filePath,
+              downloadedBytes: downloadedBytes,
+              authHeaders: authHeaders,
+              cancelToken: cancelToken,
+              download: download,
+              lessonId: lessonId,
+              onProgress: onProgress,
+            );
           }
       
           print('Download completed successfully');
@@ -405,6 +387,188 @@ class DownloadService extends ChangeNotifier {
       }
     }
     return ''; // Should never reach here due to rethrows and returns inside loop
+  }
+
+  // Download using multiple chunks in parallel for faster downloads
+  Future<void> _downloadWithChunks({
+    required String url,
+    required String filePath,
+    required int totalSize,
+    required int downloadedBytes,
+    required Map<String, String> authHeaders,
+    required CancelToken cancelToken,
+    required Download download,
+    required String lessonId,
+    Function(double)? onProgress,
+  }) async {
+    // Adaptive chunk size based on network type
+    final networkType = await _getNetworkType();
+    final chunkSize = _getAdaptiveChunkSize(networkType);
+    final maxParallelChunks = _getAdaptiveParallelChunks(networkType);
+    
+    print('Network type: $networkType, Chunk size: ${chunkSize / (1024 * 1024)}MB, Parallel chunks: $maxParallelChunks');
+    
+    final file = File(filePath);
+    final totalChunks = (totalSize / chunkSize).ceil();
+    final chunksToDownload = <int>[];
+    
+    // Determine which chunks need to be downloaded
+    for (int i = 0; i < totalChunks; i++) {
+      final chunkStart = i * chunkSize;
+      final chunkEnd = (chunkStart + chunkSize - 1).clamp(0, totalSize - 1);
+      
+      // Check if this chunk is already downloaded
+      if (downloadedBytes > chunkStart) {
+        continue; // Skip already downloaded chunks
+      }
+      chunksToDownload.add(i);
+    }
+    
+    print('Total chunks: $totalChunks, Chunks to download: ${chunksToDownload.length}');
+    
+    int totalBytesDownloaded = downloadedBytes;
+    final downloadProgress = <int, int>{}; // chunkIndex -> bytes downloaded
+    
+    // Download chunks in parallel batches
+    for (int i = 0; i < chunksToDownload.length; i += maxParallelChunks) {
+      final batch = chunksToDownload.skip(i).take(maxParallelChunks).toList();
+      final futures = batch.map((chunkIndex) async {
+        final chunkStart = chunkIndex * chunkSize;
+        final chunkEnd = (chunkStart + chunkSize - 1).clamp(0, totalSize - 1);
+        
+        try {
+          final response = await _dio.get<ResponseBody>(
+            url,
+            options: Options(
+              responseType: ResponseType.stream,
+              headers: {
+                ...authHeaders,
+                'range': 'bytes=$chunkStart-$chunkEnd',
+              },
+            ),
+            cancelToken: cancelToken,
+          );
+          
+          // Write chunk to file at correct position
+          final raf = await file.open(mode: FileMode.writeOnly);
+          await raf.setPosition(chunkStart);
+          
+          int chunkBytesDownloaded = 0;
+          await response.data!.stream.listen(
+            (List<int> chunk) {
+              raf.writeFrom(chunk);
+              chunkBytesDownloaded += chunk.length;
+              totalBytesDownloaded += chunk.length;
+              
+              // Update progress
+              final progress = totalBytesDownloaded / totalSize;
+              if (progress > (download.downloadProgress + 0.01) || progress >= 1.0) {
+                download.downloadProgress = progress;
+                _downloads[lessonId] = download.copyWith(downloadProgress: progress);
+                onProgress?.call(progress);
+                notifyListeners();
+                
+                if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
+                  _saveDownloadsToStorage();
+                }
+              }
+            },
+            onError: (e) {
+              if (CancelToken.isCancel(e)) return;
+              throw e;
+            },
+            cancelOnError: true,
+          ).asFuture();
+          
+          await raf.close();
+          downloadProgress[chunkIndex] = chunkBytesDownloaded;
+        } catch (e) {
+          print('Error downloading chunk $chunkIndex: $e');
+          rethrow;
+        }
+      });
+      
+      await Future.wait(futures);
+    }
+  }
+
+  // Single stream download (fallback for small files or when size is unknown)
+  Future<void> _downloadSingleStream({
+    required String url,
+    required String filePath,
+    required int downloadedBytes,
+    required Map<String, String> authHeaders,
+    required CancelToken cancelToken,
+    required Download download,
+    required String lessonId,
+    Function(double)? onProgress,
+  }) async {
+    final response = await _dio.get<ResponseBody>(
+      url,
+      options: Options(
+        responseType: ResponseType.stream,
+        followRedirects: true,
+        validateStatus: (status) => status == 200 || status == 206,
+        headers: {
+          ...authHeaders,
+          if (downloadedBytes > 0) 'range': 'bytes=$downloadedBytes-',
+        },
+      ),
+      cancelToken: cancelToken,
+    );
+
+    final File file = File(filePath);
+    
+    // If we requested a range but got 200 (Full Content), it means the server 
+    // doesn't support Range or the file changed. We must restart from 0.
+    bool isResuming = downloadedBytes > 0 && response.statusCode == 206;
+    int currentReceived = isResuming ? downloadedBytes : 0;
+    
+    final IOSink raf = file.openWrite(mode: isResuming ? FileMode.append : FileMode.write);
+
+    try {
+      int? contentLength = int.tryParse(response.headers.value('content-length') ?? '-1');
+      int actualTotal = (contentLength != null && contentLength != -1) ? (contentLength + currentReceived) : -1;
+
+      await response.data!.stream.listen(
+        (List<int> chunk) {
+          raf.add(chunk);
+          currentReceived += chunk.length;
+
+          if (actualTotal != -1) {
+            double progress = currentReceived / actualTotal;
+            
+            // Update progress more frequently for smoother UI (every 1% instead of 2%)
+            if (progress > (download.downloadProgress + 0.01) || progress >= 1.0 || progress < download.downloadProgress) {
+              download.downloadProgress = progress;
+              _downloads[lessonId] = download.copyWith(downloadProgress: progress);
+              onProgress?.call(progress);
+              notifyListeners();
+              
+              // Save to storage on major milestones (every 5%) or completion for better performance
+              if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
+                _saveDownloadsToStorage(); 
+              }
+            }
+          } else {
+            // Indeterminate progress - use a pulsing pattern to show activity
+            if (download.downloadProgress != -1.0) {
+              download.downloadProgress = -1.0;
+              _downloads[lessonId] = download.copyWith(downloadProgress: -1.0);
+              onProgress?.call(-1.0);
+              notifyListeners();
+            }
+          }
+        },
+        onError: (e) {
+          if (CancelToken.isCancel(e)) return;
+          throw e;
+        },
+        cancelOnError: true,
+      ).asFuture();
+    } finally {
+      await raf.close();
+    }
   }
 
   // Pause a download
@@ -733,5 +897,56 @@ class DownloadService extends ChangeNotifier {
     }
     
     return totalSize;
+  }
+
+  // Get current network type for adaptive downloading
+  Future<ConnectivityResult> _getNetworkType() async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      if (results.isNotEmpty) {
+        return results.first;
+      }
+    } catch (e) {
+      print('Error checking network type: $e');
+    }
+    return ConnectivityResult.none;
+  }
+
+  // Get adaptive chunk size based on network type
+  int _getAdaptiveChunkSize(ConnectivityResult networkType) {
+    switch (networkType) {
+      case ConnectivityResult.wifi:
+        return 20 * 1024 * 1024; // 20MB chunks for WiFi (increased for speed)
+      case ConnectivityResult.ethernet:
+        return 25 * 1024 * 1024; // 25MB chunks for Ethernet (increased for speed)
+      case ConnectivityResult.mobile:
+        return 5 * 1024 * 1024; // 5MB chunks for mobile (increased for speed)
+      case ConnectivityResult.bluetooth:
+        return 2 * 1024 * 1024; // 2MB chunks for Bluetooth (increased)
+      case ConnectivityResult.vpn:
+        return 8 * 1024 * 1024; // 8MB chunks for VPN (increased)
+      case ConnectivityResult.none:
+      default:
+        return 5 * 1024 * 1024; // 5MB chunks default (increased)
+    }
+  }
+
+  // Get adaptive parallel chunks based on network type
+  int _getAdaptiveParallelChunks(ConnectivityResult networkType) {
+    switch (networkType) {
+      case ConnectivityResult.wifi:
+        return 12; // 12 parallel chunks for WiFi (doubled for speed)
+      case ConnectivityResult.ethernet:
+        return 16; // 16 parallel chunks for Ethernet (doubled for speed)
+      case ConnectivityResult.mobile:
+        return 4; // 4 parallel chunks for mobile (increased for speed)
+      case ConnectivityResult.bluetooth:
+        return 2; // 2 chunks for Bluetooth (increased)
+      case ConnectivityResult.vpn:
+        return 6; // 6 parallel chunks for VPN (doubled)
+      case ConnectivityResult.none:
+      default:
+        return 4; // 4 parallel chunks default (increased)
+    }
   }
 }

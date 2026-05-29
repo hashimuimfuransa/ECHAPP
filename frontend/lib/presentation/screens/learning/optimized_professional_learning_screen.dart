@@ -20,6 +20,7 @@ import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 /// Optimized Professional Learning Screen with instant loading
 class OptimizedProfessionalLearningScreen extends ConsumerStatefulWidget {
@@ -58,6 +59,8 @@ class _OptimizedProfessionalLearningScreenState
   bool _isChatExpanded = false;
   bool _isSearching = false;
   String _searchQuery = '';
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
 
   @override
   void initState() {
@@ -267,13 +270,13 @@ class _OptimizedProfessionalLearningScreenState
               ),
               const SizedBox(height: 16),
               Text(
-                'Failed to load course',
+                l10n?.professionalLearningFailedToLoadCourse ?? 'Failed to load course',
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Please check your connection and try again',
+                l10n?.professionalLearningCheckConnectionTryAgain ?? 'Please check your connection and try again',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).brightness == Brightness.dark 
                       ? Colors.grey[400] 
@@ -288,7 +291,7 @@ class _OptimizedProfessionalLearningScreenState
                   backgroundColor: const Color(0xFF00C853),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Retry'),
+                child: Text(l10n?.retry ?? 'Retry'),
               ),
             ],
           ),
@@ -408,24 +411,24 @@ class _OptimizedProfessionalLearningScreenState
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'refresh',
               child: Row(
                 children: [
                   Icon(Icons.refresh),
                   SizedBox(width: 8),
-                  Text('Refresh'),
+                  Text(l10n?.professionalLearningRefresh ?? 'Refresh'),
                 ],
               ),
             ),
             if (_courseCertificates.isNotEmpty)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'certificate',
                 child: Row(
                   children: [
                     Icon(Icons.card_membership),
                     SizedBox(width: 8),
-                    Text('Certificates'),
+                    Text(l10n?.professionalLearningCertificates ?? 'Certificates'),
                   ],
                 ),
               ),
@@ -440,10 +443,10 @@ class _OptimizedProfessionalLearningScreenState
       delegate: _SliverTabBarDelegate(
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Content'),
-            Tab(text: 'Resources'),
+          tabs: [
+            Tab(text: l10n?.professionalLearningOverview ?? 'Overview'),
+            Tab(text: l10n?.professionalLearningContent ?? 'Content'),
+            Tab(text: l10n?.professionalLearningResources ?? 'Resources'),
           ],
           labelColor: const Color(0xFF00C853),
           unselectedLabelColor: Colors.grey,
@@ -487,15 +490,15 @@ class _OptimizedProfessionalLearningScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Course Information',
+              l10n?.professionalLearningCourseInformation ?? 'Course Information',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow('Duration', _course?.duration ?? 'N/A'),
-            _buildInfoRow('Level', _course?.level ?? 'N/A'),
-            _buildInfoRow('Price', '\$${_course?.price ?? 0}'),
+            _buildInfoRow(l10n?.duration ?? 'Duration', _course?.duration ?? 'N/A'),
+            _buildInfoRow(l10n?.level ?? 'Level', _course?.level ?? 'N/A'),
+            _buildInfoRow(l10n?.price ?? 'Price', '\$${_course?.price ?? 0}'),
           ],
         ),
       ),
@@ -539,7 +542,7 @@ class _OptimizedProfessionalLearningScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Your Progress',
+              l10n?.professionalLearningYourProgress ?? 'Your Progress',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -552,7 +555,7 @@ class _OptimizedProfessionalLearningScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              '30% Complete',
+              '30% ${l10n?.professionalLearningComplete ?? 'Complete'}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -590,7 +593,7 @@ class _OptimizedProfessionalLearningScreenState
                   child: ElevatedButton.icon(
                     onPressed: () => _startLearning(),
                     icon: const Icon(Icons.play_arrow),
-                    label: const Text('Continue Learning'),
+                    label: Text(l10n?.professionalLearningContinueLearning ?? 'Continue Learning'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00C853),
                       foregroundColor: Colors.white,
@@ -602,7 +605,7 @@ class _OptimizedProfessionalLearningScreenState
                   child: OutlinedButton.icon(
                     onPressed: () => _tabController.animateTo(1),
                     icon: const Icon(Icons.list),
-                    label: const Text('View Content'),
+                    label: Text(l10n?.professionalLearningViewContent ?? 'View Content'),
                   ),
                 ),
               ],
@@ -615,8 +618,8 @@ class _OptimizedProfessionalLearningScreenState
 
   Widget _buildContentTab() {
     if (_sections == null || _sections!.isEmpty) {
-      return const Center(
-        child: Text('No content available'),
+      return Center(
+        child: Text(l10n?.professionalLearningNoContentAvailable ?? 'No content available'),
       );
     }
 
@@ -658,7 +661,7 @@ class _OptimizedProfessionalLearningScreenState
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '${section.lessons?.length ?? 0} lessons',
+          '${section.lessons?.length ?? 0} ${l10n?.professionalLearningLessonsCount ?? 'lessons'}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         children: _buildLessonList(section),
@@ -674,7 +677,7 @@ class _OptimizedProfessionalLearningScreenState
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'No lessons available',
+            l10n?.professionalLearningNoLessonsAvailable ?? 'No lessons available',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -737,7 +740,7 @@ class _OptimizedProfessionalLearningScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Your Certificates',
+              l10n?.professionalLearningYourCertificates ?? 'Your Certificates',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -746,8 +749,8 @@ class _OptimizedProfessionalLearningScreenState
             ..._courseCertificates.map((certificate) {
               return ListTile(
                 leading: const Icon(Icons.card_membership, color: Color(0xFF00C853)),
-                title: Text(certificate.title ?? 'Certificate'),
-                subtitle: Text('Issued: ${certificate.issuedAt ?? 'N/A'}'),
+                title: Text(certificate.title ?? l10n?.professionalLearningCertificate ?? 'Certificate'),
+                subtitle: Text('${l10n?.professionalLearningIssued ?? 'Issued'}: ${certificate.issuedAt ?? 'N/A'}'),
                 trailing: const Icon(Icons.download),
                 onTap: () => _downloadCertificate(certificate),
               );
@@ -775,7 +778,7 @@ class _OptimizedProfessionalLearningScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Additional Resources',
+              l10n?.professionalLearningAdditionalResources ?? 'Additional Resources',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -783,15 +786,15 @@ class _OptimizedProfessionalLearningScreenState
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.help_outline, color: Color(0xFF00C853)),
-              title: const Text('Student Guide'),
-              subtitle: const Text('Get help with navigation and features'),
+              title: Text(l10n?.professionalLearningStudentGuide ?? 'Student Guide'),
+              subtitle: Text(l10n?.professionalLearningStudentGuideSubtitle ?? 'Get help with navigation and features'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () => _showStudentGuide(),
             ),
             ListTile(
               leading: const Icon(Icons.chat, color: Color(0xFF00C853)),
-              title: const Text('AI Assistant'),
-              subtitle: const Text('Get help with course content'),
+              title: Text(l10n?.professionalLearningAiAssistant ?? 'AI Assistant'),
+              subtitle: Text(l10n?.professionalLearningAiAssistantSubtitle ?? 'Get help with course content'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () => _openAIChat(),
             ),
@@ -809,7 +812,7 @@ class _OptimizedProfessionalLearningScreenState
         backgroundColor: const Color(0xFF00C853),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.play_arrow),
-        label: const Text('Continue'),
+        label: Text(l10n?.professionalLearningContinue ?? 'Continue'),
       ),
     );
   }

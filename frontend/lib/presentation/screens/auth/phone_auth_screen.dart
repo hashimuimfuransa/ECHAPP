@@ -5,7 +5,8 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 class PhoneAuthScreen extends ConsumerStatefulWidget {
   const PhoneAuthScreen({super.key});
@@ -189,81 +190,34 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
 
   Widget _buildDesktopLayout(dynamic authState) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E293B),
-              Color(0xFF0F4C75),
-              Color(0xFF041B2D),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+      body: Row(
+        children: [
+          // Left branding panel (45%)
+          const Expanded(
+            flex: 45,
+            child: DesktopBrandPanel(
+              headline: 'Welcome to',
+              title: 'Excellence\nCoaching Hub',
+              tagline: 'Empowering Growth.\nInspiring Excellence.',
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -150,
-              right: -150,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.1),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
+          // Right white form panel (55%)
+          Expanded(
+            flex: 55,
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
+                    child: _buildRightPanel(authState),
                   ),
                 ),
               ),
             ),
-            Positioned(
-              bottom: -100,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00C896).withOpacity(0.08),
-                      const Color(0xFF00C896).withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: Container(
-                width: ResponsiveBreakpoints.isDesktop(context) ? 500 : 400,
-                constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 30,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: _buildRightPanel(authState),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -366,6 +320,9 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
     );
   }
 
+  bool get _isWindowsDesktop =>
+      defaultTargetPlatform == TargetPlatform.windows && !kIsWeb;
+
   Widget _buildRightPanel(dynamic authState) {
     final l10n = AppLocalizations.of(context);
     // Fallback strings if localization fails
@@ -410,12 +367,14 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             ),
           ),
           const SizedBox(height: 40),
-          Form(
+          // Desktop Windows: phone auth not supported — show clear notice
+          if (_isWindowsDesktop) ..._buildDesktopNotSupportedContent()
+          else Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Browser state warning banner (applies to all platforms during reCAPTCHA flow)
+                // Browser state warning banner
                 Container(
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 16),
@@ -430,7 +389,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Phone authentication may open a browser for verification. Please allow the process to complete.',
+                          l10n?.phoneAuthBrowserWarning ?? 'Phone authentication may open a browser for verification. Please allow the process to complete.',
                           style: TextStyle(
                             color: Colors.amber.shade700,
                             fontSize: 13,
@@ -486,6 +445,78 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildDesktopNotSupportedContent() {
+    return [
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3CD),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.5), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC107).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.phone_disabled_rounded,
+                      color: Color(0xFFB45309), size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Phone auth not available on desktop',
+                    style: TextStyle(
+                      color: Color(0xFF92400E),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Firebase phone authentication requires a mobile device or web browser. On Windows desktop, please use email/password sign-in instead.',
+              style: TextStyle(
+                color: Color(0xFF78350F),
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      SizedBox(
+        height: 54,
+        child: ElevatedButton.icon(
+          onPressed: () => context.go('/email-auth-option'),
+          icon: const Icon(Icons.email_rounded, size: 20),
+          label: const Text(
+            'Sign in with Email instead',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00C896),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildMobileLayout(dynamic authState, AppLocalizations l10n) {
@@ -599,7 +630,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Phone authentication may open a browser for verification. Please allow the process to complete.',
+                                  l10n?.phoneAuthBrowserWarning ?? 'Phone authentication may open a browser for verification. Please allow the process to complete.',
                                   style: TextStyle(
                                     color: _isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
                                     fontSize: 12,

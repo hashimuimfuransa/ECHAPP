@@ -23,6 +23,7 @@ import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -131,7 +132,7 @@ class _ProfessionalLearningScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
 
     _heroAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
@@ -506,6 +507,7 @@ class _ProfessionalLearningScreenState
         children: [
           _buildChaptersTab(),
           _buildProgressTab(),
+          _buildBookmarksTab(),
           _buildMaterialsTab(),
         ],
       ),
@@ -809,6 +811,7 @@ class _ProfessionalLearningScreenState
             tabs: const [
               Tab(text: 'Chapters'),
               Tab(text: 'Progress'),
+              Tab(text: 'Bookmarks'),
               Tab(text: 'Materials'),
             ],
           ),
@@ -1343,6 +1346,111 @@ class _ProfessionalLearningScreenState
         ],
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────
+  //  BOOKMARKS TAB
+  // ─────────────────────────────────────────────
+  Widget _buildBookmarksTab() {
+    return FutureBuilder<List<Lesson>>(
+      future: _getBookmarkedLessons(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return _buildEmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading bookmarks',
+            subtitle: 'Please try again later',
+          );
+        }
+
+        final bookmarkedLessons = snapshot.data ?? [];
+
+        if (bookmarkedLessons.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.bookmark_border_rounded,
+            title: 'No bookmarked lessons',
+            subtitle: 'Bookmark lessons to find them here quickly',
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.fromLTRB(
+            ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+            20,
+            ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+            100,
+          ),
+          itemCount: bookmarkedLessons.length,
+          itemBuilder: (context, index) {
+            final lesson = bookmarkedLessons[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _BookmarkedLessonCard(
+                lesson: lesson,
+                isDark: _isDark,
+                onTap: () => _openLesson(lesson),
+                onRemoveBookmark: () => _removeBookmark(lesson.id),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<Lesson>> _getBookmarkedLessons() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final bookmarkedLessons = <Lesson>[];
+
+      // Iterate through all lessons in the course and check if they're bookmarked
+      if (_chapterLessons.isNotEmpty) {
+        for (final sectionId in _chapterLessons.keys) {
+          final lessons = _chapterLessons[sectionId] ?? [];
+          for (final lesson in lessons) {
+            final bookmarkKey = 'bookmarked_lesson_${lesson.id}';
+            final isBookmarked = prefs.getBool(bookmarkKey) ?? false;
+            if (isBookmarked) {
+              bookmarkedLessons.add(lesson);
+            }
+          }
+        }
+      }
+
+      return bookmarkedLessons;
+    } catch (e) {
+      print('Error loading bookmarked lessons: $e');
+      return [];
+    }
+  }
+
+  Future<void> _removeBookmark(String lessonId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final bookmarkKey = 'bookmarked_lesson_$lessonId';
+      await prefs.setBool(bookmarkKey, false);
+      
+      // Refresh the bookmarks tab
+      setState(() {});
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bookmark removed'),
+          backgroundColor: _DT.primary,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove bookmark: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -3065,6 +3173,121 @@ class _Achievement {
       required this.unlocked,
       required this.color,
       this.xp = 0});
+}
+
+class _BookmarkedLessonCard extends StatelessWidget {
+  final Lesson lesson;
+  final bool isDark;
+  final VoidCallback onTap;
+  final VoidCallback onRemoveBookmark;
+
+  const _BookmarkedLessonCard({
+    required this.lesson,
+    required this.isDark,
+    required this.onTap,
+    required this.onRemoveBookmark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? _DT.cardDark : _DT.card;
+    final textPrimary = isDark ? Colors.white : _DT.textPrimary;
+    final textSecondary = isDark ? _DT.textLight : _DT.textSecondary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: _DT.r16,
+        border: Border.all(
+          color: isDark ? _DT.borderDark : _DT.border,
+          width: 0.5,
+        ),
+        boxShadow: _DT.cardShadow,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: _DT.r16,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Lesson icon
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _DT.primary.withOpacity(0.1),
+                  borderRadius: _DT.r12,
+                ),
+                child: Icon(
+                  lesson.hasVideo ? Icons.play_circle_rounded : Icons.article_rounded,
+                  color: _DT.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Lesson info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (lesson.description != null && lesson.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        lesson.description!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (lesson.duration > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${lesson.duration} min',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Remove bookmark button
+              IconButton(
+                icon: const Icon(Icons.bookmark),
+                color: _DT.primary,
+                onPressed: onRemoveBookmark,
+                tooltip: 'Remove bookmark',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _AchievementCard extends StatelessWidget {

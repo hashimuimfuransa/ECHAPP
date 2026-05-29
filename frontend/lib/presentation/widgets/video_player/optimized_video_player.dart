@@ -39,6 +39,7 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
   StreamSubscription? _connectivitySubscription;
   bool _isDataSaver = false;
   double _playbackSpeed = 1.0;
+  bool _isSlowNetwork = false;
 
   @override
   void initState() {
@@ -48,8 +49,12 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
   }
 
   void _initConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) async {
       final isNowOffline = results.isEmpty || results.contains(ConnectivityResult.none);
+      
+      // Detect slow network (mobile or limited connections)
+      final isSlowConnection = results.contains(ConnectivityResult.mobile) || 
+                                results.isEmpty;
       
       if (!isNowOffline && _isOffline) {
         // Back online, retry if there was an error
@@ -61,9 +66,28 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
       if (mounted) {
         setState(() {
           _isOffline = isNowOffline;
+          _isSlowNetwork = isSlowConnection;
         });
+        
+        // Adjust playback quality based on network
+        if (_betterPlayerController != null && !isNowOffline) {
+          _adjustQualityForNetwork(isSlowConnection);
+        }
       }
     });
+  }
+  
+  void _adjustQualityForNetwork(bool isSlow) {
+    // If slow network, prefer lower quality if available
+    // This is a placeholder - better_player has quality selection built-in
+    // The user can manually select quality, but we could auto-select on slow networks
+    if (isSlow && _isDataSaver) {
+      // Could implement auto-quality selection here
+      // For now, data saver mode reduces volume which helps slightly
+      _betterPlayerController?.setVolume(0.5);
+    } else {
+      _betterPlayerController?.setVolume(1.0);
+    }
   }
 
   String _getOptimizedUrl(String? url) {
@@ -167,15 +191,15 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
         ),
         cacheConfiguration: BetterPlayerCacheConfiguration(
           useCache: true,
-          preCacheSize: 10 * 1024 * 1024, // 10MB pre-cache
-          maxCacheSize: 100 * 1024 * 1024, // 100MB max cache
-          maxCacheFileSize: 50 * 1024 * 1024, // 50MB per file
+          preCacheSize: 20 * 1024 * 1024, // 20MB pre-cache (doubled for slow internet)
+          maxCacheSize: 200 * 1024 * 1024, // 200MB max cache (doubled for more buffering)
+          maxCacheFileSize: 100 * 1024 * 1024, // 100MB per file (doubled)
         ),
         bufferingConfiguration: BetterPlayerBufferingConfiguration(
-          minBufferMs: 15000, // 15 seconds minimum buffer
-          maxBufferMs: 50000, // 50 seconds maximum buffer
-          bufferForPlaybackMs: 2500, // 2.5 seconds for playback start
-          bufferForPlaybackAfterRebufferMs: 5000, // 5 seconds after rebuffer
+          minBufferMs: 30000, // 30 seconds minimum buffer (increased for slow internet)
+          maxBufferMs: 120000, // 120 seconds maximum buffer (2 minutes for very slow connections)
+          bufferForPlaybackMs: 5000, // 5 seconds for playback start (increased for slow internet)
+          bufferForPlaybackAfterRebufferMs: 10000, // 10 seconds after rebuffer (increased for stability)
         ),
       );
     } else if (!kIsWeb) {

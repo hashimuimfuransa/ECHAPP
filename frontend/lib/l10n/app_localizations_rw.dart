@@ -156,7 +156,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get myLearning => 'Ukugiga Kwanjye';
 
   @override
-  String get downloads => 'Ibyamanutse';
+  String get downloads => 'Ibyakuruwe';
 
   @override
   String get offline => 'Nta Interineti';
@@ -295,11 +295,15 @@ class AppLocalizationsRw extends AppLocalizations {
   String get enter6DigitCode => 'Nyamuneka shyiraho kode igizwe n\'imibare 6';
 
   @override
+  String get phoneAuthBrowserWarning =>
+      'Kwiyemeza ukoresheje telefone bishobora gufungura browser ngo wemeze. Nyamuneka ntuze guhagarika icyo gikorwa.';
+
+  @override
   String get emailAuthOptionTitle => 'Hitamo Inzira';
 
   @override
   String get emailAuthOptionSubtitle =>
-      'Hitamo uburyo ushaka gukoresha mu konti yawe';
+      'Hitamo uburyo ushaka gukoresha winjira muri konti yawe';
 
   @override
   String get signIn => 'Injira';
@@ -342,14 +346,14 @@ class AppLocalizationsRw extends AppLocalizations {
       'Konti yawe irarindwa neza n\'uburyo bwihariye';
 
   @override
-  String get secureProtected => 'Amakuru yawe arinzwe kandi ararindwa';
+  String get secureProtected => 'Amakuru yawe ararinzwe';
 
   @override
   String get chooseYourPath => 'Hitamo Inzira';
 
   @override
   String get selectHowToProceed =>
-      'Hitamo uburyo ushaka gukoresha mu konti yawe';
+      'Hitamo uburyo ushaka gukoresha winjira muri konti yawe';
 
   @override
   String get goBack => 'Subira inyuma';
@@ -456,7 +460,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get phoneNumber => 'Numero ya Telefone';
 
   @override
-  String get onboardingInterestTitle => 'Wifatira Iki?';
+  String get onboardingInterestTitle => 'Wifuza kwiga Ibijyanye ni Iki?';
 
   @override
   String get onboardingInterestSubtitle => 'Hitamo ingingo ushaka kwiga';
@@ -466,16 +470,16 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get onboardingPersonalizationSubtitle =>
-      'Tubwire icyo ushaka kugeraho tukuhe inzira yawe';
+      'Tubwire icyo ushaka kugeraho tuguhe inzira yawe';
 
   @override
-  String get shortTermGoal => 'Intego Mubyimwacye';
+  String get shortTermGoal => 'Intego Murimacye';
 
   @override
   String get midTermGoal => 'Intego Muburyo Buringaniye';
 
   @override
-  String get longTermGoal => 'Intego Muburyo Bureure';
+  String get longTermGoal => 'Intego Muburyo Burebure';
 
   @override
   String get shortTermHint => 'Ni iki ushaka kugeraho vuba?';
@@ -490,7 +494,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get saveAndContinue => 'Bika & Komeza';
 
   @override
-  String get skipForNow => 'Rukura Ubungubu';
+  String get skipForNow => 'Simbuka Ibi';
 
   @override
   String get step => 'Intambwe';
@@ -514,7 +518,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get or => 'OR';
 
   @override
-  String get deviceWarningTitle => 'Umutekano wa Aporo';
+  String get deviceWarningTitle => 'Umutekano wa Device';
 
   @override
   String get deviceWarningMessage =>
@@ -536,7 +540,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get certifications => 'Ibyemezo';
 
   @override
-  String get expertInstructors => 'Abigisha Banyamwuga';
+  String get expertInstructors => 'Abigisha Babanyamwuga';
 
   @override
   String get learnAnywhere => 'Kwigira Aho Uri Hose';
@@ -572,24 +576,23 @@ class AppLocalizationsRw extends AppLocalizations {
   String get motivationalQuote2 => 'Buri isomo rikuzanira hafi intego yawe.';
 
   @override
-  String get motivationalQuote3 => 'Komeza - guhora ukora birusha impano.';
+  String get motivationalQuote3 =>
+      'Komeza - guhora ukora birushaho kuguha impano.';
 
   @override
-  String get motivationalQuote4 =>
-      'Abanyamwuga biga buri munsi. Nawe uri wowe.';
+  String get motivationalQuote4 => 'Abanyamwuga biga buri munsi. Nawe uri we.';
 
   @override
   String get motivationalQuote5 => 'Intambwe nto, impinduka nini.';
 
   @override
-  String get motivationalQuote6 =>
-      'Igikomere cye cyahoze kikubuze. Ba uwiteguye.';
+  String get motivationalQuote6 => 'Igikombe cyawe kiri hafi. Ba uwiteguye.';
 
   @override
   String get motivationalQuote7 => 'Abakora neza ntibigeze bareka kwiga.';
 
   @override
-  String get welcomeToExcellenceHub => 'Ikaze muri Excellence Hub!';
+  String get welcomeToExcellenceHub => 'Ikaze muri Excellence Coaching Hub!';
 
   @override
   String get startFirstLesson =>
@@ -606,7 +609,7 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get accountBoundToDevice =>
-      'Konti yawe irindeye telefone iyi. Twandikire niba ushaka guhindura.';
+      'Konti yawe yomatanye niyi telefone. Twandikire niba ushaka guhindura.';
 
   @override
   String get refreshApp => 'Vugurura App';
@@ -636,7 +639,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get yourProgress => 'Iterambere ryawe';
 
   @override
-  String get recommendedForYou => 'Amasomo Yakugeretseho';
+  String get recommendedForYou => 'Amasomo akubereye';
 
   @override
   String get popularCourses => 'Amasomo Akunzwe';
@@ -1310,7 +1313,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get errorPickingImage => 'Habaye ikosa mu guhitamo ifoto';
 
   @override
-  String get myDownloads => 'Ibyamanutse Byanjye';
+  String get myDownloads => 'Ibyakuruwe Byanjye';
 
   @override
   String get downloadedContent => 'Ibikubiyemo Byamanutse';
@@ -1340,7 +1343,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get downloadComplete => 'Kumanura byarangiye';
 
   @override
-  String get noDownloads => 'Nta byamanutse';
+  String get noDownloads => 'Nta byakuruwe';
 
   @override
   String get noDownloadsSubtitle => 'Manura amasomo wigire nta interineti';
@@ -1364,7 +1367,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get manageStorage => 'Teza Ububiko';
 
   @override
-  String get clearAllDownloads => 'Siba Ibyamanutse Byose';
+  String get clearAllDownloads => 'Siba Ibyakuruwe Byose';
 
   @override
   String get offlineMode => 'Uburyo nta Interineti';
@@ -1976,7 +1979,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get videoNotAvailable => 'Video ntaboneka';
 
   @override
-  String get viewInDownloads => 'Ereka mu Ibyamanutse';
+  String get viewInDownloads => 'Ereka mu Ibyakuruwe';
 
   @override
   String get noVideoAvailableForDownload => 'Nta video yamanutse ihari';
@@ -2031,7 +2034,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get downloadPDF => 'Manura PDF';
 
   @override
-  String get viewDownloads => 'Ereka Ibyamanutse';
+  String get viewDownloads => 'Ereka Ibyakuruwe';
 
   @override
   String get pdfView => 'Reba PDF';
@@ -2131,11 +2134,143 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get checkOutLesson =>
-      'Reba iyi isomo biva muri Excellence Coaching Hub';
+      'Reba iriyi isomo riva muri Excellence Coaching Hub';
 
   @override
   String get askAIButton => 'Baza AI';
 
   @override
   String get instructions => 'Amabwiriza';
+
+  @override
+  String get resumeLessons => 'Komeza amasomo';
+
+  @override
+  String get studyOffline => 'Kwiga nta interineti';
+
+  @override
+  String get showProgress => 'Erekana iterambere';
+
+  @override
+  String get reviewResults => 'Reba ibisubizo';
+
+  @override
+  String get hello => 'Muraho';
+
+  @override
+  String get professionalLearningFailedToLoadCourse => 'Gushaka isomo byanze';
+
+  @override
+  String get professionalLearningCheckConnectionTryAgain =>
+      'Nyamuneka reba niba ufite interineti, hanyuma gerageza nanone';
+
+  @override
+  String get professionalLearningCourseInformation => 'Amakuru y\'Isomo';
+
+  @override
+  String get professionalLearningYourProgress => 'Iterambere Ryawe';
+
+  @override
+  String get professionalLearningComplete => 'Byarangiye';
+
+  @override
+  String get professionalLearningContinueLearning => 'Komeza Kwiga';
+
+  @override
+  String get professionalLearningViewContent => 'Reba Ibikubiyemo';
+
+  @override
+  String get professionalLearningNoContentAvailable => 'Nta bikubiyemo bihari';
+
+  @override
+  String get professionalLearningOverview => 'Incamake';
+
+  @override
+  String get professionalLearningContent => 'Ibikubiyemo';
+
+  @override
+  String get professionalLearningResources => 'Ibyifashishwa';
+
+  @override
+  String get professionalLearningRefresh => 'Vugurura';
+
+  @override
+  String get professionalLearningCertificates => 'Ibyemezo';
+
+  @override
+  String get professionalLearningYourCertificates => 'Ibyemezo Byawe';
+
+  @override
+  String get professionalLearningCertificate => 'Icyemezo';
+
+  @override
+  String get professionalLearningIssued => 'Yoherejwe';
+
+  @override
+  String get professionalLearningAdditionalResources =>
+      'Ibyifashishwa Birenzeho';
+
+  @override
+  String get professionalLearningStudentGuide => 'Inzira y\'Umunyeshuri';
+
+  @override
+  String get professionalLearningStudentGuideSubtitle =>
+      'Wakire ubufasha mu kwinjira no gukoresha';
+
+  @override
+  String get professionalLearningAiAssistant => 'Umufasha wa AI';
+
+  @override
+  String get professionalLearningAiAssistantSubtitle =>
+      'Wakire ubufasha ku bigize isomo';
+
+  @override
+  String get professionalLearningContinue => 'Komeza';
+
+  @override
+  String get professionalLearningNoLessonsAvailable => 'Nta masomo bihari';
+
+  @override
+  String get professionalLearningLessonsCount => 'amasomo';
+
+  @override
+  String get lessonScreenLessonNotFound => 'Isomo Ntabonetse';
+
+  @override
+  String get lessonScreenLessonNotFoundMessage =>
+      'Isomo ushaka ntabonetse cyangwa yasibwe.';
+
+  @override
+  String get lessonScreenGoBack => 'Subira Inyuma';
+
+  @override
+  String get lessonScreenCompleted => 'Byarangiye';
+
+  @override
+  String get lessonScreenAiAssistant => 'Umufasha wa AI';
+
+  @override
+  String get lessonScreenReportIssue => 'Vuga Ikibazo';
+
+  @override
+  String get lessonScreenNoVideoAvailable => 'Nta video ihari';
+
+  @override
+  String get lessonScreenLessonOverview => 'Incamake y\'Isomo';
+
+  @override
+  String get lessonScreenNoDuration => 'Nta gihe';
+
+  @override
+  String get lessonScreenPrevious => 'Iribanze';
+
+  @override
+  String get lessonScreenNext => 'Ikurikira';
+
+  @override
+  String get lessonScreenMarkComplete => 'Shyiraho Ikimenyetso';
+
+  @override
+  String get lessonScreenMarkLessonComplete =>
+      'Shyiraho ikimenyetso cyo kurangiza';
 }

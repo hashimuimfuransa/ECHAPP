@@ -39,10 +39,12 @@ class AuthRepository {
       throw Exception('The request timed out. Please check your connection or try again later.');
     } else {
       String message = e.toString().replaceFirst('Exception: ', '');
-      // Remove any redundant "Firebase login error: " if it already exists
+      // Remove any redundant error prefixes
       message = message.replaceFirst('Firebase login error: ', '');
       message = message.replaceFirst('Login error: ', '');
       message = message.replaceFirst('Registration error: ', '');
+      // Scrub Firebase references from user-facing messages
+      message = message.replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
       
       throw Exception(message);
     }

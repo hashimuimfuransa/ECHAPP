@@ -108,7 +108,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         
         if (idToken == null) {
           debugPrint('AuthProvider: ERROR - idToken is null after login');
-          throw Exception('Failed to get Firebase ID token after login');
+          throw Exception('Failed to get authentication token after login');
         }
         
         // Step 3: Send token to backend for authentication
@@ -253,21 +253,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
         },
         verificationFailed: (firebase_auth.FirebaseAuthException e) {
           debugPrint('AuthProvider: OTP sending failed: ${e.code} - ${e.message}');
-          String errorMessage = e.toString();
           
-          // Provide user-friendly error messages
-          final msgLower = errorMessage.toLowerCase();
-          if (msgLower.contains('invalid-phone-number')) {
-            errorMessage = 'Please enter a valid phone number.';
-          } else if (msgLower.contains('quota-exceeded')) {
-            errorMessage = 'Too many SMS requests. Please try again later.';
-          } else if (msgLower.contains('network error') || 
-                     msgLower.contains('connection failed') || 
-                     msgLower.contains('socketexception')) {
-            errorMessage = 'Network connection error. Please check your internet connection and try again.';
-          } else {
-            errorMessage = errorMessage.replaceFirst('Exception: ', '').replaceAll('Firebase', 'Authentication');
+          // Use FirebaseAuthService's error mapping for consistent user-friendly messages
+          String errorMessage;
+          try {
+            final mappedException = FirebaseAuthService.mapFirebaseAuthException(e);
+            errorMessage = mappedException.toString().replaceFirst('Exception: ', '');
+          } catch (_) {
+            // Fallback if mapping fails
+            errorMessage = e.message ?? 'Failed to send verification code';
           }
+          
+          // Additional scrubbing to ensure no Firebase references
+          errorMessage = errorMessage.replaceAll('Firebase', 'Authentication').replaceAll('firebase', 'authentication');
           
           state = state.copyWith(
             isLoading: false,
@@ -328,7 +326,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final idToken = await firebaseUser.getIdToken();
         
         if (idToken == null) {
-          throw Exception('Failed to get Firebase ID token after phone sign-in');
+          throw Exception('Failed to get authentication token after phone sign-in');
         }
         
         // Send token to backend for authentication
@@ -448,7 +446,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         
         if (idToken == null) {
           debugPrint('AuthProvider: ERROR - idToken is null after registration');
-          throw Exception('Failed to get Firebase ID token after registration');
+          throw Exception('Failed to get authentication token after registration');
         }
         
         // Step 3: Send token to backend for user creation in MongoDB
@@ -519,7 +517,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (firebaseUser == null) throw Exception('No authenticated user found. Please login again.');
     
     final idToken = await firebaseUser.getIdToken(true);
-    if (idToken == null) throw Exception('Failed to get fresh Firebase ID token');
+    if (idToken == null) throw Exception('Failed to get fresh authentication token');
     
     String? deviceId;
     try {
@@ -745,7 +743,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('AuthProvider: Got Firebase ID token');
         
         if (idToken == null || idToken.toString().isEmpty) {
-          throw Exception('Failed to get valid Firebase ID token');
+          throw Exception('Failed to get valid authentication token');
         }
         
         // Send token to backend for authentication

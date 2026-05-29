@@ -252,167 +252,335 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Left side - Logo and branding
+          // Left side - Logo and branding with modern glassmorphism
           Expanded(
             flex: 1,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(40),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
+            child: Padding(
+              padding: const EdgeInsets.all(60),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Logo with glow effect
+                  Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF00C896).withOpacity(0.3),
+                          const Color(0xFF00C896).withOpacity(0.1),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00C896).withOpacity(0.4),
+                          blurRadius: 40,
+                          spreadRadius: 8,
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.1),
+                          blurRadius: 20,
+                          spreadRadius: -5,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 120,
-                    height: 120,
+                  const SizedBox(height: 48),
+                  // App name with modern typography
+                  const Text(
+                    'Excellence',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 56,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1,
+                      height: 1.1,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          blurRadius: 20,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                const Text(
-                  'Excellence\nCoaching Hub',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
+                  const Text(
+                    'Coaching Hub',
+                    style: TextStyle(
+                      color: Color(0xFF00C896),
+                      fontSize: 48,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                      height: 1.1,
+                      shadows: [
+                        Shadow(
+                          color: Color(0xFF00C896),
+                          blurRadius: 30,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Tagline
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1,
                       ),
+                    ),
+                    child: const Text(
+                      'Transforming Education Through Technology',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  // Stats row
+                  Row(
+                    children: [
+                      _buildStatItem('10K+', 'Students'),
+                      const SizedBox(width: 32),
+                      _buildStatItem('500+', 'Courses'),
+                      const SizedBox(width: 32),
+                      _buildStatItem('98%', 'Success'),
                     ],
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Transforming Education\nThrough Technology',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 20,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           
-          // Right side - Loading and features
+          // Right side - Loading and features with modern card design
           Expanded(
             flex: 1,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Loading indicator with enhanced styling
-                Container(
-                  padding: const EdgeInsets.all(30),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      if (_isInitializing) ...[
-                        const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 4,
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          _loadingMessage,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ] else ...[
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.white,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Ready to go!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+            child: Padding(
+              padding: const EdgeInsets.all(60),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Loading card with glassmorphism
+                  Container(
+                    padding: const EdgeInsets.all(48),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 40,
+                          spreadRadius: 0,
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 50),
-                
-                // Feature highlights
-                Container(
-                  padding: const EdgeInsets.all(25),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.15),
-                      width: 1,
+                    ),
+                    child: Column(
+                      children: [
+                        if (_isInitializing) ...[
+                          SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: CircularProgressIndicator(
+                              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00C896)),
+                              strokeWidth: 4,
+                              backgroundColor: Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          Text(
+                            _loadingMessage,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ] else ...[
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00C896), Color(0xFF009E76)],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00C896).withOpacity(0.4),
+                                  blurRadius: 30,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          const Text(
+                            'Ready to go!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  child: const Column(
+                  
+                  const SizedBox(height: 48),
+                  
+                  // Feature cards grid
+                  Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _FeatureItem(
-                            icon: Icons.video_library,
-                            label: 'Video Courses',
-                          ),
-                          _FeatureItem(
-                            icon: Icons.quiz,
-                            label: 'Interactive Quizzes',
-                          ),
-                          _FeatureItem(
-                            icon: Icons.verified,
-                            label: 'Certifications',
-                          ),
-                        ],
+                      Expanded(
+                        child: _buildFeatureCard(
+                          icon: Icons.video_library_rounded,
+                          title: 'Video Courses',
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
-                      SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _FeatureItem(
-                            icon: Icons.groups,
-                            label: 'Expert Instructors',
-                          ),
-                          _FeatureItem(
-                            icon: Icons.mobile_friendly,
-                            label: 'Learn Anywhere',
-                          ),
-                          _FeatureItem(
-                            icon: Icons.track_changes,
-                            label: 'Progress Tracking',
-                          ),
-                        ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildFeatureCard(
+                          icon: Icons.quiz_rounded,
+                          title: 'Interactive Quizzes',
+                          color: const Color(0xFF8B5CF6),
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFeatureCard(
+                          icon: Icons.verified_rounded,
+                          title: 'Certifications',
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildFeatureCard(
+                          icon: Icons.groups_rounded,
+                          title: 'Expert Instructors',
+                          color: const Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF00C896),
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
