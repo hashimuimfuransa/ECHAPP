@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/models/course.dart';
@@ -30,9 +31,8 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
   bool _isNavigating = false;
   bool _isPressed = false;
   late AnimationController _rippleController;
-  late AnimationController _loadingController;
   late Animation<double> _rippleAnimation;
-  late Animation<double> _loadingAnimation;
+  Timer? _dismissTimer;
 
   @override
   void initState() {
@@ -41,11 +41,7 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _loadingController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    
+
     _rippleAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -53,20 +49,12 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
       parent: _rippleController,
       curve: Curves.easeOut,
     ));
-    
-    _loadingAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _loadingController,
-      curve: Curves.linear,
-    ));
   }
 
   @override
   void dispose() {
+    _dismissTimer?.cancel();
     _rippleController.dispose();
-    _loadingController.dispose();
     super.dispose();
   }
 
@@ -91,9 +79,6 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
       _rippleController.forward();
     }
 
-    // Start loading animation
-    _loadingController.repeat();
-
     try {
       // Optimized navigation with preloading
       await _navigateWithOptimization();
@@ -108,11 +93,21 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
   Future<void> _navigateWithOptimization() async {
     // Preload navigation state
     NavigationPerformanceMonitor.startNavigation('course_${widget.course.id}');
-    
-    // Start navigation immediately with loading overlay
-    if (mounted) {
-      _showLoadingOverlay();
-    }
+
+    // Don't show dialog overlay - use inline loading indicator instead
+    // The inline indicator is already shown via _isNavigating state
+
+    // Set a fallback timer to reset navigation state after 3 seconds
+    _dismissTimer?.cancel();
+    _dismissTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+          _isPressed = false;
+        });
+        _rippleController.reset();
+      }
+    });
 
     try {
       // Execute optimized course navigation
@@ -125,36 +120,24 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
       print('Navigation error: $e');
     } finally {
       NavigationPerformanceMonitor.endNavigation('course_${widget.course.id}');
-    }
-  }
 
-  void _triggerHapticFeedback() {
-    // Light haptic feedback for immediate response
-    // Note: You can add haptic feedback package if needed
-  }
+      // Cancel the fallback timer
+      _dismissTimer?.cancel();
 
-  void _showLoadingOverlay() {
-    if (!mounted) return;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => _LoadingOverlay(
-        courseTitle: widget.course.title,
-        loadingAnimation: _loadingAnimation,
-      ),
-    ).then((_) {
-      // Reset states when dialog is closed
+      // Reset navigation state
       if (mounted) {
         setState(() {
           _isNavigating = false;
           _isPressed = false;
         });
         _rippleController.reset();
-        _loadingController.stop();
-        _loadingController.reset();
       }
-    });
+    }
+  }
+
+  void _triggerHapticFeedback() {
+    // Light haptic feedback for immediate response
+    // Note: You can add haptic feedback package if needed
   }
 
   void _showErrorSnackBar() {
@@ -240,116 +223,6 @@ class _EnhancedCourseNavigationState extends ConsumerState<EnhancedCourseNavigat
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Loading overlay dialog for course navigation
-class _LoadingOverlay extends StatelessWidget {
-  final String courseTitle;
-  final Animation<double> loadingAnimation;
-
-  const _LoadingOverlay({
-    required this.courseTitle,
-    required this.loadingAnimation,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Loading animation
-            AnimatedBuilder(
-              animation: loadingAnimation,
-              builder: (context, child) {
-                return Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryGreen,
-                        AppTheme.primaryGreen.withOpacity(0.6),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Transform.rotate(
-                      angle: loadingAnimation.value * 2 * 3.14159,
-                      child: const Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Loading text
-            Text(
-              'Navigating to course...',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              courseTitle.length > 30 
-                ? '${courseTitle.substring(0, 30)}...'
-                : courseTitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Progress indicator
-            LinearProgressIndicator(
-              backgroundColor: Colors.grey[300],
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              'Checking course access and payment status...',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

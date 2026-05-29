@@ -1826,6 +1826,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactUsForLiveClasses => 'Contact Us for Live Classes';
 
   @override
+  String get liveClassesBenefit =>
+      'Get real-time interaction, instant feedback & personalized guidance from instructors.';
+
+  @override
   String get myProgress => 'My Progress';
 
   @override

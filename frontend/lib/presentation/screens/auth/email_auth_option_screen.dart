@@ -71,6 +71,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
 
   Widget _buildDesktopLayout(AppLocalizations l10n) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       body: Row(
         children: [
           // Left branding panel (45%)
@@ -82,19 +83,80 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
               tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          // Right white form panel (55%)
+          // Right form panel (55%)
           Expanded(
             flex: 55,
             child: Container(
-              color: Colors.white,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 60),
-                    child: _buildRightPanel(l10n),
+              color: const Color(0xFFF9FAFB),
+              child: Column(
+                children: [
+                  // Top branded header bar
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => context.pop(),
+                          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7280), size: 20),
+                          tooltip: 'Back',
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00C896).withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF00C896).withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.apps_rounded, color: Color(0xFF00C896), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Choose Your Path',
+                                style: TextStyle(
+                                  color: Color(0xFF00C896),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Excellence Coaching Hub',
+                          style: TextStyle(
+                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  // Form content
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                          child: _buildRightPanel(l10n),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -105,7 +167,6 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
 
   Widget _buildRightPanel(AppLocalizations l10n) {
     // Fallback strings if localization fails
-    final String goBackText = l10n.goBack;
     final String choosePathText = l10n.chooseYourPath;
     final String selectHowText = l10n.selectHowToProceed;
     final String signInText = l10n.signIn;
@@ -114,120 +175,107 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
     final String joinCommunityText = l10n.joinCommunity;
     final String resetPasswordText = l10n.resetPassword;
     final String recoverAccessText = l10n.recoverAccess;
-    final String enterpriseSecurityText = l10n.enterpriseSecurity;
     
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Page title section with indicator
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C896),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: Icon(Icons.close_rounded, color: _isDark ? Colors.white70 : Colors.black54, size: 28),
-                    tooltip: goBackText,
+                  Text(
+                    choosePathText,
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    selectHowText,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0.3, 0), end: Offset.zero)
-                      .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        choosePathText,
-                        style: TextStyle(
-                          color: _isDark ? Colors.white : const Color(0xFF1A2433),
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        selectHowText,
-                        style: TextStyle(
-                          color: _isDark ? Colors.white60 : const Color(0xFF4A5568),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 50),
-                      _AuthOptionButton(
-                        icon: Icons.login_rounded,
-                        title: signInText,
-                        subtitle: accessAccountText,
-                        color: const Color(0xFF4CAF50),
-                        onTap: () => context.push('/login'),
-                        delay: 100,
-                      ),
-                      const SizedBox(height: 20),
-                      _AuthOptionButton(
-                        icon: Icons.person_add_rounded,
-                        title: createAccountText,
-                        subtitle: joinCommunityText,
-                        color: const Color(0xFF2196F3),
-                        onTap: () => context.push('/register'),
-                        delay: 200,
-                      ),
-                      const SizedBox(height: 20),
-                      _AuthOptionButton(
-                        icon: Icons.lock_reset_rounded,
-                        title: resetPasswordText,
-                        subtitle: recoverAccessText,
-                        color: const Color(0xFFFF9800),
-                        onTap: () => context.push('/forgot-password'),
-                        delay: 300,
-                      ),
-                      const SizedBox(height: 40),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.verified_user_rounded, color: Color(0xFF00C896), size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                enterpriseSecurityText,
-                                style: TextStyle(
-                                  color: _isDark ? Colors.white70 : const Color(0xFF4A5568),
-                                  fontSize: 13,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      _TermsFooter(l10n: l10n),
-                    ],
-                  ),
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 36),
+        // Options card
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CompactAuthOptionButton(
+                icon: Icons.login_rounded,
+                title: signInText,
+                subtitle: accessAccountText,
+                color: const Color(0xFF10B981),
+                onTap: () => context.push('/login'),
+              ),
+              const SizedBox(height: 16),
+              _CompactAuthOptionButton(
+                icon: Icons.person_add_rounded,
+                title: createAccountText,
+                subtitle: joinCommunityText,
+                color: const Color(0xFF3B82F6),
+                onTap: () => context.push('/register'),
+              ),
+              const SizedBox(height: 16),
+              _CompactAuthOptionButton(
+                icon: Icons.lock_reset_rounded,
+                title: resetPasswordText,
+                subtitle: recoverAccessText,
+                color: const Color(0xFFF59E0B),
+                onTap: () => context.push('/forgot-password'),
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 24),
+        // Security badge
+        _buildSecurityBadge(l10n),
+        const SizedBox(height: 16),
+        // Terms footer
+        _buildTermsFooter(l10n),
+      ],
     );
   }
 
@@ -380,21 +428,21 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
   }
 
   Widget _buildSecurityBadge(AppLocalizations? l10n) {
-    final String secureText = l10n?.secureProtected ?? 'Your information is secure and protected';
+    final String secureText = l10n?.secureProtected ?? 'Secure & Protected';
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _isDark ? const Color(0xFF10B981).withOpacity(0.15) : const Color(0xFFF0FDF4),
+        color: const Color(0xFFF0FDF4),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _isDark ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFFBBF7D0), width: 1),
+        border: Border.all(color: const Color(0xFFBBF7D0), width: 1),
       ),
       child: Row(
         children: [
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
+              color: const Color(0xFFD1FAE5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.verified_user, color: Color(0xFF059669), size: 16),
@@ -403,8 +451,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
           Expanded(
             child: Text(
               secureText,
-              style: TextStyle(
-                  color: _textColor,
+              style: const TextStyle(
+                  color: Color(0xFF1F2937),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   height: 1.3),
@@ -424,19 +472,19 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
 
     return Text.rich(
       TextSpan(
-        style: TextStyle(
-            color: _tertiaryTextColor,
-            fontSize: 11.5,
+        style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12.5,
             height: 1.5),
         children: [
           TextSpan(text: '$byContinuingText '),
           TextSpan(
             text: termsText,
             style: const TextStyle(
-                color: Color(0xFF10B981),
+                color: Color(0xFF00C896),
                 fontWeight: FontWeight.w700,
                 decoration: TextDecoration.underline,
-                decorationColor: Color(0xFF10B981)),
+                decorationColor: Color(0xFF00C896)),
             recognizer: TapGestureRecognizer()
               ..onTap = () => context.push('/terms'),
           ),
@@ -444,16 +492,139 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
           TextSpan(
             text: privacyText,
             style: const TextStyle(
-                color: Color(0xFF10B981),
+                color: Color(0xFF00C896),
                 fontWeight: FontWeight.w700,
                 decoration: TextDecoration.underline,
-                decorationColor: Color(0xFF10B981)),
+                decorationColor: Color(0xFF00C896)),
             recognizer: TapGestureRecognizer()
               ..onTap = () => context.push('/privacy'),
           ),
         ],
       ),
       textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _CompactAuthOptionButton extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _CompactAuthOptionButton({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_CompactAuthOptionButton> createState() => _CompactAuthOptionButtonState();
+}
+
+class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isHovered
+                  ? widget.color.withOpacity(0.5)
+                  : const Color(0xFFE2E8F0),
+              width: _isHovered ? 2 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+              if (_isHovered)
+                BoxShadow(
+                  color: widget.color.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      widget.color,
+                      widget.color.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: Color(0xFF1A2433),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: _isHovered ? widget.color : const Color(0xFF8899AA),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

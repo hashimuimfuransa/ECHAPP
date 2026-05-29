@@ -52,6 +52,7 @@ import 'package:excellencecoachinghub/presentation/screens/learning/professional
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_quiz_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/notifications/notifications_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/widgets/main_layout.dart';
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
@@ -200,7 +201,14 @@ class AppRouter {
           // Onboarding Screens - Outside MainLayout for full-screen experience
           GoRoute(
             path: '/interest-selection',
-            builder: (context, state) => const InterestSelectionScreen(),
+            builder: (context, state) {
+              bool isEditMode = false;
+              if (state.extra is Map) {
+                final extra = state.extra as Map;
+                isEditMode = extra['isEditMode'] == true;
+              }
+              return InterestSelectionScreen(isEditMode: isEditMode);
+            },
           ),
           // Privacy, Terms, Help - Outside MainLayout to prevent layout duplication
           GoRoute(
@@ -583,6 +591,10 @@ class AppRouter {
               GoRoute(
                 path: '/certificates',
                 builder: (context, state) => const CertificatesScreen(),
+              ),
+              GoRoute(
+                path: '/exams/history',
+                builder: (context, state) => const ExamHistoryScreen(),
               ),
             ],
           ),

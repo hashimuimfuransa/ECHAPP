@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/phone_validator.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class _Country {
   final String name;
@@ -212,6 +215,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
   }
 
   void _showCountryPicker() {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -235,10 +239,10 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Select Country',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          l10n?.selectCountry ?? 'Select Country',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ),
                       IconButton(
@@ -336,7 +340,24 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(authProvider);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
+    final authState = ref.watch(authProvider);
+
+    // Skip if user already has a phone number (signed up with phone)
+    if (authState.user?.phone != null && authState.user!.phone!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/dashboard');
+      });
+      return const SizedBox.shrink();
+    }
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF9FAFB),
+        body: _buildDesktopLayout(l10n),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF00C896),
@@ -385,9 +406,9 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
             const SizedBox(height: 16),
 
-            const Text(
-              'Add Your Phone Number',
-              style: TextStyle(
+            Text(
+              l10n?.phoneCollectionTitle ?? 'Add Your Phone Number',
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -396,9 +417,9 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
             const SizedBox(height: 6),
 
-            const Text(
-              'Stay connected for important updates',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+            Text(
+              l10n?.phoneCollectionSubtitle ?? 'Stay connected for important updates',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
 
             const SizedBox(height: 20),
@@ -418,11 +439,11 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildPhoneForm(),
+                      _buildPhoneForm(l10n),
                       const SizedBox(height: 24),
-                      _buildSaveButton(),
+                      _buildSaveButton(l10n),
                       const SizedBox(height: 16),
-                      _buildSkipButton(),
+                      _buildSkipButton(l10n),
                     ],
                   ),
                 ),
@@ -434,16 +455,16 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
     );
   }
 
-  Widget _buildPhoneForm() {
+  Widget _buildPhoneForm(AppLocalizations? l10n) {
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Country selector
-          const Text(
-            'Country',
-            style: TextStyle(
+          Text(
+            l10n?.selectCountry ?? 'Country',
+            style: const TextStyle(
               color: Color(0xFF1A2433),
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -486,9 +507,9 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Phone Number',
-            style: TextStyle(
+          Text(
+            l10n?.phoneNumber ?? 'Phone Number',
+            style: const TextStyle(
               color: Color(0xFF1A2433),
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -540,7 +561,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(AppLocalizations? l10n) {
     return Material(
       color: Colors.transparent,
       child: Ink(
@@ -556,21 +577,140 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: _isLoading
                 ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                : const Text('Save Phone Number', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                : Text(l10n?.continueToDashboard ?? 'Save Phone Number', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSkipButton() {
+  Widget _buildSkipButton(AppLocalizations? l10n) {
     return TextButton(
       onPressed: _isLoading ? null : () {
         context.go('/interest-selection');
       },
-      child: const Text(
-        'Skip for now',
-        style: TextStyle(color: Color(0xFF4A5568), fontSize: 14, fontWeight: FontWeight.w500),
+      child: Text(
+        l10n?.skipForNow ?? 'Skip for now',
+        style: const TextStyle(color: Color(0xFF4A5568), fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  // ─── Desktop layout ─────────────────────────────────────────────────────────
+  Widget _buildDesktopLayout(AppLocalizations? l10n) {
+    return Row(
+      children: [
+        // Left branding panel (42%)
+        const Expanded(
+          flex: 42,
+          child: DesktopBrandPanel(
+            headline: 'Secure Your',
+            title: 'Account',
+            tagline: 'Add your phone number for enhanced security and important updates.',
+          ),
+        ),
+        // Right content panel (58%)
+        Expanded(
+          flex: 58,
+          child: _buildDesktopRightPanel(l10n),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopRightPanel(AppLocalizations? l10n) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.phone_rounded, color: Color(0xFF10B981), size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n?.phoneCollectionTitle ?? 'Add Phone Number',
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n?.phoneCollectionSubtitle ?? 'This helps secure your account',
+                              style: const TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Form card
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildPhoneForm(l10n),
+                      const SizedBox(height: 24),
+                      _buildSaveButton(l10n),
+                      const SizedBox(height: 16),
+                      _buildSkipButton(l10n),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

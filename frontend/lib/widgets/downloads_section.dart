@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'dart:io';
@@ -222,13 +223,26 @@ class DownloadsSection extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => OptimizedVideoPlayer(
-          videoId: download.lessonId,
-          videoUrl: download.localPath,
-          title: download.originalTitle,
-          description: 'Local video file',
-          showAppBar: true,
-        ),
+        builder: (context) {
+          // Use better_player_enhanced for mobile, CustomVideoPlayer for desktop
+          if (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+            return OptimizedVideoPlayer(
+              videoId: download.lessonId,
+              videoUrl: download.localPath,
+              title: download.originalTitle,
+              description: 'Local video file',
+              showAppBar: true,
+            );
+          } else {
+            return CustomVideoPlayer(
+              videoId: download.lessonId,
+              videoUrl: download.localPath,
+              title: download.originalTitle,
+              description: 'Local video file',
+              showAppBar: true,
+            );
+          }
+        },
       ),
     );
   }

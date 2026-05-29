@@ -3662,6 +3662,12 @@ abstract class AppLocalizations {
   /// **'Contact Us for Live Classes'**
   String get contactUsForLiveClasses;
 
+  /// No description provided for @liveClassesBenefit.
+  ///
+  /// In en, this message translates to:
+  /// **'Get real-time interaction, instant feedback & personalized guidance from instructors.'**
+  String get liveClassesBenefit;
+
   /// No description provided for @myProgress.
   ///
   /// In en, this message translates to:

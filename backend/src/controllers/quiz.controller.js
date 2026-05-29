@@ -6,6 +6,7 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const CertificatePDFService = require('../services/certificate_pdf_service');
 const { sendSuccess, sendError, sendNotFound } = require('../utils/response.utils');
+const notificationController = require('./notification.controller');
 
 // Fisher-Yates shuffle algorithm for better randomization
 const fisherYatesShuffle = (array) => {
@@ -581,6 +582,19 @@ const submitQuiz = async (req, res, next) => {
 
     // Save the submission to the database
     const savedSubmission = await Submission.create(submission);
+
+    // Send exam result notification to user
+    try {
+      const NotificationController = notificationController.constructor;
+      await NotificationController.createExamResultNotification(
+        userId,
+        exam.title,
+        percentage,
+        exam.courseId
+      );
+    } catch (notificationError) {
+      console.error('Error creating exam result notification:', notificationError);
+    }
 
     // Generate certificate for final exams if user passed
     if (passed && exam.type === 'final') {

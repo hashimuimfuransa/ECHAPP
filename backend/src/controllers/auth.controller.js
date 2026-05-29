@@ -364,21 +364,35 @@ const firebaseLogin = async (req, res) => {
         displayName = fullName || '';
       }
       
-      user = await User.create({
-        firebaseUid: decodedToken.uid,
-        ...(decodedToken.email && { email: decodedToken.email }),
-        fullName: displayName,
-        role: 'student',
-        provider: 'firebase',
-        isVerified: decodedToken.email_verified || false,
-        isActive: true,
-        // Firebase users don't need password
-        password: undefined,
-        // Save phone number if available (from phone auth)
-        ...(phoneNumber && { phone: phoneNumber }),
-        // Bind device ID if provided
-        ...(deviceId && { deviceId })
-      });
+      try {
+        user = await User.create({
+          firebaseUid: decodedToken.uid,
+          ...(decodedToken.email && { email: decodedToken.email }),
+          fullName: displayName,
+          role: 'student',
+          provider: 'firebase',
+          isVerified: decodedToken.email_verified || false,
+          isActive: true,
+          // Firebase users don't need password
+          password: undefined,
+          // Save phone number if available (from phone auth)
+          ...(phoneNumber && { phone: phoneNumber }),
+          // Bind device ID if provided
+          ...(deviceId && { deviceId })
+        });
+      } catch (createError) {
+        // Handle race condition or stale non-sparse index: if duplicate key on email/firebaseUid,
+        // the user was already created — fetch them instead of failing
+        if (createError.code === 11000) {
+          console.log('Duplicate key on create, fetching existing user by firebaseUid:', decodedToken.uid);
+          user = await User.findOne({ firebaseUid: decodedToken.uid });
+          if (!user) {
+            throw createError;
+          }
+        } else {
+          throw createError;
+        }
+      }
 
       // Send welcome email to the new user
       try {
@@ -468,6 +482,9 @@ const firebaseLogin = async (req, res) => {
     console.error('Firebase login error:', error);
     if (error.code === 'auth/argument-error') {
       return sendError(res, 'Invalid authentication token', 401);
+    }
+    if (error.code === 11000) {
+      return sendError(res, 'Account conflict: duplicate key. Please contact support.', 409, error.message);
     }
     return sendError(res, 'Authentication failed', 500, error.message);
   }

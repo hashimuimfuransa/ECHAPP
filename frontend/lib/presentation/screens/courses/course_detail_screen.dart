@@ -237,7 +237,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     // Fetch the course data using a provider that's scoped to the widget instance
     final courseAsync = ref.watch(_courseProvider(widget.courseId));
     final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(widget.courseId));
-    
+
     // Pre-fetch course content if user is already enrolled for instant loading
     isEnrolledAsync.whenData((isEnrolled) {
       if (isEnrolled) {
@@ -246,7 +246,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     });
 
     // Automatic redirect to learning screen if already enrolled
-    isEnrolledAsync.when(
+    // Check enrollment status first before showing any UI
+    final shouldRedirect = isEnrolledAsync.when(
       data: (isEnrolled) {
         print('Course Detail Screen - Course ID: ${widget.courseId}, Is Enrolled: $isEnrolled');
         if (isEnrolled && context.mounted && !_hasRedirected) {
@@ -269,17 +270,45 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             }
           });
         }
+        return isEnrolled;
       },
-      loading: () => print('Course Detail Screen - Checking enrollment status...'),
-      error: (error, stack) => print('Course Detail Screen - Enrollment check error: $error'),
+      loading: () {
+        print('Course Detail Screen - Checking enrollment status...');
+        return null;
+      },
+      error: (error, stack) {
+        print('Course Detail Screen - Enrollment check error: $error');
+        return false;
+      },
     );
-    
+
     // Manual pending payment check and refresh user payments
     // NOTE: Avoid forcing refresh here because this build() runs often
     // and triggers extra network calls / rebuilds.
     // The purchase button already reacts to hasPendingPaymentProvider.
     // If you need a one-time refresh, move it to initState.
 
+    // If user is enrolled and redirecting, show minimal loading instead of full screen
+    if (shouldRedirect == true && _hasRedirected) {
+      return const Scaffold(
+        body: GradientBackground(
+          colors: AppTheme.oceanGradient,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Redirecting to learning...',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return courseAsync.when(
       data: (course) {

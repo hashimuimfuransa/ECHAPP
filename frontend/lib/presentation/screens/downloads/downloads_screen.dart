@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/presentation/providers/download_provider.d
 import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -506,13 +507,26 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => OptimizedVideoPlayer(
-          videoId: download.lessonId,
-          videoUrl: download.localPath,
-          title: download.originalTitle,
-          description: 'Local video file',
-          showAppBar: true,
-        ),
+        builder: (context) {
+          // Use better_player_enhanced for mobile, CustomVideoPlayer for desktop
+          if (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+            return OptimizedVideoPlayer(
+              videoId: download.lessonId,
+              videoUrl: download.localPath,
+              title: download.originalTitle,
+              description: 'Local video file',
+              showAppBar: true,
+            );
+          } else {
+            return CustomVideoPlayer(
+              videoId: download.lessonId,
+              videoUrl: download.localPath,
+              title: download.originalTitle,
+              description: 'Local video file',
+              showAppBar: true,
+            );
+          }
+        },
       ),
     );
   }

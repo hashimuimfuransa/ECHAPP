@@ -542,6 +542,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       ),
                       const SizedBox(height: 18),
                       _buildUpdateInterestsCard(context),
+                      const SizedBox(height: 18),
+                      _buildLiveClassesContactCard(context),
                       const SizedBox(height: 24),
                       const DownloadsSection(),
                       const SizedBox(height: 32),
@@ -722,6 +724,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 icon: Icons.refresh_rounded,
                                 tooltip: l10n?.refresh ?? 'Refresh',
                                 onTap: _refreshDashboard,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildHeaderIconButton(
+                                icon: Icons.contact_support_rounded,
+                                tooltip: l10n?.contactUs ?? 'Contact Us',
+                                onTap: () => _showContactInfoDialog(context),
                               ),
                               const SizedBox(width: 12),
                               Consumer(
@@ -1883,7 +1891,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/interest-selection'),
+        onTap: () => context.push('/interest-selection', extra: {'isEditMode': true}),
         borderRadius: BorderRadius.circular(22),
         child: Ink(
           padding: EdgeInsets.all(isMobile ? 16 : 20),
@@ -1940,6 +1948,79 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveClassesContactCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showContactInfoDialog(context),
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: _modernPanelDecoration(
+            context,
+            accent: const Color(0xFF10B981),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: isMobile ? 42 : 50,
+                height: isMobile ? 42 : 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.live_tv_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n?.liveClassesAvailable ?? 'Live Classes Available',
+                      style: TextStyle(
+                        fontSize: isMobile ? 15 : 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n?.liveClassesBenefit ?? 'Get real-time interaction, instant feedback & personalized guidance from instructors.',
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      maxLines: isMobile ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669),
                 size: 16,
               ),
             ],
@@ -5437,6 +5518,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     title: l10n?.callUs ?? 'Call Us',
                     subtitle: '+250 793 828 834',
                     onTap: () => _launchPhone('250793828834')),
+                const SizedBox(height: 8),
+                _buildContactMethod(context,
+                    icon: Icons.phone,
+                    title: l10n?.callUs ?? 'Call Us',
+                    subtitle: '0781671517',
+                    onTap: () => _launchPhone('0781671517')),
                 const SizedBox(height: 16),
                 _buildContactMethod(context,
                     icon: Icons.email,

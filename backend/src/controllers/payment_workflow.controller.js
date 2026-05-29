@@ -4,6 +4,7 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../utils/response.utils');
 const emailService = require('../services/email.service');
+const notificationController = require('./notification.controller');
 
 // Admin-initiated payment for a student
 const adminInitiatePayment = async (req, res) => {
@@ -286,6 +287,14 @@ const verifyPayment = async (req, res) => {
             await existingEnrollment.save();
             console.log('Updated existing enrollment with payment ID');
           }
+        }
+
+        // Send payment notification to user
+        try {
+          const NotificationController = notificationController.constructor;
+          await NotificationController.createPaymentNotification(userIdInfo.id, payment.amount, courseIdInfo.id);
+        } catch (notificationError) {
+          console.error('Error creating payment notification:', notificationError);
         }
       }
 

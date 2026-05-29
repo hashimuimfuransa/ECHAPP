@@ -8,6 +8,8 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
+import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 final _storageManager = StorageManager();
 
@@ -93,7 +95,9 @@ class _FloatingBgState extends State<_FloatingBg> with SingleTickerProviderState
 }
 
 class InterestSelectionScreen extends ConsumerStatefulWidget {
-  const InterestSelectionScreen({super.key});
+  final bool isEditMode;
+
+  const InterestSelectionScreen({super.key, this.isEditMode = false});
 
   @override
   _InterestSelectionScreenState createState() => _InterestSelectionScreenState();
@@ -101,6 +105,7 @@ class InterestSelectionScreen extends ConsumerStatefulWidget {
 
 class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScreen> {
   final Set<String> _selectedInterests = {};
+  bool _interestsInitialized = false;
 
   // Theme-aware getters
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
@@ -114,50 +119,38 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final l10n = AppLocalizations.of(context);
 
-    // Guard: Only enforce when auth has finished restoring state.
-    // `AuthNotifier` can briefly have a stale user (restored session) while storage/Firebase sync runs.
     final authState = ref.watch(authProvider);
 
-    // Only require that user is authenticated; onboarding is typically reached
-    // as part of the backend registration/onboarding flow.
-    // This avoids relying on local storage flags during login/navigation.
     if (authState.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.go('/auth-selection');
-        }
+        if (mounted) context.go('/auth-selection');
       });
       return const SizedBox.shrink();
     }
 
+    // If user already completed onboarding and NOT in edit mode, skip straight to dashboard
+    if (authState.user!.hasCompletedOnboarding && !widget.isEditMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/dashboard');
+      });
+      return const SizedBox.shrink();
+    }
+
+    // Pre-populate with previously saved interests (skip + come back, or edit)
+    if (!_interestsInitialized) {
+      final savedInterests = authState.user!.interests;
+      if (savedInterests != null && savedInterests.isNotEmpty) {
+        _selectedInterests.addAll(savedInterests);
+      }
+      _interestsInitialized = true;
+    }
 
     if (isDesktop) {
       return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/onboading desktop.png'),
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF0F172A).withOpacity(0.5),
-                  const Color(0xFF1E293B).withOpacity(0.7),
-                  const Color(0xFF0F172A).withOpacity(0.9),
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              ),
-            ),
-            child: SafeArea(child: _buildDesktopLayout()),
-          ),
-        ),
+        backgroundColor: const Color(0xFFF9FAFB),
+        body: _buildDesktopLayout(l10n),
       );
     }
 
@@ -184,7 +177,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
             ),
           ),
           child: SafeArea(
-            child: _buildMobileLayout(),
+            child: _buildMobileLayout(l10n),
           ),
         ),
       ),
@@ -192,53 +185,177 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   }
 
   // ─── Desktop layout ─────────────────────────────────────────────────────────
-  Widget _buildDesktopLayout() {
-    return Center(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 820),
-        margin: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40),
-          ],
+  Widget _buildDesktopLayout(AppLocalizations? l10n) {
+    return Row(
+      children: [
+        // Left branding panel (42%)
+        const Expanded(
+          flex: 42,
+          child: DesktopBrandPanel(
+            headline: 'Personalize Your',
+            title: 'Learning\nJourney',
+            tagline: 'Choose the topics that matter\nmost to you.',
+          ),
         ),
-        child: Column(
-          children: [
-            // Header band
-            Container(
-              padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.15))),
-              ),
-              child: _buildHeaderContent(dark: false),
-            ),
-            // Body
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildInterestsGrid(dark: false),
-                    const SizedBox(height: 32),
-                    _buildButtons(dark: false),
-                  ],
+        // Right content panel (58%)
+        Expanded(
+          flex: 58,
+          child: Container(
+            color: const Color(0xFFF9FAFB),
+            child: Column(
+              children: [
+                // Top branded header bar
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _kAccent.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kAccent.withOpacity(0.25)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.interests_rounded, color: _kAccent, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2 — ${l10n?.onboardingInterestTitle ?? 'Your Interests'}',
+                              style: const TextStyle(
+                                color: _kAccent,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Excellence Coaching Hub',
+                        style: TextStyle(
+                          color: const Color(0xFF1F2937).withOpacity(0.45),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 36),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Page title with green accent bar
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: _kAccent,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n?.onboardingInterestTitle ?? 'What are you interested in?',
+                                      style: const TextStyle(
+                                        color: Color(0xFF111827),
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                        height: 1.15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      l10n?.onboardingInterestSubtitle ?? 'Pick the coaching areas you want to focus on. You can always change them later.',
+                                      style: const TextStyle(
+                                        color: Color(0xFF6B7280),
+                                        fontSize: 14,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    if (_selectedInterests.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: _kAccent.withOpacity(0.10),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: _kAccent.withOpacity(0.25)),
+                                        ),
+                                        child: Text(
+                                          '${_selectedInterests.length} ${l10n?.selected ?? 'selected'}',
+                                          style: const TextStyle(
+                                            color: _kAccent,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+                          // Interests grid card
+                          Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: _buildInterestsGrid(dark: true, l10n: l10n),
+                          ),
+                          const SizedBox(height: 28),
+                          _buildButtons(dark: true, l10n: l10n),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   // ─── Mobile layout ───────────────────────────────────────────────────────────
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(AppLocalizations? l10n) {
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmall = screenHeight < 680;
     return Column(
@@ -257,10 +374,10 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                     constraints: const BoxConstraints(),
                   ),
                 const Spacer(),
-                _buildStepChip(),
+                _buildStepChip(l10n),
               ]),
               SizedBox(height: isSmall ? 8 : 16),
-              _buildHeaderContent(dark: false),
+              _buildHeaderContent(dark: false, l10n: l10n),
             ],
           ),
         ),
@@ -276,9 +393,9 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildInterestsGrid(dark: _isDark),
+                  _buildInterestsGrid(dark: _isDark, l10n: l10n),
                   const SizedBox(height: 28),
-                  _buildButtons(dark: _isDark),
+                  _buildButtons(dark: _isDark, l10n: l10n),
                 ],
               ),
             ),
@@ -288,7 +405,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
     );
   }
 
-  Widget _buildStepChip() {
+  Widget _buildStepChip(AppLocalizations? l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -296,14 +413,14 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
-      child: const Text(
-        'Step 1 of 2',
-        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+      child: Text(
+        '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2',
+        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
 
-  Widget _buildHeaderContent({required bool dark}) {
+  Widget _buildHeaderContent({required bool dark, AppLocalizations? l10n}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -327,7 +444,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                'What are you interested in?',
+                l10n?.onboardingInterestTitle ?? 'What are you interested in?',
                 style: TextStyle(
                   color: dark ? const Color(0xFF1A2433) : Colors.white,
                   fontSize: 20,
@@ -340,7 +457,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
         ),
         const SizedBox(height: 10),
         Text(
-          'Pick the coaching areas you want to focus on. You can always change them later.',
+          l10n?.onboardingInterestSubtitle ?? 'Pick the coaching areas you want to focus on. You can always change them later.',
           style: TextStyle(
             color: dark ? const Color(0xFF4A5568) : Colors.white.withOpacity(0.8),
             fontSize: 13,
@@ -359,7 +476,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
               ),
             ),
             child: Text(
-              '${_selectedInterests.length} selected',
+              '${_selectedInterests.length} ${l10n?.selected ?? 'selected'}',
               style: TextStyle(
                 color: dark ? _kAccent : Colors.white,
                 fontSize: 12,
@@ -372,7 +489,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
     );
   }
 
-  Widget _buildInterestsGrid({required bool dark}) {
+  Widget _buildInterestsGrid({required bool dark, AppLocalizations? l10n}) {
     final categoriesAsync = ref.watch(backendCategoriesProvider);
 
     return categoriesAsync.when(
@@ -383,7 +500,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
               children: [
                 Icon(Icons.category_outlined, color: dark ? Colors.grey.shade600 : Colors.white38, size: 40),
                 const SizedBox(height: 12),
-                Text('No categories available',
+                Text(l10n?.noCategoriesAvailable ?? 'No categories available',
                     style: TextStyle(color: dark ? Colors.grey.shade500 : Colors.white54, fontSize: 14)),
               ],
             ),
@@ -456,7 +573,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
               ),
             ),
             const SizedBox(height: 12),
-            Text('Loading categories...', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.white54, fontSize: 13)),
+            Text(l10n?.loading ?? 'Loading...', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.white54, fontSize: 13)),
             const SizedBox(height: 20),
           ],
         ),
@@ -472,14 +589,14 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
           children: [
             Icon(Icons.error_outline_rounded, color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade400, size: 20),
             const SizedBox(width: 10),
-            Text('Failed to load categories', style: TextStyle(color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade600, fontSize: 13)),
+            Text(l10n?.failedToLoadCategories ?? 'Failed to load categories', style: TextStyle(color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade600, fontSize: 13)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildButtons({required bool dark}) {
+  Widget _buildButtons({required bool dark, AppLocalizations? l10n}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -502,7 +619,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Continue',
+                  l10n?.continueText ?? 'Continue',
                   style: TextStyle(
                     color: _selectedInterests.isEmpty ? Colors.grey.shade500 : Colors.white,
                     fontSize: 16,
@@ -528,7 +645,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
             height: 48,
             alignment: Alignment.center,
             child: Text(
-              'Skip for now',
+              l10n?.skipForNow ?? 'Skip for now',
               style: TextStyle(
                 color: dark ? const Color(0xFF6B7280) : Colors.white60,
                 fontSize: 14,
@@ -549,6 +666,16 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
       );
       
       if (mounted) {
+        // In edit mode, just go back to previous screen
+        if (widget.isEditMode) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/dashboard');
+          }
+          return;
+        }
+
         final authState = ref.read(authProvider);
         final user = authState.user;
 
@@ -576,6 +703,16 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   void _handleSkip() async {
     // Skip interests and check phone number
     if (mounted) {
+      // In edit mode, just go back to previous screen
+      if (widget.isEditMode) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+        return;
+      }
+
       final authState = ref.read(authProvider);
       final user = authState.user;
       
