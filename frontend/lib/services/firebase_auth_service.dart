@@ -405,6 +405,14 @@ class FirebaseAuthService {
       return null; // The result is handled via callbacks
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Phone Auth Error: ${e.code} - ${e.message}');
+      
+      // Handle sessionStorage/initial state errors (can occur on mobile during reCAPTCHA flow)
+      if (e.message?.contains('sessionStorage') == true || 
+          e.message?.contains('missing initial state') == true ||
+          e.message?.contains('storage-partitioned') == true) {
+        throw Exception('Phone authentication failed due to a browser state issue. Please try again. If the problem persists, try using a different browser or ensure your browser allows cookies and site data.');
+      }
+      
       throw _mapFirebaseAuthException(e);
     } catch (e) {
       debugPrint('Phone Auth Error: $e');

@@ -5,6 +5,7 @@ import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart'
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PhoneAuthScreen extends ConsumerStatefulWidget {
   const PhoneAuthScreen({super.key});
@@ -414,6 +415,32 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Browser state warning banner (applies to all platforms during reCAPTCHA flow)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Phone authentication may open a browser for verification. Please allow the process to complete.',
+                          style: TextStyle(
+                            color: Colors.amber.shade700,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 if (!_isCodeSent) _buildPhoneField(),
                 if (_isCodeSent) _buildOTPField(),
                 const SizedBox(height: 24),
@@ -557,6 +584,32 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Browser state warning banner (applies to all platforms during reCAPTCHA flow)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: _isDark ? const Color(0xFF92400E).withOpacity(0.2) : const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _isDark ? const Color(0xFFB45309) : const Color(0xFFFCD34D), width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: _isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309), size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Phone authentication may open a browser for verification. Please allow the process to complete.',
+                                  style: TextStyle(
+                                    color: _isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         if (!_isCodeSent) _buildPhoneField(),
                         if (_isCodeSent) _buildOTPField(),
                         const SizedBox(height: 20),

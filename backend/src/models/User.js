@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   },
   fullName: {
     type: String,
-    required: [true, 'Full name is required'],
+    required: false,  // Made optional for phone auth users who will collect name later
     trim: true,
     maxlength: [100, 'Name cannot exceed 100 characters']
   },
