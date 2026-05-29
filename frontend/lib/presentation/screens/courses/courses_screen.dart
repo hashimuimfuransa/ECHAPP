@@ -89,48 +89,28 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
 
     try {
-      // Use recommended courses when no filters are applied
-      if (page == 1 &&
-          reset &&
-          _selectedCategory == 'all' &&
-          _searchController.text.isEmpty &&
-          widget.categoryId == null &&
-          widget.searchQuery == null) {
-        // Load recommended courses for first page
-        final recommended = await _repository.getRecommendedCourses();
-        if (!mounted) return;
-        setState(() {
-          _allCourses = recommended;
-          _currentPage = 1;
-          _hasMore = false; // Recommendations are a fixed set
-          _isLoading = false;
-          _isLoadingMore = false;
-          _filteredCourses = _allCourses;
-        });
-      } else {
-        // Use regular pagination when filters are applied
-        final result = await _repository.getCoursesPaged(
-          page: page,
-          limit: _pageSize,
-          categoryId: _selectedCategory == 'all' ? null : _selectedCategory,
-          search:
-              _searchController.text.isNotEmpty ? _searchController.text : null,
-        );
+      // Always use pagination to allow students to see all courses
+      final result = await _repository.getCoursesPaged(
+        page: page,
+        limit: _pageSize,
+        categoryId: _selectedCategory == 'all' ? null : _selectedCategory,
+        search:
+            _searchController.text.isNotEmpty ? _searchController.text : null,
+      );
 
-        if (!mounted) return;
-        setState(() {
-          if (reset) {
-            _allCourses = result.courses;
-          } else {
-            _allCourses = [..._allCourses, ...result.courses];
-          }
-          _currentPage = result.currentPage;
-          _hasMore = result.hasNextPage;
-          _isLoading = false;
-          _isLoadingMore = false;
-          _filteredCourses = _allCourses;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        if (reset) {
+          _allCourses = result.courses;
+        } else {
+          _allCourses = [..._allCourses, ...result.courses];
+        }
+        _currentPage = result.currentPage;
+        _hasMore = result.hasNextPage;
+        _isLoading = false;
+        _isLoadingMore = false;
+        _filteredCourses = _allCourses;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() {

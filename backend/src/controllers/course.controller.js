@@ -47,7 +47,7 @@ const sendCourseNotifications = async (course) => {
 const getCourses = async (req, res) => {
   try {
     const { page = 1, limit = 20, search, level, minPrice, maxPrice, category, showUnpublished } = req.query;
-    const finalLimit = Math.min(parseInt(limit) || 20, 100);
+    const finalLimit = Math.min(parseInt(limit) || 20, 1000);
     
     console.log('getCourses called with query params:', req.query);
     console.log('User role:', req.user?.role);

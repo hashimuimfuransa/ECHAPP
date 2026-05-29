@@ -4259,7 +4259,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
-    final displayCourses = courses.take(4).toList();
+    final displayCourses = courses.take(8).toList();
 
     if (displayCourses.isEmpty) {
       return const SizedBox.shrink();

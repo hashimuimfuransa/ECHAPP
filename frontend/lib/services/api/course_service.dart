@@ -58,10 +58,10 @@ class CourseService {
     }
   }
 
-  /// Get all courses with optional category filter (up to 100 results in one request)
+  /// Get all courses with optional category filter (up to 1000 results in one request)
   Future<List<Course>> getAllCourses({String? categoryId, bool showUnpublished = false}) async {
     try {
-      final queryParams = <String, dynamic>{'limit': '100'};
+      final queryParams = <String, dynamic>{'limit': '1000'};
       if (categoryId != null) {
         queryParams['category'] = categoryId;
       }
