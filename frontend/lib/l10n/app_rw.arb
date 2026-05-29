@@ -26,7 +26,7 @@
   "update": "Vugurura",
   "search": "Shakisha",
   "view": "Reba",
-  "download": "Manura",
+  "download": "Bika",
   "share": "Sangira",
   "refresh": "Ongera uvugurure",
   "apply": "Shyiraho",
@@ -52,8 +52,8 @@
   "kinyarwanda": "Ikinyarwanda",
 
   "continueLearning": "Komeza Kwiga",
-  "myLearning": "Kwiga Kwanjye",
-  "downloads": "Ibyamanuwe",
+  "myLearning": "Amasomo yanjye",
+  "downloads": "Ibyakuruwe",
   "offline": "Nta Interineti",
   "exams": "Ibizamini",
   "history": "Amateka",
@@ -68,13 +68,13 @@
   "continueCourses": "Komeza Amasomo",
 
   "home": "Ahabanza",
-  "enrolled": "Wiyandikishije",
+  "enrolled": "ayo natangiye",
   "dashboard": "Ikibaho",
   "categories": "Ibyiciro",
   "profile": "Umwirondoro",
   "settings": "Igenamiterere",
 
-  "excellenceHub": "Excellence Hub",
+  "excellenceHub": "Excellence Coaching Hub",
 
   "splashInitializing": "Porogaramu irimo gutangizwa...",
   "splashPreparing": "Turimo gutegura uburyo bwawe bwo kwiga...",
@@ -342,7 +342,7 @@
 
   "browseCourses": "Reba Amasomo",
 
-  "enrolled": "Wiyandikishije",
+  "enrolled": "ayo natangiye",
 
   "completed": "Byarangiye",
 
@@ -780,7 +780,7 @@
 
   "errorPickingImage": "Habaye ikibazo mu guhitamo ifoto",
 
-  "downloads": "Ibyamanuwe",
+  "downloads": "Ibyakuruwe",
 
   "myDownloads": "Ibyamanuwe Byanjye",
 

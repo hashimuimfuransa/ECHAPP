@@ -173,9 +173,13 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
             if (current.user?.role == 'admin') {
               context.go('/admin');
             } else {
-              // Always require name collection for phone auth users
-              // Phone auth users typically don't have a name set during initial registration
-              context.go('/name-collection');
+              final userName = current.user?.fullName ?? '';
+              final needsName = userName.isEmpty || userName == 'Unknown User';
+              if (needsName) {
+                context.go('/name-collection');
+              } else {
+                context.go('/dashboard');
+              }
             }
           }
         });

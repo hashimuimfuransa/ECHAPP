@@ -73,8 +73,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               if (current.user!.role == 'admin') {
                 context.go('/admin');
               } else {
-                final userHasCompletedOnboarding = current.user!.hasCompletedOnboarding ?? false;
-                if (userHasCompletedOnboarding) {
+                final userName = current.user!.fullName;
+                final needsName = userName.isEmpty || userName == 'Unknown User';
+                if (needsName) {
+                  context.go('/name-collection');
+                } else if (current.user!.hasCompletedOnboarding) {
                   context.go('/dashboard');
                 } else {
                   context.go('/interest-selection');

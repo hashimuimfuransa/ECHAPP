@@ -421,18 +421,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         } else {
           final userHasCompletedOnboarding =
               authState.user?.hasCompletedOnboarding ?? false;
+          final userName = authState.user?.fullName ?? '';
+          final needsName = userName.isEmpty || userName == 'Unknown User';
 
-          // Only redirect based on backend/profile value.
-          // Avoid local-storage race conditions during login/session restoration.
-          final shouldRedirect = !userHasCompletedOnboarding;
-
-
-          if (shouldRedirect) {
+          // Check name first: phone auth users may reach dashboard without a name.
+          if (needsName) {
             debugPrint(
-                'DashboardScreen: Student has not completed onboarding, redirecting to onboarding');
+                'DashboardScreen: User has no name, redirecting to name-collection');
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) context.go('/interest-selection');
+              if (mounted) context.go('/name-collection');
             });
+          } else {
+            // Only redirect based on backend/profile value.
+            // Avoid local-storage race conditions during login/session restoration.
+            final shouldRedirect = !userHasCompletedOnboarding;
+
+            if (shouldRedirect) {
+              debugPrint(
+                  'DashboardScreen: Student has not completed onboarding, redirecting to onboarding');
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) context.go('/interest-selection');
+              });
+            }
           }
         }
       }

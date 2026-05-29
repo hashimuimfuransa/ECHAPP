@@ -140,6 +140,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
         await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
         await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+        await _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding);
         
         debugPrint('AuthProvider: Login completed successfully');
         
@@ -264,6 +265,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
       await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
       await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+      await _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding);
 
       debugPrint('AuthProvider: Phone+password login successful');
       state = state.copyWith(
@@ -399,6 +401,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
         await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
         await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+        await _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding);
         
         debugPrint('AuthProvider: Phone sign-in completed successfully');
         
@@ -526,6 +529,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
         await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
         await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+        await _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding);
         
         // Step 5: Initialize and sync FCM token for push notifications
         FCMTokenService.initializeAndSyncToken();
@@ -867,6 +871,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal),
           _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal),
           _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal),
+          _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding),
         ]);
         
         debugPrint('AuthProvider: Setting success state');
@@ -1023,6 +1028,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             final freshUser = await _fetchUserProfileFromBackend(storedToken);
             if (freshUser != null) {
               debugPrint('AuthProvider: Restored user from backend: ${freshUser.email}');
+              await _storageManager.saveHasCompletedOnboarding(freshUser.hasCompletedOnboarding);
               state = state.copyWith(
                 user: freshUser,
                 isEmailLoading: false,
