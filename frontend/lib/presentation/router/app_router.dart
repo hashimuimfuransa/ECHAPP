@@ -558,10 +558,10 @@ class AppRouter {
                 path: '/books/:bookId',
                 builder: (context, state) {
                   final bookId = state.pathParameters['bookId'] ?? '';
-                  final book = state.extra as Book?;
+                  final extra = state.extra;
                   
-                  if (book != null) {
-                    return BookReaderScreen(book: book);
+                  if (extra != null) {
+                    return BookReaderScreen(book: extra);
                   } else {
                     return Scaffold(
                       appBar: AppBar(title: const Text('Book Not Found')),

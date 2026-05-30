@@ -7,6 +7,8 @@ import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/link.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class BookReaderScreen extends ConsumerStatefulWidget {
   final dynamic book;
@@ -22,31 +24,54 @@ class BookReaderScreen extends ConsumerStatefulWidget {
 
 class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   final PageController _pageController = PageController();
+  final PdfViewerController _pdfViewerController = PdfViewerController();
   int _currentPage = 0;
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
   bool _isDarkMode = false;
   double _fontSize = 16.0;
   String _selectedFormat = 'text/plain';
+  
+  // TTS State
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _isPlaying = false;
+  bool _isPaused = false;
+  double _speechRate = 0.5;
+  double _pitch = 1.0;
+  String _selectedVoice = '';
+  List<String> _availableVoices = [];
+  String _currentText = '';
+  int _currentWordIndex = 0;
+  
+  // PDF State
+  double _pdfZoomLevel = 1.0;
+  int _pdfPageCount = 0;
+  int _currentPdfPage = 1;
+  bool _isPdfLoading = true;
+  
+  // Reading Progress
+  double _readingProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _initTTS();
     
     // Check if this is an admin-uploaded book
     final isAdminBook = widget.book is! Book;
-    
-    if (!isAdminBook) {
+
+    if (!isAdminBook && widget.book is Book) {
       // Set default format preference for Gutenberg books
-      if (widget.book.formats != null) {
-        if (widget.book.formats!.containsKey('text/html')) {
+      final book = widget.book as Book;
+      if (book.formats != null) {
+        if (book.formats!.containsKey('text/html')) {
           _selectedFormat = 'text/html';
-        } else if (widget.book.formats!.containsKey('text/plain')) {
+        } else if (book.formats!.containsKey('text/plain')) {
           _selectedFormat = 'text/plain';
-        } else if (widget.book.formats!.containsKey('application/pdf')) {
+        } else if (book.formats!.containsKey('application/pdf')) {
           _selectedFormat = 'application/pdf';
         } else {
-          _selectedFormat = widget.book.formats!.keys.first;
+          _selectedFormat = book.formats!.keys.first;
         }
       }
     }
@@ -61,8 +86,105 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _pdfViewerController.dispose();
     _searchController.dispose();
+    _flutterTts.stop();
     super.dispose();
+  }
+
+  // TTS Initialization
+  Future<void> _initTTS() async {
+    try {
+      await _flutterTts.setSpeechRate(_speechRate);
+      await _flutterTts.setPitch(_pitch);
+      
+      // Get available voices
+      final voices = await _flutterTts.getVoices;
+      if (voices != null && voices is List) {
+        _availableVoices = List<String>.from(
+          voices.map((v) => v is Map ? (v['name'] ?? '') : v.toString()),
+        );
+        if (_availableVoices.isNotEmpty) {
+          _selectedVoice = _availableVoices.first;
+          await _flutterTts.setVoice({"name": _selectedVoice});
+        }
+      }
+      
+      _flutterTts.setCompletionHandler(() {
+        setState(() {
+          _isPlaying = false;
+          _isPaused = false;
+        });
+      });
+      
+      _flutterTts.setErrorHandler((msg) {
+        setState(() {
+          _isPlaying = false;
+          _isPaused = false;
+        });
+      });
+    } catch (e) {
+      // TTS not supported on this platform
+      debugPrint('TTS initialization failed: $e');
+    }
+  }
+
+  // TTS Control Methods
+  Future<void> _speak(String text) async {
+    if (text.isEmpty) return;
+    
+    await _flutterTts.stop();
+    setState(() {
+      _currentText = text;
+      _isPlaying = true;
+      _isPaused = false;
+    });
+    
+    await _flutterTts.speak(text);
+  }
+
+  Future<void> _pause() async {
+    await _flutterTts.pause();
+    setState(() {
+      _isPaused = true;
+    });
+  }
+
+  Future<void> _resume() async {
+    await _flutterTts.speak(_currentText);
+    setState(() {
+      _isPaused = false;
+    });
+  }
+
+  Future<void> _stop() async {
+    await _flutterTts.stop();
+    setState(() {
+      _isPlaying = false;
+      _isPaused = false;
+      _currentText = '';
+    });
+  }
+
+  Future<void> _setSpeechRate(double rate) async {
+    setState(() {
+      _speechRate = rate;
+    });
+    await _flutterTts.setSpeechRate(rate);
+  }
+
+  Future<void> _setPitch(double pitch) async {
+    setState(() {
+      _pitch = pitch;
+    });
+    await _flutterTts.setPitch(pitch);
+  }
+
+  Future<void> _setVoice(String voice) async {
+    setState(() {
+      _selectedVoice = voice;
+    });
+    await _flutterTts.setVoice({"name": voice});
   }
 
   @override
@@ -76,6 +198,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           Expanded(
             child: _buildContent(context),
           ),
+          if (_isPlaying || _isPaused) _buildTTSControls(context),
         ],
       ),
       floatingActionButton: _buildFloatingActions(context),
@@ -102,6 +225,21 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         ),
       ),
       actions: [
+        // TTS button - always visible
+        IconButton(
+          icon: Icon(
+            _isPlaying ? Icons.stop_circle : Icons.record_voice_over,
+            color: _isPlaying ? Colors.red : AppTheme.getTextColor(context),
+          ),
+          onPressed: () {
+            if (_isPlaying) {
+              _stop();
+            } else {
+              _showTTSOptionDialog();
+            }
+          },
+          tooltip: _isPlaying ? 'Stop Reading' : 'Voice Reader',
+        ),
         IconButton(
           icon: Icon(
             _showSearch ? Icons.close : Icons.search,
@@ -140,6 +278,10 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
             const PopupMenuItem(
               value: 'download',
               child: Text('Download Book'),
+            ),
+            const PopupMenuItem(
+              value: 'tts',
+              child: Text('TTS Settings'),
             ),
           ],
         ),
@@ -209,11 +351,16 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     }
     
     // Handle Gutenberg books
-    if (widget.book.formats == null || widget.book.formats!.isEmpty) {
+    if (isAdminBook) {
       return _buildNoContentWidget(context);
     }
 
-    final formatUrl = widget.book.formats![_selectedFormat];
+    final book = widget.book as Book;
+    if (book.formats == null || book.formats!.isEmpty) {
+      return _buildNoContentWidget(context);
+    }
+
+    final formatUrl = book.formats![_selectedFormat];
     if (formatUrl == null || formatUrl.isEmpty) {
       return _buildNoContentWidget(context);
     }
@@ -373,17 +520,19 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   }
 
   Widget _buildPDFViewer(BuildContext context, String url) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _isDarkMode ? const Color(0xFF374151) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isDarkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _isDarkMode ? const Color(0xFF374151) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _isDarkMode ? const Color(0xFF4B5563) : const Color(0xFFE5E7EB),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
+        child: Column(
+          children: [
+          // PDF Header with controls
           Container(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -403,6 +552,28 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                     ),
                   ),
                 ),
+                // Zoom controls
+                IconButton(
+                  icon: const Icon(Icons.zoom_out),
+                  onPressed: () {
+                    _pdfViewerController.zoomLevel -= 0.25;
+                  },
+                  tooltip: 'Zoom Out',
+                ),
+                Text(
+                  '${(_pdfViewerController.zoomLevel * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.getSecondaryTextColor(context),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.zoom_in),
+                  onPressed: () {
+                    _pdfViewerController.zoomLevel += 0.25;
+                  },
+                  tooltip: 'Zoom In',
+                ),
                 TextButton(
                   onPressed: _showFormatSelection,
                   child: Text(
@@ -416,6 +587,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
               ],
             ),
           ),
+          // PDF Viewer
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -424,62 +596,76 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                   bottom: Radius.circular(12),
                 ),
               ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.picture_as_pdf,
-                      color: Colors.red,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'PDF Document',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.getTextColor(context),
+              child: Stack(
+                children: [
+                  SfPdfViewer.network(
+                    url,
+                    controller: _pdfViewerController,
+                    canShowScrollHead: true,
+                    canShowScrollStatus: true,
+                    canShowPaginationDialog: true,
+                    pageLayoutMode: PdfPageLayoutMode.single,
+                    onDocumentLoaded: (details) {
+                      setState(() {
+                        _isPdfLoading = false;
+                        _pdfPageCount = details.document.pages.count;
+                      });
+                    },
+                    onPageChanged: (details) {
+                      setState(() {
+                        _currentPdfPage = details.newPageNumber;
+                      });
+                    },
+                  ),
+                  if (_isPdfLoading)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(
+                            color: Color(0xFF10B981),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading PDF...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.getSecondaryTextColor(context),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This book is available as a PDF',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.getSecondaryTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () => _launchUrl(url),
-                          icon: const Icon(Icons.open_in_browser),
-                          label: const Text('Open'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () => _downloadBook(url),
-                          icon: const Icon(Icons.download),
-                          label: const Text('Download'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6B7280),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
+          // Page indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _isDarkMode ? const Color(0xFF374151) : Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _pdfPageCount > 0 
+                      ? 'Page $_currentPdfPage of $_pdfPageCount'
+                      : 'Page $_currentPdfPage',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.getSecondaryTextColor(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+        ),
       ),
     );
   }
@@ -531,6 +717,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         FloatingActionButton.extended(
+          heroTag: 'format_fab',
           onPressed: _showFormatSelection,
           icon: const Icon(Icons.format_list_bulleted),
           label: const Text('Format'),
@@ -539,6 +726,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         ),
         const SizedBox(width: 12),
         FloatingActionButton(
+          heroTag: 'theme_fab',
           onPressed: () {
             setState(() {
               _isDarkMode = !_isDarkMode;
@@ -568,15 +756,23 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         });
         break;
       case 'download':
-        if (widget.book.formats != null && widget.book.formats!.isNotEmpty) {
-          _downloadBook(widget.book.formats!.values.first);
+        if (widget.book is Book) {
+          final book = widget.book as Book;
+          if (book.formats != null && book.formats!.isNotEmpty) {
+            _downloadBook(book.formats!.values.first);
+          }
         }
+        break;
+      case 'tts':
+        _showTTSSettings();
         break;
     }
   }
 
   void _showFormatSelection() {
-    if (widget.book.formats == null || widget.book.formats!.isEmpty) return;
+    if (widget.book is! Book) return;
+    final book = widget.book as Book;
+    if (book.formats == null || book.formats!.isEmpty) return;
 
     showDialog(
       context: context,
@@ -586,9 +782,9 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
-            itemCount: widget.book.formats!.length,
+            itemCount: book.formats!.length,
             itemBuilder: (context, index) {
-              final entry = widget.book.formats!.entries.elementAt(index);
+              final entry = book.formats!.entries.elementAt(index);
               final format = entry.key;
               final isSelected = format == _selectedFormat;
               
@@ -833,5 +1029,275 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
       default:
         return format.split('/').last.toUpperCase();
     }
+  }
+
+  // TTS Controls Panel
+  Widget _buildTTSControls(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _isDarkMode ? const Color(0xFF1F2937) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: _isDarkMode ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              if (!_isPlaying && !_isPaused)
+                IconButton(
+                  icon: const Icon(Icons.play_arrow),
+                  onPressed: () => _showTTSTextInputDialog(),
+                  tooltip: 'Start Reading',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              if (_isPlaying)
+                IconButton(
+                  icon: const Icon(Icons.pause),
+                  onPressed: _pause,
+                  tooltip: 'Pause',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              if (_isPaused)
+                IconButton(
+                  icon: const Icon(Icons.play_arrow),
+                  onPressed: _resume,
+                  tooltip: 'Resume',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(Icons.stop),
+                onPressed: _stop,
+                tooltip: 'Stop',
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: _showTTSSettings,
+                tooltip: 'Settings',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Speed control
+          Row(
+            children: [
+              const Icon(Icons.speed, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Slider(
+                  value: _speechRate,
+                  min: 0.25,
+                  max: 1.0,
+                  divisions: 3,
+                  label: '${(_speechRate * 2).toStringAsFixed(1)}x',
+                  onChanged: _setSpeechRate,
+                ),
+              ),
+              Text(
+                '${(_speechRate * 2).toStringAsFixed(1)}x',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.getSecondaryTextColor(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTTSTextInputDialog() {
+    final isAdminBook = widget.book is! Book;
+    final title = isAdminBook 
+        ? (widget.book['title'] ?? 'Untitled')
+        : widget.book.title;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Text to Read'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              maxLines: 5,
+              decoration: const InputDecoration(
+                hintText: 'Enter text to read aloud...',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _currentText = value;
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                _currentText = title;
+                Navigator.pop(context);
+                _speak(_currentText);
+              },
+              child: const Text('Read Book Title'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _speak(_currentText);
+            },
+            child: const Text('Read'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTTSOptionDialog() {
+    final isAdminBook = widget.book is! Book;
+    
+    if (isAdminBook) {
+      final book = widget.book as Map<String, dynamic>;
+      final textContent = book['textContent'] as String?;
+      
+      if (textContent != null && textContent.isNotEmpty) {
+        // Text is available, start reading directly
+        _speak(textContent);
+      } else {
+        // No text available, show paste option
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Voice Reader'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Text Not Available',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text('This book does not have extracted text available for reading.'),
+                const SizedBox(height: 12),
+                const Text('You can paste text from the PDF to have it read aloud.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showTTSTextInputDialog();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Paste Text to Read'),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      // For Gutenberg books, show the regular text input dialog
+      _showTTSTextInputDialog();
+    }
+  }
+
+  void _showTTSSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Text-to-Speech Settings'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Voice selection
+              const Text('Voice', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedVoice,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+                items: _availableVoices.map((voice) {
+                  return DropdownMenuItem(
+                    value: voice,
+                    child: Text(
+                      voice.length > 30 ? '${voice.substring(0, 30)}...' : voice,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    _setVoice(value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              // Speech rate
+              const Text('Speech Rate', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Slider(
+                value: _speechRate,
+                min: 0.25,
+                max: 1.0,
+                divisions: 3,
+                label: '${(_speechRate * 2).toStringAsFixed(1)}x',
+                onChanged: _setSpeechRate,
+              ),
+              const SizedBox(height: 16),
+              // Pitch
+              const Text('Pitch', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Slider(
+                value: _pitch,
+                min: 0.5,
+                max: 2.0,
+                divisions: 3,
+                label: _pitch.toStringAsFixed(1),
+                onChanged: _setPitch,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }

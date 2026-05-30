@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:io';
@@ -37,6 +38,9 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   String _selectedLanguage = 'en';
   String? _selectedAcademicCategory;
   List<String> _selectedCourseIds = [];
+  final ValueNotifier<List<String>> _selectedCourseIdsNotifier = ValueNotifier([]);
+  final ValueNotifier<String?> _pdfFileNameNotifier = ValueNotifier(null);
+  final ValueNotifier<String?> _coverFileNameNotifier = ValueNotifier(null);
   final TextEditingController _courseSearchController = TextEditingController();
 
   // File selection
@@ -51,6 +55,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   String? _coverUrl;
   String? _coverS3Key;
   int? _fileSize;
+  String? _textContent;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -113,15 +118,17 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
 
   Future<void> _pickPDF() async {
     try {
-      final result = await _picker.pickImage(
-        source: ImageSource.gallery,
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
       );
 
-      if (result != null) {
+      if (result != null && result.files.single.path != null) {
         setState(() {
-          _pdfFile = File(result.path);
-          _pdfFileName = result.name;
+          _pdfFile = File(result.files.single.path!);
+          _pdfFileName = result.files.single.name;
         });
+        _pdfFileNameNotifier.value = _pdfFileName;
       }
     } catch (error) {
       _showErrorSnackBar('Failed to pick PDF: $error');
@@ -139,6 +146,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
           _coverFile = File(result.path);
           _coverFileName = result.name;
         });
+        _coverFileNameNotifier.value = _coverFileName;
       }
     } catch (error) {
       _showErrorSnackBar('Failed to pick cover: $error');
@@ -209,6 +217,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             _coverUrl = data['data']['coverUrl'];
             _coverS3Key = data['data']['coverS3Key'];
             _fileSize = data['data']['fileSize'];
+            _textContent = data['data']['textContent'];
             _isUploading = false;
           });
 
@@ -238,9 +247,18 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
       return;
     }
 
-    if (_pdfUrl == null || _pdfS3Key == null) {
-      _showErrorSnackBar('Please upload PDF file first');
+    if (_pdfFile == null) {
+      _showErrorSnackBar('Please select a PDF file');
       return;
+    }
+
+    // Upload files first if not already uploaded
+    if (_pdfUrl == null || _pdfS3Key == null) {
+      await _uploadFiles();
+      if (_pdfUrl == null || _pdfS3Key == null) {
+        // Upload failed
+        return;
+      }
     }
 
     setState(() {
@@ -274,6 +292,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
           'academicCategory': _selectedAcademicCategory,
           'relatedCourses': _selectedCourseIds,
           'fileSize': _fileSize,
+          'textContent': _textContent,
         }),
       );
 
@@ -351,6 +370,260 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
     }
   }
 
+  Future<void> _togglePublish(String bookId, bool currentStatus) async {
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final idToken = await user.getIdToken(true);
+
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/books/$bookId'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'isPublished': !currentStatus,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        _showSuccessSnackBar(
+          !currentStatus ? 'Book published successfully' : 'Book unpublished',
+        );
+        _loadBooks();
+      } else {
+        throw Exception('Failed to update book: ${response.statusCode}');
+      }
+    } catch (error) {
+      _showErrorSnackBar('Failed to update book: $error');
+    }
+  }
+
+  void _showEditBookDialog(BuildContext context, Map<String, dynamic> book) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+
+    final editTitleController = TextEditingController(text: book['title'] ?? '');
+    final editAuthorController = TextEditingController(text: book['author'] ?? '');
+    final editDescriptionController = TextEditingController(text: book['description'] ?? '');
+    final editSubjectController = TextEditingController(text: book['subject'] ?? '');
+    String editLanguage = book['language'] ?? 'en';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            backgroundColor: cardColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              width: ResponsiveBreakpoints.isDesktop(context) ? 500 : double.infinity,
+              constraints: const BoxConstraints(maxHeight: 600),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit Book',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(dialogContext),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: editTitleController,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Title *',
+                              labelStyle: TextStyle(color: textColor),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryGreen)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: editAuthorController,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Author *',
+                              labelStyle: TextStyle(color: textColor),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryGreen)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: editDescriptionController,
+                            maxLines: 3,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Description',
+                              labelStyle: TextStyle(color: textColor),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryGreen)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: editSubjectController,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Subject *',
+                              labelStyle: TextStyle(color: textColor),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryGreen)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: editLanguage,
+                            dropdownColor: cardColor,
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Language',
+                              labelStyle: TextStyle(color: textColor),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryGreen)),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'en', child: Text('English')),
+                              DropdownMenuItem(value: 'rw', child: Text('Kinyarwanda')),
+                              DropdownMenuItem(value: 'fr', child: Text('French')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() => editLanguage = value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (editTitleController.text.isEmpty || editAuthorController.text.isEmpty) {
+                              _showErrorSnackBar('Title and Author are required');
+                              return;
+                            }
+                            await _updateBook(
+                              book['_id'],
+                              title: editTitleController.text,
+                              author: editAuthorController.text,
+                              description: editDescriptionController.text,
+                              subject: editSubjectController.text,
+                              language: editLanguage,
+                            );
+                            if (mounted) Navigator.pop(dialogContext);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Save Changes'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _updateBook(
+    String bookId, {
+    required String title,
+    required String author,
+    required String description,
+    required String subject,
+    required String language,
+  }) async {
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final idToken = await user.getIdToken(true);
+
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/books/$bookId'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'title': title,
+          'author': author,
+          'description': description,
+          'subject': subject,
+          'language': language,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        _showSuccessSnackBar('Book updated successfully');
+        _loadBooks();
+      } else {
+        throw Exception('Failed to update book: ${response.statusCode}');
+      }
+    } catch (error) {
+      _showErrorSnackBar('Failed to update book: $error');
+    }
+  }
+
+  void _previewBook(Map<String, dynamic> book) {
+    final pdfUrl = book['pdfUrl'] as String?;
+    if (pdfUrl == null || pdfUrl.isEmpty) {
+      _showErrorSnackBar('No PDF URL available for this book');
+      return;
+    }
+
+    final bookId = book['_id'] ?? 'preview';
+    context.push('/books/$bookId', extra: book);
+  }
 
   void _resetForm() {
     setState(() {
@@ -668,10 +941,18 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                   book['isPublished'] ? Icons.visibility : Icons.visibility_off,
                   color: book['isPublished'] ? AppTheme.primaryGreen : Colors.grey,
                 ),
-                onPressed: () {
-                  // Toggle publish status (to be implemented)
-                },
-                tooltip: book['isPublished'] ? 'Published' : 'Unpublished',
+                onPressed: () => _togglePublish(book['_id'], book['isPublished'] ?? false),
+                tooltip: book['isPublished'] ? 'Unpublish' : 'Publish',
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_rounded, color: Colors.orange),
+                onPressed: () => _showEditBookDialog(context, book),
+                tooltip: 'Edit',
+              ),
+              IconButton(
+                icon: const Icon(Icons.open_in_new_rounded, color: Colors.blue),
+                onPressed: () => _previewBook(book),
+                tooltip: 'Preview',
               ),
               IconButton(
                 icon: const Icon(Icons.delete_rounded, color: Colors.red),
@@ -686,10 +967,11 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   void _showAddBookDialog(BuildContext context) {
-    // Load courses via provider when dialog opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(adminCourseProvider.notifier).loadCourses();
-    });
+    // Initialize ValueNotifiers with current values
+    _selectedCourseIdsNotifier.value = List.from(_selectedCourseIds);
+    _pdfFileNameNotifier.value = _pdfFileName;
+    _coverFileNameNotifier.value = _coverFileName;
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -704,6 +986,9 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             selectedLanguage: _selectedLanguage,
             selectedAcademicCategory: _selectedAcademicCategory,
             selectedCourseIds: _selectedCourseIds,
+            selectedCourseIdsNotifier: _selectedCourseIdsNotifier,
+            pdfFileNameNotifier: _pdfFileNameNotifier,
+            coverFileNameNotifier: _coverFileNameNotifier,
             pdfFile: _pdfFile,
             coverFile: _coverFile,
             pdfFileName: _pdfFileName,
@@ -717,7 +1002,22 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             onSubjectChanged: (value) => setState(() => _subjectController.text = value),
             onLanguageChanged: (value) => setState(() => _selectedLanguage = value),
             onAcademicCategoryChanged: (value) => setState(() => _selectedAcademicCategory = value),
-            onCourseIdsChanged: (value) => setState(() => _selectedCourseIds = value),
+            onCourseIdsChanged: (value) {
+              setState(() => _selectedCourseIds = value);
+              _selectedCourseIdsNotifier.value = value;
+            },
+            onPdfFileNameChanged: (value) {
+              setState(() => _pdfFileName = value);
+            },
+            onPdfFileChanged: (file) {
+              setState(() => _pdfFile = file);
+            },
+            onCoverFileNameChanged: (value) {
+              setState(() => _coverFileName = value);
+            },
+            onCoverFileChanged: (file) {
+              setState(() => _coverFile = file);
+            },
             onPickPDF: _pickPDF,
             onPickCover: _pickCover,
             onUploadFiles: _uploadFiles,
@@ -739,6 +1039,9 @@ class AddBookDialog extends ConsumerStatefulWidget {
   final String selectedLanguage;
   final String? selectedAcademicCategory;
   final List<String> selectedCourseIds;
+  final ValueNotifier<List<String>> selectedCourseIdsNotifier;
+  final ValueNotifier<String?> pdfFileNameNotifier;
+  final ValueNotifier<String?> coverFileNameNotifier;
   final File? pdfFile;
   final File? coverFile;
   final String? pdfFileName;
@@ -753,6 +1056,10 @@ class AddBookDialog extends ConsumerStatefulWidget {
   final Function(String) onLanguageChanged;
   final Function(String?) onAcademicCategoryChanged;
   final Function(List<String>) onCourseIdsChanged;
+  final Function(String?) onPdfFileNameChanged;
+  final Function(File?) onPdfFileChanged;
+  final Function(String?) onCoverFileNameChanged;
+  final Function(File?) onCoverFileChanged;
   final Function() onPickPDF;
   final Function() onPickCover;
   final Function() onUploadFiles;
@@ -769,6 +1076,9 @@ class AddBookDialog extends ConsumerStatefulWidget {
     required this.selectedLanguage,
     required this.selectedAcademicCategory,
     required this.selectedCourseIds,
+    required this.selectedCourseIdsNotifier,
+    required this.pdfFileNameNotifier,
+    required this.coverFileNameNotifier,
     required this.pdfFile,
     required this.coverFile,
     required this.pdfFileName,
@@ -783,6 +1093,10 @@ class AddBookDialog extends ConsumerStatefulWidget {
     required this.onLanguageChanged,
     required this.onAcademicCategoryChanged,
     required this.onCourseIdsChanged,
+    required this.onPdfFileNameChanged,
+    required this.onPdfFileChanged,
+    required this.onCoverFileNameChanged,
+    required this.onCoverFileChanged,
     required this.onPickPDF,
     required this.onPickCover,
     required this.onUploadFiles,
@@ -797,6 +1111,58 @@ class AddBookDialog extends ConsumerStatefulWidget {
 
 class _AddBookDialogState extends ConsumerState<AddBookDialog> {
   final TextEditingController _courseSearchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Load courses when dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminCourseProvider.notifier).loadCourses();
+    });
+  }
+
+  Future<void> _pickPDFInDialog() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final fileName = result.files.single.name;
+        final file = File(result.files.single.path!);
+        widget.pdfFileNameNotifier.value = fileName;
+        // Also update parent state
+        widget.onPdfFileNameChanged(fileName);
+        widget.onPdfFileChanged(file);
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick PDF: $error')),
+      );
+    }
+  }
+
+  Future<void> _pickCoverInDialog() async {
+    try {
+      final result = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (result != null) {
+        final fileName = result.name;
+        final file = File(result.path);
+        widget.coverFileNameNotifier.value = fileName;
+        // Also update parent state
+        widget.onCoverFileNameChanged(fileName);
+        widget.onCoverFileChanged(file);
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick cover: $error')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -815,6 +1181,15 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
 
     // Watch the admin course provider
     final courseState = ref.watch(adminCourseProvider);
+
+    // Watch the ValueNotifier to rebuild when course IDs change
+    final selectedCourseIds = widget.selectedCourseIdsNotifier.value;
+    
+    // Watch the ValueNotifier to rebuild when PDF file name changes
+    final pdfFileName = widget.pdfFileNameNotifier.value;
+    
+    // Watch the ValueNotifier to rebuild when cover file name changes
+    final coverFileName = widget.coverFileNameNotifier.value;
 
     return Container(
       decoration: BoxDecoration(
@@ -965,19 +1340,22 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (widget.selectedCourseIds.isEmpty)
-                          Text(
-                            'No courses selected',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: secondaryTextColor,
-                            ),
-                          )
-                        else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: widget.selectedCourseIds.map((courseId) {
+                        ValueListenableBuilder<List<String>>(
+                          valueListenable: widget.selectedCourseIdsNotifier,
+                          builder: (context, selectedCourseIds, child) {
+                            if (selectedCourseIds.isEmpty) {
+                              return Text(
+                                'No courses selected',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: secondaryTextColor,
+                                ),
+                              );
+                            }
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: selectedCourseIds.map((courseId) {
                               final course = courseState.courses.firstWhere(
                                 (c) => c.id == courseId,
                                 orElse: () => Course(
@@ -1000,13 +1378,15 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                               return Chip(
                                 label: Text(course.title, overflow: TextOverflow.ellipsis, maxLines: 1),
                                 onDeleted: () {
-                                  final updated = List<String>.from(widget.selectedCourseIds);
+                                  final updated = List<String>.from(selectedCourseIds);
                                   updated.remove(courseId);
                                   widget.onCourseIdsChanged(updated);
                                 },
                               );
                             }).toList(),
-                          ),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
                           onPressed: () {
@@ -1068,30 +1448,41 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (widget.pdfFileName != null)
-                          Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  widget.pdfFileName!,
-                                  style: const TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
+                        ValueListenableBuilder<String?>(
+                          valueListenable: widget.pdfFileNameNotifier,
+                          builder: (context, pdfFileName, child) {
+                            if (pdfFileName == null) {
+                              return ElevatedButton.icon(
+                                onPressed: _pickPDFInDialog,
+                                icon: const Icon(Icons.upload_file_rounded),
+                                label: const Text('Select PDF'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGreen,
+                                  foregroundColor: Colors.white,
                                 ),
-                              ),
-                            ],
-                          )
-                        else
-                          ElevatedButton.icon(
-                            onPressed: widget.onPickPDF,
-                            icon: const Icon(Icons.upload_file_rounded),
-                            label: const Text('Select PDF'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryGreen,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
+                              );
+                            }
+                            return Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    pdfFileName,
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 16),
+                                  onPressed: () {
+                                    widget.pdfFileNameNotifier.value = null;
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                         if (widget.pdfUrl != null) ...[
                           const SizedBox(height: 8),
                           const Text(
@@ -1126,30 +1517,66 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (widget.coverFileName != null)
-                          Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  widget.coverFileName!,
-                                  style: const TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
+                        ValueListenableBuilder<String?>(
+                          valueListenable: widget.coverFileNameNotifier,
+                          builder: (context, coverFileName, child) {
+                            if (coverFileName == null) {
+                              return ElevatedButton.icon(
+                                onPressed: _pickCoverInDialog,
+                                icon: const Icon(Icons.image_rounded),
+                                label: const Text('Select Cover'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGreen,
+                                  foregroundColor: Colors.white,
                                 ),
-                              ),
-                            ],
-                          )
-                        else
-                          ElevatedButton.icon(
-                            onPressed: widget.onPickCover,
-                            icon: const Icon(Icons.image_rounded),
-                            label: const Text('Select Cover'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryGreen,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 120,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: widget.coverFile != null
+                                        ? Image.file(
+                                            widget.coverFile!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : const Center(
+                                            child: Icon(Icons.image, size: 48, color: Colors.grey),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        coverFileName,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 16),
+                                      onPressed: () {
+                                        widget.coverFileNameNotifier.value = null;
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                         if (widget.coverUrl != null) ...[
                           const SizedBox(height: 8),
                           const Text(
@@ -1212,24 +1639,29 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: (widget.pdfUrl != null && widget.pdfS3Key != null) && !widget.isUploading
-                        ? widget.onCreateBook
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: widget.isUploading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Create Book'),
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: widget.pdfFileNameNotifier,
+                    builder: (context, pdfName, child) {
+                      return ElevatedButton(
+                        onPressed: (pdfName != null) && !widget.isUploading
+                            ? widget.onCreateBook
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: widget.isUploading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Create Book'),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -1250,19 +1682,26 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
 
     // Reset search when dialog opens
     _courseSearchController.clear();
+    
+    // Use local state for faster selection
+    List<String> localSelectedIds = List.from(widget.selectedCourseIds);
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          // Filter courses based on search
-          final searchQuery = _courseSearchController.text.toLowerCase();
-          final filteredCourses = searchQuery.isEmpty
-              ? courseState.courses
-              : courseState.courses.where((course) {
-                  return course.title.toLowerCase().contains(searchQuery) ||
-                      course.description.toLowerCase().contains(searchQuery);
-                }).toList();
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          final courseState = ref.watch(adminCourseProvider);
+          
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              // Filter courses based on search
+              final searchQuery = _courseSearchController.text.toLowerCase();
+              final filteredCourses = searchQuery.isEmpty
+                  ? courseState.courses
+                  : courseState.courses.where((course) {
+                      return course.title.toLowerCase().contains(searchQuery) ||
+                          course.description.toLowerCase().contains(searchQuery);
+                    }).toList();
 
           return Dialog(
             child: Container(
@@ -1334,7 +1773,7 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                   ),
                   // Course List
                   Expanded(
-                    child: courseState.isLoading && courseState.courses.isEmpty
+                    child: courseState.courses.isEmpty && courseState.isLoading
                         ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -1381,20 +1820,18 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                                     itemCount: filteredCourses.length,
                                     itemBuilder: (context, index) {
                                       final course = filteredCourses[index];
-                                      final isSelected = widget.selectedCourseIds.contains(course.id);
                                       return CheckboxListTile(
-                                        value: isSelected,
+                                        value: localSelectedIds.contains(course.id),
                                         onChanged: (value) {
-                                          final updated = List<String>.from(widget.selectedCourseIds);
-                                          if (value == true) {
-                                            if (!updated.contains(course.id)) {
-                                              updated.add(course.id);
+                                          setDialogState(() {
+                                            if (value == true) {
+                                              if (!localSelectedIds.contains(course.id)) {
+                                                localSelectedIds.add(course.id);
+                                              }
+                                            } else {
+                                              localSelectedIds.remove(course.id);
                                             }
-                                          } else {
-                                            updated.remove(course.id);
-                                          }
-                                          widget.onCourseIdsChanged(updated);
-                                          setDialogState(() {});
+                                          });
                                         },
                                         title: Text(
                                           course.title,
@@ -1466,14 +1903,17 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '${widget.selectedCourseIds.length} course(s) selected',
+                          '${localSelectedIds.length} course(s) selected',
                           style: TextStyle(
                             fontSize: 14,
                             color: secondaryTextColor,
                           ),
                         ),
                         ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            widget.onCourseIdsChanged(localSelectedIds);
+                            Navigator.pop(context);
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryGreen,
                             foregroundColor: Colors.white,
@@ -1486,6 +1926,8 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                 ],
               ),
             ),
+          );
+            },
           );
         },
       ),

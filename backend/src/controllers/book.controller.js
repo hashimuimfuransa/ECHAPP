@@ -1,11 +1,12 @@
 const Book = require('../models/Book');
 const s3Service = require('../services/s3.service');
 const { sendSuccess, sendError } = require('../utils/response.utils');
+const pdfParse = require('pdf-parse');
 
 // Create a new book
 const createBook = async (req, res) => {
   try {
-    const { title, author, description, language, subject, academicCategory, pdfUrl, pdfS3Key, coverUrl, coverS3Key, fileSize, pages, relatedCourses } = req.body;
+    const { title, author, description, language, subject, academicCategory, pdfUrl, pdfS3Key, coverUrl, coverS3Key, fileSize, pages, relatedCourses, textContent } = req.body;
 
     // Validate required fields
     if (!title || !author || !pdfUrl || !pdfS3Key) {
@@ -27,6 +28,7 @@ const createBook = async (req, res) => {
       uploadedBy: req.user.id,
       fileSize,
       pages,
+      textContent,
       isPublished: true
     });
 
@@ -264,6 +266,16 @@ const uploadBookFiles = async (req, res) => {
       }
 
       try {
+        // Extract text from PDF
+        let extractedText = null;
+        try {
+          const pdfData = await pdfParse(pdfFile.buffer);
+          extractedText = pdfData.text;
+        } catch (pdfError) {
+          console.error('PDF text extraction failed:', pdfError);
+          // Continue without text extraction
+        }
+
         // Upload PDF
         const pdfResult = await s3Service.uploadDocument(
           pdfFile.buffer,
@@ -285,7 +297,8 @@ const uploadBookFiles = async (req, res) => {
           pdfS3Key: pdfResult.key,
           coverUrl: coverResult ? coverResult.url : null,
           coverS3Key: coverResult ? coverResult.key : null,
-          fileSize: pdfFile.size
+          fileSize: pdfFile.size,
+          textContent: extractedText
         }, 'Book files uploaded successfully');
       } catch (s3Error) {
         console.error('S3 upload error:', s3Error);

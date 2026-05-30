@@ -72,6 +72,10 @@ const bookSchema = new mongoose.Schema({
   pages: {
     type: Number,
     default: null
+  },
+  textContent: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
