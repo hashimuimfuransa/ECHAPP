@@ -199,7 +199,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get home => 'Home';
 
   @override
-  String get enrolled => 'Enrolled';
+  String get enrolled => 'ENROLLED';
 
   @override
   String get dashboard => 'Dashboard';
@@ -451,6 +451,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterFullName => 'Enter your full name';
 
   @override
+  String get nameHint => 'e.g. Jean Bosco Uwimana';
+
+  @override
+  String get nameRequiredError => 'Please enter your full name';
+
+  @override
+  String get nameTooShortError => 'Name must be at least 2 characters';
+
+  @override
   String get continueToDashboard => 'Continue to Dashboard';
 
   @override
@@ -631,7 +640,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOut => 'Sign Out';
 
   @override
-  String get searchCourses => 'Search courses...';
+  String get searchCourses => 'Search courses, instructors...';
 
   @override
   String get searchHint => 'Search for courses, topics...';
@@ -680,10 +689,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseDetails => 'Course Details';
 
   @override
-  String get coursePrice => 'Course Price';
+  String get coursePrice => 'COURSE PRICE';
 
   @override
-  String get courseCategory => 'Course Category';
+  String get courseCategory => 'COURSE CATEGORY';
 
   @override
   String get instructor => 'Instructor';
@@ -716,7 +725,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enrolling => 'Enrolling...';
 
   @override
-  String get alreadyEnrolled => 'Already Enrolled';
+  String get alreadyEnrolled => 'You are already enrolled!';
 
   @override
   String get enrolledSuccessfully => 'Enrolled successfully!';
@@ -964,7 +973,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tax => 'Tax';
 
   @override
-  String get discount => 'Discount';
+  String get discount => '20% OFF';
 
   @override
   String get transactionId => 'Transaction ID';
@@ -988,7 +997,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentFailed => 'Payment failed';
 
   @override
-  String get paymentPending => 'Payment pending';
+  String get paymentPending => 'Payment Pending';
 
   @override
   String get paymentProcessing => 'Payment processing';
@@ -1422,7 +1431,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminAccess => 'Admin Access';
 
   @override
-  String get students => 'Students';
+  String get students => 'students';
 
   @override
   String get totalStudents => 'Total Students';
@@ -2280,4 +2289,168 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lessonScreenMarkLessonComplete => 'Mark lesson complete';
+
+  @override
+  String searchInCategory(Object category) {
+    return 'Search in $category...';
+  }
+
+  @override
+  String get filterCourses => 'Filter Courses';
+
+  @override
+  String get filterByCategory => 'Filter by category';
+
+  @override
+  String get clearAll => 'Clear All';
+
+  @override
+  String get paid => 'Paid';
+
+  @override
+  String get beginner => 'Beginner';
+
+  @override
+  String get intermediate => 'Intermediate';
+
+  @override
+  String get advanced => 'Advanced';
+
+  @override
+  String get short => 'Short (<1h)';
+
+  @override
+  String get medium => 'Medium (1-3h)';
+
+  @override
+  String get long => 'Long (>3h)';
+
+  @override
+  String get rating => 'Rating';
+
+  @override
+  String get stars4Plus => '4+ Stars';
+
+  @override
+  String get stars4_5Plus => '4.5+ Stars';
+
+  @override
+  String get adjustSearchCriteria =>
+      'Try adjusting your search or filter criteria';
+
+  @override
+  String basedOnYourInterests(Object interests) {
+    return 'Based on your interests: $interests';
+  }
+
+  @override
+  String get open => 'Open';
+
+  @override
+  String coursesCount(Object count) {
+    return '$count courses';
+  }
+
+  @override
+  String get browseAllCourses => 'Browse all available courses';
+
+  @override
+  String byInstructor(Object instructor) {
+    return 'by $instructor';
+  }
+
+  @override
+  String get noThumbnailAvailable => 'No thumbnail available';
+
+  @override
+  String get aboutThisCourse => 'About This Course';
+
+  @override
+  String get meetYourInstructor => 'Meet Your Instructor';
+
+  @override
+  String get leadInstructor => 'Lead Instructor & Course Creator';
+
+  @override
+  String get readyToStart => 'Ready to Start Learning?';
+
+  @override
+  String get joinThousands =>
+      'Join thousands of students who have already transformed their skills';
+
+  @override
+  String get checkingEnrollment => 'Checking enrollment status...';
+
+  @override
+  String get buyNow => 'Buy Now';
+
+  @override
+  String get access => 'Access';
+
+  @override
+  String get lifetime => 'Lifetime';
+
+  @override
+  String get redirecting => 'Redirecting...';
+
+  @override
+  String get withYearsExperience =>
+      'With extensive teaching experience and expertise in modern practices, our instructor brings real-world knowledge to help you succeed.';
+
+  @override
+  String get sidebarSignIn => 'Sign In';
+
+  @override
+  String get sidebarRegister => 'Register';
+
+  @override
+  String get sidebarUnlockPotential =>
+      'Unlock your potential with expert-led courses.';
+
+  @override
+  String get sidebarLearningPlatform => 'LEARNING PLATFORM';
+
+  @override
+  String get sidebarAdminNotifications => 'Notifications';
+
+  @override
+  String get sidebarAdminStudents => 'Students';
+
+  @override
+  String get sidebarAdminPayments => 'Payments';
+
+  @override
+  String get sidebarAdminAnalytics => 'Analytics';
+
+  @override
+  String get sidebarAreYouSureLogout => 'Are you sure you want to logout?';
+
+  @override
+  String get sidebarExpandSidebar => 'Expand Sidebar';
+
+  @override
+  String get sidebarCollapseSidebar => 'Collapse Sidebar';
+
+  @override
+  String get sidebarGoBack => 'Go back';
+
+  @override
+  String get sidebarRefreshApp => 'Refresh App';
+
+  @override
+  String get examPreparation => 'Exam Preparation';
+
+  @override
+  String get examPreparationSubtitle =>
+      'Prepare for your exams with past papers and practice tests';
+
+  @override
+  String get examPreparationBenefit =>
+      'Access past papers, practice tests, and expert guidance to ace your exams';
+
+  @override
+  String get visitExamMarketplace => 'Visit Exam Marketplace';
+
+  @override
+  String get examMarketplaceUrl => 'https://www.eexams.net/marketplace';
 }

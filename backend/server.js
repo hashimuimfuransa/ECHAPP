@@ -65,6 +65,7 @@ const platformSettingsRoutes = require('./src/routes/platformSettings.routes');
 const feedbackRoutes = require('./src/routes/feedback.routes');
 const aiChatRoutes = require('./routes/ai_chat'); // AI Chat routes
 const voiceChatRoutes = require('./routes/voice_chat'); // Voice Chat routes
+const bookRoutes = require('./src/routes/book.routes'); // Book routes
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -84,6 +85,7 @@ app.use('/api/platform-settings', platformSettingsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/ai', aiChatRoutes); // AI Chat routes
 app.use('/api/voice', voiceChatRoutes); // Voice Chat routes
+app.use('/api/books', bookRoutes); // Book routes
 
 // Handle undefined routes
 app.use((req, res) => {

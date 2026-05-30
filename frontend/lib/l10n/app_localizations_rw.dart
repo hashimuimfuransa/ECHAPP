@@ -81,7 +81,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get view => 'Reba';
 
   @override
-  String get download => 'Manura';
+  String get download => 'Bika';
 
   @override
   String get share => 'Sangira';
@@ -157,7 +157,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get myLearning => 'Kwiga Kwanjye';
 
   @override
-  String get downloads => 'Ibyamanuwe';
+  String get downloads => 'Ibyakuruwe';
 
   @override
   String get offline => 'Nta Interineti';
@@ -199,7 +199,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get home => 'Ahabanza';
 
   @override
-  String get enrolled => 'Wiyandikishije';
+  String get enrolled => 'WATANGIYE';
 
   @override
   String get dashboard => 'Ikibaho';
@@ -452,6 +452,15 @@ class AppLocalizationsRw extends AppLocalizations {
   String get enterFullName => 'Injiza amazina yawe yose';
 
   @override
+  String get nameHint => 'urugero: Jean Bosco Uwimana';
+
+  @override
+  String get nameRequiredError => 'Nyamuneka injiza amazina yawe yose';
+
+  @override
+  String get nameTooShortError => 'Amazina agomba kugira nibura inyuguti 2';
+
+  @override
   String get continueToDashboard => 'Komeza ujye ku Kibaho';
 
   @override
@@ -635,7 +644,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get signOut => 'Sohoka';
 
   @override
-  String get searchCourses => 'Shakisha amasomo...';
+  String get searchCourses => 'Shakisha amasomo, abigisha...';
 
   @override
   String get searchHint => 'Shakisha amasomo cyangwa ingingo...';
@@ -647,7 +656,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get yourProgress => 'Iterambere Ryawe';
 
   @override
-  String get recommendedForYou => 'Amasomo yagenewe wowe';
+  String get recommendedForYou => 'Amasomo Yakugeretseho';
 
   @override
   String get popularCourses => 'Amasomo Akunzwe';
@@ -683,10 +692,10 @@ class AppLocalizationsRw extends AppLocalizations {
   String get courseDetails => 'Ibisobanuro by\'Isomo';
 
   @override
-  String get coursePrice => 'Igiciro cy\'Isomo';
+  String get coursePrice => 'IGICIRO CYISOMO';
 
   @override
-  String get courseCategory => 'Icyiciro cy\'Isomo';
+  String get courseCategory => 'ICYICIRO CYISOMO';
 
   @override
   String get instructor => 'Umwigisha';
@@ -719,7 +728,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get enrolling => 'Birimo kwandikisha...';
 
   @override
-  String get alreadyEnrolled => 'Usanzwe wiyandikishije';
+  String get alreadyEnrolled => 'Wasanzwe wiyandikishije!';
 
   @override
   String get enrolledSuccessfully => 'Wiyandikishije neza!';
@@ -734,7 +743,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get youAreEnrolled => 'Wamaze kwiyandikisha';
 
   @override
-  String get redirectingToLearning => 'Turimo kukujyana aho kwiga...';
+  String get redirectingToLearning => 'Turimo kukujyana...';
 
   @override
   String get description => 'Ibisobanuro';
@@ -743,7 +752,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get courseDescription => 'Ibisobanuro by\'Isomo';
 
   @override
-  String get whatYouWillLearn => 'Ibyo Ugiye Kwigira';
+  String get whatYouWillLearn => 'Ibyo Uziga';
 
   @override
   String get learningObjectives => 'Intego zo Kwiga';
@@ -764,8 +773,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get noThumbnail => 'Nta shusho ihari';
 
   @override
-  String get limitedTimeOffer =>
-      'Igiciro gito mu gihe gito • Garuka amafaranga mu minsi 30';
+  String get limitedTimeOffer => 'Ighe giteganyijwe';
 
   @override
   String get lifetimeAccess => 'Uburenganzira bwo gukoresha igihe cyose';
@@ -789,7 +797,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get category => 'Icyiciro';
 
   @override
-  String get uncategorized => 'Nta cyiciro';
+  String get uncategorized => 'Ntibyiciro';
 
   @override
   String get learning => 'Kwiga';
@@ -822,7 +830,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get courseContent => 'Ibikubiye mu Isomo';
 
   @override
-  String get courseOverview => 'Incamake y\'Isomo';
+  String get courseOverview => 'Incamake yIsomo';
 
   @override
   String get notes => 'Inyandiko';
@@ -966,7 +974,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get tax => 'Umusoro';
 
   @override
-  String get discount => 'Igabanyirizwa';
+  String get discount => '20% OFF';
 
   @override
   String get transactionId => 'Nomero y\'Igikorwa';
@@ -990,7 +998,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get paymentFailed => 'Ubwishyu bwanze';
 
   @override
-  String get paymentPending => 'Ubwishyu burategereje';
+  String get paymentPending => 'Kwishyura Birategerejwe';
 
   @override
   String get paymentProcessing => 'Ubwishyu burimo gutunganywa';
@@ -1809,19 +1817,19 @@ class AppLocalizationsRw extends AppLocalizations {
   String get hoursLearned => 'Hours Learned';
 
   @override
-  String get selectCategory => 'Select Category';
+  String get selectCategory => 'Hitamo Icyiciro';
 
   @override
-  String get noCategoriesAvailable => 'No categories available';
+  String get noCategoriesAvailable => 'Nta byiciro bihari';
 
   @override
-  String get allCategories => 'All Categories';
+  String get allCategories => 'Ibyiciro Byose';
 
   @override
   String get searchAcrossAllCourses => 'Search across all available courses';
 
   @override
-  String get failedToLoadCategories => 'Failed to load categories';
+  String get failedToLoadCategories => 'Gushaka ibyiciro byanze';
 
   @override
   String get liveClassesAvailable =>
@@ -1919,7 +1927,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get untitledCourse => 'Untitled Course';
 
   @override
-  String get noCoursesFound => 'No courses found';
+  String get noCoursesFound => 'Nta masomo yabonetse';
 
   @override
   String get tryAdjustingSearch =>
@@ -2287,4 +2295,166 @@ class AppLocalizationsRw extends AppLocalizations {
   @override
   String get lessonScreenMarkLessonComplete =>
       'Shyiraho ikimenyetso cyo kurangiza';
+
+  @override
+  String searchInCategory(Object category) {
+    return 'Shakisha muri $category...';
+  }
+
+  @override
+  String get filterCourses => 'Shungura Amasomo';
+
+  @override
+  String get filterByCategory => 'Shungura ukurikije ibice';
+
+  @override
+  String get clearAll => 'Hanagura Byose';
+
+  @override
+  String get paid => 'Igifaransa';
+
+  @override
+  String get beginner => 'Utangiriye';
+
+  @override
+  String get intermediate => 'Hagati';
+
+  @override
+  String get advanced => 'Abahanga';
+
+  @override
+  String get short => 'Gifize (<1h)';
+
+  @override
+  String get medium => 'Hagati (1-3h)';
+
+  @override
+  String get long => 'Gire (>3h)';
+
+  @override
+  String get rating => 'Amanota';
+
+  @override
+  String get stars4Plus => 'Ano 4+';
+
+  @override
+  String get stars4_5Plus => 'Ano 4.5+';
+
+  @override
+  String get adjustSearchCriteria => 'Gerageza guhindura ibyo ushakisha';
+
+  @override
+  String basedOnYourInterests(Object interests) {
+    return 'Kurikije ibyo ukunda: $interests';
+  }
+
+  @override
+  String get open => 'Fungura';
+
+  @override
+  String coursesCount(Object count) {
+    return 'Amasomo $count';
+  }
+
+  @override
+  String get browseAllCourses => 'Reba amasomo yose';
+
+  @override
+  String byInstructor(Object instructor) {
+    return 'by $instructor';
+  }
+
+  @override
+  String get noThumbnailAvailable => 'Nta ishusho ihari';
+
+  @override
+  String get aboutThisCourse => 'Ibyerekeye iri Soma';
+
+  @override
+  String get meetYourInstructor => 'Umwarimu Wawe';
+
+  @override
+  String get leadInstructor => 'Umwarimu Mukuru';
+
+  @override
+  String get readyToStart => 'Witeguye Gutangira?';
+
+  @override
+  String get joinThousands => 'Iyandikishe nabandi benshi';
+
+  @override
+  String get checkingEnrollment => 'Gusuzuma kwiyandikisha...';
+
+  @override
+  String get buyNow => 'Gura Nonaha';
+
+  @override
+  String get access => 'Access';
+
+  @override
+  String get lifetime => 'Lifetime';
+
+  @override
+  String get redirecting => 'Redirecting...';
+
+  @override
+  String get withYearsExperience =>
+      'Umwarimu ufite uburambe bwinshi mu kigisha.';
+
+  @override
+  String get sidebarSignIn => 'Injira';
+
+  @override
+  String get sidebarRegister => 'Iyandikishe';
+
+  @override
+  String get sidebarUnlockPotential =>
+      'Wunguke ubumenyi binyuze mu masomo yigishwa n\'abanyamwuga.';
+
+  @override
+  String get sidebarLearningPlatform => 'URUBUGA RWO KWIGA';
+
+  @override
+  String get sidebarAdminNotifications => 'Ubutumwa';
+
+  @override
+  String get sidebarAdminStudents => 'Abanyeshuri';
+
+  @override
+  String get sidebarAdminPayments => 'Ubwishyu';
+
+  @override
+  String get sidebarAdminAnalytics => 'Isesengura';
+
+  @override
+  String get sidebarAreYouSureLogout => 'Urifuza gusohoka?';
+
+  @override
+  String get sidebarExpandSidebar => 'Vugurura Ubari';
+
+  @override
+  String get sidebarCollapseSidebar => 'Hinga Ubari';
+
+  @override
+  String get sidebarGoBack => 'Subira Inyuma';
+
+  @override
+  String get sidebarRefreshApp => 'Ongera uvugurure Porogaramu';
+
+  @override
+  String get examPreparation => 'Gukora Ibizamini';
+
+  @override
+  String get examPreparationSubtitle =>
+      'Kwitegura ibizamini binyuze mu ibizamini byabanje n\'igeragezwa';
+
+  @override
+  String get examPreparationBenefit =>
+      'Funga ibizamini byabanje, geragezwa, n\'ubufasha bwa bagenzi kugira ngo watsinde';
+
+  @override
+  String get visitExamMarketplace => 'Kujya ku Mwanya w\'Ibizamini';
+
+  @override
+  String get examMarketplaceUrl => 'https://www.eexams.net/marketplace';
 }

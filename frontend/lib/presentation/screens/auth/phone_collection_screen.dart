@@ -202,7 +202,16 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  _Country _selectedCountry = _countries.first;
+  _Country _selectedCountry = _countries.firstWhere((c) => c.code == 'RW');
+
+  // Theme-aware getters
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _backgroundColor => _isDark ? const Color(0xFF0F172A) : const Color(0xFF00C896);
+  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1A2433);
+  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF8899AA);
+  Color get _borderColor => _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  Color get _inputBgColor => _isDark ? const Color(0xFF0F172A) : Colors.white;
 
   @override
   void dispose() {
@@ -219,7 +228,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -235,19 +244,19 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                    border: Border(bottom: BorderSide(color: _borderColor)),
                   ),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           l10n?.selectCountry ?? 'Select Country',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _textColor),
                         ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
+                        icon: Icon(Icons.close, color: _textColor),
                       ),
                     ],
                   ),
@@ -261,8 +270,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
                       final isSelected = country.code == _selectedCountry.code;
                       return ListTile(
                         leading: Text(country.flag, style: const TextStyle(fontSize: 24)),
-                        title: Text(country.name),
-                        subtitle: Text(country.dialCode),
+                        title: Text(country.name, style: TextStyle(color: _textColor)),
+                        subtitle: Text(country.dialCode, style: TextStyle(color: _secondaryTextColor)),
                         trailing: isSelected ? const Icon(Icons.check, color: Color(0xFF00C896)) : null,
                         onTap: () {
                           debugPrint('DEBUG: Country selected: ${country.name} (${country.dialCode})');
@@ -360,7 +369,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF00C896),
+      backgroundColor: _backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -372,7 +381,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
                   if (context.canPop())
                     IconButton(
                       onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                      icon: Icon(Icons.arrow_back_ios_rounded, color: _isDark ? Colors.white : Colors.white),
                     ),
                   const Spacer(),
                 ],
@@ -408,8 +417,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
             Text(
               l10n?.phoneCollectionTitle ?? 'Add Your Phone Number',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: _isDark ? Colors.white : Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
@@ -419,17 +428,17 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
             Text(
               l10n?.phoneCollectionSubtitle ?? 'Stay connected for important updates',
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: _isDark ? Colors.white70 : Colors.white70, fontSize: 13),
             ),
 
             const SizedBox(height: 20),
 
-            // White card
+            // Card
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
@@ -464,15 +473,15 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           // Country selector
           Text(
             l10n?.selectCountry ?? 'Country',
-            style: const TextStyle(
-              color: Color(0xFF1A2433),
+            style: TextStyle(
+              color: _textColor,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 10),
           Material(
-            color: Colors.white,
+            color: _inputBgColor,
             borderRadius: BorderRadius.circular(12),
             elevation: 0,
             child: InkWell(
@@ -484,23 +493,23 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                  border: Border.all(color: _borderColor, width: 1.5),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Text(_selectedCountry.flag, style: const TextStyle(fontSize: 24)),
                     const SizedBox(width: 10),
-                    Text(_selectedCountry.dialCode, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    Text(_selectedCountry.dialCode, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: _textColor)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _selectedCountry.name,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 15, color: Color(0xFF1A2433)),
+                        style: TextStyle(fontSize: 15, color: _textColor),
                       ),
                     ),
-                    const Icon(Icons.arrow_drop_down, color: Color(0xFF8899AA), size: 28),
+                    Icon(Icons.arrow_drop_down, color: _secondaryTextColor, size: 28),
                   ],
                 ),
               ),
@@ -509,8 +518,8 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           const SizedBox(height: 20),
           Text(
             l10n?.phoneNumber ?? 'Phone Number',
-            style: const TextStyle(
-              color: Color(0xFF1A2433),
+            style: TextStyle(
+              color: _textColor,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -518,10 +527,10 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _inputBgColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-              boxShadow: [
+              border: Border.all(color: _borderColor, width: 1.5),
+              boxShadow: _isDark ? [] : [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
@@ -533,13 +542,13 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
               controller: _phoneController,
               enabled: !_isLoading,
               keyboardType: TextInputType.phone,
-              style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+              style: TextStyle(color: _textColor, fontSize: 15),
               decoration: InputDecoration(
                 hintText: 'e.g., ${_selectedCountry.dialCode == '+7' ? '938288834' : '938288834'} (without ${_selectedCountry.dialCode})',
-                hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-                prefixIcon: const Icon(Icons.phone_rounded, color: Color(0xFF8899AA)),
+                hintStyle: TextStyle(color: _secondaryTextColor),
+                prefixIcon: Icon(Icons.phone_rounded, color: _secondaryTextColor),
                 prefixText: '${_selectedCountry.dialCode} ',
-                prefixStyle: const TextStyle(color: Color(0xFF1A2433), fontSize: 15, fontWeight: FontWeight.w500),
+                prefixStyle: TextStyle(color: _textColor, fontSize: 15, fontWeight: FontWeight.w500),
                 filled: false,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -554,7 +563,7 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
           const SizedBox(height: 6),
           Text(
             'Enter your number without the country code${_selectedCountry.dialCode == '+7' ? ' (10 digits required)' : ''}',
-            style: const TextStyle(color: Color(0xFF8899AA), fontSize: 12),
+            style: TextStyle(color: _secondaryTextColor, fontSize: 12),
           ),
         ],
       ),
@@ -586,12 +595,29 @@ class _PhoneCollectionScreenState extends ConsumerState<PhoneCollectionScreen> {
 
   Widget _buildSkipButton(AppLocalizations? l10n) {
     return TextButton(
-      onPressed: _isLoading ? null : () {
-        context.go('/interest-selection');
+      onPressed: _isLoading ? null : () async {
+        // Skip phone collection and complete onboarding
+        try {
+          await ref.read(authProvider.notifier).updateProfile(
+            hasCompletedOnboarding: true,
+          );
+          if (mounted) {
+            context.go('/dashboard');
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
       child: Text(
         l10n?.skipForNow ?? 'Skip for now',
-        style: const TextStyle(color: Color(0xFF4A5568), fontSize: 14, fontWeight: FontWeight.w500),
+        style: TextStyle(color: _secondaryTextColor, fontSize: 14, fontWeight: FontWeight.w500),
       ),
     );
   }

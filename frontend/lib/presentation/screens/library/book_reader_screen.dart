@@ -9,7 +9,7 @@ import 'package:url_launcher/link.dart';
 import 'package:flutter/services.dart';
 
 class BookReaderScreen extends ConsumerStatefulWidget {
-  final Book book;
+  final dynamic book;
 
   const BookReaderScreen({
     super.key,
@@ -33,16 +33,21 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   void initState() {
     super.initState();
     
-    // Set default format preference
-    if (widget.book.formats != null) {
-      if (widget.book.formats!.containsKey('text/html')) {
-        _selectedFormat = 'text/html';
-      } else if (widget.book.formats!.containsKey('text/plain')) {
-        _selectedFormat = 'text/plain';
-      } else if (widget.book.formats!.containsKey('application/pdf')) {
-        _selectedFormat = 'application/pdf';
-      } else {
-        _selectedFormat = widget.book.formats!.keys.first;
+    // Check if this is an admin-uploaded book
+    final isAdminBook = widget.book is! Book;
+    
+    if (!isAdminBook) {
+      // Set default format preference for Gutenberg books
+      if (widget.book.formats != null) {
+        if (widget.book.formats!.containsKey('text/html')) {
+          _selectedFormat = 'text/html';
+        } else if (widget.book.formats!.containsKey('text/plain')) {
+          _selectedFormat = 'text/plain';
+        } else if (widget.book.formats!.containsKey('application/pdf')) {
+          _selectedFormat = 'application/pdf';
+        } else {
+          _selectedFormat = widget.book.formats!.keys.first;
+        }
       }
     }
   }
@@ -78,13 +83,18 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isAdminBook = widget.book is! Book;
+    final title = isAdminBook 
+        ? (widget.book['title'] ?? 'Untitled')
+        : widget.book.title;
+    
     return AppBar(
       backgroundColor: _isDarkMode ? const Color(0xFF1F2937) : Colors.white,
       elevation: 0,
       title: Text(
-        widget.book.title.length > 30 
-            ? '${widget.book.title.substring(0, 30)}...' 
-            : widget.book.title,
+        title.length > 30 
+            ? '${title.substring(0, 30)}...' 
+            : title,
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -113,14 +123,16 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           ),
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'format',
-              child: Text('Change Format'),
-            ),
-            const PopupMenuItem(
-              value: 'font_size',
-              child: Text('Font Size'),
-            ),
+            if (!isAdminBook) ...[
+              const PopupMenuItem(
+                value: 'format',
+                child: Text('Change Format'),
+              ),
+              const PopupMenuItem(
+                value: 'font_size',
+                child: Text('Font Size'),
+              ),
+            ],
             const PopupMenuItem(
               value: 'theme',
               child: Text('Toggle Theme'),
@@ -184,6 +196,19 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   }
 
   Widget _buildContent(BuildContext context) {
+    final isAdminBook = widget.book is! Book;
+    
+    // Handle admin-uploaded books
+    if (isAdminBook) {
+      final pdfUrl = widget.book['pdfUrl'];
+      if (pdfUrl != null && pdfUrl.isNotEmpty) {
+        return _buildPDFViewer(context, pdfUrl);
+      } else {
+        return _buildNoContentWidget(context);
+      }
+    }
+    
+    // Handle Gutenberg books
     if (widget.book.formats == null || widget.book.formats!.isEmpty) {
       return _buildNoContentWidget(context);
     }

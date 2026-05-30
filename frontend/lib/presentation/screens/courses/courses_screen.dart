@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -12,6 +13,7 @@ import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
@@ -43,6 +45,14 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   String? _errorMessage;
   bool _showCategoryDropdown = false;
+  bool _showFiltersPanel = false;
+  List<String> _userInterests = [];
+
+  // Filter states
+  String _selectedPriceFilter = 'all'; // all, free, paid
+  String _selectedLevelFilter = 'all'; // all, beginner, intermediate, advanced
+  String _selectedDurationFilter = 'all'; // all, short, medium, long
+  String _selectedRatingFilter = 'all'; // all, 4plus, 4.5plus
 
   final CourseRepository _repository = CourseRepository();
 
@@ -66,8 +76,29 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       _selectedCategoryName = widget.categoryName;
     }
 
+    // Load user interests and then courses
+    _loadUserInterestsAndCourses();
+  }
+
+  Future<void> _loadUserInterestsAndCourses() async {
+    // Load user interests from storage
+    final storageManager = StorageManager();
+    final interests = await storageManager.getUserInterests();
+    final authState = ref.read(authProvider);
+    
+    // Use interests from auth state if available, otherwise from storage
+    final userInterests = authState.user?.interests ?? interests ?? [];
+    
+    if (mounted) {
+      setState(() {
+        _userInterests = userInterests;
+      });
+    }
+    
+    debugPrint('CoursesScreen: User interests loaded: $_userInterests');
+    
     // Load initial page with debounce for better performance
-    Future.microtask(() => _loadPage(1, reset: true));
+    await _loadPage(1, reset: true);
   }
 
   void _onScroll() {
@@ -109,7 +140,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         _hasMore = result.hasNextPage;
         _isLoading = false;
         _isLoadingMore = false;
-        _filteredCourses = _allCourses;
+        // Apply filters and sort by interests
+        var courses = _applyFilters(_allCourses);
+        _filteredCourses = _sortCoursesByInterests(courses);
       });
     } catch (error) {
       if (!mounted) return;
@@ -140,6 +173,107 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     debugPrint(
         'CoursesScreen: Reloading courses for category $_selectedCategory');
     _loadPage(1, reset: true);
+  }
+
+  /// Apply client-side filters to courses
+  List<Course> _applyFilters(List<Course> courses) {
+    return courses.where((course) {
+      // Price filter
+      if (_selectedPriceFilter != 'all') {
+        final price = course.price ?? 0;
+        if (_selectedPriceFilter == 'free' && price > 0) return false;
+        if (_selectedPriceFilter == 'paid' && price == 0) return false;
+      }
+
+      // Level filter
+      if (_selectedLevelFilter != 'all') {
+        final level = course.level.toLowerCase();
+        if (_selectedLevelFilter == 'beginner' && !level.contains('beginner')) return false;
+        if (_selectedLevelFilter == 'intermediate' && !level.contains('intermediate')) return false;
+        if (_selectedLevelFilter == 'advanced' && !level.contains('advanced')) return false;
+      }
+
+      // Duration filter (in minutes)
+      if (_selectedDurationFilter != 'all') {
+        final duration = course.duration ?? 0;
+        if (_selectedDurationFilter == 'short' && duration > 60) return false;
+        if (_selectedDurationFilter == 'medium' && (duration <= 60 || duration > 180)) return false;
+        if (_selectedDurationFilter == 'long' && duration <= 180) return false;
+      }
+
+      // Rating filter
+      if (_selectedRatingFilter != 'all') {
+        final rating = course.averageRating ?? 0;
+        if (_selectedRatingFilter == '4plus' && rating < 4.0) return false;
+        if (_selectedRatingFilter == '4.5plus' && rating < 4.5) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  /// Sort courses to prioritize those matching user interests
+  List<Course> _sortCoursesByInterests(List<Course> courses) {
+    if (_userInterests.isEmpty) return courses;
+
+    return courses.toList()..sort((a, b) {
+      final aScore = _getCourseInterestScore(a);
+      final bScore = _getCourseInterestScore(b);
+      // Higher score comes first (descending order)
+      return bScore.compareTo(aScore);
+    });
+  }
+
+  /// Calculate how well a course matches user interests (0-10 scale)
+  int _getCourseInterestScore(Course course) {
+    if (_userInterests.isEmpty) return 0;
+
+    int score = 0;
+    final courseCategory = _getCourseCategoryName(course).toLowerCase();
+    
+    for (final interest in _userInterests) {
+      final interestLower = interest.toLowerCase();
+      
+      // Direct category match (highest priority)
+      if (courseCategory.contains(interestLower) || 
+          interestLower.contains(courseCategory)) {
+        score += 5;
+      }
+      
+      // Title match
+      final title = (course.title ?? '').toLowerCase();
+      if (title.contains(interestLower)) {
+        score += 3;
+      }
+      
+      // Description match
+      final description = (course.description ?? '').toLowerCase();
+      if (description.contains(interestLower)) {
+        score += 2;
+      }
+    }
+    
+    return score;
+  }
+
+  /// Get category name from course
+  String _getCourseCategoryName(Course course) {
+    if (course.category != null && course.category! is Map<String, dynamic>) {
+      final categoryMap = course.category! as Map<String, dynamic>;
+      return categoryMap['name'] as String? ?? '';
+    }
+    
+    // Fallback to categoryId mapping
+    final categoryMapping = {
+      '69c503cb27858856e87d0027': 'Digital and Tech coaching',
+      '69c50aa727858856e87d003f': 'Entrepreneurship & Innovation Hub',
+      '69c5067c27858856e87d002f': 'Jobseeker Coaching',
+      '69c5017a27858856e87d001f': 'Language coaching',
+      '69c5116627858856e87d004f': 'Mental Health & Parental Coaching',
+      '69c50a3327858856e87d0037': 'Professional Coaching',
+    };
+    
+    return categoryMapping[course.categoryId] ?? '';
   }
 
   void _onSearchChanged(String value) {
@@ -264,8 +398,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   ),
                   decoration: InputDecoration(
                     hintText: _selectedCategory == 'all'
-                        ? 'Search courses, instructors...'
-                        : 'Search in $_selectedCategoryName...',
+                        ? (l10n?.searchCourses ?? 'Search courses, instructors...')
+                        : 'Search in ${_selectedCategoryName ?? ''}...',
                     hintStyle: TextStyle(
                       color: AppTheme.greyColor.withOpacity(0.7),
                       fontSize: _getResponsiveTextSize(context) * 1.1,
@@ -284,7 +418,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       children: [
                         if (_searchController.text.isNotEmpty)
                           IconButton(
-                            tooltip: 'Clear search',
+                            tooltip: l10n?.clear ?? 'Clear search',
                             icon: Icon(
                               Icons.clear_rounded,
                               color: AppTheme.greyColor,
@@ -299,17 +433,17 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: IconButton(
-                            tooltip: 'Filter by category',
+                            tooltip: l10n?.filterCourses ?? 'Filter courses',
                             onPressed: () {
-                              setState(() => _showCategoryDropdown = !_showCategoryDropdown);
+                              setState(() => _showFiltersPanel = !_showFiltersPanel);
                             },
                             icon: Icon(
-                              _showCategoryDropdown
+                              _showFiltersPanel
                                   ? Icons.keyboard_arrow_up_rounded
                                   : Icons.tune_rounded,
-                              color: _selectedCategory == 'all'
-                                  ? (isDark ? Colors.white70 : const Color(0xFF9A8A76))
-                                  : const Color(0xFF0F766E),
+                              color: _hasActiveFilters()
+                                  ? const Color(0xFF0F766E)
+                                  : (isDark ? Colors.white70 : const Color(0xFF9A8A76)),
                               size: _getResponsiveIconSize(context) * 0.7,
                             ),
                           ),
@@ -334,8 +468,348 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             ),
             child: _buildCategoryDropdown(context),
           ),
+        // Filters Panel
+        if (_showFiltersPanel)
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: _getResponsiveHorizontalPadding(context),
+            ),
+            child: _buildFiltersPanel(context),
+          ),
+        // Active Filters Chips
+        if (_hasActiveFilters())
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: _getResponsiveHorizontalPadding(context),
+              vertical: 8,
+            ),
+            child: _buildActiveFiltersChips(context),
+          ),
       ],
     );
+  }
+
+  bool _hasActiveFilters() {
+    return _selectedPriceFilter != 'all' ||
+        _selectedLevelFilter != 'all' ||
+        _selectedDurationFilter != 'all' ||
+        _selectedRatingFilter != 'all';
+  }
+
+  Widget _buildFiltersPanel(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.filter_list_rounded,
+                color: const Color(0xFF10B981),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n?.filterCourses ?? 'Filter Courses',
+                style: TextStyle(
+                  color: AppTheme.getTextColor(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedPriceFilter = 'all';
+                    _selectedLevelFilter = 'all';
+                    _selectedDurationFilter = 'all';
+                    _selectedRatingFilter = 'all';
+                  });
+                  _filterCourses();
+                },
+                icon: Icon(Icons.clear_all, size: 16, color: AppTheme.greyColor),
+                label: Text(
+                  l10n?.clearAll ?? 'Clear All',
+                  style: TextStyle(
+                    color: AppTheme.greyColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Price Filter
+          _buildFilterSection(
+            context,
+            l10n?.price ?? 'Price',
+            [
+              _buildFilterChip(l10n?.all ?? 'All', 'all', _selectedPriceFilter, (val) {
+                setState(() => _selectedPriceFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.free ?? 'Free', 'free', _selectedPriceFilter, (val) {
+                setState(() => _selectedPriceFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.paid ?? 'Paid', 'paid', _selectedPriceFilter, (val) {
+                setState(() => _selectedPriceFilter = val);
+                _filterCourses();
+              }),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Level Filter
+          _buildFilterSection(
+            context,
+            l10n?.level ?? 'Level',
+            [
+              _buildFilterChip(l10n?.all ?? 'All', 'all', _selectedLevelFilter, (val) {
+                setState(() => _selectedLevelFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.beginner ?? 'Beginner', 'beginner', _selectedLevelFilter, (val) {
+                setState(() => _selectedLevelFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.intermediate ?? 'Intermediate', 'intermediate', _selectedLevelFilter, (val) {
+                setState(() => _selectedLevelFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.advanced ?? 'Advanced', 'advanced', _selectedLevelFilter, (val) {
+                setState(() => _selectedLevelFilter = val);
+                _filterCourses();
+              }),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Duration Filter
+          _buildFilterSection(
+            context,
+            l10n?.duration ?? 'Duration',
+            [
+              _buildFilterChip(l10n?.all ?? 'All', 'all', _selectedDurationFilter, (val) {
+                setState(() => _selectedDurationFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.short ?? 'Short (<1h)', 'short', _selectedDurationFilter, (val) {
+                setState(() => _selectedDurationFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.medium ?? 'Medium (1-3h)', 'medium', _selectedDurationFilter, (val) {
+                setState(() => _selectedDurationFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.long ?? 'Long (>3h)', 'long', _selectedDurationFilter, (val) {
+                setState(() => _selectedDurationFilter = val);
+                _filterCourses();
+              }),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Rating Filter
+          _buildFilterSection(
+            context,
+            l10n?.rating ?? 'Rating',
+            [
+              _buildFilterChip(l10n?.all ?? 'All', 'all', _selectedRatingFilter, (val) {
+                setState(() => _selectedRatingFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.stars4Plus ?? '4+ Stars', '4plus', _selectedRatingFilter, (val) {
+                setState(() => _selectedRatingFilter = val);
+                _filterCourses();
+              }),
+              _buildFilterChip(l10n?.stars4_5Plus ?? '4.5+ Stars', '4.5plus', _selectedRatingFilter, (val) {
+                setState(() => _selectedRatingFilter = val);
+                _filterCourses();
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(BuildContext context, String title, List<Widget> chips) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: AppTheme.greyColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: chips,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, String selectedValue, Function(String) onSelected) {
+    final isSelected = value == selectedValue;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onSelected(value),
+      selectedColor: const Color(0xFF10B981),
+      backgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppTheme.getTextColor(context),
+        fontSize: 13,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    );
+  }
+
+  Widget _buildActiveFiltersChips(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chips = <Widget>[];
+
+    if (_selectedPriceFilter != 'all') {
+      chips.add(_buildActiveFilterChip(
+        _getFilterLabel('price', _selectedPriceFilter),
+        () {
+          setState(() => _selectedPriceFilter = 'all');
+          _filterCourses();
+        },
+      ));
+    }
+    if (_selectedLevelFilter != 'all') {
+      chips.add(_buildActiveFilterChip(
+        _getFilterLabel('level', _selectedLevelFilter),
+        () {
+          setState(() => _selectedLevelFilter = 'all');
+          _filterCourses();
+        },
+      ));
+    }
+    if (_selectedDurationFilter != 'all') {
+      chips.add(_buildActiveFilterChip(
+        _getFilterLabel('duration', _selectedDurationFilter),
+        () {
+          setState(() => _selectedDurationFilter = 'all');
+          _filterCourses();
+        },
+      ));
+    }
+    if (_selectedRatingFilter != 'all') {
+      chips.add(_buildActiveFilterChip(
+        _getFilterLabel('rating', _selectedRatingFilter),
+        () {
+          setState(() => _selectedRatingFilter = 'all');
+          _filterCourses();
+        },
+      ));
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: chips,
+    );
+  }
+
+  Widget _buildActiveFilterChip(String label, VoidCallback onDelete) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withOpacity(isDark ? 0.2 : 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF0F766E),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onDelete,
+            child: Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: const Color(0xFF0F766E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getFilterLabel(String type, String value) {
+    switch (type) {
+      case 'price':
+        return {
+          'free': l10n?.free ?? 'Free',
+          'paid': l10n?.paid ?? 'Paid',
+        }[value] ?? value;
+      case 'level':
+        return {
+          'beginner': l10n?.beginner ?? 'Beginner',
+          'intermediate': l10n?.intermediate ?? 'Intermediate',
+          'advanced': l10n?.advanced ?? 'Advanced',
+        }[value] ?? value;
+      case 'duration':
+        return {
+          'short': l10n?.short ?? 'Short',
+          'medium': l10n?.medium ?? 'Medium',
+          'long': l10n?.long ?? 'Long',
+        }[value] ?? value;
+      case 'rating':
+        return {
+          '4plus': l10n?.stars4Plus ?? '4+ Stars',
+          '4.5plus': l10n?.stars4_5Plus ?? '4.5+ Stars',
+        }[value] ?? value;
+      default:
+        return value;
+    }
   }
 
   Widget _buildTopBar(BuildContext context) {
@@ -957,7 +1431,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       );
     }
 
-    // Group courses by category
+    // Group courses by category (dynamically based on user interests)
     final groupedCourses = _groupCoursesByCategory(courses);
 
     // Build slivers for each category
@@ -1018,6 +1492,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       BuildContext context, String categoryName, int courseCount) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRecommended = categoryName == 'Recommended for You';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -1034,28 +1509,58 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
-              ),
+              gradient: isRecommended
+                  ? const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                    )
+                  : const LinearGradient(
+                      colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
+                    ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              categoryName,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isDesktop ? 16 : 14,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isRecommended) ...[
+                  Icon(
+                    Icons.recommend_rounded,
+                    color: Colors.white,
+                    size: isDesktop ? 16 : 14,
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  categoryName,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isDesktop ? 16 : 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            '$courseCount courses',
-            style: TextStyle(
-              color: AppTheme.greyColor,
-              fontSize: isDesktop ? 14 : 12,
+          if (isRecommended)
+            Expanded(
+              child: Text(
+                'Based on your interests: ${_userInterests.take(3).join(", ")}${_userInterests.length > 3 ? "..." : ""}',
+                style: TextStyle(
+                  color: AppTheme.greyColor,
+                  fontSize: isDesktop ? 13 : 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          else
+            Text(
+              '$courseCount courses',
+              style: TextStyle(
+                color: AppTheme.greyColor,
+                fontSize: isDesktop ? 14 : 12,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1063,76 +1568,85 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   Map<String, List<Course>> _groupCoursesByCategory(List<Course> courses) {
     final Map<String, List<Course>> grouped = {};
+    final List<String> interestMatchingCategories = [];
+    final List<String> otherCategories = [];
 
-    // Define category order - starting with Technical & Digital Coaching
-    final categoryOrder = [
-      'Digital and Tech coaching',
-      'Entrepreneurship & Innovation Hub',
-      'Jobseeker Coaching',
-      'Laguange coaching',
-      'Mental Health & Parental Coaching',
-      'Professional Coaching',
-    ];
-
-    // Initialize all categories in order
-    for (final categoryName in categoryOrder) {
-      grouped[categoryName] = [];
-    }
-
-    // Add 'Uncategorized' at the end
-    grouped['Uncategorized'] = [];
-
-    // Group courses by category
+    // First pass: categorize all courses and identify interest-matching categories
     for (final course in courses) {
-      String? categoryName;
-
-      // Try to get category name from course.category (populated object)
-      if (course.category != null && course.category! is Map<String, dynamic>) {
-        final categoryMap = course.category! as Map<String, dynamic>;
-        categoryName = categoryMap['name'] as String?;
-
-        // Debug logging
-        if (categoryName == null) {
-          print(
-              'Course: ${course.title} - Category object found but no name field: ${categoryMap.keys}');
+      final categoryName = _getCourseCategoryName(course);
+      
+      if (!grouped.containsKey(categoryName)) {
+        grouped[categoryName] = [];
+        
+        // Check if this category matches user interests
+        if (_categoryMatchesInterests(categoryName)) {
+          interestMatchingCategories.add(categoryName);
+        } else {
+          otherCategories.add(categoryName);
         }
       }
-
-      // If no category name, try to get by categoryId
-      if (categoryName == null && course.categoryId != null) {
-        // This would require categories data, but for now we'll use a mapping
-        final categoryMapping = {
-          '69c503cb27858856e87d0027': 'Digital and Tech coaching',
-          '69c50aa727858856e87d003f': 'Entrepreneurship & Innovation Hub',
-          '69c5067c27858856e87d002f': 'Jobseeker Coaching',
-          '69c5017a27858856e87d001f': 'Laguange coaching',
-          '69c5116627858856e87d004f': 'Mental Health & Parental Coaching',
-          '69c50a3327858856e87d0037': 'Professional Coaching',
-        };
-        categoryName = categoryMapping[course.categoryId];
-
-        // Debug logging
-        print(
-            'Course: ${course.title} - Using categoryId mapping: ${course.categoryId} -> $categoryName');
-      }
-
-      // Add to appropriate category
-      if (categoryName != null && grouped.containsKey(categoryName)) {
-        grouped[categoryName]!.add(course);
-      } else {
-        grouped['Uncategorized']!.add(course);
-      }
+      
+      grouped[categoryName]!.add(course);
     }
 
-    // Remove empty categories (except Uncategorized if it has courses)
-    final filteredGrouped = <String, List<Course>>{};
-    for (final entry in grouped.entries) {
-      if (entry.value.isNotEmpty) {
-        filteredGrouped[entry.key] = entry.value;
+    // Create final ordered map: Recommended (if interests exist) -> Interest categories -> Other categories -> Uncategorized
+    final orderedGrouped = <String, List<Course>>{};
+    
+    // If user has interests, create a "Recommended for You" section with all matching courses
+    if (_userInterests.isNotEmpty) {
+      final recommendedCourses = <Course>[];
+      for (final categoryName in interestMatchingCategories) {
+        recommendedCourses.addAll(grouped[categoryName]!);
+      }
+      
+      // Sort recommended courses by interest score
+      recommendedCourses.sort((a, b) {
+        final aScore = _getCourseInterestScore(a);
+        final bScore = _getCourseInterestScore(b);
+        return bScore.compareTo(aScore);
+      });
+      
+      if (recommendedCourses.isNotEmpty) {
+        orderedGrouped['Recommended for You'] = recommendedCourses;
       }
     }
+    
+    // Add interest-matching categories first (sorted alphabetically)
+    interestMatchingCategories.sort();
+    for (final categoryName in interestMatchingCategories) {
+      if (grouped[categoryName]!.isNotEmpty) {
+        orderedGrouped[categoryName] = grouped[categoryName]!;
+      }
+    }
+    
+    // Then add other categories (sorted alphabetically)
+    otherCategories.sort();
+    for (final categoryName in otherCategories) {
+      if (grouped[categoryName]!.isNotEmpty && categoryName != 'Uncategorized') {
+        orderedGrouped[categoryName] = grouped[categoryName]!;
+      }
+    }
+    
+    // Add Uncategorized last if it has courses
+    if (grouped.containsKey('Uncategorized') && grouped['Uncategorized']!.isNotEmpty) {
+      orderedGrouped['Uncategorized'] = grouped['Uncategorized']!;
+    }
 
-    return filteredGrouped;
+    return orderedGrouped;
+  }
+
+  /// Check if a category name matches any user interest
+  bool _categoryMatchesInterests(String categoryName) {
+    if (_userInterests.isEmpty) return false;
+    
+    final categoryLower = categoryName.toLowerCase();
+    for (final interest in _userInterests) {
+      final interestLower = interest.toLowerCase();
+      if (categoryLower.contains(interestLower) || interestLower.contains(categoryLower)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Widget _buildCoursesHeader(BuildContext context, int count) {
@@ -1215,13 +1729,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () {
-          if (isEnrolled) {
-            context.push('/learning/${course.id}');
-          } else {
-            CourseNavigationUtils.navigateToCourse(context, ref, course);
-          }
-        },
+        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+            context, ref, course),
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         child: Padding(
           padding: EdgeInsets.all(isDesktop ? 18 : 14),
@@ -1282,15 +1791,15 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.check_circle_rounded,
+                              const Icon(Icons.check_circle_rounded,
                                   color: Colors.white, size: 10),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                'ENROLLED',
-                                style: TextStyle(
+                                l10n?.enrolled ?? 'ENROLLED',
+                                style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 8,
                                     fontWeight: FontWeight.w800),
@@ -1310,8 +1819,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                             color: Colors.red.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text(
-                            '20% OFF',
+                          child: Text(
+                            l10n?.discount ?? '20% OFF',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 9,
@@ -1459,7 +1968,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           )
                         else
                           Text(
-                            'FREE',
+                            l10n?.free ?? 'FREE',
                             style: TextStyle(
                               color: Colors.green,
                               fontSize: isDesktop ? 15 : 13,
@@ -1482,8 +1991,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           ),
                           child: Text(
                             isEnrolled
-                                ? 'Open'
-                                : 'Enroll', // Shortened text for mobile
+                                ? (l10n?.open ?? 'Open')
+                                : (l10n?.enroll ?? 'Enroll'),
                             style: TextStyle(
                               color: AppTheme.whiteColor,
                               fontSize: isDesktop ? 11 : 10,
@@ -1524,13 +2033,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         ),
       ),
       child: InkWell(
-        onTap: () {
-          if (isEnrolled) {
-            context.push('/learning/${course.id}');
-          } else {
-            CourseNavigationUtils.navigateToCourse(context, ref, course);
-          }
-        },
+        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
+            context, ref, course),
         borderRadius: BorderRadius.circular(15),
         child: Padding(
           padding: const EdgeInsets.all(15),
@@ -1733,9 +2237,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       ],
                     )
                   else
-                    const Text(
-                      'FREE',
-                      style: TextStyle(
+                    Text(
+                      l10n?.free ?? 'FREE',
+                      style: const TextStyle(
                         color: Colors.green,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1754,7 +2258,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      isEnrolled ? 'Continue' : 'Enroll',
+                      isEnrolled ? (l10n?.continueText ?? 'Continue') : (l10n?.enroll ?? 'Enroll'),
                       style: const TextStyle(
                         color: AppTheme.whiteColor,
                         fontSize: 12,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class NameCollectionScreen extends ConsumerStatefulWidget {
   const NameCollectionScreen({super.key});
@@ -60,6 +61,10 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -109,7 +114,7 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
                         ),
                         const SizedBox(height: 32),
                         Text(
-                          'What\'s your name?',
+                          l10n.nameCollectionTitle,
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -119,7 +124,7 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Help us personalise your learning experience by telling us your full name.',
+                          l10n.nameCollectionSubtitle,
                           style: TextStyle(
                             fontSize: 15,
                             color: AppTheme.getSecondaryTextColor(context),
@@ -141,8 +146,8 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
                             color: AppTheme.getTextColor(context),
                           ),
                           decoration: InputDecoration(
-                            labelText: 'Full Name',
-                            hintText: 'e.g. Jean Bosco Uwimana',
+                            labelText: l10n.fullName,
+                            hintText: l10n.nameHint,
                             prefixIcon: const Icon(
                               Icons.person_outline_rounded,
                               color: Color(0xFF10B981),
@@ -190,10 +195,10 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your full name';
+                              return l10n.nameRequiredError;
                             }
                             if (value.trim().length < 2) {
-                              return 'Name must be at least 2 characters';
+                              return l10n.nameTooShortError;
                             }
                             return null;
                           },
@@ -226,20 +231,20 @@ class _NameCollectionScreenState extends ConsumerState<NameCollectionScreen>
                                           Colors.white),
                                     ),
                                   )
-                                : const Row(
+                                : Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        'Continue',
-                                        style: TextStyle(
+                                        l10n.continueText,
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                           letterSpacing: 0.3,
                                         ),
                                       ),
-                                      SizedBox(width: 8),
-                                      Icon(Icons.arrow_forward_rounded,
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.arrow_forward_rounded,
                                           size: 20),
                                     ],
                                   ),

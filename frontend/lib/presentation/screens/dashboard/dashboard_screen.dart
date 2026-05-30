@@ -554,6 +554,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       _buildUpdateInterestsCard(context),
                       const SizedBox(height: 18),
                       _buildLiveClassesContactCard(context),
+                      const SizedBox(height: 18),
+                      _buildExamPreparationCard(context),
                       const SizedBox(height: 24),
                       const DownloadsSection(),
                       const SizedBox(height: 32),
@@ -1238,6 +1240,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       border: Border.all(color: borderColor),
       boxShadow: _softShadows(accent ?? const Color(0xFF64748B),
           opacity: isDark ? 0.16 : 0.08),
+    );
+  }
+
+  BoxDecoration _liveClassesDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark 
+        ? const Color(0xFF0D2D1A) 
+        : const Color(0xFFECFDF5);
+    final borderColor = isDark 
+        ? const Color(0xFF10B981).withOpacity(0.3) 
+        : const Color(0xFF10B981).withOpacity(0.2);
+
+    return BoxDecoration(
+      color: baseColor,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: borderColor, width: 1.5),
+      boxShadow: _softShadows(const Color(0xFF10B981), opacity: isDark ? 0.2 : 0.12),
+    );
+  }
+
+  BoxDecoration _examPreparationDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark 
+        ? const Color(0xFF1E1B3A) 
+        : const Color(0xFFF5F3FF);
+    final borderColor = isDark 
+        ? const Color(0xFF8B5CF6).withOpacity(0.3) 
+        : const Color(0xFF8B5CF6).withOpacity(0.2);
+
+    return BoxDecoration(
+      color: baseColor,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: borderColor, width: 1.5),
+      boxShadow: _softShadows(const Color(0xFF8B5CF6), opacity: isDark ? 0.2 : 0.12),
     );
   }
 
@@ -1978,10 +2014,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         borderRadius: BorderRadius.circular(22),
         child: Ink(
           padding: EdgeInsets.all(isMobile ? 16 : 20),
-          decoration: _modernPanelDecoration(
-            context,
-            accent: const Color(0xFF10B981),
-          ),
+          decoration: _liveClassesDecoration(context),
           child: Row(
             children: [
               Container(
@@ -2031,6 +2064,82 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669),
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExamPreparationCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          final url = l10n?.examMarketplaceUrl ?? 'https://www.eexams.net/marketplace';
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: EdgeInsets.all(isMobile ? 16 : 20),
+          decoration: _examPreparationDecoration(context),
+          child: Row(
+            children: [
+              Container(
+                width: isMobile ? 42 : 50,
+                height: isMobile ? 42 : 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.quiz_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n?.examPreparation ?? 'Exam Preparation',
+                      style: TextStyle(
+                        fontSize: isMobile ? 15 : 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n?.examPreparationBenefit ?? 'Access past papers, practice tests, and expert guidance to ace your exams',
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      maxLines: isMobile ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF6366F1),
                 size: 16,
               ),
             ],

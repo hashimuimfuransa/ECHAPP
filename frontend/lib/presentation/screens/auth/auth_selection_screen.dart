@@ -731,7 +731,7 @@ class _PhoneAuthButtonState extends State<_PhoneAuthButton>
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
                 if (widget.isLoading)
@@ -831,7 +831,7 @@ class _EmailButtonState extends State<_EmailButton> with SingleTickerProviderSta
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
                 if (widget.isLoading)
@@ -1203,7 +1203,7 @@ class _AuthCard extends StatelessWidget {
           _FadeInSlide(
             delay: const Duration(milliseconds: 300),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
                 color: errorBgColor,
@@ -1532,10 +1532,10 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                 ),
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
-                    isSmallMobile ? 20 : 24,
-                    isSmallMobile ? 20 : 24,
-                    isSmallMobile ? 20 : 24,
-                    isSmallMobile ? 20 : 24,
+                    isSmallMobile ? 28 : 32,
+                    isSmallMobile ? 28 : 32,
+                    isSmallMobile ? 28 : 32,
+                    isSmallMobile ? 28 : 32,
                   ),
                   child: _AuthCard(
                     isLoading: authState.isLoading,

@@ -128,13 +128,13 @@ class ResponsiveGridCount {
   
   double get childAspectRatio {
     if (ResponsiveBreakpoints.isSmallMobile(context)) {
-      return 0.65; // Increased height
+      return 0.58; // Taller cards to prevent overflow
     } else if (ResponsiveBreakpoints.isStandardMobile(context)) {
-      return 0.7;
+      return 0.62;
     } else if (ResponsiveBreakpoints.isTablet(context)) {
-      return 0.75;
+      return 0.68;
     } else {
-      return 0.78; // Increased height for desktop
+      return 0.72; // Taller cards for desktop
     }
   }
 }

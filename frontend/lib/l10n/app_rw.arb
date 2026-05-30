@@ -1,8 +1,6 @@
 {
   "@@locale": "rw",
-
   "appName": "Excellence Coaching Hub",
-
   "welcome": "Murakaza neza",
   "getStarted": "Tangira",
   "continueText": "Komeza",
@@ -44,15 +42,13 @@
   "unselect": "Kuraho ibyahiswemo",
   "confirm": "Emeza",
   "submit": "Ohereza",
-
   "languageSelectionTitle": "Hitamo Ururimi",
   "languageSelectionSubtitle": "Hitamo ururimi ukunda kugirango ukomeze",
   "language": "Ururimi",
   "english": "Icyongereza",
   "kinyarwanda": "Ikinyarwanda",
-
   "continueLearning": "Komeza Kwiga",
-  "myLearning": "Amasomo yanjye",
+  "myLearning": "Kwiga Kwanjye",
   "downloads": "Ibyakuruwe",
   "offline": "Nta Interineti",
   "exams": "Ibizamini",
@@ -66,1042 +62,529 @@
   "examHistory": "Amateka y'Ibizamini",
   "pastResults": "Ibisubizo byabanje",
   "continueCourses": "Komeza Amasomo",
-
   "home": "Ahabanza",
-  "enrolled": "ayo natangiye",
+  "enrolled": "WATANGIYE",
   "dashboard": "Ikibaho",
   "categories": "Ibyiciro",
   "profile": "Umwirondoro",
   "settings": "Igenamiterere",
-
-  "excellenceHub": "Excellence Coaching Hub",
-
+  "excellenceHub": "EXCELLENCE COACHING HUB",
   "splashInitializing": "Porogaramu irimo gutangizwa...",
   "splashPreparing": "Turimo gutegura uburyo bwawe bwo kwiga...",
   "splashReady": "Byiteguye!",
-
   "authTagline": "Guhindura Uburezi Binyuze mu Ikoranabuhanga",
   "authExpertLed": "Kwiga biyobowe n'Abanyamwuga",
   "authLearnGrowSucceed": "Kwiga • Gukura • Gutsinda",
-
   "authSelectionTitle": "Murakaza neza muri Excellence Coaching Hub",
   "authSelectionSubtitle": "Hitamo uburyo ushaka gukoresha kugirango ukomeze",
-
   "continueWithGoogle": "Komeza ukoresheje Google",
   "continueWithPhone": "Komeza ukoresheje Telefone",
   "continueWithEmail": "Komeza ukoresheje Imeyili",
-
   "phoneAuthTitle": "Kwemeza ukoresheje Telefone",
   "phoneAuthSubtitle": "Injiza nimero ya telefone yawe kugirango wemezwe",
-
   "phoneSignIn": "Injira ukoresheje Telefone",
   "quickAndSecure": "Byihuse kandi Bifite Umutekano",
-
   "signInWithPhone": "Injira ukoresheje nimero ya telefone yawe kugira ngo ubone uburyo bwihuse kandi bwizewe. Nta jambobanga rikenewe.",
-
   "enterVerificationCode": "Injiza kode yo kwemeza",
   "enterPhoneNumber": "Injiza nimero ya telefone yawe",
-
   "sendVerificationCode": "Ohereza Kode yo Kwemeza",
   "verifyCode": "Emeza Kode",
   "resendCode": "Ongera wohereze Kode",
-
   "changePhoneNumber": "Hindura nimero ya telefone",
   "selectCountry": "Hitamo Igihugu",
-
   "enterValidPhone": "Nyamuneka injiza nimero ya telefone yemewe",
-
   "enterVerificationCodeError": "Nyamuneka injiza kode yo kwemeza",
-
   "enter6DigitCode": "Nyamuneka injiza kode igizwe n'imibare 6",
-
   "phoneAuthBrowserWarning": "Kwemeza ukoresheje telefone bishobora gufungura browser kugirango wemeze. Nyamuneka ntuhagarike icyo gikorwa.",
-
   "emailAuthOptionTitle": "Hitamo Uburyo",
   "emailAuthOptionSubtitle": "Hitamo uburyo ushaka gukoresha winjira muri konti yawe",
-
   "signIn": "Injira",
   "signInSubtitle": "Injira muri konti yawe",
   "signInPhoneSubtitle": "Injira muri konti yawe",
-
   "createAccount": "Fungura Konti",
   "createAccountSubtitle": "Injira mu muryango w'abanyeshuri bacu",
   "createAccountPhoneSubtitle": "Injira mu banyeshuri bacu",
-
   "resetPassword": "Hindura Ijambobanga",
-  "resetPasswordSubtitle": "Garura uburyo bwo kwinjira muri konti yawe",
+  "resetPasswordSubtitle": "Injiza ijambobanga rishya",
   "resetPasswordPhoneSubtitle": "Garura uburyo bwo kwinjira",
-
   "accessYourAccount": "Injira muri konti yawe",
   "joinCommunity": "Injira mu muryango wacu",
   "recoverAccess": "Garura uburyo bwo kwinjira muri konti yawe",
-
   "enterpriseSecurity": "Konti yawe irinzwe n'umutekano wo ku rwego rwo hejuru",
   "secureProtected": "Amakuru yawe ararinzwe",
-
   "chooseYourPath": "Hitamo Uburyo",
   "selectHowToProceed": "Hitamo uburyo ushaka gukoresha winjira muri konti yawe",
   "goBack": "Subira Inyuma",
-
   "loginTitle": "Injira",
   "loginSubtitle": "Murakaza neza! Nyamuneka injiza amakuru yawe",
-
   "email": "Imeyili",
   "password": "Ijambobanga",
-
   "forgotPassword": "Wibagiwe Ijambobanga?",
-
   "dontHaveAccount": "Nta konti ufite?",
   "alreadyHaveAccount": "Usanzwe ufite konti?",
-
   "registerNow": "Iyandikishe Nonaha",
   "loginNow": "Injira Nonaha",
-
   "registerTitle": "Fungura Konti",
   "registerSubtitle": "Injiza amakuru yawe utangire",
-
   "fullName": "Amazina Yose",
-
   "confirmPassword": "Emeza Ijambobanga",
-
   "agreeToTerms": "Nemeye amategeko ya serivisi n'ubuzima bwite",
-
   "forgotPasswordTitle": "Wibagiwe Ijambobanga",
-
   "forgotPasswordSubtitle": "Injiza imeyili yawe twohereze uburyo bwo guhindura ijambobanga",
-
   "sendResetLink": "Ohereza Link",
-
   "resetLinkSent": "Link yo guhindura ijambobanga yoherejwe! Reba imeyili yawe.",
-
   "enterResetCodeTitle": "Injiza Kode yo Kwemeza",
-
   "enterResetCodeSubtitle": "Injiza kode yoherejwe kuri imeyili yawe",
-
   "verificationCode": "Kode yo Kwemeza",
-
   "verify": "Emeza",
-
   "resetPasswordTitle": "Hindura Ijambobanga",
-
-  "resetPasswordSubtitle": "Injiza ijambobanga rishya",
-
   "newPassword": "Ijambobanga Rishya",
-
   "updatePassword": "Vugurura Ijambobanga",
-
   "passwordUpdated": "Ijambobanga ryavuguruwe neza!",
-
   "nameCollectionTitle": "Witwa nde?",
-
   "nameCollectionSubtitle": "Dufashe kunoza uburyo bwawe bwo kwiga",
-
   "enterFullName": "Injiza amazina yawe yose",
-
+  "nameHint": "urugero: Jean Bosco Uwimana",
+  "nameRequiredError": "Nyamuneka injiza amazina yawe yose",
+  "nameTooShortError": "Amazina agomba kugira nibura inyuguti 2",
   "continueToDashboard": "Komeza ujye ku Kibaho",
-
   "phoneCollectionTitle": "Ongeraho Nimero ya Telefone",
-
   "phoneCollectionSubtitle": "Ibi bifasha kurinda konti yawe",
-
   "phoneNumber": "Nimero ya Telefone",
-
   "onboardingInterestTitle": "Ni iki wifuza kwiga?",
-
   "onboardingInterestSubtitle": "Hitamo amasomo cyangwa ingingo ushaka kwiga",
-
   "onboardingPersonalizationTitle": "Shyiraho Intego zawe",
-
   "onboardingPersonalizationSubtitle": "Tubwire icyo ushaka kugeraho kugira ngo tugufashe",
-
   "shortTermGoal": "Intego y'Igihe Gito",
-
   "midTermGoal": "Intego y'Igihe Giciriritse",
-
   "longTermGoal": "Intego y'Igihe Kirekire",
-
   "shortTermHint": "Ni iki ushaka kugeraho vuba?",
-
   "midTermHint": "Ni iki ushaka kuba cyo mu myaka 1-2?",
-
   "longTermHint": "Ni iyihe ntego yawe nyamukuru?",
-
   "saveAndContinue": "Bika & Komeza",
-
   "skipForNow": "Simbuka Ubu",
-
   "step": "Intambwe",
-
   "ofText": "kuri",
-
   "termsOfService": "Amategeko ya Serivisi",
-
   "privacyPolicy": "Politiki y'Ubuzima Bwite",
-
   "byContinuing": "Ukomeje, uba wemeye",
-
   "and": "na",
-
   "or": "Cyangwa",
-
   "deviceWarningTitle": "Umutekano w'Igikoresho",
-
   "deviceWarningMessage": "Konti yawe ihuzwa na telefone yawe ya mbere. Niba ushaka kuyihindura, twandikire.",
-
   "contactSupport": "Twandikire",
-
   "features": "Ibiranga",
-
   "videoCourses": "Amasomo ya Video",
-
   "interactiveQuizzes": "Ibizamini Bikorwa",
-
   "certifications": "Impamyabushobozi",
-
   "expertInstructors": "Abigisha b'Abanyamwuga",
-
   "learnAnywhere": "Kwiga Aho Uri Hose",
-
   "progressTracking": "Gukurikirana Iterambere",
-
-  "dashboard": "Ikibaho",
-
   "studentDashboard": "Ikibaho cy'Umunyeshuri",
-
   "adminDashboard": "Ikibaho cy'Umuyobozi",
-
   "adminPanel": "Urubuga rw'Umuyobozi",
-
-  "excellenceHub": "EXCELLENCE COACHING HUB",
-
   "welcomeBack": "Murakaza neza",
-
   "goodMorning": "Mwaramutse",
-
   "goodAfternoon": "Mwiriwe",
-
   "goodEvening": "Mugoroba mwiza",
-
   "motivationalQuote1": "Wunguke ubumenyi buzagufasha mu buzima bwawe.",
-
   "motivationalQuote2": "Buri somo rikwegereza intego yawe.",
-
   "motivationalQuote3": "Komeza gukora cyane, intsinzi iraza.",
-
   "motivationalQuote4": "Abahanga ntibahwema kwiga. Nawe ushobora kubigeraho.",
-
   "motivationalQuote5": "Intambwe nto zizana impinduka nini.",
-
   "motivationalQuote6": "Intego yawe iri hafi kugerwaho. Komeza witegure.",
-
   "motivationalQuote7": "Abatsinze ntabwo bahagarika kwiga.",
-
   "welcomeToExcellenceHub": "Murakaza neza muri Excellence Coaching Hub!",
-
   "startFirstLesson": "Tangira isomo ryawe rya mbere maze utangire urugendo rwo kwiga.",
-
   "keepStreakAlive": "Komeza umuhate wawe.",
-
   "consistencyIsSuperpower": "Guhora ukora ni imbaraga ikomeye.",
-
   "deviceSecurity": "Umutekano",
-
   "accountBoundToDevice": "Konti yawe ihujwe n'iyi telefone. Twandikire niba ushaka kuyihindura.",
-
   "refreshApp": "Ongera uvugurure Porogaramu",
-
   "notifications": "Ubutumwa",
-
-  "profile": "Umwirondoro",
-
-  "settings": "Igenamiterere",
-
   "logout": "Sohoka",
-
   "logOut": "Sohoka",
-
   "signOut": "Sohoka",
-
-  "searchCourses": "Shakisha amasomo...",
-
+  "searchCourses": "Shakisha amasomo, abigisha...",
   "searchHint": "Shakisha amasomo cyangwa ingingo...",
-
-  "continueLearning": "Komeza Kwiga",
-
   "continueLearningSubtitle": "Komeza aho wari ugeze",
-
   "yourProgress": "Iterambere Ryawe",
-
-  "recommendedForYou": "Amasomo yagenewe wowe",
-
+  "recommendedForYou": "Amasomo Yakugeretseho",
   "popularCourses": "Amasomo Akunzwe",
-
   "noEnrolledCourses": "Nta masomo wiyandikishijemo",
-
   "startLearningToday": "Tangira kwiga nonaha winjire mu isomo!",
-
   "browseCourses": "Reba Amasomo",
-
-  "enrolled": "ayo natangiye",
-
   "completed": "Byarangiye",
-
-  "certificates": "Impamyabushobozi",
-
   "quizzes": "Ibizamini",
-
   "courses": "Amasomo",
-
   "course": "Isomo",
-
   "myCourses": "Amasomo Yanjye",
-
   "allCourses": "Amasomo Yose",
-
   "courseDetails": "Ibisobanuro by'Isomo",
-
   "coursePrice": "Igiciro cy'Isomo",
-
   "courseCategory": "Icyiciro cy'Isomo",
-
   "instructor": "Umwigisha",
-
   "duration": "Igihe",
-
   "level": "Urwego",
-
   "lessons": "Amasomo",
-
   "lesson": "Isomo",
-
   "free": "Ubuntu",
-
   "price": "Igiciro",
-
   "enroll": "Iyandikishe",
-
   "enrollNow": "Iyandikishe Nonaha",
-
   "enrolling": "Birimo kwandikisha...",
-
   "alreadyEnrolled": "Usanzwe wiyandikishije",
-
   "enrolledSuccessfully": "Wiyandikishije neza!",
-
   "enrollmentFailed": "Kwandikisha byanze",
-
   "enrolledInCourse": "Wiyandikishije muri iri somo",
-
   "youAreEnrolled": "Wamaze kwiyandikisha",
-
   "redirectingToLearning": "Turimo kukujyana aho kwiga...",
-
   "description": "Ibisobanuro",
-
   "courseDescription": "Ibisobanuro by'Isomo",
-
   "whatYouWillLearn": "Ibyo Ugiye Kwigira",
-
   "learningObjectives": "Intego zo Kwiga",
-
   "requirements": "Ibisabwa",
-
   "courseRequirements": "Ibisabwa kugira ngo wige iri somo",
-
   "aboutInstructor": "Ibyerekeye Umwigisha",
-
   "noDescription": "Nta bisobanuro bihari",
-
   "noThumbnail": "Nta shusho ihari",
-
   "limitedTimeOffer": "Igiciro gito mu gihe gito • Garuka amafaranga mu minsi 30",
-
   "lifetimeAccess": "Uburenganzira bwo gukoresha igihe cyose",
-
   "days": "Iminsi",
-
   "months": "Amezi",
-
   "years": "Imyaka",
-
   "hours": "Amasaha",
-
   "minutes": "Iminota",
-
-  "categories": "Ibyiciro",
-
   "category": "Icyiciro",
-
-  "uncategorized": "Nta cyiciro",
-
+  "uncategorized": "Ntibyiciro",
   "learning": "Kwiga",
-
   "learningTitle": "Kwiga",
-
   "startLesson": "Tangira Isomo",
-
   "nextLesson": "Isomo Rikurikira",
-
   "previousLesson": "Isomo Ribanza",
-
   "completeLesson": "Rangiza Isomo",
-
   "markComplete": "Shyira Ikimenyetso",
-
   "lessonCompleted": "Isomo Ryarangiye",
-
   "lessonInProgress": "Isomo ririmo gukorwa",
-
   "courseContent": "Ibikubiye mu Isomo",
-
   "courseOverview": "Incamake y'Isomo",
-
   "notes": "Inyandiko",
-
   "transcript": "Inyandiko y'Ibiganiro",
-
   "resources": "Ibikoresho",
-
   "quiz": "Ikizamini",
-
   "quizzesTitle": "Ibizamini",
-
   "takeQuiz": "Kora Ikizamini",
-
   "quizResults": "Ibisubizo by'Ikizamini",
-
   "yourScore": "Amanota Yawe",
-
   "passingScore": "Amanota yo Gutsinda",
-
   "passed": "Watsinze",
-
   "failed": "Watsinzwe",
-
   "tryAgain": "Gerageza Nanone",
-
   "retakeQuiz": "Ongera Ukore Ikizamini",
-
   "question": "Ikibazo",
-
   "questions": "Ibibazo",
-
   "answer": "Igisubizo",
-
   "answers": "Ibisubizo",
-
   "correct": "Nibyo",
-
   "incorrect": "Sibyo",
-
   "explanation": "Ibisobanuro",
-
   "timeRemaining": "Igihe Gisigaye",
-
   "startQuiz": "Tangira Ikizamini",
-
   "submitQuiz": "Ohereza Ikizamini",
-
   "quizSubmitted": "Ikizamini cyoherejwe",
-
   "quizInProgress": "Ikizamini kirimo gukorwa",
-
   "wishlist": "Ibyifuzo",
-
   "myWishlist": "Ibyifuzo Byanjye",
-
   "savedCourses": "Amasomo Yabitswe",
-
   "addToWishlist": "Bika mu Byifuzo",
-
   "removeFromWishlist": "Kuraho mu Byifuzo",
-
   "addedToWishlist": "Byongewe mu byifuzo",
-
   "removedFromWishlist": "Byakuwe mu byifuzo",
-
   "wishlistEmpty": "Nta byifuzo bihari",
-
   "wishlistEmptySubtitle": "Bika amasomo ushaka kwiga nyuma",
-
   "payments": "Ubwishyu",
-
   "payment": "Ubwishyu",
-
   "paymentMethod": "Uburyo bwo Kwishyura",
-
   "paymentStatus": "Imiterere y'Ubwishyu",
-
   "paymentHistory": "Amateka y'Ubwishyu",
-
   "pending": "Birategereje",
-
   "completedPayment": "Byarangiye",
-
   "cancelled": "Byahagaritswe",
-
   "refunded": "Amafaranga yasubijwe",
-
   "amount": "Amafaranga",
-
   "total": "Igiteranyo",
-
   "subtotal": "Igiteranyo cy'ibanze",
-
   "tax": "Umusoro",
-
-  "discount": "Igabanyirizwa",
-
+  "discount": "20% OFF",
   "transactionId": "Nomero y'Igikorwa",
-
   "transactionDate": "Itariki y'Igikorwa",
-
   "payNow": "Ishyure Nonaha",
-
   "checkout": "Kwishyura",
-
   "orderSummary": "Incamake y'Ibyaguzwe",
-
   "paymentSuccessful": "Ubwishyu bwagenze neza!",
-
   "paymentFailed": "Ubwishyu bwanze",
-
   "paymentPending": "Ubwishyu burategereje",
-
   "paymentProcessing": "Ubwishyu burimo gutunganywa",
-
   "initiatePayment": "Tangira Ubwishyu",
-
   "completePayment": "Rangiza Ubwishyu",
-
   "verifyPayment": "Emeza Ubwishyu",
-
   "mtnMomo": "MTN Mobile Money",
-
   "airtelMoney": "Airtel Money",
-
   "mobileMoney": "Mobile Money",
-
   "creditCard": "Ikarita ya Banki",
-
   "bankTransfer": "Kohereza Amafaranga muri Banki",
-
   "certificate": "Impamyabushobozi",
-
   "myCertificates": "Impamyabushobozi Zanjye",
-
   "downloadCertificate": "Manura Impamyabushobozi",
-
   "certificateOfCompletion": "Impamyabushobozi yo Kurangiza",
-
   "thisCertifiesThat": "Iyi mpamyabushobozi yemeza ko",
-
   "hasCompleted": "yarangije neza",
-
   "issueDate": "Itariki yatangiweho",
-
   "certificateId": "Nomero y'Impamyabushobozi",
-
   "verifyCertificate": "Emeza Impamyabushobozi",
-
   "noCertificates": "Nta mpamyabushobozi zihari",
-
   "noCertificatesSubtitle": "Rangiza amasomo ubone impamyabushobozi",
-
   "help": "Ubufasha",
-
   "helpCenter": "Ikigo cy'Ubufasha",
-
   "helpCenterSubtitle": "Bona ubufasha bwo gukoresha porogaramu",
-
   "helpAndSupport": "Ubufasha n'Inkunga",
-
   "faq": "Ibibazo Bikunze Kubazwa",
-
   "frequentlyAskedQuestions": "Ibibazo Bikunze Kubazwa",
-
   "contactUs": "Twandikire",
-
-  "contactSupport": "Twandikire",
-
   "emailSupport": "Ubufasha bwa Imeyili",
-
   "phoneSupport": "Ubufasha bwa Telefone",
-
   "liveChat": "Ikiganiro Ako Kanya",
-
   "gettingStarted": "Gutangira",
-
   "accountManagement": "Gucunga Konti",
-
   "technicalSupport": "Ubufasha bwa Tekiniki",
-
   "howToCreateAccount": "Nigute nafungura konti?",
-
   "howToEnroll": "Nigute nayandikisha mu isomo?",
-
   "howToAccessOffline": "Nigute nakoresha porogaramu nta interineti?",
-
   "howToChangePassword": "Nigute nahindura ijambobanga?",
-
   "howToUpdateProfile": "Nigute navugurura umwirondoro?",
-
   "howToDeleteAccount": "Nigute nasiba konti?",
-
   "appCrashing": "Porogaramu iri guhagarara, nkore iki?",
-
   "videosNotLoading": "Amavidewo ntabwo ari gufunguka",
-
   "paymentIssues": "Mfite ikibazo cyo kwishyura",
-
   "createAccountAnswer": "Kanda kuri \"Komeza ukoresheje Google\" cyangwa \"Komeza ukoresheje Imeyili\" kugira ngo ufungure konti.",
-
   "enrollAnswer": "Shakisha isomo kuri dashboard cyangwa ku rupapuro rw'amasomo, hanyuma ukande \"Iyandikishe\" ku isomo ushaka.",
-
   "offlineAnswer": "Yego, ushobora kumanura amasomo ukayiga nta interineti.",
-
   "changePasswordAnswer": "Jya mu igenamiterere hanyuma uhitemo guhindura ijambobanga.",
-
   "updateProfileAnswer": "Kanda ku mwirondoro wawe hanyuma uhitemo \"Hindura Umwirondoro\".",
-
   "deleteAccountAnswer": "Twandikire kuri info@excellencecoachinghub.com usabe gusiba konti yawe.",
-
   "crashingAnswer": "Gerageza gufunga no kongera gufungura porogaramu. Nibikomeza, ongera utangize telefone.",
-
   "videosAnswer": "Reba niba interineti yawe ikora neza cyangwa ugerageze kongera gufungura porogaramu.",
-
   "paymentAnswer": "Reba niba uburyo bwo kwishyura bwemewe. Niba ikibazo gikomeje, twandikire tugufashe.",
-
   "needMoreHelp": "Ukeneye ubufasha bwisumbuyeho?",
-
   "support24_7": "Abakozi bacu b'ubufasha barahari igihe cyose.",
-
   "chatWithUs": "Ganira natwe nonaha",
-
   "alternativeContact": "Ubundi buryo bwo kutwandikira",
-
   "secondaryLine": "Nimero ya kabiri:",
-
   "website": "Urubuga",
-
   "settingsTitle": "Igenamiterere",
-
   "accountSettings": "Igenamiterere rya Konti",
-
   "profileInformation": "Amakuru y'Umwirondoro",
-
   "updatePersonalDetails": "Vugurura amakuru yawe bwite",
-
   "pushNotifications": "Ubutumwa bwo Kumenyesha",
-
   "receiveUpdates": "Akira amakuru mashya",
-
   "notificationsEnabled": "Ubutumwa bwemerewe",
-
   "notificationsDisabled": "Ubutumwa bwahagaritswe",
-
   "preferences": "Ibyo Ukunda",
-
   "darkMode": "Uburyo bw'Umukara",
-
   "darkTheme": "Ukoresha uburyo bw'umukara",
-
   "lightTheme": "Ukoresha uburyo bw'umucyo",
-
   "darkModeEnabled": "Uburyo bw'umukara bwakoreshejwe",
-
   "lightModeEnabled": "Uburyo bw'umucyo bwakoreshejwe",
-
   "support": "Inkunga",
-
   "sendFeedback": "Ohereza Igitekerezo",
-
   "shareThoughts": "Sangira ibitekerezo byawe natwe",
-
   "about": "Ibyerekeye Porogaramu",
-
   "appVersion": "Verisiyo ya Porogaramu",
-
   "legal": "Amategeko",
-
   "readPrivacyPolicy": "Soma politiki y'ubuzima bwite",
-
   "readTerms": "Soma amategeko ya serivisi",
-
   "dangerZone": "Ahantu Hihariye",
-
   "deleteAccount": "Siba Konti",
-
   "permanentlyDelete": "Siba burundu konti yawe n'amakuru yayo",
-
   "signOutAllDevices": "Sohoka ku bikoresho byose",
-
   "areYouSureLogout": "Urifuza gusohoka?",
-
   "areYouSureSignOut": "Urifuza gusohoka?",
-
   "areYouSureDelete": "Urifuza gusiba burundu konti yawe? Iki gikorwa ntikishobora gusubizwa inyuma.",
-
   "passwordRequired": "Ijambobanga rirakenewe",
-
   "enterPasswordConfirm": "Nyamuneka injiza ijambobanga ryawe kugira ngo wemeze.",
-
   "currentPassword": "Ijambobanga Ukoresha Ubu",
-
   "deleteConfirmation": "Emeza Gusiba",
-
   "reset": "Subizamo",
-
   "resetOnboarding": "Subizamo Intangiriro",
-
   "resetOnboardingConfirm": "Ibi bizasubizamo uburyo bwo gutangira kandi uzongera gukora intambwe zose. Urifuza gukomeza?",
-
   "resetOnboardingFailed": "Gusubizamo intangiriro byanze",
-
   "profileTitle": "Umwirondoro",
-
   "editProfile": "Hindura Umwirondoro",
-
   "saveChanges": "Bika Impinduka",
-
   "saving": "Birimo kubikwa...",
-
   "tapToChangePhoto": "Kanda ku ifoto kugira ngo uyihindure",
-
   "emailAddress": "Aderesi ya Imeyili",
-
   "enterEmail": "Injiza imeyili yawe",
-
   "enterPhone": "Injiza nimero ya telefone yawe",
-
   "profileUpdated": "Umwirondoro wavuguruwe neza!",
-
   "profileUpdateError": "Habaye ikibazo mu kuvugurura umwirondoro",
-
   "errorPickingImage": "Habaye ikibazo mu guhitamo ifoto",
-
-  "downloads": "Ibyakuruwe",
-
   "myDownloads": "Ibyamanuwe Byanjye",
-
   "downloadedContent": "Ibikubiyemo byamanuwe",
-
   "downloadedCourses": "Amasomo Yamanuwe",
-
   "availableOffline": "Biboneka nta interineti",
-
   "downloadCourse": "Manura Isomo",
-
   "downloadLesson": "Manura Isomo",
-
   "downloading": "Birimo kumanurwa...",
-
   "downloaded": "Byamanuwe",
-
   "downloadFailed": "Kumanura byanze",
-
   "downloadComplete": "Kumanura byarangiye",
-
   "noDownloads": "Nta byamanuwe bihari",
-
   "noDownloadsSubtitle": "Manura amasomo kugira ngo uyige nta interineti",
-
   "deleteDownload": "Siba Ibyamanuwe",
-
   "deleteDownloadConfirm": "Urifuza gusiba ibi byamanuwe?",
-
   "storage": "Ububiko",
-
   "usedStorage": "Ububiko Bwakoreshejwe",
-
   "freeStorage": "Ububiko Busigaye",
-
   "manageStorage": "Genzura Ububiko",
-
   "clearAllDownloads": "Siba Ibyamanuwe Byose",
-
   "offlineMode": "Uburyo bwa Nta Interineti",
-
   "termsTitle": "Amategeko ya Serivisi",
-
   "termsContent": "Ukoresheje iyi porogaramu, uba wemeye amategeko ya serivisi...\n\n• Ugomba kuba ufite nibura imyaka 13\n• Ibikubiyemo bigenewe uburezi gusa\n• Amafaranga yishyuwe ntasubizwa nyuma y'iminsi 7\n• Dufite uburenganzira bwo guhagarika konti\n\nByavuguruwe: Tariki ya 1 Gashyantare 2026",
-
   "lastUpdated": "Byavuguruwe",
-
   "privacyTitle": "Politiki y'Ubuzima Bwite",
-
   "readPrivacy": "Soma politiki y'ubuzima bwite",
-
   "notificationsTitle": "Ubutumwa",
-
   "markAllRead": "Shyira byose nk'ibyasomwe",
-
   "noNotifications": "Nta butumwa buhari",
-
   "noNotificationsSubtitle": "Warangije kureba ubutumwa bwose!",
-
   "notificationSettings": "Igenamiterere ry'Ubutumwa",
-
   "unread": "Bitarasomwa",
-
   "read": "Byarasomwe",
-
   "admin": "Umuyobozi",
-
   "adminAccess": "Kwinjira k'Umuyobozi",
-
   "students": "Abanyeshuri",
-
   "totalStudents": "Abanyeshuri Bose",
-
   "activeStudents": "Abanyeshuri Bakora",
-
   "newStudents": "Abanyeshuri Bashya",
-
   "coursesManagement": "Gucunga Amasomo",
-
   "createCourse": "Shyiraho Isomo",
-
   "editCourse": "Hindura Isomo",
-
   "deleteCourse": "Siba Isomo",
-
   "courseCreated": "Isomo ryashyizweho neza",
-
   "courseUpdated": "Isomo ryavuguruwe neza",
-
   "courseDeleted": "Isomo ryasibwe neza",
-
   "content": "Ibikubiyemo",
-
   "videos": "Amavidewo",
-
   "uploadVideo": "Ohereza Video",
-
   "addLesson": "Ongeraho Isomo",
-
   "editLesson": "Hindura Isomo",
-
   "deleteLesson": "Siba Isomo",
-
   "analytics": "Isesengura",
-
   "courseAnalytics": "Isesengura ry'Isomo",
-
   "revenue": "Amafaranga Yinjiye",
-
   "enrollments": "Abiyandikishije",
-
   "completionRate": "Igipimo cyo Kurangiza",
-
   "averageRating": "Impuzandengo y'Amanota",
-
   "userManagement": "Gucunga Abakoresha",
-
   "user": "Umukoresha",
-
   "users": "Abakoresha",
-
   "role": "Uruhare",
-
   "status": "Imiterere",
-
   "active": "Bikora",
-
   "inactive": "Bidakora",
-
   "adminRole": "Umuyobozi",
-
   "studentRole": "Umunyeshuri",
-
   "instructorRole": "Umwigisha",
-
   "moderatorRole": "Umugenzuzi",
-
   "feedback": "Igitekerezo",
-
   "userFeedback": "Igitekerezo cy'Umukoresha",
-
   "systemSettings": "Igenamiterere rya Sisitemu",
-
   "generalSettings": "Igenamiterere Rusange",
-
   "paymentSettings": "Igenamiterere ry'Ubwishyu",
-
   "notificationSettingsAdmin": "Igenamiterere ry'Ubutumwa",
-
   "contentModeration": "Gucunga Ibikubiyemo",
-
   "syncUsers": "Huzahuza Abakoresha",
-
   "syncing": "Birimo guhuzwa...",
-
   "syncComplete": "Guhuza byarangiye",
-
   "syncFailed": "Guhuza byanze",
-
   "applicationRefreshed": "Porogaramu yavuguruwe",
-
   "landingTitle": "Wunguke Ubumenyi Bushya",
-
   "landingSubtitle": "Bona amasomo agezweho atangwa n'abanyamwuga",
-
   "getStartedFree": "Tangira ku Buntu",
-
   "exploreCourses": "Shakisha Amasomo",
-
   "trustedBy": "Yizewe n'abanyeshuri benshi",
-
   "whyChooseUs": "Kuki Waduhitamo?",
-
   "enrolledCourses": "Amasomo Wiyandikishijemo",
-
-  "myLearning": "Kwiga Kwanjye",
-
   "updateInterests": "Hindura Ibyo Ukunda",
-
   "updateYourInterests": "Hindura ibyo ushaka kwiga",
-
   "selectInterests": "Hitamo amasomo cyangwa ingingo ushaka kwiga",
-
   "progress": "Iterambere",
-
-  "yourProgress": "Iterambere Ryawe",
-
   "completion": "Kurangiza",
-
   "courseCompletion": "Kurangiza Isomo",
-
   "started": "Byatangiye",
-
   "inProgress": "Birimo gukorwa",
-
   "finished": "Byarangiye",
-
   "quarterWay": "Ugeze ku cya kane!",
-
   "momentumBuilding": "Ugeze kuri 25% — komeza umuhate!",
-
   "halfwayChampion": "Ugeze hagati!",
-
   "finishLineReal": "Ugeze kuri 50% — uri hafi kugera ku ntego.",
-
   "almostThere": "Hasigaye gato!",
-
   "nearlyUnstoppable": "Ugeze kuri 75% — intsinzi iri hafi!",
-
   "courseCompleted": "Isomo Ryarangiye!",
-
   "incredibleEffort": "Warangije isomo neza. Akazi keza cyane!",
-
-  "library": "Isomero",
-
   "myLibrary": "Isomero Ryanjye",
-
   "books": "Ibitabo",
-
   "documents": "Inyandiko",
-
   "reading": "Gusoma",
-
   "exam": "Ikizamini",
-
-  "exams": "Ibizamini",
-
   "takeExam": "Kora Ikizamini",
-
   "examResults": "Ibisubizo by'Ikizamini",
-
   "examTime": "Igihe cy'Ikizamini",
-
   "timeLeft": "Igihe Gisigaye",
-
   "examInstructions": "Amabwiriza y'Ikizamini",
-
   "examSubmitted": "Ikizamini cyoherejwe",
-
   "examScore": "Amanota y'Ikizamini",
-
   "pass": "Watsinze",
-
   "examPassed": "Watsinze Ikizamini",
-
   "examFailed": "Watsinzwe Ikizamini",
-
   "onboarding": "Gutangira",
-
   "completeOnboarding": "Rangiza Intangiriro",
-
   "send": "Ohereza",
-
   "feedbackSent": "Urakoze ku gitekerezo cyawe!",
-
   "feedbackFailed": "Kohereza igitekerezo byanze. Gerageza nanone.",
-
   "howCanWeImprove": "Tubwire uburyo twakomeza kunoza serivisi zacu...",
-
   "enterFeedback": "Nyamuneka andika igitekerezo cyawe",
-
   "aboutApp": "Urubuga rw'uburezi rugamije guteza imbere ubumenyi n'ubushobozi.",
-
   "appVersionInfo": "Verisiyo ya Porogaramu",
-
   "copyright": "© 2026 Excellence Coaching Hub",
-
   "areYouSure": "Uremeza?",
-
   "actionCannotUndone": "Iki gikorwa ntigishobora gusubizwa inyuma.",
-
   "confirmDelete": "Emeza Gusiba",
-
   "confirmAction": "Emeza Igikorwa",
-
   "generalError": "Habaye ikibazo. Gerageza nanone.",
-
   "networkError": "Habaye ikibazo cya interineti. Reba niba interneti ikora.",
-
   "serverError": "Seriveri ifite ikibazo. Gerageza nyuma.",
-
   "notFound": "Ntibyabonetse",
-
   "accessDenied": "Kwinjira byanzwe",
-
   "sessionExpired": "Igihe cyawe cyarangiye. Ongera winjire.",
-
   "unauthorized": "Ntabwo wemerewe",
-
   "forbidden": "Birabujijwe",
-
   "invalidInput": "Ibyinjijwe ntabwo byemewe",
-
   "requiredField": "Iki kibazo kirakenewe",
-
   "invalidEmail": "Nyamuneka injiza imeyili yemewe",
-
   "passwordTooShort": "Ijambobanga rigomba kugira nibura inyuguti 6",
-
   "passwordsDontMatch": "Amajambobanga ntabwo ahura",
-
   "invalidPhone": "Nyamuneka injiza nimero ya telefone yemewe",
-
   "shareCourse": "Reba iri somo ryiza",
-
   "shareCourseSubject": "Isomo Nagusangiza",
-
   "learnMoreAt": "Menya byinshi kuri Excellence Coaching Hub!",
-
   "welcomeBackTitle": "Murakaza neza! Komeza gukora neza.",
-
   "yourConsistency": "Guhorana umuhate ni imbaraga yawe.",
-
   "noInternet": "Nta interineti",
-
   "online": "Hari interineti",
-
   "connected": "Byahujwe",
-
   "disconnected": "Ntibyahujwe",
-
   "professionalLearningFailedToLoadCourse": "Gushaka isomo byanze",
   "professionalLearningCheckConnectionTryAgain": "Nyamuneka reba niba ufite interineti, hanyuma gerageza nanone",
   "professionalLearningCourseInformation": "Amakuru y'Isomo",
@@ -1141,5 +624,67 @@
   "lessonScreenMarkLessonComplete": "Shyiraho ikimenyetso cyo kurangiza",
   "liveClassesAvailable": "Nba wifuza kwiga Live class twandikire hano",
   "contactUsForLiveClasses": "Twandikire ubashe kwiga live classes",
-  "liveClassesBenefit": "Mu masomo ya Live, ubasha kuganira n’umwarimu no kwakira ibisubizo byihuse igihe ubikeneye."
+  "liveClassesBenefit": "Mu masomo ya Live, ubasha kuganira n’umwarimu no kwakira ibisubizo byihuse igihe ubikeneye.",
+  "searchInCategory": "Shakisha muri {category}...",
+  "filterCourses": "Shungura Amasomo",
+  "filterByCategory": "Shungura ukurikije ibice",
+  "clearAll": "Hanagura Byose",
+  "paid": "Igifaransa",
+  "beginner": "Utangiriye",
+  "intermediate": "Hagati",
+  "advanced": "Abahanga",
+  "short": "Gifize (<1h)",
+  "medium": "Hagati (1-3h)",
+  "long": "Gire (>3h)",
+  "rating": "Amanota",
+  "stars4Plus": "Ano 4+",
+  "stars4_5Plus": "Ano 4.5+",
+  "noCoursesFound": "Nta masomo yabonetse",
+  "adjustSearchCriteria": "Gerageza guhindura ibyo ushakisha",
+  "basedOnYourInterests": "Kurikije ibyo ukunda: {interests}",
+  "open": "Fungura",
+  "coursesCount": "Amasomo {count}",
+  "selectCategory": "Hitamo Icyiciro",
+  "allCategories": "Ibyiciro Byose",
+  "browseAllCourses": "Reba amasomo yose",
+  "noCategoriesAvailable": "Nta byiciro bihari",
+  "failedToLoadCategories": "Gushaka ibyiciro byanze",
+  "coursePrice": "IGICIRO CYISOMO",
+  "noThumbnailAvailable": "Nta ishusho ihari",
+  "courseCategory": "ICYICIRO CYISOMO",
+  "courseOverview": "Incamake yIsomo",
+  "aboutThisCourse": "Ibyerekeye iri Soma",
+  "whatYouWillLearn": "Ibyo Uziga",
+  "requirements": "Ibisabwa",
+  "meetYourInstructor": "Umwarimu Wawe",
+  "leadInstructor": "Umwarimu Mukuru",
+  "readyToStart": "Witeguye Gutangira?",
+  "joinThousands": "Iyandikishe nabandi benshi",
+  "checkingEnrollment": "Gusuzuma kwiyandikisha...",
+  "paymentPending": "Kwishyura Birategerejwe",
+  "enrollNow": "Iyandikishe Nonaha",
+  "buyNow": "Gura Nonaha",
+  "continueLearning": "Komeza Kwiga",
+  "limitedTimeOffer": "Ighe giteganyijwe",
+  "redirectingToLearning": "Turimo kukujyana...",
+  "alreadyEnrolled": "Wasanzwe wiyandikishije!",
+  "withYearsExperience": "Umwarimu ufite uburambe bwinshi mu kigisha.",
+  "sidebarSignIn": "Injira",
+  "sidebarRegister": "Iyandikishe",
+  "sidebarUnlockPotential": "Wunguke ubumenyi binyuze mu masomo yigishwa n'abanyamwuga.",
+  "sidebarLearningPlatform": "URUBUGA RWO KWIGA",
+  "sidebarAdminNotifications": "Ubutumwa",
+  "sidebarAdminStudents": "Abanyeshuri",
+  "sidebarAdminPayments": "Ubwishyu",
+  "sidebarAdminAnalytics": "Isesengura",
+  "sidebarAreYouSureLogout": "Urifuza gusohoka?",
+  "sidebarExpandSidebar": "Vugurura Ubari",
+  "sidebarCollapseSidebar": "Hinga Ubari",
+  "sidebarGoBack": "Subira Inyuma",
+  "sidebarRefreshApp": "Ongera uvugurure Porogaramu",
+  "examPreparation": "Gukora Ibizamini",
+  "examPreparationSubtitle": "Kwitegura ibizamini binyuze mu ibizamini byabanje n'igeragezwa",
+  "examPreparationBenefit": "Funga ibizamini byabanje, geragezwa, n'ubufasha bwa bagenzi kugira ngo watsinde",
+  "visitExamMarketplace": "Kujya ku Mwanya w'Ibizamini",
+  "examMarketplaceUrl": "https://www.eexams.net/marketplace"
 }

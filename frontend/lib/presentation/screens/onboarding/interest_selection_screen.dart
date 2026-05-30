@@ -1,10 +1,8 @@
-import 'dart:math' show pi, sin, cos, Random;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
@@ -13,86 +11,9 @@ import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 final _storageManager = StorageManager();
 
-
-
-
 // ─── Shared design tokens ─────────────────────────────────────────────────────
 const _kAccent      = Color(0xFF10B981);
-const _kAccentLight = Color(0xFF34D399);
-
-// ─── Animated floating background (reused from auth screens) ─────────────────
-class _FloatingBg extends StatefulWidget {
-  const _FloatingBg();
-  @override
-  State<_FloatingBg> createState() => _FloatingBgState();
-}
-
-class _FloatingBgState extends State<_FloatingBg> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  final List<Offset> _particles = List.generate(12, (_) => Offset(Random().nextDouble(), Random().nextDouble()));
-  final List<double> _sizes = List.generate(12, (_) => Random().nextDouble() * 36 + 8);
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 15))..repeat();
-  }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, _) {
-        final t = _ctrl.value;
-        return Stack(children: [
-          Positioned(
-            top: -100 + 30 * sin(t * 2 * pi),
-            right: -100 + 20 * cos(t * 2 * pi),
-            child: _blob(size: 400, color: _kAccent.withOpacity(0.07), blur: 70),
-          ),
-          Positioned(
-            bottom: 80 + 40 * cos(t * 2 * pi + 1),
-            left: -120 + 30 * sin(t * 2 * pi + 1),
-            child: _blob(size: 300, color: _kAccentLight.withOpacity(0.05), blur: 55),
-          ),
-          ...List.generate(_particles.length, (i) {
-            final p = _particles[i];
-            final y = (p.dy + t * 0.08 * (i % 3 + 1)) % 1.0;
-            return Positioned(
-              left: MediaQuery.of(context).size.width * p.dx,
-              top: MediaQuery.of(context).size.height * y,
-              child: Opacity(
-                opacity: 0.12 + 0.08 * sin(t * 2 * pi + i),
-                child: Container(
-                  width: _sizes[i], height: _sizes[i],
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      Colors.white.withOpacity(0.4),
-                      Colors.white.withOpacity(0.0),
-                    ]),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ]);
-      },
-    );
-  }
-
-  Widget _blob({required double size, required Color color, required double blur}) =>
-      Container(
-        width: size, height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: color, blurRadius: blur, spreadRadius: blur / 2)],
-        ),
-      );
-}
+const _kAccentDark  = Color(0xFF059669);
 
 class InterestSelectionScreen extends ConsumerStatefulWidget {
   final bool isEditMode;
@@ -107,14 +28,23 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   final Set<String> _selectedInterests = {};
   bool _interestsInitialized = false;
 
-  // Theme-aware getters
+  // ─── Theme-aware color tokens ────────────────────────────────────────────────
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
-  Color get _cardColor => _isDark ? const Color(0xFF1E293B) : Colors.white.withOpacity(0.95);
-  Color get _textColor => _isDark ? Colors.white : const Color(0xFF1A2433);
-  Color get _secondaryTextColor => _isDark ? Colors.white70 : const Color(0xFF4A5568);
-  Color get _interestCardBg => _isDark ? const Color(0xFF0F172A) : Colors.grey.shade50;
-  Color get _interestCardBorder => _isDark ? const Color(0xFF334155) : Colors.grey.shade200;
-  Color get _selectedInterestBg => _isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFECFDF5);
+
+  Color get _scaffoldBg => _isDark ? const Color(0xFF0F1419) : const Color(0xFFF8FAFB);
+  Color get _cardBg     => _isDark ? const Color(0xFF1A202C) : Colors.white;
+  Color get _surfaceBg  => _isDark ? const Color(0xFF1E2733) : const Color(0xFFF1F5F9);
+  Color get _borderColor => _isDark ? const Color(0xFF2D3748) : const Color(0xFFE2E8F0);
+
+  Color get _textPrimary    => _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF111827);
+  Color get _textSecondary  => _isDark ? const Color(0xFFA0AEC0) : const Color(0xFF6B7280);
+  Color get _textMuted      => _isDark ? const Color(0xFF718096) : const Color(0xFF9CA3AF);
+
+  Color get _chipUnselectedBg     => _isDark ? const Color(0xFF232D3C) : const Color(0xFFF8FAFC);
+  Color get _chipUnselectedBorder => _isDark ? const Color(0xFF374151) : const Color(0xFFD1D5DB);
+
+  Color get _continueBtnDisabledBg   => _isDark ? const Color(0xFF2D3748) : const Color(0xFFE5E7EB);
+  Color get _continueBtnDisabledText => _isDark ? const Color(0xFF4B5563) : const Color(0xFF9CA3AF);
 
   @override
   Widget build(BuildContext context) {
@@ -149,37 +79,15 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
+        backgroundColor: _scaffoldBg,
         body: _buildDesktopLayout(l10n),
       );
     }
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/onboardign mobile.png'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF0F172A).withOpacity(0.4),
-                const Color(0xFF1E293B).withOpacity(0.6),
-                const Color(0xFF0F172A).withOpacity(0.85),
-              ],
-              stops: const [0.0, 0.4, 1.0],
-            ),
-          ),
-          child: SafeArea(
-            child: _buildMobileLayout(l10n),
-          ),
-        ),
+      backgroundColor: _scaffoldBg,
+      body: SafeArea(
+        child: _buildMobileLayout(l10n),
       ),
     );
   }
@@ -201,40 +109,40 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
         Expanded(
           flex: 58,
           child: Container(
-            color: const Color(0xFFF9FAFB),
+            color: _scaffoldBg,
             child: Column(
               children: [
-                // Top branded header bar
+                // Top header bar
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: _cardBg,
                     border: Border(
-                      bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                      bottom: BorderSide(color: _borderColor, width: 1),
                     ),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
                           color: _kAccent.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _kAccent.withOpacity(0.25)),
+                          border: Border.all(color: _kAccent.withOpacity(0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.interests_rounded, color: _kAccent, size: 16),
+                            const Icon(Icons.tune_rounded, color: _kAccent, size: 14),
                             const SizedBox(width: 6),
                             Text(
-                              '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2 — ${l10n?.onboardingInterestTitle ?? 'Your Interests'}',
+                              '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2',
                               style: const TextStyle(
                                 color: _kAccent,
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
+                                letterSpacing: 0.4,
                               ),
                             ),
                           ],
@@ -244,7 +152,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                       Text(
                         'Excellence Coaching Hub',
                         style: TextStyle(
-                          color: const Color(0xFF1F2937).withOpacity(0.45),
+                          color: _textMuted,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -255,92 +163,17 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                 // Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 40),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Page title with green accent bar
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: _kAccent,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n?.onboardingInterestTitle ?? 'What are you interested in?',
-                                      style: const TextStyle(
-                                        color: Color(0xFF111827),
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
-                                        height: 1.15,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      l10n?.onboardingInterestSubtitle ?? 'Pick the coaching areas you want to focus on. You can always change them later.',
-                                      style: const TextStyle(
-                                        color: Color(0xFF6B7280),
-                                        fontSize: 14,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                    if (_selectedInterests.isNotEmpty) ...[
-                                      const SizedBox(height: 10),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: _kAccent.withOpacity(0.10),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: _kAccent.withOpacity(0.25)),
-                                        ),
-                                        child: Text(
-                                          '${_selectedInterests.length} ${l10n?.selected ?? 'selected'}',
-                                          style: const TextStyle(
-                                            color: _kAccent,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                          _buildPageHeading(l10n),
                           const SizedBox(height: 28),
-                          // Interests grid card
-                          Container(
-                            padding: const EdgeInsets.all(28),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: _buildInterestsGrid(dark: true, l10n: l10n),
-                          ),
+                          _buildInterestsCard(l10n),
                           const SizedBox(height: 28),
-                          _buildButtons(dark: true, l10n: l10n),
+                          _buildButtons(l10n),
                         ],
                       ),
                     ),
@@ -356,48 +189,44 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
 
   // ─── Mobile layout ───────────────────────────────────────────────────────────
   Widget _buildMobileLayout(AppLocalizations? l10n) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isSmall = screenHeight < 680;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Green top section
+        // Top navigation bar
         Padding(
-          padding: EdgeInsets.fromLTRB(20, isSmall ? 8 : 12, 20, isSmall ? 12 : 20),
-          child: Column(
+          padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+          child: Row(
             children: [
-              Row(children: [
-                if (context.canPop())
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                const Spacer(),
-                _buildStepChip(l10n),
-              ]),
-              SizedBox(height: isSmall ? 8 : 16),
-              _buildHeaderContent(dark: false, l10n: l10n),
+              if (context.canPop())
+                IconButton(
+                  onPressed: () => context.pop(),
+                  icon: Icon(Icons.arrow_back_ios_new_rounded, color: _textSecondary, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              const Spacer(),
+              _buildStepBadge(l10n),
             ],
           ),
         ),
-        // Card sliding up
+        const SizedBox(height: 20),
+        // Header section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: _buildPageHeading(l10n),
+        ),
+        const SizedBox(height: 24),
+        // Scrollable interests + buttons
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: _cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 28, 22, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildInterestsGrid(dark: _isDark, l10n: l10n),
-                  const SizedBox(height: 28),
-                  _buildButtons(dark: _isDark, l10n: l10n),
-                ],
-              ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 4, 22, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildInterestsCard(l10n),
+                const SizedBox(height: 24),
+                _buildButtons(l10n),
+              ],
             ),
           ),
         ),
@@ -405,50 +234,60 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
     );
   }
 
-  Widget _buildStepChip(AppLocalizations? l10n) {
+  // ─── Shared sub-widgets ──────────────────────────────────────────────────────
+
+  Widget _buildStepBadge(AppLocalizations? l10n) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: _kAccent.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: _kAccent.withOpacity(0.3)),
       ),
-      child: Text(
-        '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2',
-        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.tune_rounded, color: _kAccent, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            '${l10n?.step ?? 'Step'} 1 ${l10n?.ofText ?? 'of'} 2',
+            style: const TextStyle(color: _kAccent, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeaderContent({required bool dark, AppLocalizations? l10n}) {
+  Widget _buildPageHeading(AppLocalizations? l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Icon + title row
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: dark ? _kAccent.withOpacity(0.12) : Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: dark ? _kAccent.withOpacity(0.3) : Colors.white.withOpacity(0.3),
+                gradient: const LinearGradient(
+                  colors: [_kAccent, _kAccentDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.interests_rounded,
-                color: dark ? _kAccent : Colors.white,
-                size: 22,
-              ),
+              child: const Icon(Icons.interests_rounded, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                l10n?.onboardingInterestTitle ?? 'What are you interested in?',
+                l10n?.onboardingInterestTitle ?? 'What are you\ninterested in?',
                 style: TextStyle(
-                  color: dark ? const Color(0xFF1A2433) : Colors.white,
-                  fontSize: 20,
+                  color: _textPrimary,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
                   height: 1.2,
                 ),
               ),
@@ -459,57 +298,90 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
         Text(
           l10n?.onboardingInterestSubtitle ?? 'Pick the coaching areas you want to focus on. You can always change them later.',
           style: TextStyle(
-            color: dark ? const Color(0xFF4A5568) : Colors.white.withOpacity(0.8),
-            fontSize: 13,
-            height: 1.5,
+            color: _textSecondary,
+            fontSize: 13.5,
+            height: 1.55,
           ),
         ),
         if (_selectedInterests.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: dark ? _kAccent.withOpacity(0.1) : Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: dark ? _kAccent.withOpacity(0.3) : Colors.white.withOpacity(0.3),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _kAccent.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: _kAccent, size: 13),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${_selectedInterests.length} ${l10n?.selected ?? 'selected'}',
+                      style: const TextStyle(
+                        color: _kAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Text(
-              '${_selectedInterests.length} ${l10n?.selected ?? 'selected'}',
-              style: TextStyle(
-                color: dark ? _kAccent : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            ],
           ),
         ],
       ],
     );
   }
 
-  Widget _buildInterestsGrid({required bool dark, AppLocalizations? l10n}) {
+  Widget _buildInterestsCard(AppLocalizations? l10n) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(_isDark ? 0.25 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: _buildInterestsGrid(l10n),
+    );
+  }
+
+  Widget _buildInterestsGrid(AppLocalizations? l10n) {
     final categoriesAsync = ref.watch(backendCategoriesProvider);
 
     return categoriesAsync.when(
       data: (categories) {
         if (categories.isEmpty) {
-          return Center(
-            child: Column(
-              children: [
-                Icon(Icons.category_outlined, color: dark ? Colors.grey.shade600 : Colors.white38, size: 40),
-                const SizedBox(height: 12),
-                Text(l10n?.noCategoriesAvailable ?? 'No categories available',
-                    style: TextStyle(color: dark ? Colors.grey.shade500 : Colors.white54, fontSize: 14)),
-              ],
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.category_outlined, color: _textMuted, size: 40),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n?.noCategoriesAvailable ?? 'No categories available',
+                    style: TextStyle(color: _textSecondary, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
         return Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: 9,
+          runSpacing: 9,
           children: categories.map((category) {
             final interest = category.name;
             final isSelected = _selectedInterests.contains(interest);
@@ -522,34 +394,42 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                     : _selectedInterests.add(interest);
               }),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 decoration: BoxDecoration(
-                  color: isSelected ? color : (dark ? _interestCardBg : Colors.white.withOpacity(0.08)),
+                  color: isSelected
+                      ? color.withOpacity(_isDark ? 0.22 : 0.12)
+                      : _chipUnselectedBg,
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(
-                    color: isSelected ? color : (dark ? _interestCardBorder : Colors.white.withOpacity(0.2)),
-                    width: isSelected ? 1.8 : 1.2,
+                    color: isSelected ? color : _chipUnselectedBorder,
+                    width: isSelected ? 1.5 : 1.0,
                   ),
-                  boxShadow: isSelected && !dark
-                      ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))]
+                  boxShadow: isSelected
+                      ? [BoxShadow(color: color.withOpacity(0.18), blurRadius: 8, offset: const Offset(0, 2))]
                       : [],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isSelected ? Icons.check_circle_rounded : CategoryUtils.getCategoryIcon(category.id, name: category.name),
-                      color: isSelected ? Colors.white : (dark ? color : Colors.white70),
-                      size: 15,
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 160),
+                      child: Icon(
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : CategoryUtils.getCategoryIcon(category.id, name: category.name),
+                        key: ValueKey(isSelected),
+                        color: isSelected ? color : _textMuted,
+                        size: 14,
+                      ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 6),
                     Text(
                       interest,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : (dark ? _secondaryTextColor : Colors.white70),
-                        fontSize: 13.5,
+                        color: isSelected ? (_isDark ? color.withOpacity(0.9) : color.withOpacity(0.85)) : _textSecondary,
+                        fontSize: 13,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         letterSpacing: 0.1,
                       ),
@@ -561,96 +441,125 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
           }).toList(),
         );
       },
-      loading: () => Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            const SizedBox(
-              width: 36, height: 36,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation(_kAccent),
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 32, height: 32,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(_kAccent),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(l10n?.loading ?? 'Loading...', style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.white54, fontSize: 13)),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 14),
+              Text(
+                l10n?.loading ?? 'Loading...',
+                style: TextStyle(color: _textMuted, fontSize: 13),
+              ),
+            ],
+          ),
         ),
       ),
       error: (_, __) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: dark ? const Color(0xFF450A0A) : Colors.red.shade50,
+          color: _isDark ? const Color(0xFF2D1515) : const Color(0xFFFFF5F5),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: dark ? const Color(0xFF7F1D1D) : Colors.red.shade200),
+          border: Border.all(
+            color: _isDark ? const Color(0xFF7F1D1D).withOpacity(0.6) : const Color(0xFFFECACA),
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded, color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade400, size: 20),
+            Icon(
+              Icons.error_outline_rounded,
+              color: _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFEF4444),
+              size: 20,
+            ),
             const SizedBox(width: 10),
-            Text(l10n?.failedToLoadCategories ?? 'Failed to load categories', style: TextStyle(color: dark ? const Color(0xFFFCA5A5) : Colors.red.shade600, fontSize: 13)),
+            Expanded(
+              child: Text(
+                l10n?.failedToLoadCategories ?? 'Failed to load categories',
+                style: TextStyle(
+                  color: _isDark ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626),
+                  fontSize: 13,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildButtons({required bool dark, AppLocalizations? l10n}) {
+  Widget _buildButtons(AppLocalizations? l10n) {
+    final hasSelection = _selectedInterests.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Continue button
-        GestureDetector(
-          onTap: _selectedInterests.isEmpty ? null : _handleContinue,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 54,
-            decoration: BoxDecoration(
-              gradient: _selectedInterests.isEmpty
-                  ? LinearGradient(colors: [Colors.grey.shade300, Colors.grey.shade300])
-                  : const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: _selectedInterests.isEmpty
-                  ? []
-                  : [BoxShadow(color: _kAccent.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 4))],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  l10n?.continueText ?? 'Continue',
-                  style: TextStyle(
-                    color: _selectedInterests.isEmpty ? Colors.grey.shade500 : Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: hasSelection
+                ? const LinearGradient(
+                    colors: [_kAccent, _kAccentDark],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: hasSelection ? null : _continueBtnDisabledBg,
+            borderRadius: BorderRadius.circular(13),
+            boxShadow: hasSelection
+                ? [BoxShadow(color: _kAccent.withOpacity(0.28), blurRadius: 14, offset: const Offset(0, 4))]
+                : [],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: hasSelection ? _handleContinue : null,
+              borderRadius: BorderRadius.circular(13),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    l10n?.continueText ?? 'Continue',
+                    style: TextStyle(
+                      color: hasSelection ? Colors.white : _continueBtnDisabledText,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: _selectedInterests.isEmpty ? Colors.grey.shade500 : Colors.white,
-                  size: 18,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: hasSelection ? Colors.white : _continueBtnDisabledText,
+                    size: 17,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 4),
         // Skip button
-        GestureDetector(
-          onTap: _handleSkip,
-          child: Container(
-            height: 48,
-            alignment: Alignment.center,
-            child: Text(
-              l10n?.skipForNow ?? 'Skip for now',
-              style: TextStyle(
-                color: dark ? const Color(0xFF6B7280) : Colors.white60,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+        TextButton(
+          onPressed: _handleSkip,
+          style: TextButton.styleFrom(
+            foregroundColor: _textMuted,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          ),
+          child: Text(
+            l10n?.skipForNow ?? 'Skip for now',
+            style: TextStyle(
+              color: _textMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),

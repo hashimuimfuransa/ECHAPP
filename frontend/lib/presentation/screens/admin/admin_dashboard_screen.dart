@@ -410,6 +410,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               children: [
                 _buildDesktopNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true, isCollapsed),
                 _buildDesktopNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false, isCollapsed),
+                _buildDesktopNavItem(context, 'Library', Icons.menu_book_rounded, '/admin/books', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Admins', Icons.admin_panel_settings_rounded, '/admin/admins', false, isCollapsed),
                 _buildDesktopNavItem(context, 'Exams', Icons.quiz_rounded, '/admin/exams-review', false, isCollapsed),
@@ -809,6 +810,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   _buildMobileNavItem(context, 'Dashboard', Icons.dashboard_rounded, '/admin', true),
                   _buildMobileNavItem(context, 'Notifications', Icons.notifications_active_rounded, '/admin/notifications', false),
                   _buildMobileNavItem(context, 'Courses', Icons.school_rounded, '/admin/courses', false),
+                  _buildMobileNavItem(context, 'Library', Icons.menu_book_rounded, '/admin/books', false),
                   _buildMobileNavItem(context, 'Students', Icons.people_rounded, '/admin/students', false),
                   _buildMobileNavItem(context, 'Admins', Icons.admin_panel_settings_rounded, '/admin/admins', false),
                   _buildMobileNavItem(context, 'Exams', Icons.quiz_rounded, '/admin/exams-review', false),

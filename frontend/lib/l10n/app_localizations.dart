@@ -479,7 +479,7 @@ abstract class AppLocalizations {
   /// No description provided for @enrolled.
   ///
   /// In en, this message translates to:
-  /// **'Enrolled'**
+  /// **'ENROLLED'**
   String get enrolled;
 
   /// No description provided for @dashboard.
@@ -962,6 +962,24 @@ abstract class AppLocalizations {
   /// **'Enter your full name'**
   String get enterFullName;
 
+  /// No description provided for @nameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Jean Bosco Uwimana'**
+  String get nameHint;
+
+  /// No description provided for @nameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your full name'**
+  String get nameRequiredError;
+
+  /// No description provided for @nameTooShortError.
+  ///
+  /// In en, this message translates to:
+  /// **'Name must be at least 2 characters'**
+  String get nameTooShortError;
+
   /// No description provided for @continueToDashboard.
   ///
   /// In en, this message translates to:
@@ -1313,7 +1331,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchCourses.
   ///
   /// In en, this message translates to:
-  /// **'Search courses...'**
+  /// **'Search courses, instructors...'**
   String get searchCourses;
 
   /// No description provided for @searchHint.
@@ -1409,13 +1427,13 @@ abstract class AppLocalizations {
   /// No description provided for @coursePrice.
   ///
   /// In en, this message translates to:
-  /// **'Course Price'**
+  /// **'COURSE PRICE'**
   String get coursePrice;
 
   /// No description provided for @courseCategory.
   ///
   /// In en, this message translates to:
-  /// **'Course Category'**
+  /// **'COURSE CATEGORY'**
   String get courseCategory;
 
   /// No description provided for @instructor.
@@ -1481,7 +1499,7 @@ abstract class AppLocalizations {
   /// No description provided for @alreadyEnrolled.
   ///
   /// In en, this message translates to:
-  /// **'Already Enrolled'**
+  /// **'You are already enrolled!'**
   String get alreadyEnrolled;
 
   /// No description provided for @enrolledSuccessfully.
@@ -1973,7 +1991,7 @@ abstract class AppLocalizations {
   /// No description provided for @discount.
   ///
   /// In en, this message translates to:
-  /// **'Discount'**
+  /// **'20% OFF'**
   String get discount;
 
   /// No description provided for @transactionId.
@@ -2021,7 +2039,7 @@ abstract class AppLocalizations {
   /// No description provided for @paymentPending.
   ///
   /// In en, this message translates to:
-  /// **'Payment pending'**
+  /// **'Payment Pending'**
   String get paymentPending;
 
   /// No description provided for @paymentProcessing.
@@ -2861,7 +2879,7 @@ abstract class AppLocalizations {
   /// No description provided for @students.
   ///
   /// In en, this message translates to:
-  /// **'Students'**
+  /// **'students'**
   String get students;
 
   /// No description provided for @totalStudents.
@@ -4549,6 +4567,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark lesson complete'**
   String get lessonScreenMarkLessonComplete;
+
+  /// No description provided for @searchInCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search in {category}...'**
+  String searchInCategory(Object category);
+
+  /// No description provided for @filterCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter Courses'**
+  String get filterCourses;
+
+  /// No description provided for @filterByCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by category'**
+  String get filterByCategory;
+
+  /// No description provided for @clearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAll;
+
+  /// No description provided for @paid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get paid;
+
+  /// No description provided for @beginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get beginner;
+
+  /// No description provided for @intermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get intermediate;
+
+  /// No description provided for @advanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get advanced;
+
+  /// No description provided for @short.
+  ///
+  /// In en, this message translates to:
+  /// **'Short (<1h)'**
+  String get short;
+
+  /// No description provided for @medium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium (1-3h)'**
+  String get medium;
+
+  /// No description provided for @long.
+  ///
+  /// In en, this message translates to:
+  /// **'Long (>3h)'**
+  String get long;
+
+  /// No description provided for @rating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get rating;
+
+  /// No description provided for @stars4Plus.
+  ///
+  /// In en, this message translates to:
+  /// **'4+ Stars'**
+  String get stars4Plus;
+
+  /// No description provided for @stars4_5Plus.
+  ///
+  /// In en, this message translates to:
+  /// **'4.5+ Stars'**
+  String get stars4_5Plus;
+
+  /// No description provided for @adjustSearchCriteria.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your search or filter criteria'**
+  String get adjustSearchCriteria;
+
+  /// No description provided for @basedOnYourInterests.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your interests: {interests}'**
+  String basedOnYourInterests(Object interests);
+
+  /// No description provided for @open.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get open;
+
+  /// No description provided for @coursesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} courses'**
+  String coursesCount(Object count);
+
+  /// No description provided for @browseAllCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse all available courses'**
+  String get browseAllCourses;
+
+  /// No description provided for @byInstructor.
+  ///
+  /// In en, this message translates to:
+  /// **'by {instructor}'**
+  String byInstructor(Object instructor);
+
+  /// No description provided for @noThumbnailAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No thumbnail available'**
+  String get noThumbnailAvailable;
+
+  /// No description provided for @aboutThisCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'About This Course'**
+  String get aboutThisCourse;
+
+  /// No description provided for @meetYourInstructor.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet Your Instructor'**
+  String get meetYourInstructor;
+
+  /// No description provided for @leadInstructor.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead Instructor & Course Creator'**
+  String get leadInstructor;
+
+  /// No description provided for @readyToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to Start Learning?'**
+  String get readyToStart;
+
+  /// No description provided for @joinThousands.
+  ///
+  /// In en, this message translates to:
+  /// **'Join thousands of students who have already transformed their skills'**
+  String get joinThousands;
+
+  /// No description provided for @checkingEnrollment.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking enrollment status...'**
+  String get checkingEnrollment;
+
+  /// No description provided for @buyNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Now'**
+  String get buyNow;
+
+  /// No description provided for @access.
+  ///
+  /// In en, this message translates to:
+  /// **'Access'**
+  String get access;
+
+  /// No description provided for @lifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get lifetime;
+
+  /// No description provided for @redirecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Redirecting...'**
+  String get redirecting;
+
+  /// No description provided for @withYearsExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'With extensive teaching experience and expertise in modern practices, our instructor brings real-world knowledge to help you succeed.'**
+  String get withYearsExperience;
+
+  /// No description provided for @sidebarSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get sidebarSignIn;
+
+  /// No description provided for @sidebarRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get sidebarRegister;
+
+  /// No description provided for @sidebarUnlockPotential.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock your potential with expert-led courses.'**
+  String get sidebarUnlockPotential;
+
+  /// No description provided for @sidebarLearningPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'LEARNING PLATFORM'**
+  String get sidebarLearningPlatform;
+
+  /// No description provided for @sidebarAdminNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get sidebarAdminNotifications;
+
+  /// No description provided for @sidebarAdminStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Students'**
+  String get sidebarAdminStudents;
+
+  /// No description provided for @sidebarAdminPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments'**
+  String get sidebarAdminPayments;
+
+  /// No description provided for @sidebarAdminAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get sidebarAdminAnalytics;
+
+  /// No description provided for @sidebarAreYouSureLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to logout?'**
+  String get sidebarAreYouSureLogout;
+
+  /// No description provided for @sidebarExpandSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand Sidebar'**
+  String get sidebarExpandSidebar;
+
+  /// No description provided for @sidebarCollapseSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse Sidebar'**
+  String get sidebarCollapseSidebar;
+
+  /// No description provided for @sidebarGoBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get sidebarGoBack;
+
+  /// No description provided for @sidebarRefreshApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh App'**
+  String get sidebarRefreshApp;
+
+  /// No description provided for @examPreparation.
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Preparation'**
+  String get examPreparation;
+
+  /// No description provided for @examPreparationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare for your exams with past papers and practice tests'**
+  String get examPreparationSubtitle;
+
+  /// No description provided for @examPreparationBenefit.
+  ///
+  /// In en, this message translates to:
+  /// **'Access past papers, practice tests, and expert guidance to ace your exams'**
+  String get examPreparationBenefit;
+
+  /// No description provided for @visitExamMarketplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit Exam Marketplace'**
+  String get visitExamMarketplace;
+
+  /// No description provided for @examMarketplaceUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'https://www.eexams.net/marketplace'**
+  String get examMarketplaceUrl;
 }
 
 class _AppLocalizationsDelegate

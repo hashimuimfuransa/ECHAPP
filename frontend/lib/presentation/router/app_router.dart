@@ -47,6 +47,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_general_s
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_books_screen.dart';
 import 'package:excellencecoachinghub/screens/admin/quiz_creation_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
@@ -435,6 +436,13 @@ class AppRouter {
             builder: (context, state) => const AdminLayoutWrapper(
               screenName: 'Admin Notifications',
               child: AdminNotificationsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/books',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Books',
+              child: AdminBooksScreen(),
             ),
           ),
 

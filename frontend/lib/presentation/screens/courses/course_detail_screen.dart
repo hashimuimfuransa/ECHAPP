@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -26,6 +27,8 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   bool _hasRedirected = false;
+
+  AppLocalizations? get l10n => AppLocalizations.of(context);
 
   // Provider for fetching course information
   static final _courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
@@ -319,8 +322,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF1E3A8A), // Deep Blue
-                  Color(0xFF3B82F6), // Blue
+                  Color(0xFF047857), // Emerald 700
+                  Color(0xFF10B981), // Emerald 500 (primary)
                 ],
               ),
             ),
@@ -437,7 +440,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'No thumbnail available',
+                                        l10n?.noThumbnailAvailable ?? 'No thumbnail available',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.7),
                                           fontSize: 16,
@@ -586,17 +589,29 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: GradientBackground(
-          colors: AppTheme.oceanGradient,
-          child: Center(
-            child: CircularProgressIndicator(),
+      loading: () => Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF047857), Color(0xFF10B981)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.white),
           ),
         ),
       ),
       error: (error, stack) => Scaffold(
-        body: GradientBackground(
-          colors: AppTheme.oceanGradient,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF047857), Color(0xFF10B981)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -624,6 +639,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF047857),
+                  ),
                   child: const Text('Retry'),
                 ),
               ],
@@ -697,14 +716,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+          colors: [Color(0xFF047857), Color(0xFF10B981)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.3),
+            color: const Color(0xFF047857).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -774,9 +793,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'COURSE PRICE',
-          style: TextStyle(
+        Text(
+          l10n?.coursePrice ?? 'COURSE PRICE',
+          style: const TextStyle(
             color: Colors.white70,
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -817,9 +836,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Limited time offer • 30-day money back guarantee',
-          style: TextStyle(
+        Text(
+          l10n?.limitedTimeOffer ?? 'Limited time offer • 30-day money back guarantee',
+          style: const TextStyle(
             color: Colors.white70,
             fontSize: 12,
           ),
@@ -920,9 +939,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      'Payment Pending',
-                      style: TextStyle(
+                    child: Text(
+                      l10n?.paymentPending ?? 'Payment Pending',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -952,7 +971,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                  isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1130,7 +1149,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     onPressed: () {
                       _handlePayment(ref, course);
                     },
-                    color: const Color(0xFF4facfe),
+                    color: AppTheme.primary,
                   );
                 }
               },
@@ -1154,7 +1173,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     onPressed: () {
                       _handlePayment(ref, course);
                     },
-                    color: const Color(0xFF4facfe),
+                    color: AppTheme.primary,
                   );
                 }
               }
@@ -1179,7 +1198,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         onPressed: () {
           // Handle paid enrollment
         },
-        color: const Color(0xFF4facfe),
+        color: AppTheme.primary,
       );
     }
   }
@@ -1483,7 +1502,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'About This Course',
+          l10n?.aboutThisCourse ?? 'About This Course',
           style: TextStyle(
             color: AppTheme.getTextColor(context),
             fontSize: 20,
@@ -1552,7 +1571,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'What You Will Learn',
+          l10n?.whatYouWillLearn ?? 'What You Will Learn',
           style: TextStyle(
             color: AppTheme.getTextColor(context),
             fontSize: 20,
@@ -1691,7 +1710,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Requirements',
+          l10n?.requirements ?? 'Requirements',
           style: TextStyle(
             color: AppTheme.getTextColor(context),
             fontSize: 20,
@@ -1928,7 +1947,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Meet Your Instructor',
+          l10n?.meetYourInstructor ?? 'Meet Your Instructor',
           style: TextStyle(
             color: AppTheme.getTextColor(context),
             fontSize: 20,
@@ -2128,7 +2147,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         onPressed: () {
           _handlePayment(ref, course);
         },
-        color: const Color(0xFF4facfe),
+        color: AppTheme.primary,
       );
     }
   }
@@ -2137,14 +2156,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+          colors: [Color(0xFF047857), Color(0xFF10B981)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.3),
+            color: const Color(0xFF047857).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -2154,19 +2173,19 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const Text(
-              'Ready to Start Learning?',
-              style: TextStyle(
+            Text(
+              l10n?.readyToStart ?? 'Ready to Start Learning?',
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Join thousands of students who have already transformed their skills',
+            Text(
+              l10n?.joinThousands ?? 'Join thousands of students who have already transformed their skills',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
                 height: 1.5,
@@ -2185,10 +2204,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'Checking enrollment status...',
-                    style: TextStyle(
+                    l10n?.checkingEnrollment ?? 'Checking enrollment status...',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -2283,9 +2302,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   // Navigate directly to the learning screen using GoRouter
                   context.push('/learning/${course.id}');
                 },
-                child: const Text(
-                  'Continue Learning',
-                  style: TextStyle(
+                child: Text(
+                  l10n?.continueLearning ?? 'Continue Learning',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

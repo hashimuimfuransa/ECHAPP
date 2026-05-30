@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
 import 'package:excellencecoachinghub/widgets/modern_dialog.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class ResponsiveNavigationDrawer extends ConsumerWidget {
   final String currentPage;
@@ -18,6 +19,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final isCollapsed = ref.watch(sidebarProvider);
     final user = ref.watch(authProvider).user;
     final bool isAuth = user == null || currentPage == 'auth';
@@ -25,129 +27,147 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
     final navItems = isAuth ? [
       {
-        'title': 'Welcome',
+        'title': l10n?.welcome ?? 'Welcome',
         'icon': Icons.handshake_outlined,
         'route': '/auth-selection',
         'key': 'auth'
       },
       {
-        'title': 'Sign In',
+        'title': l10n?.sidebarSignIn ?? 'Sign In',
         'icon': Icons.login_rounded,
         'route': '/login',
         'key': 'login'
       },
       {
-        'title': 'Register',
+        'title': l10n?.sidebarRegister ?? 'Register',
         'icon': Icons.person_add_rounded,
         'route': '/register',
         'key': 'register'
       },
       {
-        'title': 'Help Center',
+        'title': l10n?.helpCenter ?? 'Help Center',
         'icon': Icons.help_outline_rounded,
         'route': '/help',
         'key': 'help'
       },
     ] : isAdmin ? [
       {
-        'title': 'Dashboard',
+        'title': l10n?.dashboard ?? 'Dashboard',
         'icon': Icons.dashboard_outlined,
         'route': '/admin',
         'key': 'dashboard'
       },
       {
-        'title': 'Notifications',
+        'title': l10n?.sidebarAdminNotifications ?? 'Notifications',
         'icon': Icons.notifications_active_outlined,
         'route': '/admin/notifications',
         'key': 'admin-notifications'
       },
       {
-        'title': 'Courses',
+        'title': l10n?.courses ?? 'Courses',
         'icon': Icons.school_outlined,
         'route': '/admin/courses',
         'key': 'courses'
       },
       {
-        'title': 'Students',
+        'title': l10n?.sidebarAdminStudents ?? 'Students',
         'icon': Icons.people_outline,
         'route': '/admin/students',
         'key': 'students'
       },
       {
-        'title': 'Payments',
+        'title': l10n?.sidebarAdminPayments ?? 'Payments',
         'icon': Icons.payments_outlined,
         'route': '/admin/payments',
         'key': 'payments'
       },
       {
-        'title': 'Analytics',
+        'title': l10n?.sidebarAdminAnalytics ?? 'Analytics',
         'icon': Icons.analytics_outlined,
         'route': '/admin/analytics',
         'key': 'analytics'
       },
       {
-        'title': 'Profile',
+        'title': l10n?.profile ?? 'Profile',
         'icon': Icons.person_outline,
         'route': '/profile',
         'key': 'profile'
       },
       {
-        'title': 'Settings',
+        'title': l10n?.settings ?? 'Settings',
         'icon': Icons.settings_outlined,
         'route': '/settings',
         'key': 'settings'
       },
     ] : [
       {
-        'title': 'Dashboard',
+        'title': l10n?.dashboard ?? 'Dashboard',
         'icon': Icons.dashboard_outlined,
         'route': '/dashboard',
         'key': 'dashboard'
       },
       {
-        'title': 'Courses',
+        'title': l10n?.courses ?? 'Courses',
         'icon': Icons.school_outlined,
         'route': '/courses',
         'key': 'courses'
       },
       {
-        'title': 'My Learning',
+        'title': l10n?.myLearning ?? 'My Learning',
         'icon': Icons.play_circle_outline,
         'route': '/my-courses',
         'key': 'my-courses'
       },
       {
-        'title': 'Categories',
+        'title': l10n?.categories ?? 'Categories',
         'icon': Icons.category_outlined,
         'route': '/categories',
         'key': 'categories'
       },
       {
-        'title': 'Library',
+        'title': l10n?.library ?? 'Library',
         'icon': Icons.local_library_outlined,
         'route': '/library',
         'key': 'library'
       },
       {
-        'title': 'Certificates',
+        'title': l10n?.certificates ?? 'Certificates',
         'icon': Icons.verified_outlined,
         'route': '/certificates',
         'key': 'certificates'
       },
       {
-        'title': 'Downloads',
+        'title': l10n?.downloads ?? 'Downloads',
         'icon': Icons.download_for_offline_outlined,
         'route': '/downloads',
         'key': 'downloads'
       },
       {
-        'title': 'Profile',
+        'title': l10n?.notifications ?? 'Notifications',
+        'icon': Icons.notifications_outlined,
+        'route': '/notifications',
+        'key': 'notifications'
+      },
+      {
+        'title': l10n?.payments ?? 'Payments',
+        'icon': Icons.payment_outlined,
+        'route': '/payments/history',
+        'key': 'payments'
+      },
+      {
+        'title': l10n?.exams ?? 'Exams',
+        'icon': Icons.quiz_outlined,
+        'route': '/exams/history',
+        'key': 'exams'
+      },
+      {
+        'title': l10n?.profile ?? 'Profile',
         'icon': Icons.person_outline,
         'route': '/profile',
         'key': 'profile'
       },
       {
-        'title': 'Settings',
+        'title': l10n?.settings ?? 'Settings',
         'icon': Icons.settings_outlined,
         'route': '/settings',
         'key': 'settings'
@@ -169,28 +189,28 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildDesktopDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref, bool isCollapsed, bool isAuth) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutExpo,
-      width: isCollapsed ? 80 : 280,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: isCollapsed ? 72 : 260,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(5, 0),
+        border: Border(
+          right: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06),
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 24, 40, isCollapsed ? 12 : 24, 28),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
+            padding: EdgeInsets.fromLTRB(isCollapsed ? 16 : 20, 24, isCollapsed ? 16 : 20, 20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF00C896), Color(0xFF059669)],
@@ -200,42 +220,42 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
               mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Image.asset(
                     'assets/logo.png',
-                    width: 32,
-                    height: 32,
+                    width: 28,
+                    height: 28,
                     fit: BoxFit.contain,
                   ),
                 ),
                 if (!isCollapsed) ...[
-                  const SizedBox(width: 14),
-                  const Expanded(
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Excellence Hub',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                          l10n?.excellenceHub ?? 'Excellence Hub',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.3,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'LEARNING PLATFORM',
-                          style: TextStyle(
-                            fontSize: 9,
+                          l10n?.sidebarLearningPlatform ?? 'LEARNING PLATFORM',
+                          style: const TextStyle(
+                            fontSize: 8,
                             color: Colors.white70,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.0,
                           ),
                         ),
                       ],
@@ -248,7 +268,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           
           Expanded(
             child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCollapsed ? 8 : 12,
+                vertical: 8,
+              ),
               children: items.map((item) => _buildNavItem(
                 context,
                 item['title'] as String,
@@ -264,45 +287,18 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           if (!isAuth)
             Container(
               padding: EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: isCollapsed ? 0 : 16
+                vertical: 12,
+                horizontal: isCollapsed ? 8 : 12,
               ),
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: Theme.of(context).dividerColor.withOpacity(0.05),
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06),
                     width: 1,
                   ),
                 ),
               ),
               child: _buildLogoutButton(context, ref, isCollapsed),
-            ),
-          if (isAuth && !isCollapsed)
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.1)),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.auto_awesome, color: AppTheme.primaryGreen, size: 24),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Unlock your potential with expert-led courses.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.getTextColor(context).withOpacity(0.7),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
         ],
       ),
@@ -314,12 +310,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Drawer(
-      backgroundColor: isDark ? AppTheme.darkBg : Colors.white,
-      width: MediaQuery.of(context).size.width * 0.85,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      width: MediaQuery.of(context).size.width * 0.82,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topRight: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+          topRight: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
       ),
       child: Column(
@@ -327,30 +323,25 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           _buildMobileHeader(context, user),
           
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkBg : Colors.white,
-              ),
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  ...items.map((item) => _buildNavItem(
-                    context,
-                    item['title'] as String,
-                    item['icon'] as IconData,
-                    item['route'] as String,
-                    item['key'] as String,
-                    currentPage == item['key'],
-                    false, // Mobile is never collapsed
-                  )).toList(),
-                ],
-              ),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              physics: const BouncingScrollPhysics(),
+              children: [
+                ...items.map((item) => _buildNavItem(
+                  context,
+                  item['title'] as String,
+                  item['icon'] as IconData,
+                  item['route'] as String,
+                  item['key'] as String,
+                  currentPage == item['key'],
+                  false, // Mobile is never collapsed
+                )).toList(),
+              ],
             ),
           ),
           
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: _buildLogoutButton(context, ref, false), // Mobile is never collapsed
           ),
         ],
@@ -359,9 +350,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildMobileHeader(BuildContext context, user) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 70, 24, 28),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -375,38 +367,38 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Image.asset(
                   'assets/logo.png',
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(width: 16),
-              const Column(
+              const SizedBox(width: 12),
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Excellence Hub',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                    l10n?.excellenceHub ?? 'Excellence Hub',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   Text(
-                    'LEARNING PLATFORM',
-                    style: TextStyle(
+                    l10n?.sidebarLearningPlatform ?? 'LEARNING PLATFORM',
+                    style: const TextStyle(
                       color: Colors.white70,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.0,
                     ),
                   ),
                 ],
@@ -414,30 +406,24 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             ],
           ),
           if (user != null) ...[
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                       image: user.profilePicture != null && user.profilePicture!.isNotEmpty
                         ? DecorationImage(
                             image: NetworkImage(user.profilePicture!),
@@ -456,7 +442,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                               user.fullName[0].toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -464,7 +450,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                         )
                       : null,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,8 +458,8 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                         Text(
                           user.fullName,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                           maxLines: 1,
@@ -484,7 +470,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                           user.email,
                           style: const TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -518,59 +504,50 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     
     if (useDesktopStyle) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: 1),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: isSelected ? null : () => context.go(route),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 0 : 16, 
+                horizontal: isCollapsed ? 0 : 12, 
                 vertical: 10
               ),
               alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
               decoration: isSelected
                   ? BoxDecoration(
-                      color: AppTheme.primaryGreen.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.primaryGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
                     )
                   : null,
               child: isCollapsed
                   ? Icon(
                       icon,
-                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
-                      size: 22,
+                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.6),
+                      size: 20,
                     )
                   : Row(
                       children: [
                         Icon(
                           icon,
-                          color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.7),
-                          size: 20,
+                          color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.6),
+                          size: 18,
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             title,
                             style: TextStyle(
-                              color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context).withOpacity(0.8),
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              fontSize: 14,
+                              color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context).withOpacity(0.75),
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontSize: 13,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isSelected)
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primaryGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
                       ],
                     ),
             ),
@@ -581,7 +558,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: InkWell(
           onTap: () {
             if (!isSelected) {
@@ -589,54 +566,45 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             }
             Navigator.of(context).pop();
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppTheme.primaryGreen.withOpacity(0.1)
+                  ? AppTheme.primaryGreen.withOpacity(0.08)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-              border: isSelected 
-                  ? Border.all(color: AppTheme.primaryGreen.withOpacity(0.2), width: 1)
-                  : Border.all(color: Colors.transparent, width: 1),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppTheme.primaryGreen
-                        : (isDark ? Colors.white.withOpacity(0.05) : AppTheme.greyColor.withOpacity(0.08)),
-                    borderRadius: BorderRadius.circular(12),
+                        : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05)),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
-                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppTheme.greyColor),
-                    size: 20,
+                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black54),
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
                       color: isSelected 
                           ? AppTheme.primaryGreen 
-                          : (isDark ? Colors.white.withOpacity(0.9) : AppTheme.getTextColor(context)),
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      fontSize: 15,
+                          : (isDark ? Colors.white.withOpacity(0.9) : Colors.black87),
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 14,
                     ),
                   ),
                 ),
-                if (isSelected)
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: AppTheme.primaryGreen,
-                  ),
               ],
             ),
           ),
@@ -646,6 +614,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref, bool isCollapsed) {
+    final l10n = AppLocalizations.of(context);
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
     
@@ -654,7 +623,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     
     if (useDesktopStyle) {
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 0 : 12),
+        padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -662,8 +631,8 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             borderRadius: BorderRadius.circular(10),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 0 : 16, 
-                vertical: 12
+                horizontal: isCollapsed ? 0 : 12, 
+                vertical: 10
               ),
               child: Row(
                 mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
@@ -674,14 +643,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                     color: Colors.red.shade600,
                   ),
                   if (!isCollapsed) ...[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Text(
-                      'Logout',
+                      l10n?.logout ?? 'Logout',
                       style: TextStyle(
                         color: Colors.red.shade600,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -697,53 +665,41 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       return Container(
         decoration: BoxDecoration(
           color: isDark ? Colors.red.withOpacity(0.08) : Colors.red.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.red.withOpacity(isDark ? 0.2 : 0.1),
+            color: Colors.red.withOpacity(isDark ? 0.15 : 0.1),
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: InkWell(
           onTap: () => _showLogoutDialog(context, ref),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.logout_rounded,
                     color: Colors.red.shade600,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Logout',
+                    l10n?.logout ?? 'Logout',
                     style: TextStyle(
                       color: Colors.red.shade600,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.power_settings_new_rounded,
-                  size: 18,
-                  color: Colors.red.withOpacity(0.4),
                 ),
               ],
             ),
@@ -754,11 +710,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     showModernDialog(
       context: context,
-      title: 'Logout',
-      content: const Text(
-        'Are you sure you want to logout?',
+      title: l10n?.logout ?? 'Logout',
+      content: Text(
+        l10n?.sidebarAreYouSureLogout ?? 'Are you sure you want to logout?',
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 14, color: AppTheme.greyColor),
       ),
@@ -770,7 +727,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             Navigator.of(context).pop();
             ref.read(authProvider.notifier).logout();
           },
-          text: 'Logout',
+          text: l10n?.logout ?? 'Logout',
         ),
       ],
     );

@@ -125,6 +125,9 @@ class MainLayout extends ConsumerWidget {
     if (currentRoute.contains('/categories')) currentPage = 'categories';
     if (currentRoute.contains('/certificates')) currentPage = 'certificates';
     if (currentRoute.contains('/downloads')) currentPage = 'downloads';
+    if (currentRoute.contains('/notifications')) currentPage = 'notifications';
+    if (currentRoute.contains('/payments')) currentPage = 'payments';
+    if (currentRoute.contains('/exams')) currentPage = 'exams';
     if (currentRoute.contains('/profile')) currentPage = 'profile';
     if (currentRoute.contains('/settings')) currentPage = 'settings';
     if (isAuthRoute) currentPage = 'auth';
@@ -196,6 +199,9 @@ class MainLayout extends ConsumerWidget {
       case 'categories': return l10n?.categories ?? 'Categories';
       case 'certificates': return l10n?.certificates ?? 'Certificates';
       case 'downloads': return l10n?.downloads ?? 'Downloads';
+      case 'notifications': return l10n?.notifications ?? 'Notifications';
+      case 'payments': return l10n?.payments ?? 'Payments';
+      case 'exams': return l10n?.exams ?? 'Exams';
       case 'profile': return l10n?.profile ?? 'Profile';
       case 'settings': return l10n?.settings ?? 'Settings';
       default: return l10n?.excellenceHub ?? 'Excellence Hub';
@@ -203,6 +209,7 @@ class MainLayout extends ConsumerWidget {
   }
 
   Widget _buildDesktopTopBar(BuildContext context, WidgetRef ref, app_models.User? user, String title, bool isCollapsed) {
+    final l10n = AppLocalizations.of(context);
     // For desktop, show back button if we can pop OR if we are not on a root level route
     final String currentRoute = GoRouterState.of(context).uri.path;
     final bool isRootRoute = currentRoute == '/dashboard' || currentRoute == '/admin' || currentRoute == '/';
@@ -250,7 +257,7 @@ class MainLayout extends ConsumerWidget {
                   }
                 }
               },
-              tooltip: 'Go back',
+              tooltip: l10n?.sidebarGoBack ?? 'Go back',
             ),
           if (showBackButton) const SizedBox(width: 8),
           // Sidebar Toggle Button
@@ -260,7 +267,7 @@ class MainLayout extends ConsumerWidget {
               color: AppTheme.getTextColor(context).withOpacity(0.7),
             ),
             onPressed: () => ref.read(sidebarProvider.notifier).toggleSidebar(),
-            tooltip: isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+            tooltip: isCollapsed ? l10n?.sidebarExpandSidebar ?? 'Expand Sidebar' : l10n?.sidebarCollapseSidebar ?? 'Collapse Sidebar',
           ),
           const SizedBox(width: 16),
           Text(
@@ -279,7 +286,7 @@ class MainLayout extends ConsumerWidget {
               color: AppTheme.getTextColor(context).withOpacity(0.7),
             ),
             onPressed: () => _handleGlobalRefresh(ref, context),
-            tooltip: 'Refresh App',
+            tooltip: l10n?.sidebarRefreshApp ?? 'Refresh App',
           ),
           const Spacer(),
           _buildNotificationBadge(context, ref),
