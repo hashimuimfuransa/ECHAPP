@@ -64,7 +64,9 @@ class ApiClient {
     
     print('ApiClient: Query parameters converted to strings: $stringQueryParams');
     
-    final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
+    final uri = stringQueryParams.isEmpty 
+        ? Uri.parse(url)
+        : Uri.parse(url).replace(queryParameters: stringQueryParams);
     final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     print('ApiClient: Auth headers received: $authHeaders');
     final mergedHeaders = {...authHeaders, ...?headers};
@@ -84,7 +86,9 @@ class ApiClient {
       (key, value) => MapEntry(key, value.toString()),
     ) ?? {};
     
-    final uri = Uri.parse(url).replace(queryParameters: stringQueryParams);
+    final uri = stringQueryParams.isEmpty 
+        ? Uri.parse(url)
+        : Uri.parse(url).replace(queryParameters: stringQueryParams);
     final authHeaders = authenticate ? await _getAuthHeaders() : {'Content-Type': 'application/json'};
     final mergedHeaders = {...authHeaders, ...?headers};
     

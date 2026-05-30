@@ -77,7 +77,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
 
       final idToken = await user.getIdToken(true);
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/books/admin/all'),
+        Uri.parse('${ApiConfig.baseUrl}/books/admin/all'),
         headers: {
           'Authorization': 'Bearer $idToken',
           'Content-Type': 'application/json',
@@ -160,7 +160,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
       // Create multipart request
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${ApiConfig.baseUrl}/api/books/upload-files'),
+        Uri.parse('${ApiConfig.baseUrl}/books/upload-files'),
       );
 
       request.headers.addAll({
@@ -250,7 +250,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
       final idToken = await user.getIdToken(true);
 
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/books'),
+        Uri.parse('${ApiConfig.baseUrl}/books'),
         headers: {
           'Authorization': 'Bearer $idToken',
           'Content-Type': 'application/json',
@@ -293,11 +293,16 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   Future<void> _deleteBook(String bookId) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Book'),
-        content: const Text('Are you sure you want to delete this book?'),
+        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+        title: Text('Delete Book', style: TextStyle(color: textColor)),
+        content: Text('Are you sure you want to delete this book?', 
+            style: TextStyle(color: textColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -323,7 +328,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
       final idToken = await user.getIdToken(true);
 
       final response = await http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/api/books/$bookId'),
+        Uri.parse('${ApiConfig.baseUrl}/books/$bookId'),
         headers: {
           'Authorization': 'Bearer $idToken',
         },
@@ -382,20 +387,34 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final surfaceColor = isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA),
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
               padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: borderColor,
+                    width: 1,
+                  ),
+                ),
+              ),
               child: Row(
                 children: [
                   if (context.canPop())
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_rounded),
+                      icon: Icon(Icons.arrow_back_ios_rounded, color: textColor),
                       onPressed: () => context.pop(),
                     ),
                   const SizedBox(width: 8),
@@ -404,7 +423,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.getTextColor(context),
+                      color: textColor,
                     ),
                   ),
                   const Spacer(),
@@ -437,13 +456,17 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   Widget _buildErrorWidget() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.error_outline_rounded,
-            color: Colors.red,
+            color: isDark ? const Color(0xFFF87171) : Colors.red,
             size: 48,
           ),
           const SizedBox(height: 16),
@@ -452,7 +475,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppTheme.getTextColor(context),
+              color: textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -460,7 +483,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             _errorMessage ?? 'Something went wrong',
             style: TextStyle(
               fontSize: 14,
-              color: AppTheme.getSecondaryTextColor(context),
+              color: secondaryTextColor,
             ),
             textAlign: TextAlign.center,
           ),
@@ -479,6 +502,9 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   Widget _buildBooksList(BuildContext context, bool isDark) {
+    final textColor = AppTheme.getTextColor(context);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    
     if (_books.isEmpty) {
       return Center(
         child: Column(
@@ -486,7 +512,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
           children: [
             Icon(
               Icons.menu_book_rounded,
-              color: AppTheme.getSecondaryTextColor(context),
+              color: secondaryTextColor,
               size: 64,
             ),
             const SizedBox(height: 16),
@@ -495,7 +521,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.getTextColor(context),
+                color: textColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -503,7 +529,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
               'Click "Add Book" to upload your first book',
               style: TextStyle(
                 fontSize: 14,
-                color: AppTheme.getSecondaryTextColor(context),
+                color: secondaryTextColor,
               ),
             ),
           ],
@@ -526,14 +552,19 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   Widget _buildBookCard(BuildContext context, dynamic book, bool isDark) {
+    final textColor = AppTheme.getTextColor(context);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+          color: borderColor,
         ),
       ),
       child: Row(
@@ -578,7 +609,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.getTextColor(context),
+                    color: textColor,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -588,7 +619,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                   book['author'] ?? 'Unknown Author',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppTheme.getSecondaryTextColor(context),
+                    color: secondaryTextColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -614,7 +645,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                       book['language']?.toUpperCase() ?? 'EN',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.getSecondaryTextColor(context),
+                        color: secondaryTextColor,
                       ),
                     ),
                   ],
@@ -752,10 +783,15 @@ class AddBookDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final surfaceColor = isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6);
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -767,22 +803,23 @@ class AddBookDialog extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  color: borderColor,
                 ),
               ),
             ),
             child: Row(
               children: [
-                const Text(
+                Text(
                   'Add New Book',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
+                    color: textColor,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(Icons.close_rounded, color: textColor),
                   onPressed: onClose,
                 ),
               ],
@@ -798,18 +835,38 @@ class AddBookDialog extends StatelessWidget {
                   // Title
                   TextField(
                     controller: titleController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
                       labelText: 'Book Title',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: textColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.primaryGreen),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   // Author
                   TextField(
                     controller: authorController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
                       labelText: 'Author',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: textColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.primaryGreen),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -817,19 +874,40 @@ class AddBookDialog extends StatelessWidget {
                   TextField(
                     controller: descriptionController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
                       labelText: 'Description (Optional)',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: textColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.primaryGreen),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   // Subject (text input instead of dropdown)
                   TextField(
                     controller: subjectController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
                       labelText: 'Subject',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: textColor),
                       hintText: 'e.g., Mathematics, Physics, Computer Science',
+                      hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.primaryGreen),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -837,34 +915,35 @@ class AddBookDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                      color: surfaceColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Related Courses (Optional)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Link this book to courses so students can easily find it',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: secondaryTextColor,
                           ),
                         ),
                         const SizedBox(height: 8),
                         if (selectedCourseIds.isEmpty)
-                          const Text(
+                          Text(
                             'No courses selected',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: secondaryTextColor,
                             ),
                           )
                         else
@@ -903,9 +982,20 @@ class AddBookDialog extends StatelessWidget {
                   // Language
                   DropdownButtonFormField<String>(
                     value: selectedLanguage,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: textColor),
+                    dropdownColor: cardColor,
+                    decoration: InputDecoration(
                       labelText: 'Language',
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: textColor),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.primaryGreen),
+                      ),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'en', child: Text('English')),
@@ -919,17 +1009,18 @@ class AddBookDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                      color: surfaceColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'PDF File',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -976,17 +1067,18 @@ class AddBookDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
+                      color: surfaceColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Cover Image (Optional)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1062,7 +1154,7 @@ class AddBookDialog extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  color: borderColor,
                 ),
               ),
             ),
@@ -1105,16 +1197,22 @@ class AddBookDialog extends StatelessWidget {
   }
 
   void _showCourseSelectionDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = AppTheme.getTextColor(context);
+    
     // For now, show a simple dialog to enter course IDs
     // In a real implementation, you would fetch courses from the backend
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Course'),
+        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+        title: Text('Add Course', style: TextStyle(color: textColor)),
         content: TextField(
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Course ID',
             hintText: 'Enter course ID',
+            labelStyle: TextStyle(color: textColor),
+            hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
           ),
           onSubmitted: (value) {
             if (value.isNotEmpty) {

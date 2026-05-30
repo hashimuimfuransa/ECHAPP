@@ -37,7 +37,7 @@ class BookService {
         queryParams['search'] = search;
       }
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/books')
+      final uri = Uri.parse('${ApiConfig.baseUrl}/books')
           .replace(queryParameters: queryParams);
 
       final response = await http.get(
@@ -74,7 +74,7 @@ class BookService {
       final idToken = await user.getIdToken(true);
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/books/$bookId'),
+        Uri.parse('${ApiConfig.baseUrl}/books/$bookId'),
         headers: {
           'Authorization': 'Bearer $idToken',
           'Content-Type': 'application/json',
