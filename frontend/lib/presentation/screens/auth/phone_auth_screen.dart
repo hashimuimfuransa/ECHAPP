@@ -205,11 +205,11 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
               tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          // Right white form panel (55%)
+          // Right form panel (55%) - theme-aware
           Expanded(
             flex: 55,
             child: Container(
-              color: Colors.white,
+              color: _cardColor,
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),

@@ -178,6 +178,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get library => 'Library';
 
   @override
+  String get browseBooks => 'Browse books';
+
+  @override
   String get browseResources => 'Browse Resources';
 
   @override

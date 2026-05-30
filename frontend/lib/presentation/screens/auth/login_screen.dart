@@ -149,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final String loginText = l10n.loginTitle;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: _backgroundColor,
       body: Row(
         children: [
           // Left branding panel (45%)
@@ -165,24 +165,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
           Expanded(
             flex: 55,
             child: Container(
-              color: const Color(0xFFF9FAFB),
+              color: _backgroundColor,
               child: Column(
                 children: [
                   // Top branded header bar
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: _cardColor,
                       border: Border(
-                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                        bottom: BorderSide(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE8F5F0), width: 1.5),
                       ),
                     ),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7280), size: 20),
+                          icon: Icon(Icons.arrow_back_ios_rounded, color: _secondaryTextColor, size: 20),
                           tooltip: 'Back',
                         ),
                         const SizedBox(width: 16),
@@ -214,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         Text(
                           'Excellence Coaching Hub',
                           style: TextStyle(
-                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            color: _secondaryTextColor.withOpacity(0.6),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -264,8 +264,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               children: [
                 Text(
                   welcomeText,
-                  style: const TextStyle(
-                    color: Color(0xFF111827),
+                  style: TextStyle(
+                    color: _textColor,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
@@ -275,8 +275,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 const SizedBox(height: 4),
                 Text(
                   subtitleText,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
+                  style: TextStyle(
+                    color: _secondaryTextColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     height: 1.4,
@@ -291,10 +291,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-            boxShadow: [
+            border: Border.all(color: _inputBorderColor, width: 1),
+            boxShadow: _isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 20,
@@ -318,8 +318,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     style: TextButton.styleFrom(padding: EdgeInsets.zero),
                     child: Text(
                       forgotPasswordText,
-                      style: const TextStyle(
-                        color: Color(0xFF00C896),
+                      style: TextStyle(
+                        color: _linkColor,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -334,13 +334,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: authState.error!.contains('Forgot password?')
-                          ? const Color(0xFFFFFBEB)
-                          : const Color(0xFFFEF2F2),
+                          ? _warningBgColor
+                          : _errorBgColor,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: authState.error!.contains('Forgot password?')
-                            ? const Color(0xFFFEF3C7)
-                            : const Color(0xFFFECACA),
+                            ? _warningBorderColor
+                            : _errorBorderColor,
                       ),
                     ),
                     child: Row(
@@ -360,8 +360,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                             authState.error!,
                             style: TextStyle(
                               color: authState.error!.contains('Forgot password?')
-                                  ? const Color(0xFFB45309)
-                                  : const Color(0xFFB91C1C),
+                                  ? _warningTextColor
+                                  : _errorTextColor,
                               fontSize: 13,
                               height: 1.4,
                             ),
@@ -382,8 +382,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
           children: [
             Text(
               noAccountText,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
+              style: TextStyle(
+                color: _secondaryTextColor,
                 fontSize: 14,
               ),
             ),
@@ -392,8 +392,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 4)),
               child: Text(
                 signUpText,
-                style: const TextStyle(
-                  color: Color(0xFF00C896),
+                style: TextStyle(
+                  color: _linkColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),

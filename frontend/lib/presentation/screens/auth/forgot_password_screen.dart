@@ -77,7 +77,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
 
   Widget _buildDesktopLayout(dynamic authState, AppLocalizations l10n) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: _backgroundColor,
       body: Row(
         children: [
           // Left branding panel (45%)
@@ -93,24 +93,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
           Expanded(
             flex: 55,
             child: Container(
-              color: const Color(0xFFF9FAFB),
+              color: _backgroundColor,
               child: Column(
                 children: [
                   // Top branded header bar
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: _cardColor,
                       border: Border(
-                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                        bottom: BorderSide(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE8F5F0), width: 1.5),
                       ),
                     ),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7280), size: 20),
+                          icon: Icon(Icons.arrow_back_ios_rounded, color: _secondaryTextColor, size: 20),
                           tooltip: 'Back',
                         ),
                         const SizedBox(width: 16),
@@ -142,7 +142,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                         Text(
                           'Excellence Coaching Hub',
                           style: TextStyle(
-                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            color: _secondaryTextColor.withOpacity(0.6),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -294,10 +294,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
         Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-            boxShadow: [
+            border: Border.all(color: _inputBorderColor, width: 1),
+            boxShadow: _isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 20,
@@ -312,20 +312,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Remember your password? ',
               style: TextStyle(
-                color: Color(0xFF6B7280),
+                color: _secondaryTextColor,
                 fontSize: 14,
               ),
             ),
             TextButton(
               onPressed: () => context.push('/login'),
               style: TextButton.styleFrom(padding: const EdgeInsets.only(left: 4)),
-              child: const Text(
+              child: Text(
                 'Sign in',
                 style: TextStyle(
-                  color: Color(0xFF00C896),
+                  color: const Color(0xFF00C896),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -351,15 +351,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
             children: [
               TextFormField(
                 controller: _emailController,
-                style: const TextStyle(color: Color(0xFF1A2433), fontSize: 15),
+                style: TextStyle(color: _inputTextColor, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
-                  hintStyle: const TextStyle(color: Color(0xFF8899AA)),
-                  prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF8899AA)),
+                  hintStyle: TextStyle(color: _inputHintColor),
+                  prefixIcon: Icon(Icons.email_outlined, color: _iconColor),
                   filled: true,
-                  fillColor: const Color(0xFFF9FAFB),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  fillColor: _inputFillColor,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _inputBorderColor)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _inputBorderColor)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00C896), width: 2)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
@@ -398,15 +398,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> wit
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
+                    color: _errorBgColor,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFECACA)),
+                    border: Border.all(color: _errorBorderColor),
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(authState.error, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13, height: 1.4))),
+                      Expanded(child: Text(authState.error, style: TextStyle(color: _errorTextColor, fontSize: 13, height: 1.4))),
                     ],
                   ),
                 ),

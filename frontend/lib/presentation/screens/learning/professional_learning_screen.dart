@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:excellencecoachinghub/services/book_service.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -120,6 +121,12 @@ class _ProfessionalLearningScreenState
   int _completedChaptersCount = 0;
   final Set<String> _celebratedChapters = {};
 
+  // Library tab state
+  List<dynamic> _courseBooks = [];
+  bool _isLoadingBooks = false;
+  String? _booksError;
+  final BookService _bookService = BookService();
+
   late TabController _tabController;
   late AnimationController _heroAnimCtrl;
   late AnimationController _fabAnimCtrl;
@@ -132,7 +139,7 @@ class _ProfessionalLearningScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     _heroAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
@@ -151,6 +158,7 @@ class _ProfessionalLearningScreenState
 
     _searchController.addListener(_onSearchChanged);
     _loadCourseData();
+    _loadCourseBooks();
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -228,6 +236,19 @@ class _ProfessionalLearningScreenState
       debugPrint('Error loading course data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadCourseBooks() async {
+    setState(() => _isLoadingBooks = true);
+    try {
+      _courseBooks = await _bookService.fetchBooksByCourse(widget.courseId);
+      setState(() => _booksError = null);
+    } catch (e) {
+      debugPrint('Error loading course books: $e');
+      setState(() => _booksError = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoadingBooks = false);
     }
   }
 
@@ -509,6 +530,7 @@ class _ProfessionalLearningScreenState
           _buildProgressTab(),
           _buildBookmarksTab(),
           _buildMaterialsTab(),
+          _buildLibraryTab(),
         ],
       ),
     );
@@ -813,6 +835,7 @@ class _ProfessionalLearningScreenState
               Tab(text: 'Progress'),
               Tab(text: 'Bookmarks'),
               Tab(text: 'Materials'),
+              Tab(text: 'Library'),
             ],
           ),
         ],
@@ -1717,6 +1740,226 @@ class _ProfessionalLearningScreenState
         return _textSecondary;
       default:
         return _textSecondary;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  //  LIBRARY TAB
+  // ─────────────────────────────────────────────
+  Widget _buildLibraryTab() {
+    if (_isLoadingBooks) {
+      return Center(
+        child: CircularProgressIndicator(color: _DT.primary),
+      );
+    }
+
+    if (_booksError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 48, color: _textSecondary),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load books',
+                style: TextStyle(fontSize: 16, color: _textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _booksError!,
+                style: TextStyle(fontSize: 12, color: _textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadCourseBooks,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _DT.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_courseBooks.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.menu_book_rounded,
+        title: 'No books available',
+        subtitle: 'No books have been linked to this course yet',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _courseBooks.length,
+      itemBuilder: (context, index) {
+        final book = _courseBooks[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildBookCard(book),
+        );
+      },
+    );
+  }
+
+  Widget _buildBookCard(dynamic book) {
+    final String coverUrl = book['coverUrl'] ?? '';
+    final String title = book['title'] ?? 'Untitled';
+    final String author = book['author'] ?? 'Unknown Author';
+    final String? description = book['description'];
+    final String pdfUrl = book['pdfUrl'] ?? '';
+    final String subject = book['subject'] ?? 'General';
+    final String language = book['language'] ?? 'en';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: _DT.r16,
+        border: Border.all(color: _borderColor.withOpacity(0.5)),
+        boxShadow: _DT.cardShadow,
+      ),
+      child: InkWell(
+        borderRadius: _DT.r16,
+        onTap: () {
+          if (pdfUrl.isNotEmpty) {
+            _launchUrl(pdfUrl);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cover image or placeholder
+            if (coverUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  coverUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [_DT.primary.withOpacity(0.1), _DT.accent.withOpacity(0.1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.menu_book_rounded, size: 64, color: _DT.primary.withOpacity(0.3)),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_DT.primary.withOpacity(0.1), _DT.accent.withOpacity(0.1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                child: Center(
+                  child: Icon(Icons.menu_book_rounded, size: 64, color: _DT.primary.withOpacity(0.3)),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Subject badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _DT.primary.withOpacity(0.1),
+                      borderRadius: _DT.r8,
+                    ),
+                    child: Text(
+                      subject,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _DT.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Title
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Author
+                  Text(
+                    'By $author',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _textSecondary,
+                    ),
+                  ),
+                  if (description != null && description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _textSecondary,
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  // Language badge
+                  Row(
+                    children: [
+                      Icon(Icons.language_rounded, size: 14, color: _textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        language.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: _DT.primary),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

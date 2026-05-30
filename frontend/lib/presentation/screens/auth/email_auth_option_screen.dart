@@ -71,7 +71,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
 
   Widget _buildDesktopLayout(AppLocalizations l10n) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: _backgroundColor,
       body: Row(
         children: [
           // Left branding panel (45%)
@@ -83,28 +83,28 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
               tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          // Right form panel (55%)
+          // Right form panel (55%) - theme-aware
           Expanded(
             flex: 55,
             child: Container(
-              color: const Color(0xFFF9FAFB),
+              color: _backgroundColor,
               child: Column(
                 children: [
                   // Top branded header bar
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: _cardColor,
                       border: Border(
-                        bottom: BorderSide(color: Color(0xFFE8F5F0), width: 1.5),
+                        bottom: BorderSide(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE8F5F0), width: 1.5),
                       ),
                     ),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF6B7280), size: 20),
+                          icon: Icon(Icons.arrow_back_ios_rounded, color: _secondaryTextColor, size: 20),
                           tooltip: 'Back',
                         ),
                         const SizedBox(width: 16),
@@ -136,7 +136,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                         Text(
                           'Excellence Coaching Hub',
                           style: TextStyle(
-                            color: const Color(0xFF1F2937).withOpacity(0.45),
+                            color: _tertiaryTextColor,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -199,8 +199,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                     choosePathText,
                     softWrap: true,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF111827),
+                    style: TextStyle(
+                      color: _textColor,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -212,8 +212,8 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                     selectHowText,
                     softWrap: true,
                     overflow: TextOverflow.visible,
-                    style: const TextStyle(
-                      color: Color(0xFF6B7280),
+                    style: TextStyle(
+                      color: _secondaryTextColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       height: 1.4,
@@ -229,10 +229,10 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
         Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-            boxShadow: [
+            border: Border.all(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0), width: 1),
+            boxShadow: _isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 20,
@@ -249,6 +249,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                 subtitle: accessAccountText,
                 color: const Color(0xFF10B981),
                 onTap: () => context.push('/login'),
+                isDark: _isDark,
               ),
               const SizedBox(height: 16),
               _CompactAuthOptionButton(
@@ -257,6 +258,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                 subtitle: joinCommunityText,
                 color: const Color(0xFF3B82F6),
                 onTap: () => context.push('/register'),
+                isDark: _isDark,
               ),
               const SizedBox(height: 16),
               _CompactAuthOptionButton(
@@ -265,6 +267,7 @@ class _EmailAuthOptionScreenState extends State<EmailAuthOptionScreen>
                 subtitle: recoverAccessText,
                 color: const Color(0xFFF59E0B),
                 onTap: () => context.push('/forgot-password'),
+                isDark: _isDark,
               ),
             ],
           ),
@@ -512,6 +515,7 @@ class _CompactAuthOptionButton extends StatefulWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final bool isDark;
 
   const _CompactAuthOptionButton({
     required this.icon,
@@ -519,6 +523,7 @@ class _CompactAuthOptionButton extends StatefulWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.isDark = false,
   });
 
   @override
@@ -530,6 +535,12 @@ class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF1A2433);
+    final secondaryTextColor = widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final borderColor = widget.isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final iconColor = widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF8899AA);
+    
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -539,15 +550,15 @@ class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _isHovered
                   ? widget.color.withOpacity(0.5)
-                  : const Color(0xFFE2E8F0),
+                  : borderColor,
               width: _isHovered ? 2 : 1.5,
             ),
-            boxShadow: [
+            boxShadow: widget.isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 10,
@@ -597,8 +608,8 @@ class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
                   children: [
                     Text(
                       widget.title,
-                      style: const TextStyle(
-                        color: Color(0xFF1A2433),
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
@@ -607,8 +618,8 @@ class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
                     const SizedBox(height: 2),
                     Text(
                       widget.subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
+                      style: TextStyle(
+                        color: secondaryTextColor,
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
                       ),
@@ -618,7 +629,7 @@ class _CompactAuthOptionButtonState extends State<_CompactAuthOptionButton> {
               ),
               Icon(
                 Icons.arrow_forward_rounded,
-                color: _isHovered ? widget.color : const Color(0xFF8899AA),
+                color: _isHovered ? widget.color : iconColor,
                 size: 20,
               ),
             ],

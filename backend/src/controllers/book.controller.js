@@ -199,6 +199,42 @@ const deleteBook = async (req, res) => {
   }
 };
 
+// Get books by course ID
+const getBooksByCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const skip = (page - 1) * limit;
+
+    const query = {
+      isPublished: true,
+      relatedCourses: courseId
+    };
+
+    const books = await Book.find(query)
+      .populate('uploadedBy', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Book.countDocuments(query);
+
+    sendSuccess(res, {
+      books,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }, 'Books retrieved successfully');
+  } catch (error) {
+    console.error('Get books by course error:', error);
+    sendError(res, 'Failed to retrieve books', 500, error.message);
+  }
+};
+
 // Upload book PDF and cover
 const uploadBookFiles = async (req, res) => {
   try {
@@ -267,6 +303,7 @@ module.exports = {
   getAllBooks,
   getAllBooksForAdmin,
   getBookById,
+  getBooksByCourse,
   updateBook,
   deleteBook,
   uploadBookFiles

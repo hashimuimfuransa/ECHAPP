@@ -178,6 +178,9 @@ class AppLocalizationsRw extends AppLocalizations {
   String get library => 'Isomero';
 
   @override
+  String get browseBooks => 'Shakisha Ibitabo';
+
+  @override
   String get browseResources => 'Shakisha Ibikoresho';
 
   @override

@@ -304,16 +304,18 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   // ─── Desktop layout ─────────────────────────────────────────────────────────
   Widget _buildDesktopLayout() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Center(
       child: Container(
         width: 600,
         constraints: const BoxConstraints(maxHeight: 840),
         margin: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white.withOpacity(0.95),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40),
+            BoxShadow(color: Colors.black.withOpacity(isDark ? 0.4 : 0.2), blurRadius: 40),
           ],
         ),
         child: Column(
@@ -321,11 +323,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
+                color: isDark ? const Color(0xFF0F172A).withOpacity(0.3) : Colors.white.withOpacity(0.12),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.15))),
+                border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.white.withOpacity(0.15))),
               ),
-              child: _buildHeaderContent(dark: false),
+              child: _buildHeaderContent(dark: isDark),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -333,12 +335,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildGoalDropdowns(dark: false),
+                    _buildGoalDropdowns(dark: isDark),
                     const SizedBox(height: 32),
-                    _buildSaveButton(dark: false),
+                    _buildSaveButton(dark: isDark),
                     if (!_isUpdating) ...[
                       const SizedBox(height: 14),
-                      _buildSkipButton(dark: false),
+                      _buildSkipButton(dark: isDark),
                     ],
                   ],
                 ),

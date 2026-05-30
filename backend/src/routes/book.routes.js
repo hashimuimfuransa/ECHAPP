@@ -5,6 +5,7 @@ const {
   getAllBooks,
   getAllBooksForAdmin,
   getBookById,
+  getBooksByCourse,
   updateBook,
   deleteBook,
   uploadBookFiles
@@ -14,6 +15,9 @@ const { authorize } = require('../middleware/role.middleware');
 
 // Public route to get all published books (for library)
 router.get('/', getAllBooks);
+
+// Public route to get books by course ID (must come before /:id)
+router.get('/course/:courseId', protect, getBooksByCourse);
 
 // Public route to get a single book by ID
 router.get('/:id', getBookById);

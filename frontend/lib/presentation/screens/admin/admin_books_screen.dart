@@ -11,6 +11,10 @@ import 'dart:convert';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/services/api/course_service.dart';
+import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/user.dart';
+import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 
 class AdminBooksScreen extends ConsumerStatefulWidget {
   const AdminBooksScreen({super.key});
@@ -33,6 +37,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   String _selectedLanguage = 'en';
   String? _selectedAcademicCategory;
   List<String> _selectedCourseIds = [];
+  final TextEditingController _courseSearchController = TextEditingController();
 
   // File selection
   File? _pdfFile;
@@ -60,6 +65,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
     _titleController.dispose();
     _authorController.dispose();
     _descriptionController.dispose();
+    _courseSearchController.dispose();
     super.dispose();
   }
 
@@ -344,6 +350,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
       _showErrorSnackBar('Failed to delete book: $error');
     }
   }
+
 
   void _resetForm() {
     setState(() {
@@ -679,6 +686,10 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 
   void _showAddBookDialog(BuildContext context) {
+    // Load courses via provider when dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminCourseProvider.notifier).loadCourses();
+    });
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -720,7 +731,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
   }
 }
 
-class AddBookDialog extends StatelessWidget {
+class AddBookDialog extends ConsumerStatefulWidget {
   final TextEditingController titleController;
   final TextEditingController authorController;
   final TextEditingController descriptionController;
@@ -781,6 +792,19 @@ class AddBookDialog extends StatelessWidget {
   });
 
   @override
+  ConsumerState<AddBookDialog> createState() => _AddBookDialogState();
+}
+
+class _AddBookDialogState extends ConsumerState<AddBookDialog> {
+  final TextEditingController _courseSearchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _courseSearchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = AppTheme.getTextColor(context);
@@ -788,6 +812,9 @@ class AddBookDialog extends StatelessWidget {
     final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
     final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
     final surfaceColor = isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6);
+
+    // Watch the admin course provider
+    final courseState = ref.watch(adminCourseProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -820,7 +847,7 @@ class AddBookDialog extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: Icon(Icons.close_rounded, color: textColor),
-                  onPressed: onClose,
+                  onPressed: widget.onClose,
                 ),
               ],
             ),
@@ -834,7 +861,7 @@ class AddBookDialog extends StatelessWidget {
                 children: [
                   // Title
                   TextField(
-                    controller: titleController,
+                    controller: widget.titleController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Book Title',
@@ -853,7 +880,7 @@ class AddBookDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Author
                   TextField(
-                    controller: authorController,
+                    controller: widget.authorController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Author',
@@ -872,7 +899,7 @@ class AddBookDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Description
                   TextField(
-                    controller: descriptionController,
+                    controller: widget.descriptionController,
                     maxLines: 3,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
@@ -892,7 +919,7 @@ class AddBookDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Subject (text input instead of dropdown)
                   TextField(
-                    controller: subjectController,
+                    controller: widget.subjectController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Subject',
@@ -938,7 +965,7 @@ class AddBookDialog extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (selectedCourseIds.isEmpty)
+                        if (widget.selectedCourseIds.isEmpty)
                           Text(
                             'No courses selected',
                             style: TextStyle(
@@ -950,14 +977,32 @@ class AddBookDialog extends StatelessWidget {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: selectedCourseIds.map((courseId) {
+                            children: widget.selectedCourseIds.map((courseId) {
+                              final course = courseState.courses.firstWhere(
+                                (c) => c.id == courseId,
+                                orElse: () => Course(
+                                  id: courseId,
+                                  title: 'Unknown Course',
+                                  description: '',
+                                  duration: 0,
+                                  level: '',
+                                  isPublished: false,
+                                  createdAt: DateTime.now(),
+                                  createdBy: User(
+                                    id: '',
+                                    fullName: '',
+                                    email: '',
+                                    role: '',
+                                    createdAt: DateTime.now(),
+                                  ),
+                                ),
+                              );
                               return Chip(
-                                label: Text('Course: ${courseId.substring(0, 8)}...'),
+                                label: Text(course.title, overflow: TextOverflow.ellipsis, maxLines: 1),
                                 onDeleted: () {
-                                  // Remove course from selection
-                                  final updated = List<String>.from(selectedCourseIds);
+                                  final updated = List<String>.from(widget.selectedCourseIds);
                                   updated.remove(courseId);
-                                  onCourseIdsChanged(updated);
+                                  widget.onCourseIdsChanged(updated);
                                 },
                               );
                             }).toList(),
@@ -965,8 +1010,7 @@ class AddBookDialog extends StatelessWidget {
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
                           onPressed: () {
-                            // Show course selection dialog
-                            _showCourseSelectionDialog(context);
+                            _showCourseSelectionDialog(context, courseState);
                           },
                           icon: const Icon(Icons.add_rounded),
                           label: const Text('Add Courses'),
@@ -981,7 +1025,7 @@ class AddBookDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Language
                   DropdownButtonFormField<String>(
-                    value: selectedLanguage,
+                    value: widget.selectedLanguage,
                     style: TextStyle(color: textColor),
                     dropdownColor: cardColor,
                     decoration: InputDecoration(
@@ -1002,7 +1046,7 @@ class AddBookDialog extends StatelessWidget {
                       DropdownMenuItem(value: 'rw', child: Text('Kinyarwanda')),
                       DropdownMenuItem(value: 'fr', child: Text('French')),
                     ],
-                    onChanged: (value) => onLanguageChanged(value!),
+                    onChanged: (value) => widget.onLanguageChanged(value!),
                   ),
                   const SizedBox(height: 16),
                   // PDF Upload
@@ -1024,14 +1068,14 @@ class AddBookDialog extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (pdfFileName != null)
+                        if (widget.pdfFileName != null)
                           Row(
                             children: [
                               const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  pdfFileName!,
+                                  widget.pdfFileName!,
                                   style: const TextStyle(fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1040,7 +1084,7 @@ class AddBookDialog extends StatelessWidget {
                           )
                         else
                           ElevatedButton.icon(
-                            onPressed: onPickPDF,
+                            onPressed: widget.onPickPDF,
                             icon: const Icon(Icons.upload_file_rounded),
                             label: const Text('Select PDF'),
                             style: ElevatedButton.styleFrom(
@@ -1048,7 +1092,7 @@ class AddBookDialog extends StatelessWidget {
                               foregroundColor: Colors.white,
                             ),
                           ),
-                        if (pdfUrl != null) ...[
+                        if (widget.pdfUrl != null) ...[
                           const SizedBox(height: 8),
                           const Text(
                             '✓ PDF uploaded to cloud',
@@ -1082,14 +1126,14 @@ class AddBookDialog extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (coverFileName != null)
+                        if (widget.coverFileName != null)
                           Row(
                             children: [
                               const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  coverFileName!,
+                                  widget.coverFileName!,
                                   style: const TextStyle(fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1098,7 +1142,7 @@ class AddBookDialog extends StatelessWidget {
                           )
                         else
                           ElevatedButton.icon(
-                            onPressed: onPickCover,
+                            onPressed: widget.onPickCover,
                             icon: const Icon(Icons.image_rounded),
                             label: const Text('Select Cover'),
                             style: ElevatedButton.styleFrom(
@@ -1106,7 +1150,7 @@ class AddBookDialog extends StatelessWidget {
                               foregroundColor: Colors.white,
                             ),
                           ),
-                        if (coverUrl != null) ...[
+                        if (widget.coverUrl != null) ...[
                           const SizedBox(height: 8),
                           const Text(
                             '✓ Cover uploaded to cloud',
@@ -1122,12 +1166,12 @@ class AddBookDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // Upload Files Button
-                  if (pdfFile != null && pdfUrl == null)
+                  if (widget.pdfFile != null && widget.pdfUrl == null)
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: isUploading ? null : onUploadFiles,
-                        icon: isUploading
+                        onPressed: widget.isUploading ? null : widget.onUploadFiles,
+                        icon: widget.isUploading
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
@@ -1137,7 +1181,7 @@ class AddBookDialog extends StatelessWidget {
                                 ),
                               )
                             : const Icon(Icons.cloud_upload_rounded),
-                        label: Text(isUploading ? 'Uploading...' : 'Upload Files to Cloud'),
+                        label: Text(widget.isUploading ? 'Uploading...' : 'Upload Files to Cloud'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
                           foregroundColor: Colors.white,
@@ -1162,21 +1206,21 @@ class AddBookDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: onReset,
+                    onPressed: widget.onReset,
                     child: const Text('Reset'),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: (pdfUrl != null && pdfS3Key != null) && !isUploading
-                        ? onCreateBook
+                    onPressed: (widget.pdfUrl != null && widget.pdfS3Key != null) && !widget.isUploading
+                        ? widget.onCreateBook
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryGreen,
                       foregroundColor: Colors.white,
                     ),
-                    child: isUploading
+                    child: widget.isUploading
                         ? const SizedBox(
                             width: 16,
                             height: 16,
@@ -1196,49 +1240,254 @@ class AddBookDialog extends StatelessWidget {
     );
   }
 
-  void _showCourseSelectionDialog(BuildContext context) {
+  void _showCourseSelectionDialog(BuildContext context, AdminCourseState courseState) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = AppTheme.getTextColor(context);
-    
-    // For now, show a simple dialog to enter course IDs
-    // In a real implementation, you would fetch courses from the backend
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(context);
+    final cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final surfaceColor = isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6);
+
+    // Reset search when dialog opens
+    _courseSearchController.clear();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
-        title: Text('Add Course', style: TextStyle(color: textColor)),
-        content: TextField(
-          decoration: InputDecoration(
-            labelText: 'Course ID',
-            hintText: 'Enter course ID',
-            labelStyle: TextStyle(color: textColor),
-            hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
-          ),
-          onSubmitted: (value) {
-            if (value.isNotEmpty) {
-              final updated = List<String>.from(selectedCourseIds);
-              if (!updated.contains(value)) {
-                updated.add(value);
-                onCourseIdsChanged(updated);
-              }
-            }
-            Navigator.pop(context);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGreen,
-              foregroundColor: Colors.white,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Filter courses based on search
+          final searchQuery = _courseSearchController.text.toLowerCase();
+          final filteredCourses = searchQuery.isEmpty
+              ? courseState.courses
+              : courseState.courses.where((course) {
+                  return course.title.toLowerCase().contains(searchQuery) ||
+                      course.description.toLowerCase().contains(searchQuery);
+                }).toList();
+
+          return Dialog(
+            child: Container(
+              width: ResponsiveBreakpoints.isDesktop(context) ? 600 : double.infinity,
+              constraints: const BoxConstraints(maxHeight: 600),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: borderColor),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Select Courses',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: textColor),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Search
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      controller: _courseSearchController,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        labelText: 'Search courses',
+                        labelStyle: TextStyle(color: textColor),
+                        hintText: 'Search by title or description',
+                        hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                        prefixIcon: Icon(Icons.search, color: textColor),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.primaryGreen),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {});
+                      },
+                      onSubmitted: (value) {
+                        // Trigger backend search
+                        ref.read(adminCourseProvider.notifier).searchCourses(value);
+                      },
+                    ),
+                  ),
+                  // Course List
+                  Expanded(
+                    child: courseState.isLoading && courseState.courses.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(color: AppTheme.primaryGreen),
+                                SizedBox(height: 16),
+                                Text('Loading courses...'),
+                              ],
+                            ),
+                          )
+                        : courseState.error != null && courseState.courses.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.error, color: Colors.red, size: 48),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Error: ${courseState.error}',
+                                      style: TextStyle(color: Colors.red),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        ref.read(adminCourseProvider.notifier).loadCourses();
+                                      },
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : filteredCourses.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      searchQuery.isEmpty
+                                          ? 'No courses available'
+                                          : 'No courses match your search',
+                                      style: TextStyle(color: secondaryTextColor),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    itemCount: filteredCourses.length,
+                                    itemBuilder: (context, index) {
+                                      final course = filteredCourses[index];
+                                      final isSelected = widget.selectedCourseIds.contains(course.id);
+                                      return CheckboxListTile(
+                                        value: isSelected,
+                                        onChanged: (value) {
+                                          final updated = List<String>.from(widget.selectedCourseIds);
+                                          if (value == true) {
+                                            if (!updated.contains(course.id)) {
+                                              updated.add(course.id);
+                                            }
+                                          } else {
+                                            updated.remove(course.id);
+                                          }
+                                          widget.onCourseIdsChanged(updated);
+                                          setDialogState(() {});
+                                        },
+                                        title: Text(
+                                          course.title,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: textColor,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        subtitle: Text(
+                                          course.description,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: secondaryTextColor,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        secondary: course.thumbnail != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(4),
+                                                child: Image.network(
+                                                  course.thumbnail!,
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      width: 48,
+                                                      height: 48,
+                                                      color: surfaceColor,
+                                                      child: Icon(
+                                                        Icons.school_rounded,
+                                                        color: secondaryTextColor,
+                                                        size: 24,
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              )
+                                            : Container(
+                                                width: 48,
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: surfaceColor,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Icon(
+                                                  Icons.school_rounded,
+                                                  color: secondaryTextColor,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                      );
+                                    },
+                                  ),
+                  ),
+                  // Footer
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: borderColor),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${widget.selectedCourseIds.length} course(s) selected',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Done'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Text('Add'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -16,6 +16,8 @@ class DesktopBrandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -31,11 +33,17 @@ class DesktopBrandPanel extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFE8F5F0).withOpacity(0.60),
-                const Color(0xFFB2DFCF).withOpacity(0.35),
-                const Color(0xFF0D4A38).withOpacity(0.45),
-              ],
+              colors: isDark
+                  ? [
+                      const Color(0xFF0F172A).withOpacity(0.85),
+                      const Color(0xFF1E293B).withOpacity(0.75),
+                      const Color(0xFF0D4A38).withOpacity(0.65),
+                    ]
+                  : [
+                      const Color(0xFFE8F5F0).withOpacity(0.60),
+                      const Color(0xFFB2DFCF).withOpacity(0.35),
+                      const Color(0xFF0D4A38).withOpacity(0.45),
+                    ],
               stops: const [0.0, 0.5, 1.0],
             ),
           ),
@@ -47,20 +55,20 @@ class DesktopBrandPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // White circular logo
+              // Circular logo
               Container(
                 width: 104,
                 height: 104,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   border: Border.all(
                     color: const Color(0xFF00C896).withOpacity(0.20),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
+                      color: Colors.black.withOpacity(isDark ? 0.30 : 0.10),
                       blurRadius: 24,
                       offset: const Offset(0, 6),
                     ),
@@ -80,8 +88,8 @@ class DesktopBrandPanel extends StatelessWidget {
               if (headline != null) ...[
                 Text(
                   headline!,
-                  style: const TextStyle(
-                    color: Color(0xFF1B3A2A),
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1B3A2A),
                     fontSize: 22,
                     fontWeight: FontWeight.w500,
                     height: 1.3,
@@ -91,8 +99,8 @@ class DesktopBrandPanel extends StatelessWidget {
               ],
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFF0C3A28),
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0C3A28),
                   fontSize: 44,
                   fontWeight: FontWeight.w900,
                   height: 1.15,
@@ -112,8 +120,8 @@ class DesktopBrandPanel extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 tagline,
-                style: const TextStyle(
-                  color: Color(0xFF2D5A46),
+                style: TextStyle(
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF2D5A46),
                   fontSize: 17,
                   fontWeight: FontWeight.w400,
                   height: 1.65,

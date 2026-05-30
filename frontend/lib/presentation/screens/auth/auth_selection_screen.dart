@@ -1421,11 +1421,11 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
               tagline: 'Empowering Growth.\nInspiring Excellence.',
             ),
           ),
-          // Right white auth panel (55%)
+          // Right auth panel (55%) - theme-aware
           Expanded(
             flex: 55,
             child: Container(
-              color: Colors.white,
+              color: _cardColor,
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
@@ -1441,6 +1441,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                       onEmail: () => context.push('/email-auth-option'),
                       onGoogle: null,
                       onPhone: () => context.push('/phone-auth'),
+                      isDark: _isDark,
                     ),
                   ),
                 ),

@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'Library'**
   String get library;
 
+  /// No description provided for @browseBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse books'**
+  String get browseBooks;
+
   /// No description provided for @browseResources.
   ///
   /// In en, this message translates to:
