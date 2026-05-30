@@ -1804,10 +1804,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         'color': AppTheme.primary,
       },
       {
-        'icon': Icons.history_edu_rounded,
-        'label': l10n?.exams ?? 'Exams',
-        'subtitle': l10n?.reviewResults ?? 'Review results',
-        'route': '/exams/history',
+        'icon': Icons.local_library_rounded,
+        'label': l10n?.library ?? 'E-Library',
+        'subtitle': l10n?.browseBooks ?? 'Browse books',
+        'route': '/library',
         'color': AppTheme.accent,
       },
     ];
