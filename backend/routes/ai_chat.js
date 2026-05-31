@@ -33,7 +33,14 @@ router.put('/conversations/:conversationId/context', protect, async (req, res) =
     }
 
     const Conversation = require('../src/models/Conversation');
-    const conversation = await Conversation.findById(conversationId);
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
+    let conversation;
+
+    if (isValidObjectId) {
+      conversation = await Conversation.findById(conversationId);
+    } else {
+      conversation = await Conversation.findOne({ customId: conversationId, userId });
+    }
 
     if (!conversation || conversation.userId !== userId) {
       return res.status(404).json({ error: 'Conversation not found' });

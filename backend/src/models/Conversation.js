@@ -6,6 +6,12 @@ const conversationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  customId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true
+  },
   title: {
     type: String,
     trim: true,
@@ -105,6 +111,7 @@ conversationSchema.statics.getOrCreateConversation = async function(userId, cont
   };
   
   // Add context-based query parameters if provided
+  if (context.customId) query.customId = context.customId;
   if (context.courseId) query.courseId = context.courseId;
   if (context.lessonId) query.lessonId = context.lessonId;
   if (context.sectionTitle) query.sectionTitle = context.sectionTitle;
@@ -117,10 +124,12 @@ conversationSchema.statics.getOrCreateConversation = async function(userId, cont
   if (!conversation) {
     const title = context.sectionTitle || 
                  (context.lessonId ? 'Lesson Chat' : 
-                 (context.courseId ? 'Course Chat' : 'General Chat'));
+                 (context.courseId ? 'Course Chat' : 
+                 (context.customId ? 'Platform Support' : 'General Chat')));
     
     conversation = new this({
       userId: userId,
+      customId: context.customId,
       title: title,
       courseId: context.courseId,
       lessonId: context.lessonId,

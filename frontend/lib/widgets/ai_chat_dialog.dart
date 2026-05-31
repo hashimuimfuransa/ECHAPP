@@ -352,8 +352,8 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        width: isDesktop ? 550 : screenWidth,
-        height: isDesktop ? math.min(750.0, screenHeight * 0.85) : screenHeight * 0.85,
+        width: isDesktop ? 550 : screenWidth * 0.7,
+        height: isDesktop ? math.min(750.0, screenHeight * 0.4) : screenHeight * 0.4,
         margin: EdgeInsets.zero,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),

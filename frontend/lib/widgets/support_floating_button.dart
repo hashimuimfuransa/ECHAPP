@@ -4,7 +4,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
-import 'package:excellencecoachinghub/presentation/providers/platform_settings_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Floating Support Button for dashboard that provides platform guidance
 class SupportFloatingButton extends ConsumerStatefulWidget {
@@ -527,63 +527,55 @@ class _SupportDialog extends ConsumerWidget {
 
   void _showContactSupport(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final settingsAsync = ref.read(platformSettingsProvider);
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n?.contactSupport ?? 'Contact Support'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n?.support24_7 ?? 'Our support team is here to help you 24/7:'),
-            const SizedBox(height: 16),
-            settingsAsync.when(
-              data: (settings) {
-                final contact = settings.paymentInfo.contactSupport;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (contact.email.isNotEmpty) ...[
-                      _buildContactItem(
-                        Icons.email,
-                        'Email: ${contact.email}',
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (contact.phone.isNotEmpty) ...[
-                      _buildContactItem(
-                        Icons.phone,
-                        'Phone: ${contact.phone}',
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (contact.whatsapp.isNotEmpty)
-                      _buildContactItem(
-                        Icons.message,
-                        'WhatsApp: ${contact.whatsapp}',
-                      ),
-                  ],
-                );
-              },
-              loading: () => const CircularProgressIndicator(),
-              error: (_, __) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildContactItem(
-                    Icons.email,
-                    l10n?.contactSupportEmail ?? 'Email: info@excellencecoachinghub.com',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildContactItem(
-                    Icons.phone,
-                    l10n?.contactSupportPhone ?? 'Phone: +250 788 123 456',
-                  ),
-                ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n?.support24_7 ?? 'Our support team is here to help you 24/7:'),
+              const SizedBox(height: 16),
+              _buildContactItem(
+                Icons.message,
+                'WhatsApp: +250 793 828 834',
+                onTap: () => _launchWhatsApp('250793828834'),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildContactItem(
+                Icons.message,
+                'WhatsApp: +250 788 535 156',
+                onTap: () => _launchWhatsApp('250788535156'),
+              ),
+              const SizedBox(height: 12),
+              _buildContactItem(
+                Icons.phone,
+                'Phone: +250 788 535 156',
+                onTap: () => _launchPhone('250788535156'),
+              ),
+              const SizedBox(height: 12),
+              _buildContactItem(
+                Icons.phone,
+                'Phone: +250 793 828 834',
+                onTap: () => _launchPhone('250793828834'),
+              ),
+              const SizedBox(height: 12),
+              _buildContactItem(
+                Icons.phone,
+                'Phone: 0781671517',
+                onTap: () => _launchPhone('0781671517'),
+              ),
+              const SizedBox(height: 12),
+              _buildContactItem(
+                Icons.email,
+                'Email: info@excellencecoachinghub.com',
+                onTap: () => _launchEmail('info@excellencecoachinghub.com'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -603,13 +595,13 @@ class _SupportDialog extends ConsumerWidget {
         barrierColor: Colors.black.withOpacity(0.5),
         pageBuilder: (context, animation, secondaryAnimation) => Scaffold(
           backgroundColor: Colors.transparent,
-          body: SizedBox.expand(
+          body: Center(
             child: ModernAIChatDialog(
               chatService: RealAIChatService(),
               conversationId: 'support_chat',
               onClose: () => Navigator.pop(context),
               // Pass platform support context so AI knows to provide general platform help
-              context: const AIChatContext(
+              context: AIChatContext(
                 isPlatformSupport: true,
                 studentName: 'Student',
                 studentLevel: 'Platform User',
@@ -621,19 +613,56 @@ class _SupportDialog extends ConsumerWidget {
     );
   }
 
-  Widget _buildContactItem(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppTheme.primary),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 14),
+  Widget _buildContactItem(IconData icon, String text, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14),
+            ),
           ),
-        ),
-      ],
+          if (onTap != null)
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+        ],
+      ),
     );
+  }
+
+  Future<void> _launchWhatsApp(String phoneNumber) async {
+    final Uri whatsappUri = Uri(
+        scheme: 'https',
+        host: 'api.whatsapp.com',
+        path: 'send',
+        queryParameters: {'phone': phoneNumber});
+
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      }
+    } catch (_) {}
   }
 }
 

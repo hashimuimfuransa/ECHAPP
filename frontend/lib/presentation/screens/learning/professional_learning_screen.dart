@@ -196,7 +196,15 @@ class _ProfessionalLearningScreenState
 
       final courseSections =
           courseContent['sections'] ?? courseContent['chapters'];
-      if (courseSections != null) {
+      debugPrint('Course sections: $courseSections');
+      debugPrint('Course sections type: ${courseSections.runtimeType}');
+      debugPrint('Course sections is null: ${courseSections == null}');
+      debugPrint('Course sections is List: ${courseSections is List}');
+      if (courseSections is List) {
+        debugPrint('Course sections length: ${(courseSections as List).length}');
+      }
+
+      if (courseSections != null && courseSections is List && courseSections.isNotEmpty) {
         final sectionsData = courseSections as List;
         _chapters =
             sectionsData.map((s) => Section.fromJson(s as Map<String, dynamic>)).toList();
@@ -220,7 +228,10 @@ class _ProfessionalLearningScreenState
           }
         }
       } else {
-        _chapters = [];
+        // Keep chapters as null if sections data is missing or empty
+        // This allows us to show loading state for lazy loading scenarios
+        debugPrint('Setting chapters to null - data not ready or empty');
+        _chapters = null;
       }
 
       _initializeCompletionStatus();
@@ -567,6 +578,36 @@ class _ProfessionalLearningScreenState
   }
 
   // ─────────────────────────────────────────────
+  //  CONTENT LOADING STATE (for lazy loading)
+  // ─────────────────────────────────────────────
+  Widget _buildContentLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              color: _DT.primary,
+              strokeWidth: 2.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Please wait, loading content...',
+            style: TextStyle(
+              color: _DT.textSecondary,
+              fontSize: 14,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
   //  BODY (CustomScrollView with SliverAppBar)
   // ─────────────────────────────────────────────
   Widget _buildBody() {
@@ -898,11 +939,19 @@ class _ProfessionalLearningScreenState
   //  CHAPTERS TAB
   // ─────────────────────────────────────────────
   Widget _buildChaptersTab() {
-    final chapters = _filteredChapters ?? _chapters ?? [];
+    final chapters = _filteredChapters ?? _chapters;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final screenW = MediaQuery.of(context).size.width;
 
-    if (chapters.isEmpty) {
+    // Show loading state if:
+    // 1. Still loading initial data
+    // 2. Chapters is null (lazy loading - data not ready yet)
+    if (_isLoading || _chapters == null) {
+      return _buildContentLoadingState();
+    }
+
+    // At this point, chapters is not null (it's either a list or empty list)
+    if (chapters!.isEmpty) {
       return _buildEmptyState(
           icon: Icons.library_books_rounded,
           title: _isSearchActive
@@ -914,8 +963,8 @@ class _ProfessionalLearningScreenState
     }
 
     return isDesktop && screenW > 1100
-        ? _buildChaptersGrid(chapters)
-        : _buildChaptersList(chapters);
+        ? _buildChaptersGrid(chapters!)
+        : _buildChaptersList(chapters!);
   }
 
   Widget _buildChaptersGrid(List<Section> chapters) {

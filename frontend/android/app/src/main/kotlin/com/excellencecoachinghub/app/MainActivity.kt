@@ -1,18 +1,14 @@
 package com.excellencecoachinghub.app
 
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.enableEdgeToEdge
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        super.onCreate(savedInstanceState)
-        
         // Enable edge-to-edge display for Android 15+ compatibility
-        // This replaces the deprecated setStatusBarColor and setNavigationBarColor APIs
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // This provides better backward compatibility
+        enableEdgeToEdge()
         
-        // Let Flutter's SystemChrome API handle system UI styling
-        // The WindowInsetsControllerCompat is used by Flutter internally
+        super.onCreate(savedInstanceState)
     }
 }
