@@ -203,16 +203,25 @@ class ChatController {
         Enrollment.find({ userId }).populate('courseId', 'title').lean(),
         Result.find({ userId }).populate('examId', 'title').lean(),
         User.findById(userId).select('fullName role').lean(),
-        conversationId
-          ? (async () => {
-              const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
-              if (isValidObjectId) {
-                return await Conversation.findById(conversationId);
-              } else {
-                return await Conversation.findOne({ customId: conversationId, userId });
-              }
-            })()
-          : Conversation.getOrCreateConversation(userId, { ...safeContext, customId: 'support_chat' }),
+        (async () => {
+          if (!conversationId) {
+            return await Conversation.getOrCreateConversation(userId, { ...safeContext, customId: 'support_chat' });
+          }
+          
+          const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
+          if (isValidObjectId) {
+            const conv = await Conversation.findById(conversationId);
+            if (!conv) return null;
+            return conv;
+          } else {
+            // For custom IDs, if not found, create it
+            let conv = await Conversation.findOne({ customId: conversationId, userId });
+            if (!conv) {
+              conv = await Conversation.getOrCreateConversation(userId, { ...safeContext, customId: conversationId });
+            }
+            return conv;
+          }
+        })(),
       ]);
 
       if (!conversation || (conversationId && conversation.userId !== userId)) {
@@ -361,16 +370,25 @@ class ChatController {
         // Parallel: resolve conversation + user
         const [user, conversation] = await Promise.all([
           User.findById(userId).select('fullName role').lean(),
-          conversationId
-            ? (async () => {
-                const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
-                if (isValidObjectId) {
-                  return await Conversation.findById(conversationId);
-                } else {
-                  return await Conversation.findOne({ customId: conversationId, userId });
-                }
-              })()
-            : Conversation.getOrCreateConversation(userId, { ...safeContext, customId: 'support_chat' }),
+          (async () => {
+            if (!conversationId) {
+              return await Conversation.getOrCreateConversation(userId, { ...safeContext, customId: 'support_chat' });
+            }
+            
+            const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
+            if (isValidObjectId) {
+              const conv = await Conversation.findById(conversationId);
+              if (!conv) return null;
+              return conv;
+            } else {
+              // For custom IDs, if not found, create it
+              let conv = await Conversation.findOne({ customId: conversationId, userId });
+              if (!conv) {
+                conv = await Conversation.getOrCreateConversation(userId, { ...safeContext, customId: conversationId });
+              }
+              return conv;
+            }
+          })(),
         ]);
 
         if (!conversation || (conversationId && conversation.userId !== userId)) {
