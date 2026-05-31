@@ -31,7 +31,7 @@ const conversationSchema = new mongoose.Schema({
   },
   studentLevel: {
     type: String,
-    enum: ['beginner', 'intermediate', 'advanced'],
+    enum: ['beginner', 'intermediate', 'advanced', 'platform_user'],
     default: 'beginner'
   },
   isActive: {
@@ -127,6 +127,12 @@ conversationSchema.statics.getOrCreateConversation = async function(userId, cont
                  (context.courseId ? 'Course Chat' : 
                  (context.customId ? 'Platform Support' : 'General Chat')));
     
+    // Normalize studentLevel to match enum values
+    let normalizedStudentLevel = context.studentLevel || 'beginner';
+    if (normalizedStudentLevel.toLowerCase() === 'platform user') {
+      normalizedStudentLevel = 'platform_user';
+    }
+    
     conversation = new this({
       userId: userId,
       customId: context.customId,
@@ -134,7 +140,7 @@ conversationSchema.statics.getOrCreateConversation = async function(userId, cont
       courseId: context.courseId,
       lessonId: context.lessonId,
       sectionTitle: context.sectionTitle,
-      studentLevel: context.studentLevel || 'beginner'
+      studentLevel: normalizedStudentLevel
     });
   }
   
