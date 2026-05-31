@@ -86,7 +86,7 @@ const verifyPayment = async (req, res) => {
 
       // Send payment notification (Professional way)
       try {
-        const NotificationController = notificationController.constructor;
+        const NotificationController = notificationController.NotificationController;
         await NotificationController.createPaymentNotification(userId, payment.amount, payment.courseId);
       } catch (notificationError) {
         console.error('Error creating payment notification:', notificationError);

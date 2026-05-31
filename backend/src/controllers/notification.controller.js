@@ -763,4 +763,6 @@ NotificationController.createPromotionNotification = async (userId, promoTitle, 
   }
 };
 
+notificationController.NotificationController = NotificationController;
+
 module.exports = notificationController;

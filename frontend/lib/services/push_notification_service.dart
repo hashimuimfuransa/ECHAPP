@@ -3,6 +3,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+
+// Top-level background handler (MUST be outside class for FCM to work)
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Background message: ${message.notification?.title}');
+}
 
 class PushNotificationService {
   static FirebaseMessaging get _firebaseMessaging => FirebaseMessaging.instance;
@@ -48,8 +55,8 @@ class PushNotificationService {
       // 3. Initialize local notifications
       await _initializeLocalNotifications(channel);
       
-      // 4. Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      // 4. Handle background messages (use top-level function)
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       
       // 5. Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -71,7 +78,7 @@ class PushNotificationService {
       }
       
       // 8. Schedule daily reminder
-      await scheduleDailyReminder();
+      await scheduleDailyReminder(_context);
       
     } catch (e) {
       print('Error initializing push notifications: $e');
@@ -104,12 +111,6 @@ class PushNotificationService {
         }
       },
     );
-  }
-  
-  // Background message handler
-  @pragma('vm:entry-point')
-  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-    print('Handling a background message: ${message.messageId}');
   }
   
   // Show local notification
@@ -215,10 +216,10 @@ class PushNotificationService {
   }
 
   // Schedule daily reminder (Duolingo style)
-  static Future<void> scheduleDailyReminder() async {
+  static Future<void> scheduleDailyReminder([BuildContext? context]) async {
     if (defaultTargetPlatform == TargetPlatform.windows) return;
 
-    final reminder = _getRandomReminder();
+    final reminder = _getRandomReminder(context);
     
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'daily_reminder_channel',
@@ -266,17 +267,85 @@ class PushNotificationService {
     print('Notifications cleared');
   }
 
-  // Get a random Duolingo-style reminder
-  static Map<String, String> _getRandomReminder() {
+  // Send congratulatory notification for achievements
+  static Future<void> sendCongratulatoryNotification(String title, String body) async {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
+
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.max,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      badgeNumber: 1,
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    try {
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch % 100000,
+        title,
+        body,
+        platformDetails,
+        payload: '/dashboard',
+      );
+    } catch (e) {
+      print('Error sending congratulatory notification: $e');
+    }
+  }
+
+  // Get a random Duolingo-style reminder (translatable when context is available)
+  static Map<String, String> _getRandomReminder([BuildContext? context]) {
+    final l10n = context != null ? AppLocalizations.of(context) : null;
     final reminders = [
-      {'title': 'Don\'t break your streak! 🔥', 'body': 'Your brain misses learning. Just 5 minutes today?'},
-      {'title': 'Excellence Hub misses you 🥺', 'body': 'Ready to master that next lesson? Come on back!'},
-      {'title': 'Your goal is waiting! 🎯', 'body': 'Success doesn\'t happen by itself. Let\'s learn something new.'},
-      {'title': 'Quick reminder... ⏰', 'body': 'Consistency is the key to mastery. See you in the app!'},
-      {'title': 'Psst... 🎓', 'body': 'A little bird told me you haven\'t learned anything today.'},
-      {'title': 'Keep the momentum! 🚀', 'body': 'You were doing so well! Don\'t stop now.'},
+      {
+        'title': l10n?.reminderDontBreakStreak ?? 'Don\'t break your streak! 🔥',
+        'body': l10n?.reminderDontBreakStreakBody ?? 'Your brain misses learning. Just 5 minutes today?',
+      },
+      {
+        'title': l10n?.reminderMissYou ?? 'Excellence Hub misses you 🥺',
+        'body': l10n?.reminderMissYouBody ?? 'Ready to master that next lesson? Come on back!',
+      },
+      {
+        'title': l10n?.reminderGoalWaiting ?? 'Your goal is waiting! 🎯',
+        'body': l10n?.reminderGoalWaitingBody ?? 'Success doesn\'t happen by itself. Let\'s learn something new.',
+      },
+      {
+        'title': l10n?.reminderQuick ?? 'Quick reminder... ⏰',
+        'body': l10n?.reminderQuickBody ?? 'Consistency is the key to mastery. See you in the app!',
+      },
+      {
+        'title': l10n?.reminderPsst ?? 'Psst... 🎓',
+        'body': l10n?.reminderPsstBody ?? 'A little bird told me you haven\'t learned anything today.',
+      },
+      {
+        'title': l10n?.reminderMomentum ?? 'Keep the momentum! 🚀',
+        'body': l10n?.reminderMomentumBody ?? 'You were doing so well! Don\'t stop now.',
+      },
     ];
-    
+
     return reminders[DateTime.now().millisecond % reminders.length];
   }
 }

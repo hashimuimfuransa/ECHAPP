@@ -26,7 +26,7 @@ class NotificationSchedulerService {
         }).populate('courseId').sort({ updatedAt: -1 });
 
         if (enrollment && enrollment.courseId) {
-          const NotificationController = notificationController.constructor;
+          const NotificationController = notificationController.NotificationController;
           await NotificationController.createInactivityReminder(
             user._id,
             enrollment.courseId.title,
@@ -58,7 +58,7 @@ class NotificationSchedulerService {
           });
 
           if (weeklyLessonsCount > 0) {
-            const NotificationController = notificationController.constructor;
+            const NotificationController = notificationController.NotificationController;
             await NotificationController.createWeeklyProgressSummary(user._id, weeklyLessonsCount);
           }
         }

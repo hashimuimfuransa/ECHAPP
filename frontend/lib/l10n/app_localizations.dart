@@ -4873,6 +4873,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'https://www.eexams.net/marketplace'**
   String get examMarketplaceUrl;
+
+  /// No description provided for @notificationsScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsScreenTitle;
+
+  /// No description provided for @markAllAsRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get markAllAsRead;
+
+  /// No description provided for @deleteAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all'**
+  String get deleteAll;
+
+  /// No description provided for @deleteAllNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete All Notifications'**
+  String get deleteAllNotifications;
+
+  /// No description provided for @deleteAllNotificationsConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete all notifications? This action cannot be undone.'**
+  String get deleteAllNotificationsConfirm;
+
+  /// No description provided for @notificationDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification deleted'**
+  String get notificationDeleted;
+
+  /// No description provided for @allNotificationsDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'All notifications deleted'**
+  String get allNotificationsDeleted;
+
+  /// No description provided for @allNotificationsMarkedRead.
+  ///
+  /// In en, this message translates to:
+  /// **'All notifications marked as read'**
+  String get allNotificationsMarkedRead;
+
+  /// No description provided for @noNotificationsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get noNotificationsYet;
+
+  /// No description provided for @noNotificationsYetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll see important updates here'**
+  String get noNotificationsYetSubtitle;
+
+  /// No description provided for @failedToLoadNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load notifications'**
+  String get failedToLoadNotifications;
+
+  /// No description provided for @notificationTypePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get notificationTypePayment;
+
+  /// No description provided for @notificationTypeCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Course'**
+  String get notificationTypeCourse;
+
+  /// No description provided for @notificationTypeExam.
+  ///
+  /// In en, this message translates to:
+  /// **'Exam'**
+  String get notificationTypeExam;
+
+  /// No description provided for @notificationTypeAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement'**
+  String get notificationTypeAchievement;
+
+  /// No description provided for @notificationTypeReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder'**
+  String get notificationTypeReminder;
+
+  /// No description provided for @notificationTypePromotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion'**
+  String get notificationTypePromotion;
+
+  /// No description provided for @timeJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get timeJustNow;
+
+  /// No description provided for @timeMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String timeMinutesAgo(int minutes);
+
+  /// No description provided for @timeHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String timeHoursAgo(int hours);
+
+  /// No description provided for @timeDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String timeDaysAgo(int days);
+
+  /// No description provided for @reminderDontBreakStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t break your streak!'**
+  String get reminderDontBreakStreak;
+
+  /// No description provided for @reminderDontBreakStreakBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your brain misses learning. Just 5 minutes today?'**
+  String get reminderDontBreakStreakBody;
+
+  /// No description provided for @reminderMissYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellence Hub misses you'**
+  String get reminderMissYou;
+
+  /// No description provided for @reminderMissYouBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to master that next lesson? Come on back!'**
+  String get reminderMissYouBody;
+
+  /// No description provided for @reminderGoalWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your goal is waiting!'**
+  String get reminderGoalWaiting;
+
+  /// No description provided for @reminderGoalWaitingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Success doesn\'t happen by itself. Let\'s learn something new.'**
+  String get reminderGoalWaitingBody;
+
+  /// No description provided for @reminderQuick.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick reminder...'**
+  String get reminderQuick;
+
+  /// No description provided for @reminderQuickBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency is the key to mastery. See you in the app!'**
+  String get reminderQuickBody;
+
+  /// No description provided for @reminderPsst.
+  ///
+  /// In en, this message translates to:
+  /// **'Psst...'**
+  String get reminderPsst;
+
+  /// No description provided for @reminderPsstBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A little bird told me you haven\'t learned anything today.'**
+  String get reminderPsstBody;
+
+  /// No description provided for @reminderMomentum.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the momentum!'**
+  String get reminderMomentum;
+
+  /// No description provided for @reminderMomentumBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You were doing so well! Don\'t stop now.'**
+  String get reminderMomentumBody;
 }
 
 class _AppLocalizationsDelegate

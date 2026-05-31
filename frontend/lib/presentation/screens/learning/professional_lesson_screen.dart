@@ -1386,7 +1386,7 @@ class _ProfessionalLessonScreenState
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 10,
                         fontWeight: active
                             ? FontWeight.w600
                             : FontWeight.w500,
@@ -1736,7 +1736,38 @@ class _ProfessionalLessonScreenState
                 SizedBox(width: 280, child: _buildVideoRight()),
               ],
             )
-          : Column(children: [_buildVideoLeft(), const SizedBox(height: 16), _buildVideoRight()]),
+          : Column(
+              children: [
+                // Video player takes full width on mobile (no horizontal padding)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: _buildVideoPlayer(),
+                ),
+                const SizedBox(height: 16),
+                // Other content keeps normal padding
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      _buildVideoActions(),
+                      const SizedBox(height: 16),
+                      _buildAboutCard(),
+                      const SizedBox(height: 16),
+                      _buildMaterialsCard(),
+                      if (_lesson!.hasQuiz) ...[
+                        const SizedBox(height: 16),
+                        _buildVideoQuizSection(),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildVideoRight(),
+                ),
+              ],
+            ),
     );
   }
 

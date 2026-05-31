@@ -202,7 +202,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get home => 'Ahabanza';
 
   @override
-  String get enrolled => 'WATANGIYE';
+  String get enrolled => 'Watangiye';
 
   @override
   String get dashboard => 'Ikibaho';
@@ -659,7 +659,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get yourProgress => 'Iterambere Ryawe';
 
   @override
-  String get recommendedForYou => 'Amasomo Yakugeretseho';
+  String get recommendedForYou => 'Amasomo Wagenewe';
 
   @override
   String get popularCourses => 'Amasomo Akunzwe';
@@ -1836,7 +1836,7 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get liveClassesAvailable =>
-      'Nba wifuza kwiga Live class twandikire hano';
+      'Niba wifuza kwiga Live class twandikire hano';
 
   @override
   String get contactUsForLiveClasses => 'Twandikire ubashe kwiga live classes';
@@ -2453,11 +2453,122 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get examPreparationBenefit =>
-      'Funga ibizamini byabanje, geragezwa, n\'ubufasha bwa bagenzi kugira ngo watsinde';
+      'Kora ibizamini byabanje, geragezwa, kuri eexams.net kugirango ubashe gutsinda';
 
   @override
   String get visitExamMarketplace => 'Kujya ku Mwanya w\'Ibizamini';
 
   @override
   String get examMarketplaceUrl => 'https://www.eexams.net/marketplace';
+
+  @override
+  String get notificationsScreenTitle => 'Ubutumwa';
+
+  @override
+  String get markAllAsRead => 'Shyira byose nk\'ibyasomwe';
+
+  @override
+  String get deleteAll => 'Siba byose';
+
+  @override
+  String get deleteAllNotifications => 'Siba Ubutumwa Bwose';
+
+  @override
+  String get deleteAllNotificationsConfirm =>
+      'Urifuza gusiba ubutumwa bwose? Iyi ntambwe ntibishobora gusubirwaho.';
+
+  @override
+  String get notificationDeleted => 'Ubutumwa bwasibwe';
+
+  @override
+  String get allNotificationsDeleted => 'Ubutumwa bwose bwasibwe';
+
+  @override
+  String get allNotificationsMarkedRead =>
+      'Ubutumwa bwose bwashyizwe nk\'ibyasomwe';
+
+  @override
+  String get noNotificationsYet => 'Nta butumwa buhari';
+
+  @override
+  String get noNotificationsYetSubtitle => 'Uzabona amakuru y\'ingenzi hano';
+
+  @override
+  String get failedToLoadNotifications => 'Byanze gufungura ubutumwa';
+
+  @override
+  String get notificationTypePayment => 'Ubwishyu';
+
+  @override
+  String get notificationTypeCourse => 'Isomo';
+
+  @override
+  String get notificationTypeExam => 'Ikizamini';
+
+  @override
+  String get notificationTypeAchievement => 'Intsinzi';
+
+  @override
+  String get notificationTypeReminder => 'Icyibutsa';
+
+  @override
+  String get notificationTypePromotion => 'Itangazo';
+
+  @override
+  String get timeJustNow => 'Nonaha';
+
+  @override
+  String timeMinutesAgo(int minutes) {
+    return 'Minota $minutes ishize';
+  }
+
+  @override
+  String timeHoursAgo(int hours) {
+    return 'Amasaha $hours ashize';
+  }
+
+  @override
+  String timeDaysAgo(int days) {
+    return 'Iminsi $days ishize';
+  }
+
+  @override
+  String get reminderDontBreakStreak => 'Ntutane inzira yawe!';
+
+  @override
+  String get reminderDontBreakStreakBody =>
+      'Ubwonko bwawe bukeneye ubumenyi. Iminota 5 gusa uyu munsi?';
+
+  @override
+  String get reminderMissYou => 'Excellence Coaching Hub iragukumbuye';
+
+  @override
+  String get reminderMissYouBody => 'Witeguye kwiga isomo rikurikira? Tangira!';
+
+  @override
+  String get reminderGoalWaiting => 'Intego yawe irategereje!';
+
+  @override
+  String get reminderGoalWaitingBody =>
+      'Intsinzi ntizijya zihinduka ubwazo. Iga ikintu gishya.';
+
+  @override
+  String get reminderQuick => 'Icyibutsa gito...';
+
+  @override
+  String get reminderQuickBody =>
+      'Gukomeza ni urufunguzo rw\'ubunyamwuga. Tuzabonane muri porogaramu!';
+
+  @override
+  String get reminderPsst => 'Shhh...';
+
+  @override
+  String get reminderPsstBody => 'Nabwiwe ko utigeze wiga uyu munsi.';
+
+  @override
+  String get reminderMomentum => 'Komeza imbere!';
+
+  @override
+  String get reminderMomentumBody =>
+      'Uri Gukora neza cyane! Ntuhagarare nonaha.';
 }

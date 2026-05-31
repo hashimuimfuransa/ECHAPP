@@ -192,8 +192,9 @@ class _CurvedEdgePainter extends CustomPainter {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _hasCheckedRole = false;
+  bool _isRefreshing = false;
   Timer? _autoRefreshTimer;
   Timer? _phraseTimer;
   AnimationController? _animationController;
@@ -225,6 +226,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     PushNotificationService.clearNotifications();
 
     _animationController = AnimationController(
@@ -246,6 +248,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeShowWelcomePopup();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh dashboard when app is resumed (user returns from background)
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('DashboardScreen: App resumed, refreshing data...');
+      _refreshDashboard();
+    }
   }
 
   Future<void> _maybeShowWelcomePopup() async {
@@ -373,6 +384,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _autoRefreshTimer?.cancel();
     _phraseTimer?.cancel();
     _animationController?.dispose();
@@ -477,9 +489,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF07111D) : const Color(0xFFF6F8FB),
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: _refreshDashboard,
+        displacement: 50,
+        strokeWidth: 3,
+        color: AppTheme.primary,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
           // Modern Header with Gradient
           SliverToBoxAdapter(
             child: _buildModernHeader(context, user),
@@ -570,16 +590,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ],
       ),
+      ),
     );
   }
 
   // FIX #6: Extracted refresh logic into a dedicated method to cleanly
   // discard provider refresh futures without the warning-suppression no-op pattern.
   Future<void> _refreshDashboard() async {
-    ref.invalidate(enrolledCoursesProvider);
-    ref.invalidate(userEnrollmentsProvider);
-    ref.invalidate(popularCoursesProvider);
-    ref.invalidate(recommendedCoursesProvider);
+    if (_isRefreshing) return; // Prevent concurrent refreshes
+
+    setState(() => _isRefreshing = true);
+
+    try {
+      // Invalidate all dashboard data providers to trigger fresh fetch
+      ref.invalidate(enrolledCoursesProvider);
+      ref.invalidate(userEnrollmentsProvider);
+      ref.invalidate(popularCoursesProvider);
+      ref.invalidate(recommendedCoursesProvider);
+
+      // Wait for the providers to reload
+      await Future.wait([
+        ref.read(enrolledCoursesProvider.future),
+        ref.read(userEnrollmentsProvider.future),
+        ref.read(popularCoursesProvider.future),
+        ref.read(recommendedCoursesProvider.future),
+      ]);
+    } catch (e) {
+      debugPrint('DashboardScreen: Error during refresh: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
   }
 
   // Modern Header with Gradient, Logo, Notification and Refresh
@@ -732,11 +774,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             children: [
                               _buildLanguageSwitcher(),
                               const SizedBox(width: 12),
-                              _buildHeaderIconButton(
-                                icon: Icons.refresh_rounded,
-                                tooltip: l10n?.refresh ?? 'Refresh',
-                                onTap: _refreshDashboard,
-                              ),
+                              _isRefreshing
+                                ? Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.35),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : _buildHeaderIconButton(
+                                    icon: Icons.refresh_rounded,
+                                    tooltip: l10n?.refresh ?? 'Refresh',
+                                    onTap: _refreshDashboard,
+                                  ),
                               const SizedBox(width: 12),
                               _buildHeaderIconButton(
                                 icon: Icons.contact_support_rounded,
@@ -855,7 +920,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    '${l10n?.hello ?? 'Hello'}, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
+                                    '${() { final h = DateTime.now().hour; return h < 12 ? (l10n?.goodMorning ?? 'Good morning') : h < 17 ? (l10n?.goodAfternoon ?? 'Good afternoon') : (l10n?.goodEvening ?? 'Good evening'); }()}, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
                                     style: TextStyle(
                                       fontSize: isMobile ? 24 : 34,
                                       fontWeight: FontWeight.w900,

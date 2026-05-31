@@ -10,7 +10,6 @@ import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
-import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
@@ -1712,26 +1711,26 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.08),
-            blurRadius: isDesktop ? 10 : 8,
-            offset: const Offset(0, 4),
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withOpacity(0.08),
+              blurRadius: isDesktop ? 10 : 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
+            width: 0.5,
           ),
-        ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
-          width: 0.5,
         ),
-      ),
-      child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-            context, ref, course),
-        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         child: Padding(
           padding: EdgeInsets.all(isDesktop ? 18 : 14),
           child: Column(
@@ -2016,28 +2015,28 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       BuildContext context, Course course, List<Course> enrolledCourses) {
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            width: 1,
           ),
-        ],
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
-          width: 1,
         ),
-      ),
-      child: InkWell(
-        onTap: () => CourseNavigationUtils.navigateToCourseWithContext(
-            context, ref, course),
-        borderRadius: BorderRadius.circular(15),
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               // Course Image
@@ -2046,8 +2045,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                 child: Stack(
                   children: [
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 70,
+                      height: 70,
                       decoration: BoxDecoration(
                         color: AppTheme.greyColor.withOpacity(0.1),
                       ),
@@ -2056,8 +2055,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           ? NetworkImageWidget(
                               imageUrl: course.thumbnail!,
                               fit: BoxFit.cover,
-                              width: 80,
-                              height: 80,
+                              width: 70,
+                              height: 70,
                               placeholder: Container(
                                 color: AppTheme.greyColor.withOpacity(0.1),
                                 child: const Icon(
@@ -2111,7 +2110,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 10),
 
               // Course Info
               Expanded(
@@ -2122,84 +2121,84 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       course.title ?? 'Untitled Course',
                       style: TextStyle(
                         color: AppTheme.getTextColor(context),
-                        fontSize: 16,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 3),
                     Text(
                       'by ${course.displayInstructor}',
                       style: const TextStyle(
                         color: AppTheme.greyColor,
-                        fontSize: 13,
+                        fontSize: 11,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(
                           Icons.access_time,
                           color: AppTheme.greyColor,
-                          size: 14,
+                          size: 12,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           course.formattedDuration,
                           style: const TextStyle(
                             color: AppTheme.greyColor,
-                            fontSize: 12,
+                            fontSize: 10,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         const Icon(
                           Icons.people_outline,
                           color: AppTheme.greyColor,
-                          size: 14,
+                          size: 12,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
-                          '${course.enrollmentCount ?? 0} students',
+                          '${course.enrollmentCount ?? 0}',
                           style: const TextStyle(
                             color: AppTheme.greyColor,
-                            fontSize: 12,
+                            fontSize: 10,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(
                           Icons.star,
                           color: Colors.amber,
-                          size: 16,
+                          size: 12,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           (course.averageRating ?? 0.0).toStringAsFixed(1),
                           style: TextStyle(
                             color: AppTheme.getTextColor(context),
-                            fontSize: 13,
+                            fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 6,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.greyColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             course.level,
                             style: const TextStyle(
                               color: AppTheme.greyColor,
-                              fontSize: 11,
+                              fontSize: 9,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -2219,18 +2218,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
-                          style: TextStyle(
-                            color: AppTheme.greyColor.withOpacity(0.6),
-                            fontSize: 11,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        Text(
                           'RWF ${course.price}',
                           style: const TextStyle(
                             color: AppTheme.primaryGreen,
-                            fontSize: 18,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2238,30 +2229,30 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     )
                   else
                     Text(
-                      l10n?.free ?? 'FREE',
+                      l10n?.free ?? 'Free',
                       style: const TextStyle(
                         color: Colors.green,
-                        fontSize: 18,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 2),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 6,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [AppTheme.primaryGreen, Color(0xFF00cdac)],
                       ),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      isEnrolled ? (l10n?.continueText ?? 'Continue') : (l10n?.enroll ?? 'Enroll'),
+                      isEnrolled ? (l10n?.open ?? 'Open') : (l10n?.enroll ?? 'Enroll'),
                       style: const TextStyle(
                         color: AppTheme.whiteColor,
-                        fontSize: 12,
+                        fontSize: 9,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

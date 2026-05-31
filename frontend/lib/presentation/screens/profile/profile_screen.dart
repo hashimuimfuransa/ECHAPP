@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/user_profile_provider.dart';
@@ -629,6 +631,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         _buildLanguageSwitcher(),
         const SizedBox(height: 15),
+        _buildContactUsButton(),
+        const SizedBox(height: 15),
         _buildActionButton(
           AppLocalizations.of(context)!.settings,
           Icons.settings_rounded,
@@ -808,6 +812,493 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       },
     );
+  }
+
+  Widget _buildContactUsButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showContactInfoDialog(context),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.primaryGreen,
+                AppTheme.primaryGreen.withOpacity(0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryGreen.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.contact_support_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.contactUs,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Get help & support',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showContactInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.contact_support,
+                  color: AppTheme.primaryGreen,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                AppLocalizations.of(context)!.contactUs,
+                style: TextStyle(
+                  color: AppTheme.getTextColor(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildContactMethod(
+                  context,
+                  icon: Icons.message,
+                  title: AppLocalizations.of(context)!.whatsapp,
+                  subtitle: '+250 793 828 834',
+                  onTap: () => _launchWhatsApp('250793828834'),
+                ),
+                const SizedBox(height: 8),
+                _buildContactMethod(
+                  context,
+                  icon: Icons.message,
+                  title: AppLocalizations.of(context)!.whatsapp,
+                  subtitle: '+250 788 535 156',
+                  onTap: () => _launchWhatsApp('250788535156'),
+                ),
+                const SizedBox(height: 16),
+                _buildContactMethod(
+                  context,
+                  icon: Icons.phone,
+                  title: AppLocalizations.of(context)!.callUs,
+                  subtitle: '+250 788 535 156',
+                  onTap: () => _launchPhone('250788535156'),
+                ),
+                const SizedBox(height: 8),
+                _buildContactMethod(
+                  context,
+                  icon: Icons.phone,
+                  title: AppLocalizations.of(context)!.callUs,
+                  subtitle: '+250 793 828 834',
+                  onTap: () => _launchPhone('250793828834'),
+                ),
+                const SizedBox(height: 8),
+                _buildContactMethod(
+                  context,
+                  icon: Icons.phone,
+                  title: AppLocalizations.of(context)!.callUs,
+                  subtitle: '0781671517',
+                  onTap: () => _launchPhone('0781671517'),
+                ),
+                const SizedBox(height: 16),
+                _buildContactMethod(
+                  context,
+                  icon: Icons.email,
+                  title: AppLocalizations.of(context)!.emailUs,
+                  subtitle: 'info@excellencecoachinghub.com',
+                  onTap: () => _launchEmail('info@excellencecoachinghub.com'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                AppLocalizations.of(context)!.close,
+                style: TextStyle(
+                  color: AppTheme.getSecondaryTextColor(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildContactMethod(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.primaryGreen.withOpacity(0.1)
+              : AppTheme.primaryGreen.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.primaryGreen.withOpacity(0.3)
+                : AppTheme.primaryGreen.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: AppTheme.primaryGreen,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppTheme.getTextColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.getSecondaryTextColor(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: AppTheme.getSecondaryTextColor(context),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchWhatsApp(String phoneNumber) async {
+    final Uri whatsappUri = Uri(
+      scheme: 'https',
+      host: 'api.whatsapp.com',
+      path: 'send',
+      queryParameters: {'phone': phoneNumber},
+    );
+
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else if (context.mounted) {
+        _showWhatsAppFallbackDialog(context, phoneNumber);
+      }
+    } catch (_) {
+      if (context.mounted) _showWhatsAppFallbackDialog(context, phoneNumber);
+    }
+  }
+
+  void _showWhatsAppFallbackDialog(BuildContext context, String phoneNumber) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.orange),
+              SizedBox(width: 10),
+              Text('WhatsApp Not Available'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'WhatsApp is not installed or not accessible on this device.',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Alternative options:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              _buildFallbackOption(
+                context,
+                icon: Icons.phone,
+                title: 'Call Directly',
+                subtitle: phoneNumber,
+                onTap: () => _launchPhone(phoneNumber),
+              ),
+              const SizedBox(height: 8),
+              _buildFallbackOption(
+                context,
+                icon: Icons.copy,
+                title: 'Copy Number',
+                subtitle: 'Copy to clipboard',
+                onTap: () => _copyToClipboard(context, phoneNumber, 'Phone number'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else if (context.mounted) {
+        _showPhoneFallbackDialog(context, phoneNumber);
+      }
+    } catch (_) {
+      if (context.mounted) _showPhoneFallbackDialog(context, phoneNumber);
+    }
+  }
+
+  void _showPhoneFallbackDialog(BuildContext context, String phoneNumber) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.phone_disabled, color: Colors.orange),
+              SizedBox(width: 10),
+              Text('Call Not Available'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Phone calls are not supported on this device.'),
+              const SizedBox(height: 16),
+              const Text(
+                'Alternative options:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              _buildFallbackOption(
+                context,
+                icon: Icons.copy,
+                title: 'Copy Number',
+                subtitle: 'Copy to clipboard',
+                onTap: () => _copyToClipboard(context, phoneNumber, 'Phone number'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not launch email client'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not launch email client'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildFallbackOption(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.getCardColor(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppTheme.getSecondaryTextColor(context).withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.getTextColor(context), size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppTheme.getTextColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.getSecondaryTextColor(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copyToClipboard(
+    BuildContext context,
+    String text,
+    String label,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$label copied to clipboard'),
+          backgroundColor: AppTheme.primaryGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showLogoutDialog() {

@@ -64,7 +64,7 @@
   "pastResults": "Ibisubizo byabanje",
   "continueCourses": "Komeza Amasomo",
   "home": "Ahabanza",
-  "enrolled": "WATANGIYE",
+  "enrolled": "Watangiye",
   "dashboard": "Ikibaho",
   "categories": "Ibyiciro",
   "profile": "Umwirondoro",
@@ -210,7 +210,7 @@
   "searchHint": "Shakisha amasomo cyangwa ingingo...",
   "continueLearningSubtitle": "Komeza aho wari ugeze",
   "yourProgress": "Iterambere Ryawe",
-  "recommendedForYou": "Amasomo Yakugeretseho",
+  "recommendedForYou": "Amasomo Wagenewe",
   "popularCourses": "Amasomo Akunzwe",
   "noEnrolledCourses": "Nta masomo wiyandikishijemo",
   "startLearningToday": "Tangira kwiga nonaha winjire mu isomo!",
@@ -623,7 +623,7 @@
   "lessonScreenNext": "Ikurikira",
   "lessonScreenMarkComplete": "Shyiraho Ikimenyetso",
   "lessonScreenMarkLessonComplete": "Shyiraho ikimenyetso cyo kurangiza",
-  "liveClassesAvailable": "Nba wifuza kwiga Live class twandikire hano",
+  "liveClassesAvailable": "Niba wifuza kwiga Live class twandikire hano",
   "contactUsForLiveClasses": "Twandikire ubashe kwiga live classes",
   "liveClassesBenefit": "Mu masomo ya Live, ubasha kuganira n’umwarimu no kwakira ibisubizo byihuse igihe ubikeneye.",
   "searchInCategory": "Shakisha muri {category}...",
@@ -685,7 +685,55 @@
   "sidebarRefreshApp": "Ongera uvugurure Porogaramu",
   "examPreparation": "Gukora Ibizamini",
   "examPreparationSubtitle": "Kwitegura ibizamini binyuze mu ibizamini byabanje n'igeragezwa",
-  "examPreparationBenefit": "Funga ibizamini byabanje, geragezwa, n'ubufasha bwa bagenzi kugira ngo watsinde",
+  "examPreparationBenefit": "Kora ibizamini byabanje, geragezwa, kuri eexams.net kugirango ubashe gutsinda",
   "visitExamMarketplace": "Kujya ku Mwanya w'Ibizamini",
-  "examMarketplaceUrl": "https://www.eexams.net/marketplace"
+  "examMarketplaceUrl": "https://www.eexams.net/marketplace",
+  "notificationsScreenTitle": "Ubutumwa",
+  "markAllAsRead": "Shyira byose nk'ibyasomwe",
+  "deleteAll": "Siba byose",
+  "deleteAllNotifications": "Siba Ubutumwa Bwose",
+  "deleteAllNotificationsConfirm": "Urifuza gusiba ubutumwa bwose? Iyi ntambwe ntibishobora gusubirwaho.",
+  "notificationDeleted": "Ubutumwa bwasibwe",
+  "allNotificationsDeleted": "Ubutumwa bwose bwasibwe",
+  "allNotificationsMarkedRead": "Ubutumwa bwose bwashyizwe nk'ibyasomwe",
+  "noNotificationsYet": "Nta butumwa buhari",
+  "noNotificationsYetSubtitle": "Uzabona amakuru y'ingenzi hano",
+  "failedToLoadNotifications": "Byanze gufungura ubutumwa",
+  "notificationTypePayment": "Ubwishyu",
+  "notificationTypeCourse": "Isomo",
+  "notificationTypeExam": "Ikizamini",
+  "notificationTypeAchievement": "Intsinzi",
+  "notificationTypeReminder": "Icyibutsa",
+  "notificationTypePromotion": "Itangazo",
+  "timeJustNow": "Nonaha",
+  "timeMinutesAgo": "Minota {minutes} ishize",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "timeHoursAgo": "Amasaha {hours} ashize",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "timeDaysAgo": "Iminsi {days} ishize",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "reminderDontBreakStreak": "Ntutane inzira yawe!",
+  "reminderDontBreakStreakBody": "Ubwonko bwawe bukeneye ubumenyi. Iminota 5 gusa uyu munsi?",
+  "reminderMissYou": "Excellence Coaching Hub iragukumbuye",
+  "reminderMissYouBody": "Witeguye kwiga isomo rikurikira? Tangira!",
+  "reminderGoalWaiting": "Intego yawe irategereje!",
+  "reminderGoalWaitingBody": "Intsinzi ntizijya zihinduka ubwazo. Iga ikintu gishya.",
+  "reminderQuick": "Icyibutsa gito...",
+  "reminderQuickBody": "Gukomeza ni urufunguzo rw'ubunyamwuga. Tuzabonane muri porogaramu!",
+  "reminderPsst": "Shhh...",
+  "reminderPsstBody": "Nabwiwe ko utigeze wiga uyu munsi.",
+  "reminderMomentum": "Komeza imbere!",
+  "reminderMomentumBody": "Uri Gukora neza cyane! Ntuhagarare nonaha."
 }

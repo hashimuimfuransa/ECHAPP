@@ -883,9 +883,19 @@ class _OptimizedProfessionalLearningScreenState
   }
 
   void _openAIChat() {
+    final chatService = RealAIChatService();
+    final conversationId = 'course_${_course?.id ?? DateTime.now().millisecondsSinceEpoch}';
+    
     showDialog(
       context: context,
-      builder: (context) => const AIChatDialog(),
+      builder: (context) => ModernAIChatDialog(
+        chatService: chatService,
+        conversationId: conversationId,
+        onClose: () => Navigator.of(context).pop(),
+        currentCourse: _course,
+        allSections: _sections,
+        sectionLessons: _sectionLessons,
+      ),
     );
   }
 }

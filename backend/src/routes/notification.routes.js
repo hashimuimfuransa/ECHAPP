@@ -13,85 +13,10 @@ router.get('/', notificationController.getNotifications);
 // GET /api/notifications/unread-count - Get unread notifications count
 router.get('/unread-count', notificationController.getUnreadCount);
 
-// GET /api/notifications/:id - Get specific notification by ID
-router.get('/:id', notificationController.getNotificationById);
-
-// PUT /api/notifications/:id/read - Mark notification as read
-router.put('/:id/read', notificationController.markAsRead);
-
-// PUT /api/notifications/read-all - Mark all notifications as read
+// PUT /api/notifications/read-all - Mark all notifications as read (MUST be before /:id routes)
 router.put('/read-all', notificationController.markAllAsRead);
 
-// DELETE /api/notifications/:id - Delete a notification
-router.delete('/:id', notificationController.deleteNotification);
-
-// DELETE /api/notifications - Delete all notifications for current user
-router.delete('/', notificationController.deleteAllNotifications);
-
-// POST /api/notifications - Create a notification (admin/internal use)
-router.post('/', notificationController.createNotification);
-
-// POST /api/notifications/send-push - Send push notification to specific user
-router.post('/send-push', async (req, res) => {
-  try {
-    const { userId, title, message, data } = req.body;
-    
-    if (!userId || !title || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId, title, and message are required'
-      });
-    }
-    
-    // Call the method on the controller instance
-    const response = await notificationController.sendPushNotification(userId, title, message, data);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Push notification sent successfully',
-      data: response
-    });
-  } catch (error) {
-    console.error('Error sending push notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send push notification',
-      error: error.message
-    });
-  }
-});
-
-// POST /api/notifications/send-topic - Send push notification to topic
-router.post('/send-topic', async (req, res) => {
-  try {
-    const { topic, title, message, data } = req.body;
-    
-    if (!topic || !title || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'topic, title, and message are required'
-      });
-    }
-    
-    // Call the method on the controller instance
-    const response = await notificationController.sendPushToTopic(topic, title, message, data);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Push notification sent to topic successfully',
-      data: response
-    });
-  } catch (error) {
-    console.error('Error sending push notification to topic:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send push notification to topic',
-      error: error.message
-    });
-  }
-});
-
-// PUT /api/notifications/fcm-token - Update user's FCM token
+// PUT /api/notifications/fcm-token - Update user's FCM token (MUST be before /:id routes)
 router.put('/fcm-token', async (req, res) => {
   try {
     const userId = req.user.id;
@@ -134,5 +59,78 @@ router.put('/fcm-token', async (req, res) => {
     });
   }
 });
+
+// POST /api/notifications - Create a notification (admin/internal use)
+router.post('/', notificationController.createNotification);
+
+// POST /api/notifications/send-push - Send push notification to specific user (MUST be before /:id routes)
+router.post('/send-push', async (req, res) => {
+  try {
+    const { userId, title, message, data } = req.body;
+    
+    if (!userId || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId, title, and message are required'
+      });
+    }
+    
+    const response = await notificationController.sendPushNotification(userId, title, message, data);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Push notification sent successfully',
+      data: response
+    });
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send push notification',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/notifications/send-topic - Send push notification to topic (MUST be before /:id routes)
+router.post('/send-topic', async (req, res) => {
+  try {
+    const { topic, title, message, data } = req.body;
+    
+    if (!topic || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'topic, title, and message are required'
+      });
+    }
+    
+    const response = await notificationController.sendPushToTopic(topic, title, message, data);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Push notification sent to topic successfully',
+      data: response
+    });
+  } catch (error) {
+    console.error('Error sending push notification to topic:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send push notification to topic',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/notifications/:id - Get specific notification by ID
+router.get('/:id', notificationController.getNotificationById);
+
+// PUT /api/notifications/:id/read - Mark notification as read
+router.put('/:id/read', notificationController.markAsRead);
+
+// DELETE /api/notifications/:id - Delete a notification
+router.delete('/:id', notificationController.deleteNotification);
+
+// DELETE /api/notifications - Delete all notifications for current user
+router.delete('/', notificationController.deleteAllNotifications);
 
 module.exports = router;

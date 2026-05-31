@@ -11,6 +11,7 @@ import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/widgets/video_player_widget.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
+import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
@@ -823,10 +824,17 @@ class _OptimizedLessonScreenState extends ConsumerState<OptimizedLessonScreen>
   }
 
   void _openAIChat() {
+    final chatService = RealAIChatService();
+    final conversationId = 'lesson_${_lesson?.id ?? DateTime.now().millisecondsSinceEpoch}';
+    
     showDialog(
       context: context,
-      builder: (context) => AIChatDialog(
-        context: _lesson?.description ?? '',
+      builder: (context) => ModernAIChatDialog(
+        chatService: chatService,
+        conversationId: conversationId,
+        onClose: () => Navigator.of(context).pop(),
+        currentLesson: _lesson,
+        currentCourse: _course,
       ),
     );
   }

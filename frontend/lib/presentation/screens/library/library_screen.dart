@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 import 'package:excellencecoachinghub/services/book_service.dart';
-import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -20,7 +19,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   List<Book> _filteredBooks = [];
   List<dynamic> _adminBooks = [];
   List<dynamic> _filteredAdminBooks = [];
-  bool _isLoading = false;
+  bool _isLoadingAdminBooks = false;
+  bool _isLoadingGutenberg = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
@@ -33,13 +33,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   bool _showFilters = false;
   bool _filterByEnrolledCourses = false;
   final ScrollController _scrollController = ScrollController();
-  static const int _pageSize = 20;
+  static const int _pageSize = 10;
 
   @override
   void initState() {
     super.initState();
-    // Load initial books with microtask for better performance
-    Future.microtask(() => _loadInitialBooks());
+    // Load admin books first for instant display, then Gutenberg in background
+    Future.microtask(() => _loadAdminBooksFirst());
     _scrollController.addListener(_onScroll);
   }
 
@@ -124,11 +124,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             if (_showFilters) _buildFilters(context),
             // Content
             Expanded(
-              child: _isLoading && _allBooks.isEmpty
+              child: _isLoadingAdminBooks && _adminBooks.isEmpty && _allBooks.isEmpty
                   ? const Center(
                       child: CircularProgressIndicator(color: Color(0xFF10B981)),
                     )
-                  : _errorMessage != null && _allBooks.isEmpty
+                  : _errorMessage != null && _adminBooks.isEmpty && _allBooks.isEmpty
                       ? _buildErrorWidget()
                       : _buildCoursesList(context),
             ),
@@ -455,10 +455,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Widget _buildCoursesList(BuildContext context) {
-    // Combine Gutenberg books and filtered admin books
-    final allDisplayBooks = [..._filteredBooks, ..._filteredAdminBooks];
+    // Show admin books FIRST, then Gutenberg books
+    final allDisplayBooks = [..._filteredAdminBooks, ..._filteredBooks];
     
-    if (allDisplayBooks.isEmpty && !_isLoading) {
+    if (allDisplayBooks.isEmpty && !_isLoadingAdminBooks && !_isLoadingGutenberg) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -508,10 +508,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         controller: _scrollController,
         padding: ResponsiveBreakpoints.getPadding(context),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: ResponsiveBreakpoints.isDesktop(context) ? 3 : 2,
+          crossAxisCount: ResponsiveBreakpoints.isDesktop(context) ? 4 : ResponsiveBreakpoints.isTablet(context) ? 3 : 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 0.75,
+          childAspectRatio: ResponsiveBreakpoints.isDesktop(context) ? 0.65 : ResponsiveBreakpoints.isTablet(context) ? 0.6 : 0.55,
         ),
         itemCount: allDisplayBooks.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
@@ -557,7 +557,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           children: [
             // Book Cover
             Expanded(
-              flex: 3,
+              flex: 4,
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withOpacity(0.1),
@@ -602,31 +602,38 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
             // Book Info
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      book.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.getTextColor(context),
+                    Flexible(
+                      child: Text(
+                        book.title,
+                        style: TextStyle(
+                          fontSize: ResponsiveBreakpoints.isMobile(context) ? 13 : 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.getTextColor(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      book.displayAuthor,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.getSecondaryTextColor(context),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        book.displayAuthor,
+                        style: TextStyle(
+                          fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                          color: AppTheme.getSecondaryTextColor(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
                     Row(
@@ -634,15 +641,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         Icon(
                           Icons.download_rounded,
                           color: const Color(0xFF10B981),
-                          size: 14,
+                          size: ResponsiveBreakpoints.isMobile(context) ? 12 : 14,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '${book.downloadCount ?? 0}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.getSecondaryTextColor(context),
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            '${book.downloadCount ?? 0}',
+                            style: TextStyle(
+                              fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                              color: AppTheme.getSecondaryTextColor(context),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (book.languages.isNotEmpty) ...[
@@ -650,15 +660,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           Icon(
                             Icons.language_rounded,
                             color: const Color(0xFF10B981),
-                            size: 14,
+                            size: ResponsiveBreakpoints.isMobile(context) ? 12 : 14,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            book.languages[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.getSecondaryTextColor(context),
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              book.languages[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                                color: AppTheme.getSecondaryTextColor(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -701,7 +714,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           children: [
             // Book Cover
             Expanded(
-              flex: 3,
+              flex: 4,
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withOpacity(0.1),
@@ -746,31 +759,38 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
             // Book Info
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      book['title'] ?? 'Untitled',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.getTextColor(context),
+                    Flexible(
+                      child: Text(
+                        book['title'] ?? 'Untitled',
+                        style: TextStyle(
+                          fontSize: ResponsiveBreakpoints.isMobile(context) ? 13 : 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.getTextColor(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      book['author'] ?? 'Unknown Author',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.getSecondaryTextColor(context),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        book['author'] ?? 'Unknown Author',
+                        style: TextStyle(
+                          fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                          color: AppTheme.getSecondaryTextColor(context),
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
                     Row(
@@ -778,15 +798,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         Icon(
                           Icons.download_rounded,
                           color: const Color(0xFF10B981),
-                          size: 14,
+                          size: ResponsiveBreakpoints.isMobile(context) ? 12 : 14,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '${book['downloadCount'] ?? 0}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.getSecondaryTextColor(context),
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            '${book['downloadCount'] ?? 0}',
+                            style: TextStyle(
+                              fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                              color: AppTheme.getSecondaryTextColor(context),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (book['language'] != null) ...[
@@ -794,15 +817,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           Icon(
                             Icons.language_rounded,
                             color: const Color(0xFF10B981),
-                            size: 14,
+                            size: ResponsiveBreakpoints.isMobile(context) ? 12 : 14,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            book['language'].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.getSecondaryTextColor(context),
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              book['language'].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: ResponsiveBreakpoints.isMobile(context) ? 11 : 12,
+                                color: AppTheme.getSecondaryTextColor(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -849,10 +875,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<void> _applyFilters() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       List<Book> booksToFilter = _allBooks;
 
@@ -919,12 +941,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           return languageMatch && subjectMatch;
         }).toList();
         _filteredAdminBooks = adminBooksToFilter;
-        _isLoading = false;
       });
     } catch (error) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -993,47 +1011,74 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     });
   }
 
-  Future<void> _loadInitialBooks() async {
+  Future<void> _loadAdminBooksFirst() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingAdminBooks = true;
       _errorMessage = null;
       _currentPage = 1;
       _allBooks.clear();
       _filteredBooks.clear();
       _adminBooks.clear();
+      _filteredAdminBooks.clear();
       _hasMore = true;
     });
     
     try {
-      // Fetch Gutenberg books
-      final gutenbergBooks = await _gutenbergService.fetchAcademicBooks(page: 1, limit: _pageSize);
-      
-      // Fetch admin-uploaded books
+      // Load admin books FIRST for instant display
       List<dynamic> adminBooks = [];
       try {
         adminBooks = await _bookService.fetchBooks(page: 1, limit: 50);
       } catch (e) {
         print('Error fetching admin books: $e');
-        // Continue with Gutenberg books if admin books fail
       }
       
       if (mounted) {
         setState(() {
-          _allBooks = gutenbergBooks;
           _adminBooks = adminBooks;
+          _filteredAdminBooks = adminBooks;
+          _isLoadingAdminBooks = false;
+        });
+      }
+      
+      // Load Gutenberg books in background after admin books are shown
+      _loadGutenbergBooks();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAdminBooks = false;
+          _errorMessage = error.toString();
+        });
+      }
+    }
+  }
+  
+  Future<void> _loadGutenbergBooks() async {
+    setState(() {
+      _isLoadingGutenberg = true;
+    });
+    
+    try {
+      final gutenbergBooks = await _gutenbergService.fetchAcademicBooks(page: 1, limit: _pageSize);
+      
+      if (mounted) {
+        setState(() {
+          _allBooks = gutenbergBooks;
           _filteredBooks = gutenbergBooks;
-          _isLoading = false;
+          _isLoadingGutenberg = false;
           _hasMore = gutenbergBooks.length == _pageSize;
         });
       }
     } catch (error) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
-          _errorMessage = error.toString();
+          _isLoadingGutenberg = false;
         });
       }
     }
+  }
+  
+  Future<void> _loadInitialBooks() async {
+    await _loadAdminBooksFirst();
   }
 
   Future<void> _loadMoreBooks() async {
@@ -1077,7 +1122,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<void> _refreshBooks() async {
-    await _loadInitialBooks();
+    await _loadAdminBooksFirst();
   }
 
   Widget _buildLoadingIndicator() {

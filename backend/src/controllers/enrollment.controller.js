@@ -110,7 +110,7 @@ const enrollInCourse = async (req, res) => {
 
     // Send in-app and push notification (Professional way)
     try {
-      const NotificationController = require('./notification.controller').constructor;
+      const NotificationController = require('./notification.controller').NotificationController;
       await NotificationController.createCourseEnrollmentNotification(userId, course.title, courseId);
     } catch (notificationError) {
       console.error('Error creating enrollment notification:', notificationError);
@@ -276,7 +276,7 @@ const updateEnrollmentProgress = async (req, res) => {
 
         // Send Achievement Notification
         try {
-          const NotificationController = require('./notification.controller').constructor;
+          const NotificationController = require('./notification.controller').NotificationController;
           await NotificationController.createAchievementNotification(
             userId, 
             `Completed Course: ${enrollment.courseId.title}`

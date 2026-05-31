@@ -812,5 +812,53 @@
   "examPreparationSubtitle": "Prepare for your exams with past papers and practice tests",
   "examPreparationBenefit": "Access past papers, practice tests, and expert guidance to ace your exams",
   "visitExamMarketplace": "Visit Exam Marketplace",
-  "examMarketplaceUrl": "https://www.eexams.net/marketplace"
+  "examMarketplaceUrl": "https://www.eexams.net/marketplace",
+  "notificationsScreenTitle": "Notifications",
+  "markAllAsRead": "Mark all as read",
+  "deleteAll": "Delete all",
+  "deleteAllNotifications": "Delete All Notifications",
+  "deleteAllNotificationsConfirm": "Are you sure you want to delete all notifications? This action cannot be undone.",
+  "notificationDeleted": "Notification deleted",
+  "allNotificationsDeleted": "All notifications deleted",
+  "allNotificationsMarkedRead": "All notifications marked as read",
+  "noNotificationsYet": "No notifications yet",
+  "noNotificationsYetSubtitle": "You'll see important updates here",
+  "failedToLoadNotifications": "Failed to load notifications",
+  "notificationTypePayment": "Payment",
+  "notificationTypeCourse": "Course",
+  "notificationTypeExam": "Exam",
+  "notificationTypeAchievement": "Achievement",
+  "notificationTypeReminder": "Reminder",
+  "notificationTypePromotion": "Promotion",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{minutes}m ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "timeHoursAgo": "{hours}h ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "timeDaysAgo": "{days}d ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "reminderDontBreakStreak": "Don't break your streak!",
+  "reminderDontBreakStreakBody": "Your brain misses learning. Just 5 minutes today?",
+  "reminderMissYou": "Excellence Hub misses you",
+  "reminderMissYouBody": "Ready to master that next lesson? Come on back!",
+  "reminderGoalWaiting": "Your goal is waiting!",
+  "reminderGoalWaitingBody": "Success doesn't happen by itself. Let's learn something new.",
+  "reminderQuick": "Quick reminder...",
+  "reminderQuickBody": "Consistency is the key to mastery. See you in the app!",
+  "reminderPsst": "Psst...",
+  "reminderPsstBody": "A little bird told me you haven't learned anything today.",
+  "reminderMomentum": "Keep the momentum!",
+  "reminderMomentumBody": "You were doing so well! Don't stop now."
 }

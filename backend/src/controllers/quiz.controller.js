@@ -585,7 +585,7 @@ const submitQuiz = async (req, res, next) => {
 
     // Send exam result notification to user
     try {
-      const NotificationController = notificationController.constructor;
+      const NotificationController = notificationController.NotificationController;
       await NotificationController.createExamResultNotification(
         userId,
         exam.title,

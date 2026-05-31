@@ -25,6 +25,7 @@ import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/services/book_service.dart';
+import 'package:excellencecoachinghub/services/push_notification_service.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -102,6 +103,7 @@ class _ProfessionalLearningScreenState
   int _currentSectionIndex = 0;
   bool _isChatExpanded = false;
   bool _isLoading = false;
+  bool _isLoadingChapterDetails = false;
   final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   List<Certificate>? _courseCertificates;
   Map<String, dynamic>? _courseAccessData;
@@ -281,6 +283,12 @@ class _ProfessionalLearningScreenState
       // XP reward: 100 chapter bonus (lesson XP already counted per lesson)
       _xpPoints += 100;
     });
+
+    // Send congratulatory push notification
+    PushNotificationService.sendCongratulatoryNotification(
+      'Chapter Complete! 🎉',
+      'Congratulations! You completed "${chapter.displayName}"',
+    );
 
     _showChapterCompletionCelebration(chapter, chapterIndex, lessons.length);
   }
@@ -825,9 +833,9 @@ class _ProfessionalLearningScreenState
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.tab,
             labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700, fontSize: 14),
+                fontWeight: FontWeight.w700, fontSize: 12),
             unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w500, fontSize: 14),
+                fontWeight: FontWeight.w500, fontSize: 12),
             dividerColor: _borderColor,
             dividerHeight: 0.5,
             tabs: const [
@@ -2124,6 +2132,7 @@ class _ProfessionalLearningScreenState
         lessons: lessons,
         lessonCompletionStatus: _lessonCompletionStatus,
         isDark: _isDark,
+        isLoading: _isLoadingChapterDetails,
         onLessonTap: (l) {
           Navigator.pop(ctx);
           _openLesson(l);
@@ -2880,6 +2889,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
   final List<Lesson> lessons;
   final Map<String, bool> lessonCompletionStatus;
   final bool isDark;
+  final bool isLoading;
   final void Function(Lesson) onLessonTap;
 
   const _ChapterDetailsSheet({
@@ -2888,6 +2898,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
     required this.lessonCompletionStatus,
     required this.isDark,
     required this.onLessonTap,
+    this.isLoading = false,
   });
 
   // Returns the lessons that should be visible based on completion status
@@ -2993,23 +3004,38 @@ class _ChapterDetailsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-              itemCount: lessons.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (ctx, i) {
-                final l = lessons[i];
-                return _LessonRow(
-                  lesson: l,
-                  isCompleted: lessonCompletionStatus[l.id] == true,
-                  isCompact: false,
-                  isDark: isDark,
-                  onTap: () => onLessonTap(l),
-                );
-              },
+          if (isLoading)
+            const Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: _DT.primary),
+                    SizedBox(height: 16),
+                    Text('Loading lessons...',
+                        style: TextStyle(color: _DT.textSecondary, fontSize: 14)),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                itemCount: lessons.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (ctx, i) {
+                  final l = lessons[i];
+                  return _LessonRow(
+                    lesson: l,
+                    isCompleted: lessonCompletionStatus[l.id] == true,
+                    isCompact: false,
+                    isDark: isDark,
+                    onTap: () => onLessonTap(l),
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

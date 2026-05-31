@@ -48,6 +48,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   int _pdfPageCount = 0;
   int _currentPdfPage = 1;
   bool _isPdfLoading = true;
+  bool _isFullScreen = false;
   
   // Reading Progress
   double _readingProgress = 0.0;
@@ -191,17 +192,17 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _isDarkMode ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB),
-      appBar: _buildAppBar(context),
+      appBar: _isFullScreen ? null : _buildAppBar(context),
       body: Column(
         children: [
-          if (_showSearch) _buildSearchBar(context),
+          if (_showSearch && !_isFullScreen) _buildSearchBar(context),
           Expanded(
             child: _buildContent(context),
           ),
-          if (_isPlaying || _isPaused) _buildTTSControls(context),
+          if (_isPlaying || _isPaused && !_isFullScreen) _buildTTSControls(context),
         ],
       ),
-      floatingActionButton: _buildFloatingActions(context),
+      floatingActionButton: _isFullScreen ? null : _buildFloatingActions(context),
     );
   }
 
@@ -574,15 +575,14 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                   },
                   tooltip: 'Zoom In',
                 ),
-                TextButton(
-                  onPressed: _showFormatSelection,
-                  child: Text(
-                    'Change',
-                    style: TextStyle(
-                      color: const Color(0xFF10B981),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                IconButton(
+                  icon: Icon(_isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen),
+                  onPressed: () {
+                    setState(() {
+                      _isFullScreen = !_isFullScreen;
+                    });
+                  },
+                  tooltip: _isFullScreen ? 'Exit Full Screen' : 'Full Screen',
                 ),
               ],
             ),

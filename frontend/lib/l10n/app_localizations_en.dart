@@ -2456,4 +2456,115 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get examMarketplaceUrl => 'https://www.eexams.net/marketplace';
+
+  @override
+  String get notificationsScreenTitle => 'Notifications';
+
+  @override
+  String get markAllAsRead => 'Mark all as read';
+
+  @override
+  String get deleteAll => 'Delete all';
+
+  @override
+  String get deleteAllNotifications => 'Delete All Notifications';
+
+  @override
+  String get deleteAllNotificationsConfirm =>
+      'Are you sure you want to delete all notifications? This action cannot be undone.';
+
+  @override
+  String get notificationDeleted => 'Notification deleted';
+
+  @override
+  String get allNotificationsDeleted => 'All notifications deleted';
+
+  @override
+  String get allNotificationsMarkedRead => 'All notifications marked as read';
+
+  @override
+  String get noNotificationsYet => 'No notifications yet';
+
+  @override
+  String get noNotificationsYetSubtitle => 'You\'ll see important updates here';
+
+  @override
+  String get failedToLoadNotifications => 'Failed to load notifications';
+
+  @override
+  String get notificationTypePayment => 'Payment';
+
+  @override
+  String get notificationTypeCourse => 'Course';
+
+  @override
+  String get notificationTypeExam => 'Exam';
+
+  @override
+  String get notificationTypeAchievement => 'Achievement';
+
+  @override
+  String get notificationTypeReminder => 'Reminder';
+
+  @override
+  String get notificationTypePromotion => 'Promotion';
+
+  @override
+  String get timeJustNow => 'Just now';
+
+  @override
+  String timeMinutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String timeHoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String timeDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get reminderDontBreakStreak => 'Don\'t break your streak!';
+
+  @override
+  String get reminderDontBreakStreakBody =>
+      'Your brain misses learning. Just 5 minutes today?';
+
+  @override
+  String get reminderMissYou => 'Excellence Hub misses you';
+
+  @override
+  String get reminderMissYouBody =>
+      'Ready to master that next lesson? Come on back!';
+
+  @override
+  String get reminderGoalWaiting => 'Your goal is waiting!';
+
+  @override
+  String get reminderGoalWaitingBody =>
+      'Success doesn\'t happen by itself. Let\'s learn something new.';
+
+  @override
+  String get reminderQuick => 'Quick reminder...';
+
+  @override
+  String get reminderQuickBody =>
+      'Consistency is the key to mastery. See you in the app!';
+
+  @override
+  String get reminderPsst => 'Psst...';
+
+  @override
+  String get reminderPsstBody =>
+      'A little bird told me you haven\'t learned anything today.';
+
+  @override
+  String get reminderMomentum => 'Keep the momentum!';
+
+  @override
+  String get reminderMomentumBody => 'You were doing so well! Don\'t stop now.';
 }

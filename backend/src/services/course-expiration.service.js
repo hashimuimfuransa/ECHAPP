@@ -58,7 +58,7 @@ class CourseExpirationService {
       if (user && course) {
         try {
           // Import the controller class from the exported instance's constructor
-          const NotificationController = require('../controllers/notification.controller').constructor;
+          const NotificationController = require('../controllers/notification.controller').NotificationController;
           
           if (typeof NotificationController.createCourseExpirationNotification === 'function') {
             await NotificationController.createCourseExpirationNotification(
@@ -89,7 +89,7 @@ class CourseExpirationService {
       
       const warningDays = [1, 5];
       const Notification = require('../models/Notification');
-      const NotificationController = require('../controllers/notification.controller').constructor;
+      const NotificationController = require('../controllers/notification.controller').NotificationController;
       
       for (const days of warningDays) {
         const warningDateStart = new Date(todayStart);
