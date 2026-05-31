@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../presentation/providers/payment_provider.dart';
 import '../../../models/course.dart';
 
@@ -20,11 +21,18 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
   String _selectedPaymentMethod = 'mtn_momo';
   bool _isLoading = false;
   String? _error;
+  AppLocalizations? _l10n;
 
   @override
   void dispose() {
     _contactController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _l10n = AppLocalizations.of(context);
   }
 
   Future<void> _initiatePayment() async {
@@ -60,35 +68,36 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
   }
 
   void _showSuccessDialog(dynamic response) {
+    final l10n = _l10n ?? AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Payment Initiated'),
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(l10n?.paymentInitiated ?? 'Payment Initiated'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your payment has been initiated successfully.'),
+            Text(l10n?.paymentInitiatedSuccess ?? 'Your payment has been initiated successfully.'),
             const SizedBox(height: 16),
-            _buildDetailRow('Transaction ID', response.transactionId),
-            _buildDetailRow('Amount', '${response.amount} ${response.currency}'),
-            _buildDetailRow('Payment Method', response.paymentMethod),
+            _buildDetailRow(l10n?.transactionIdLabel ?? 'Transaction ID', response.transactionId),
+            _buildDetailRow(l10n?.amountLabel ?? 'Amount', '${response.amount} ${response.currency}'),
+            _buildDetailRow(l10n?.paymentMethodLabelDetail ?? 'Payment Method', response.paymentMethod),
             const SizedBox(height: 16),
-            const Text(
-              'Next Steps:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              l10n?.nextSteps ?? 'Next Steps:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(response.instructions),
             const SizedBox(height: 8),
-            Text('Contact: ${response.adminContact}'),
+            Text('${l10n?.contactLabel ?? 'Contact'}: ${response.adminContact}'),
           ],
         ),
         actions: [
@@ -97,7 +106,7 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
               Navigator.pop(context); // Close dialog
               Navigator.pop(context); // Close payment screen
             },
-            child: const Text('Done'),
+            child: Text(l10n?.done ?? 'Done'),
           ),
         ],
       ),
@@ -129,9 +138,10 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n ?? AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Initiate Payment'),
+        title: Text(l10n?.initiatePaymentTitle ?? 'Initiate Payment'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -149,9 +159,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Course Details',
-                        style: TextStyle(
+                      Text(
+                        l10n?.courseDetails ?? 'Course Details',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -182,9 +192,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Total Amount:',
-                                  style: TextStyle(
+                                Text(
+                                  l10n?.totalAmount ?? 'Total Amount:',
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -209,9 +219,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                                           color: Colors.green,
                                         ),
                                       ),
-                                      const Text(
-                                        '(20% Discount Applied)',
-                                        style: TextStyle(
+                                      Text(
+                                        l10n?.discountApplied ?? '(20% Discount Applied)',
+                                        style: const TextStyle(
                                           fontSize: 10,
                                           color: Colors.red,
                                           fontWeight: FontWeight.bold,
@@ -249,7 +259,7 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Course Access Duration',
+                                            l10n?.courseAccessDuration ?? 'Course Access Duration',
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -258,7 +268,12 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'You will have access to this course for ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'}',
+                                            (() {
+                                              final template = _l10n?.courseAccessDurationDescription ?? 'You will have access to this course for {duration} {unit}';
+                                              return (template as String)
+                                                  .replaceAll('{duration}', widget.course.accessDuration.toString())
+                                                  .replaceAll('{unit}', widget.course.accessDurationUnit ?? 'days');
+                                            })(),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.blue.shade600,
@@ -307,26 +322,26 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
               const SizedBox(height: 24),
               
               // Payment Method Selection
-              const Text(
-                'Select Payment Method',
-                style: TextStyle(
+              Text(
+                l10n?.selectPaymentMethod ?? 'Select Payment Method',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
               _buildPaymentMethodOption(
-                'MTN Mobile Money',
+                l10n?.mtnMomo ?? 'MTN Mobile Money',
                 'mtn_momo',
                 Icons.phone_android,
-                'Pay using your MTN Mobile Money account',
+                l10n?.payUsingMtnMomo ?? 'Pay using your MTN Mobile Money account',
               ),
               const SizedBox(height: 12),
               _buildPaymentMethodOption(
-                'Airtel Money',
+                l10n?.airtelMoney ?? 'Airtel Money',
                 'airtel_money',
                 Icons.phone_iphone,
-                'Pay using your Airtel Money account',
+                l10n?.payUsingAirtelMoney ?? 'Pay using your Airtel Money account',
               ),
               
               const SizedBox(height: 16),
@@ -347,7 +362,7 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                         Icon(Icons.payment, color: Colors.green.shade700, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Direct Payment Available',
+                          l10n?.directPaymentAvailable ?? 'Direct Payment Available',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -368,9 +383,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                         children: [
                           Icon(Icons.copy, color: Colors.green.shade600, size: 18),
                           const SizedBox(width: 8),
-                          const Text(
-                            'MoMo Code:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          Text(
+                            l10n?.momoCode ?? 'MoMo Code',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -387,9 +402,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                               await Clipboard.setData(const ClipboardData(text: '81671517'));
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('MoMo code copied to clipboard!'),
-                                    duration: Duration(seconds: 2),
+                                  SnackBar(
+                                    content: Text(l10n?.momoCodeCopied ?? 'MoMo code copied to clipboard!'),
+                                    duration: const Duration(seconds: 2),
                                   ),
                                 );
                               }
@@ -405,7 +420,7 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'You can pay directly using the MoMo code above or contact us for other payment options.',
+                      l10n?.directPaymentDescription ?? 'You can pay directly using the MoMo code above or contact us for other payment options.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.green.shade700,
@@ -418,9 +433,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
               const SizedBox(height: 24),
               
               // Contact Information
-              const Text(
-                'Contact Information',
-                style: TextStyle(
+              Text(
+                l10n?.contactInformation ?? 'Contact Information',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -428,18 +443,18 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _contactController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number or Email',
-                  hintText: 'Enter your contact information',
-                  prefixIcon: Icon(Icons.contact_phone),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n?.phoneNumberOrEmail ?? 'Phone Number or Email',
+                  hintText: l10n?.enterContactInformation ?? 'Enter your contact information',
+                  prefixIcon: const Icon(Icons.contact_phone),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your contact information';
+                    return l10n?.pleaseEnterContactInfo ?? 'Please enter your contact information';
                   }
                   if (value.trim().length < 5) {
-                    return 'Please enter a valid contact information';
+                    return l10n?.pleaseEnterValidContactInfo ?? 'Please enter a valid contact information';
                   }
                   return null;
                 },
@@ -484,10 +499,10 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const Row(
+                      ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -495,13 +510,13 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                                 color: Colors.white,
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Text('Processing...'),
+                            const SizedBox(width: 12),
+                            Text(_l10n?.processing ?? 'Processing...'),
                           ],
                         )
-                      : const Text(
-                          'Initiate Payment',
-                          style: TextStyle(
+                      : Text(
+                          _l10n?.initiatePayment ?? 'Initiate Payment',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -527,7 +542,7 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                         Icon(Icons.contact_support, color: Colors.purple.shade700, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Need Other Payment Options?',
+                          l10n?.needOtherPaymentOptions ?? 'Need Other Payment Options?',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -537,12 +552,12 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Contact us for alternative payment methods including:',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    Text(
+                      l10n?.contactForAlternativePayment ?? 'Contact us for alternative payment methods including:',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
-                    ...['Bank Transfer', 'Credit/Debit Cards', 'Cash Payment', 'Other Mobile Money Providers'].map(
+                    ...[(l10n?.bankTransferOption ?? 'Bank Transfer'), (l10n?.creditDebitCards ?? 'Credit/Debit Cards'), (l10n?.cashPayment ?? 'Cash Payment'), (l10n?.otherMobileMoneyProviders ?? 'Other Mobile Money Providers')].map(
                       (option) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Row(
@@ -577,9 +592,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                                 children: [
                                   Icon(Icons.phone, color: Colors.purple.shade600, size: 18),
                                   const SizedBox(width: 8),
-                                  const Text(
-                                    'Contact Numbers:',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  Text(
+                                    l10n?.contactNumbers ?? 'Contact Numbers:',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -602,9 +617,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                             children: [
                               Icon(Icons.email, color: Colors.purple.shade600, size: 18),
                               const SizedBox(width: 8),
-                              const Text(
-                                'Email:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              Text(
+                                l10n?.emailLabel ?? 'Email:',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 8),
                               const Text(
@@ -630,9 +645,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                             children: [
                               Icon(Icons.message, color: Colors.purple.shade600, size: 18),
                               const SizedBox(width: 8),
-                              const Text(
-                                'WhatsApp:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              Text(
+                                l10n?.whatsappLabel ?? 'WhatsApp:',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -664,11 +679,9 @@ class _PaymentInitiationScreenState extends State<PaymentInitiationScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
-                child: const Text(
-                  'By initiating this payment, you agree to our terms and conditions. '
-                  'Your payment will be processed and you will receive confirmation '
-                  'once the payment is completed. Course access is time-bound as mentioned above.',
-                  style: TextStyle(
+                child: Text(
+                  l10n?.termsAndConditions ?? 'By initiating this payment, you agree to our terms and conditions. Your payment will be processed and you will receive confirmation once the payment is completed. Course access is time-bound as mentioned above.',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
                   ),

@@ -66,6 +66,7 @@ class AIChatContext {
   final String? studentLevel;
   final List<Section>? allSections;
   final Map<String, List<Lesson>>? sectionLessons;
+  final bool isPlatformSupport; // Indicates this is for general platform help, not lesson-specific
 
   AIChatContext({
     this.currentCourse,
@@ -74,6 +75,7 @@ class AIChatContext {
     this.studentLevel,
     this.allSections,
     this.sectionLessons,
+    this.isPlatformSupport = false,
   });
 
   AIChatContext copyWith({
@@ -83,6 +85,7 @@ class AIChatContext {
     String? studentLevel,
     List<Section>? allSections,
     Map<String, List<Lesson>>? sectionLessons,
+    bool? isPlatformSupport,
   }) {
     return AIChatContext(
       currentCourse: currentCourse ?? this.currentCourse,
@@ -91,6 +94,7 @@ class AIChatContext {
       studentLevel: studentLevel ?? this.studentLevel,
       allSections: allSections ?? this.allSections,
       sectionLessons: sectionLessons ?? this.sectionLessons,
+      isPlatformSupport: isPlatformSupport ?? this.isPlatformSupport,
     );
   }
 }
@@ -173,6 +177,10 @@ class RealAIChatService implements AIChatService {
               }).toList(),
             };
           }).toList(),
+          'isPlatformSupport': context.isPlatformSupport,
+          'platformHelpContext': context.isPlatformSupport 
+            ? 'You are a platform support assistant for Excellence Coaching Hub. Help users with: navigating the app, enrolling in courses, making payments, accessing video lessons, taking exams, account management, and general platform usage. Provide clear, step-by-step guidance.'
+            : null,
         },
       };
 

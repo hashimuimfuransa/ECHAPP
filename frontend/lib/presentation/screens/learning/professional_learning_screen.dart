@@ -122,6 +122,7 @@ class _ProfessionalLearningScreenState
   int _xpPoints = 0;
   int _completedChaptersCount = 0;
   final Set<String> _celebratedChapters = {};
+  String? _markingCompleteChapterId;
 
   // Library tab state
   List<dynamic> _courseBooks = [];
@@ -255,10 +256,44 @@ class _ProfessionalLearningScreenState
   }
 
   // ── Mark chapter complete ─────────────────────
-  void _markChapterComplete(Section chapter, int chapterIndex) {
+  Future<void> _markChapterComplete(Section chapter, int chapterIndex) async {
     if (_celebratedChapters.contains(chapter.id)) return;
     _celebratedChapters.add(chapter.id);
     final lessons = _chapterLessons[chapter.id] ?? [];
+
+    // Get enrollmentId from course access data
+    final enrollmentId = _courseAccessData?['enrollmentId']?.toString();
+    if (enrollmentId == null) {
+      debugPrint('Error: No enrollmentId found in course access data');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to mark chapter complete: Enrollment not found'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Set loading state
+    setState(() => _markingCompleteChapterId = chapter.id);
+
+    // Call backend API to mark section as complete
+    try {
+      await ref.read(enrollmentRepositoryProvider).completeSection(enrollmentId, chapter.id);
+      debugPrint('Successfully marked chapter ${chapter.id} as complete');
+    } catch (e) {
+      debugPrint('Error marking chapter complete: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mark chapter complete: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _markingCompleteChapterId = null);
+      return;
+    }
 
     setState(() {
       // Mark all lessons done
@@ -282,13 +317,21 @@ class _ProfessionalLearningScreenState
 
       // XP reward: 100 chapter bonus (lesson XP already counted per lesson)
       _xpPoints += 100;
+      
+      // Clear loading state
+      _markingCompleteChapterId = null;
     });
 
     // Send congratulatory push notification
-    PushNotificationService.sendCongratulatoryNotification(
-      'Chapter Complete! 🎉',
-      'Congratulations! You completed "${chapter.displayName}"',
-    );
+    try {
+      await PushNotificationService.sendCongratulatoryNotification(
+        'Chapter Complete! 🎉',
+        'Congratulations! You completed "${chapter.displayName}"',
+      );
+      debugPrint('Chapter completion notification sent');
+    } catch (e) {
+      debugPrint('Error sending chapter completion notification: $e');
+    }
 
     _showChapterCompletionCelebration(chapter, chapterIndex, lessons.length);
   }
@@ -901,6 +944,7 @@ class _ProfessionalLearningScreenState
           onLessonTap: _openLesson,
           onMoreTap: () => _openChapterDetails(s),
           onMarkComplete: () => _markChapterComplete(s, i),
+          isLoading: _markingCompleteChapterId == s.id,
         );
       },
     );
@@ -930,6 +974,7 @@ class _ProfessionalLearningScreenState
           onLessonTap: _openLesson,
           onMoreTap: () => _openChapterDetails(s),
           onMarkComplete: () => _markChapterComplete(s, i),
+          isLoading: _markingCompleteChapterId == s.id,
         );
       },
     );
@@ -2250,7 +2295,7 @@ class _ProfessionalLearningScreenState
           chapterLessons.every((l) => _lessonCompletionStatus[l.id] == true);
 
       if (anyNewlyCompleted && allDone) {
-        _markChapterComplete(_chapters![chapterIndex], chapterIndex);
+        await _markChapterComplete(_chapters![chapterIndex], chapterIndex);
       }
     } catch (e) {
       // Fallback: optimistically mark the lesson done if it wasn't before
@@ -2265,7 +2310,7 @@ class _ProfessionalLearningScreenState
         final allDone = chapterLessons.isNotEmpty &&
             chapterLessons.every((l) => _lessonCompletionStatus[l.id] == true);
         if (allDone) {
-          _markChapterComplete(_chapters![chapterIndex], chapterIndex);
+          await _markChapterComplete(_chapters![chapterIndex], chapterIndex);
         }
       }
     }
@@ -2356,7 +2401,8 @@ class _ChapterCard extends StatelessWidget {
   final bool isCompact;
   final void Function(Lesson) onLessonTap;
   final VoidCallback onMoreTap;
-  final VoidCallback onMarkComplete;
+  final Future<void> Function() onMarkComplete;
+  final bool isLoading;
 
   const _ChapterCard({
     required this.section,
@@ -2370,6 +2416,7 @@ class _ChapterCard extends StatelessWidget {
     required this.onLessonTap,
     required this.onMoreTap,
     required this.onMarkComplete,
+    this.isLoading = false,
   });
 
   int get completedCount =>
@@ -2714,7 +2761,7 @@ class _ChapterCard extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(isCompact ? 10 : 14, 0, isCompact ? 10 : 14, isCompact ? 10 : 14),
       child: GestureDetector(
-        onTap: onMarkComplete,
+        onTap: isLoading ? null : () => onMarkComplete(),
         child: Container(
           width: double.infinity,
           padding: EdgeInsets.symmetric(
@@ -2736,11 +2783,21 @@ class _ChapterCard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.emoji_events_rounded,
-                  color: Colors.white, size: isCompact ? 14 : 16),
+              if (isLoading)
+                SizedBox(
+                  width: isCompact ? 14 : 16,
+                  height: isCompact ? 14 : 16,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else
+                Icon(Icons.emoji_events_rounded,
+                    color: Colors.white, size: isCompact ? 14 : 16),
               const SizedBox(width: 8),
               Text(
-                'Mark Chapter Complete',
+                isLoading ? 'Marking Complete...' : 'Mark Chapter Complete',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: isCompact ? 11 : 13,
@@ -2748,15 +2805,17 @@ class _ChapterCard extends StatelessWidget {
                   letterSpacing: 0.2,
                 ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                '+100 XP',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
-                  fontSize: isCompact ? 10 : 11,
-                  fontWeight: FontWeight.w600,
+              if (!isLoading) ...[
+                const SizedBox(width: 6),
+                Text(
+                  '+100 XP',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: isCompact ? 10 : 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

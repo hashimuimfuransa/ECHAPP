@@ -2567,4 +2567,264 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reminderMomentumBody => 'You were doing so well! Don\'t stop now.';
+
+  @override
+  String get paymentPendingApproval => 'Payment Pending Approval';
+
+  @override
+  String get waitingForAdminApproval => 'Waiting for admin approval...';
+
+  @override
+  String get stillWaitingForAdminApproval =>
+      'Still waiting for admin approval...';
+
+  @override
+  String get noPaymentFoundForCourse => 'No payment found for this course';
+
+  @override
+  String get paymentApprovedRedirecting =>
+      'Payment Approved! Redirecting to course...';
+
+  @override
+  String paymentPendingDescription(Object course) {
+    return 'Your payment for \"$course\" is currently pending admin approval.';
+  }
+
+  @override
+  String get directPaymentAvailable => 'Direct Payment Available';
+
+  @override
+  String get momoCode => 'MoMo Code';
+
+  @override
+  String get momoCodeCopied => 'MoMo code copied to clipboard!';
+
+  @override
+  String get directPaymentDescription =>
+      'You can pay directly using the MoMo code above or contact us for other payment options.';
+
+  @override
+  String get courseAccessDuration => 'Course Access Duration';
+
+  @override
+  String courseAccessDurationDescription(Object duration, Object unit) {
+    return 'You will have access to this course for $duration $unit';
+  }
+
+  @override
+  String courseAccessDurationWarning(Object duration, Object unit) {
+    return 'Important: You must complete the course within this time period. Access will expire automatically after $duration $unit and you will need to repurchase to regain access.';
+  }
+
+  @override
+  String get needHelp => 'Need Help?';
+
+  @override
+  String get toCompletePayment => 'To complete your payment:';
+
+  @override
+  String get paymentViaMtnMomo => 'Payment via MTN MoMo:';
+
+  @override
+  String get paymentViaAirtelMoney => 'Payment via Airtel Money:';
+
+  @override
+  String paymentViaBankTransfer(Object bank) {
+    return 'Payment via Bank Transfer ($bank):';
+  }
+
+  @override
+  String get contactSupportPhone => 'Contact Support Phone:';
+
+  @override
+  String get contactSupportEmail => 'Contact Support Email:';
+
+  @override
+  String get contactOnWhatsapp => 'Contact on WhatsApp:';
+
+  @override
+  String get contactForPayment => '1. Contact for payment via:';
+
+  @override
+  String get alsoAvailableVia => '2. Also available via:';
+
+  @override
+  String get additionalContact => '3. Additional contact:';
+
+  @override
+  String get contactViaEmail => '4. Contact via email:';
+
+  @override
+  String get contactOnWhatsappNumber => '5. Or contact us on WhatsApp:';
+
+  @override
+  String get keepTransactionId =>
+      'Important: Keep your transaction ID for reference and send proof of payment to admin.';
+
+  @override
+  String get autoCheckingPayment =>
+      'Automatically checking payment status every 5 seconds...';
+
+  @override
+  String get backToCourse => 'Back to Course';
+
+  @override
+  String get checkStatus => 'Check Status';
+
+  @override
+  String get myPayments => 'My Payments';
+
+  @override
+  String get errorLoadingPayments => 'Error loading payments';
+
+  @override
+  String get noPaymentsFound => 'No payments found';
+
+  @override
+  String get tryAdjustingSearchCriteria => 'Try adjusting your search criteria';
+
+  @override
+  String get noPaymentsYet => 'You haven\'t made any payments yet';
+
+  @override
+  String get searchByTransactionOrCourse =>
+      'Search by transaction ID or course...';
+
+  @override
+  String get paymentMethodLabel => 'Payment Method';
+
+  @override
+  String get contactInfoLabel => 'Contact Info';
+
+  @override
+  String get cancelPayment => 'Cancel Payment';
+
+  @override
+  String areYouSureCancelPayment(Object transactionId) {
+    return 'Are you sure you want to cancel payment $transactionId? This action cannot be undone.';
+  }
+
+  @override
+  String get yesCancel => 'Yes, Cancel';
+
+  @override
+  String get paymentDetails => 'Payment Details';
+
+  @override
+  String get transactionIdLabel => 'Transaction ID';
+
+  @override
+  String get statusLabel => 'Status';
+
+  @override
+  String get amountLabel => 'Amount';
+
+  @override
+  String get paymentMethodLabelDetail => 'Payment Method';
+
+  @override
+  String get contactInfoLabelDetail => 'Contact Info';
+
+  @override
+  String get courseLabel => 'Course';
+
+  @override
+  String get paymentDateLabel => 'Payment Date';
+
+  @override
+  String get adminApproval => 'Admin Approval';
+
+  @override
+  String get approvedBy => 'Approved By';
+
+  @override
+  String get approvedAt => 'Approved At';
+
+  @override
+  String get notesLabel => 'Notes';
+
+  @override
+  String get initiatePaymentTitle => 'Initiate Payment';
+
+  @override
+  String get totalAmount => 'Total Amount:';
+
+  @override
+  String get discountApplied => '(20% Discount Applied)';
+
+  @override
+  String get selectPaymentMethod => 'Select Payment Method';
+
+  @override
+  String get payUsingMtnMomo => 'Pay using your MTN Mobile Money account';
+
+  @override
+  String get payUsingAirtelMoney => 'Pay using your Airtel Money account';
+
+  @override
+  String get contactInformation => 'Contact Information';
+
+  @override
+  String get phoneNumberOrEmail => 'Phone Number or Email';
+
+  @override
+  String get enterContactInformation => 'Enter your contact information';
+
+  @override
+  String get pleaseEnterContactInfo => 'Please enter your contact information';
+
+  @override
+  String get pleaseEnterValidContactInfo =>
+      'Please enter a valid contact information';
+
+  @override
+  String get processing => 'Processing...';
+
+  @override
+  String get needOtherPaymentOptions => 'Need Other Payment Options?';
+
+  @override
+  String get contactForAlternativePayment =>
+      'Contact us for alternative payment methods including:';
+
+  @override
+  String get bankTransferOption => 'Bank Transfer';
+
+  @override
+  String get creditDebitCards => 'Credit/Debit Cards';
+
+  @override
+  String get cashPayment => 'Cash Payment';
+
+  @override
+  String get otherMobileMoneyProviders => 'Other Mobile Money Providers';
+
+  @override
+  String get contactNumbers => 'Contact Numbers:';
+
+  @override
+  String get emailLabel => 'Email:';
+
+  @override
+  String get whatsappLabel => 'WhatsApp:';
+
+  @override
+  String get termsAndConditions =>
+      'By initiating this payment, you agree to our terms and conditions. Your payment will be processed and you will receive confirmation once the payment is completed. Course access is time-bound as mentioned above.';
+
+  @override
+  String get paymentInitiated => 'Payment Initiated';
+
+  @override
+  String get paymentInitiatedSuccess =>
+      'Your payment has been initiated successfully.';
+
+  @override
+  String get nextSteps => 'Next Steps:';
+
+  @override
+  String get contactLabel => 'Contact:';
+
+  @override
+  String get unknownCourse => 'Unknown Course';
 }

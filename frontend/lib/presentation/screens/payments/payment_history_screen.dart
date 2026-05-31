@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../presentation/providers/payment_provider.dart';
 import '../../../models/payment.dart';
 import '../../../models/payment_status.dart';
@@ -14,12 +15,19 @@ class PaymentHistoryScreen extends StatefulWidget {
 
 class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  AppLocalizations? _l10n;
 
   @override
   void initState() {
     super.initState();
     _loadPayments();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _l10n = AppLocalizations.of(context);
   }
 
   @override
@@ -41,9 +49,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n ?? AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Payments'),
+        title: Text(l10n?.myPayments ?? 'My Payments'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -67,7 +76,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                   Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'Error loading payments',
+                    l10n?.errorLoadingPayments ?? 'Error loading payments',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
@@ -114,10 +123,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           // Search bar
           TextField(
             controller: _searchController,
-            decoration: const InputDecoration(
-              hintText: 'Search by transaction ID or course...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: _l10n?.searchByTransactionOrCourse ?? 'Search by transaction ID or course...',
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
               filled: true,
               fillColor: Colors.white,
             ),
@@ -171,14 +180,14 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
             Icon(Icons.payment_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No payments found',
+              _l10n?.noPaymentsFound ?? 'No payments found',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
               provider.searchQuery.isNotEmpty
-                  ? 'Try adjusting your search criteria'
-                  : 'You haven\'t made any payments yet',
+                  ? (_l10n?.tryAdjustingSearchCriteria ?? 'Try adjusting your search criteria')
+                  : (_l10n?.noPaymentsYet ?? 'You haven\'t made any payments yet'),
               style: TextStyle(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
@@ -271,7 +280,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                   ),
                 ),
                 Text(
-                  'Payment Method: ${payment.paymentMethod}',
+                  '${_l10n?.paymentMethodLabel ?? 'Payment Method'}: ${payment.paymentMethod}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
@@ -287,7 +296,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Contact Info: ${payment.contactInfo}',
+                '${_l10n?.contactInfoLabel ?? 'Contact Info'}: ${payment.contactInfo}',
                 style: TextStyle(color: Colors.grey[700], fontSize: 12),
               ),
             ),
@@ -301,7 +310,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 if (payment.canBeCancelled)
                   OutlinedButton(
                     onPressed: provider.isProcessing ? null : () => _showCancelDialog(payment, provider),
-                    child: const Text('Cancel'),
+                    child: Text(_l10n?.cancel ?? 'Cancel'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
@@ -309,7 +318,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => _showPaymentDetails(payment),
-                  child: const Text('View Details'),
+                  child: Text(_l10n?.view ?? 'View Details'),
                 ),
               ],
             ),
@@ -337,15 +346,19 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   }
 
   void _showCancelDialog(Payment payment, PaymentProvider provider) {
+    final l10n = _l10n ?? AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Payment'),
-        content: Text('Are you sure you want to cancel payment ${payment.transactionId}? This action cannot be undone.'),
+        title: Text(l10n?.cancelPayment ?? 'Cancel Payment'),
+        content: Text((() {
+          final template = _l10n?.areYouSureCancelPayment ?? 'Are you sure you want to cancel payment {transactionId}? This action cannot be undone.';
+          return (template as String).replaceAll('{transactionId}', payment.transactionId);
+        })()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('No'),
+            child: Text(l10n?.no ?? 'No'),
           ),
           ElevatedButton(
             onPressed: provider.isProcessing
@@ -361,7 +374,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Yes, Cancel', style: TextStyle(color: Colors.white)),
+                : Text(l10n?.yesCancel ?? 'Yes, Cancel', style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -369,6 +382,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   }
 
   void _showPaymentDetails(Payment payment) {
+    final l10n = _l10n ?? AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -377,29 +391,29 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Payment Details',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              l10n?.paymentDetails ?? 'Payment Details',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Transaction ID', payment.transactionId),
-            _buildDetailRow('Status', payment.statusDisplayName),
-            _buildDetailRow('Amount', '${payment.amount} ${payment.currency}'),
-            _buildDetailRow('Payment Method', payment.paymentMethod),
-            _buildDetailRow('Contact Info', payment.contactInfo),
-            _buildDetailRow('Course', payment.course?.title ?? 'Unknown Course'),
+            _buildDetailRow(l10n?.transactionIdLabel ?? 'Transaction ID', payment.transactionId),
+            _buildDetailRow(l10n?.statusLabel ?? 'Status', payment.statusDisplayName),
+            _buildDetailRow(l10n?.amountLabel ?? 'Amount', '${payment.amount} ${payment.currency}'),
+            _buildDetailRow(l10n?.paymentMethodLabelDetail ?? 'Payment Method', payment.paymentMethod),
+            _buildDetailRow(l10n?.contactInfoLabelDetail ?? 'Contact Info', payment.contactInfo),
+            _buildDetailRow(l10n?.courseLabel ?? 'Course', payment.course?.title ?? (l10n?.unknownCourse ?? 'Unknown Course')),
             if (payment.paymentDate != null)
-              _buildDetailRow('Payment Date', payment.paymentDate.toString()),
+              _buildDetailRow(l10n?.paymentDateLabel ?? 'Payment Date', payment.paymentDate.toString()),
             if (payment.adminApproval != null) ...[
               const SizedBox(height: 16),
-              const Text(
-                'Admin Approval',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                l10n?.adminApproval ?? 'Admin Approval',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              _buildDetailRow('Approved By', payment.adminApproval!.approvedBy),
-              _buildDetailRow('Approved At', payment.adminApproval!.approvedAt.toString()),
+              _buildDetailRow(l10n?.approvedBy ?? 'Approved By', payment.adminApproval!.approvedBy),
+              _buildDetailRow(l10n?.approvedAt ?? 'Approved At', payment.adminApproval!.approvedAt.toString()),
               if (payment.adminApproval!.adminNotes != null)
-                _buildDetailRow('Notes', payment.adminApproval!.adminNotes!),
+                _buildDetailRow(l10n?.notesLabel ?? 'Notes', payment.adminApproval!.adminNotes!),
             ],
           ],
         ),

@@ -23,6 +23,7 @@ import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
+import 'package:excellencecoachinghub/widgets/support_floating_button.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -489,13 +490,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF07111D) : const Color(0xFFF6F8FB),
-      body: RefreshIndicator(
-        onRefresh: _refreshDashboard,
-        displacement: 50,
-        strokeWidth: 3,
-        color: AppTheme.primary,
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        child: CustomScrollView(
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _refreshDashboard,
+            displacement: 50,
+            strokeWidth: 3,
+            color: AppTheme.primary,
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
@@ -590,6 +593,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ],
       ),
+          ),
+          // Floating Support Button
+          const Positioned(
+            right: 16,
+            bottom: 16,
+            child: SupportFloatingButton(),
+          ),
+        ],
       ),
     );
   }

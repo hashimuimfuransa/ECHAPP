@@ -5071,6 +5071,486 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You were doing so well! Don\'t stop now.'**
   String get reminderMomentumBody;
+
+  /// No description provided for @paymentPendingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Pending Approval'**
+  String get paymentPendingApproval;
+
+  /// No description provided for @waitingForAdminApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for admin approval...'**
+  String get waitingForAdminApproval;
+
+  /// No description provided for @stillWaitingForAdminApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Still waiting for admin approval...'**
+  String get stillWaitingForAdminApproval;
+
+  /// No description provided for @noPaymentFoundForCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment found for this course'**
+  String get noPaymentFoundForCourse;
+
+  /// No description provided for @paymentApprovedRedirecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Approved! Redirecting to course...'**
+  String get paymentApprovedRedirecting;
+
+  /// No description provided for @paymentPendingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment for \"{course}\" is currently pending admin approval.'**
+  String paymentPendingDescription(Object course);
+
+  /// No description provided for @directPaymentAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct Payment Available'**
+  String get directPaymentAvailable;
+
+  /// No description provided for @momoCode.
+  ///
+  /// In en, this message translates to:
+  /// **'MoMo Code'**
+  String get momoCode;
+
+  /// No description provided for @momoCodeCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'MoMo code copied to clipboard!'**
+  String get momoCodeCopied;
+
+  /// No description provided for @directPaymentDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You can pay directly using the MoMo code above or contact us for other payment options.'**
+  String get directPaymentDescription;
+
+  /// No description provided for @courseAccessDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Course Access Duration'**
+  String get courseAccessDuration;
+
+  /// No description provided for @courseAccessDurationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You will have access to this course for {duration} {unit}'**
+  String courseAccessDurationDescription(Object duration, Object unit);
+
+  /// No description provided for @courseAccessDurationWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Important: You must complete the course within this time period. Access will expire automatically after {duration} {unit} and you will need to repurchase to regain access.'**
+  String courseAccessDurationWarning(Object duration, Object unit);
+
+  /// No description provided for @needHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Need Help?'**
+  String get needHelp;
+
+  /// No description provided for @toCompletePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'To complete your payment:'**
+  String get toCompletePayment;
+
+  /// No description provided for @paymentViaMtnMomo.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment via MTN MoMo:'**
+  String get paymentViaMtnMomo;
+
+  /// No description provided for @paymentViaAirtelMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment via Airtel Money:'**
+  String get paymentViaAirtelMoney;
+
+  /// No description provided for @paymentViaBankTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment via Bank Transfer ({bank}):'**
+  String paymentViaBankTransfer(Object bank);
+
+  /// No description provided for @contactSupportPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support Phone:'**
+  String get contactSupportPhone;
+
+  /// No description provided for @contactSupportEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support Email:'**
+  String get contactSupportEmail;
+
+  /// No description provided for @contactOnWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact on WhatsApp:'**
+  String get contactOnWhatsapp;
+
+  /// No description provided for @contactForPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Contact for payment via:'**
+  String get contactForPayment;
+
+  /// No description provided for @alsoAvailableVia.
+  ///
+  /// In en, this message translates to:
+  /// **'2. Also available via:'**
+  String get alsoAvailableVia;
+
+  /// No description provided for @additionalContact.
+  ///
+  /// In en, this message translates to:
+  /// **'3. Additional contact:'**
+  String get additionalContact;
+
+  /// No description provided for @contactViaEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'4. Contact via email:'**
+  String get contactViaEmail;
+
+  /// No description provided for @contactOnWhatsappNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'5. Or contact us on WhatsApp:'**
+  String get contactOnWhatsappNumber;
+
+  /// No description provided for @keepTransactionId.
+  ///
+  /// In en, this message translates to:
+  /// **'Important: Keep your transaction ID for reference and send proof of payment to admin.'**
+  String get keepTransactionId;
+
+  /// No description provided for @autoCheckingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically checking payment status every 5 seconds...'**
+  String get autoCheckingPayment;
+
+  /// No description provided for @backToCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Course'**
+  String get backToCourse;
+
+  /// No description provided for @checkStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Status'**
+  String get checkStatus;
+
+  /// No description provided for @myPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'My Payments'**
+  String get myPayments;
+
+  /// No description provided for @errorLoadingPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading payments'**
+  String get errorLoadingPayments;
+
+  /// No description provided for @noPaymentsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments found'**
+  String get noPaymentsFound;
+
+  /// No description provided for @tryAdjustingSearchCriteria.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your search criteria'**
+  String get tryAdjustingSearchCriteria;
+
+  /// No description provided for @noPaymentsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t made any payments yet'**
+  String get noPaymentsYet;
+
+  /// No description provided for @searchByTransactionOrCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by transaction ID or course...'**
+  String get searchByTransactionOrCourse;
+
+  /// No description provided for @paymentMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethodLabel;
+
+  /// No description provided for @contactInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Info'**
+  String get contactInfoLabel;
+
+  /// No description provided for @cancelPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Payment'**
+  String get cancelPayment;
+
+  /// No description provided for @areYouSureCancelPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel payment {transactionId}? This action cannot be undone.'**
+  String areYouSureCancelPayment(Object transactionId);
+
+  /// No description provided for @yesCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, Cancel'**
+  String get yesCancel;
+
+  /// No description provided for @paymentDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Details'**
+  String get paymentDetails;
+
+  /// No description provided for @transactionIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get transactionIdLabel;
+
+  /// No description provided for @statusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get statusLabel;
+
+  /// No description provided for @amountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get amountLabel;
+
+  /// No description provided for @paymentMethodLabelDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get paymentMethodLabelDetail;
+
+  /// No description provided for @contactInfoLabelDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Info'**
+  String get contactInfoLabelDetail;
+
+  /// No description provided for @courseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Course'**
+  String get courseLabel;
+
+  /// No description provided for @paymentDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Date'**
+  String get paymentDateLabel;
+
+  /// No description provided for @adminApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Approval'**
+  String get adminApproval;
+
+  /// No description provided for @approvedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved By'**
+  String get approvedBy;
+
+  /// No description provided for @approvedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved At'**
+  String get approvedAt;
+
+  /// No description provided for @notesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get notesLabel;
+
+  /// No description provided for @initiatePaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Initiate Payment'**
+  String get initiatePaymentTitle;
+
+  /// No description provided for @totalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount:'**
+  String get totalAmount;
+
+  /// No description provided for @discountApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'(20% Discount Applied)'**
+  String get discountApplied;
+
+  /// No description provided for @selectPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Payment Method'**
+  String get selectPaymentMethod;
+
+  /// No description provided for @payUsingMtnMomo.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay using your MTN Mobile Money account'**
+  String get payUsingMtnMomo;
+
+  /// No description provided for @payUsingAirtelMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay using your Airtel Money account'**
+  String get payUsingAirtelMoney;
+
+  /// No description provided for @contactInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Information'**
+  String get contactInformation;
+
+  /// No description provided for @phoneNumberOrEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number or Email'**
+  String get phoneNumberOrEmail;
+
+  /// No description provided for @enterContactInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your contact information'**
+  String get enterContactInformation;
+
+  /// No description provided for @pleaseEnterContactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your contact information'**
+  String get pleaseEnterContactInfo;
+
+  /// No description provided for @pleaseEnterValidContactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid contact information'**
+  String get pleaseEnterValidContactInfo;
+
+  /// No description provided for @processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get processing;
+
+  /// No description provided for @needOtherPaymentOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Need Other Payment Options?'**
+  String get needOtherPaymentOptions;
+
+  /// No description provided for @contactForAlternativePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us for alternative payment methods including:'**
+  String get contactForAlternativePayment;
+
+  /// No description provided for @bankTransferOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank Transfer'**
+  String get bankTransferOption;
+
+  /// No description provided for @creditDebitCards.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit/Debit Cards'**
+  String get creditDebitCards;
+
+  /// No description provided for @cashPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Payment'**
+  String get cashPayment;
+
+  /// No description provided for @otherMobileMoneyProviders.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Mobile Money Providers'**
+  String get otherMobileMoneyProviders;
+
+  /// No description provided for @contactNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Numbers:'**
+  String get contactNumbers;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email:'**
+  String get emailLabel;
+
+  /// No description provided for @whatsappLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp:'**
+  String get whatsappLabel;
+
+  /// No description provided for @termsAndConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'By initiating this payment, you agree to our terms and conditions. Your payment will be processed and you will receive confirmation once the payment is completed. Course access is time-bound as mentioned above.'**
+  String get termsAndConditions;
+
+  /// No description provided for @paymentInitiated.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Initiated'**
+  String get paymentInitiated;
+
+  /// No description provided for @paymentInitiatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment has been initiated successfully.'**
+  String get paymentInitiatedSuccess;
+
+  /// No description provided for @nextSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Steps:'**
+  String get nextSteps;
+
+  /// No description provided for @contactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact:'**
+  String get contactLabel;
+
+  /// No description provided for @unknownCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Course'**
+  String get unknownCourse;
 }
 
 class _AppLocalizationsDelegate

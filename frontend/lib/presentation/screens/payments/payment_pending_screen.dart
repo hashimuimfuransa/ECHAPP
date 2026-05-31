@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/course.dart';
 import '../../../models/payment_status.dart';
 import '../../../models/platform_settings.dart';
 import '../../providers/payment_riverpod_provider.dart';
-import '../../providers/course_payment_providers.dart'; // Import the hasPendingPaymentProvider
 import '../../providers/platform_settings_provider.dart';
 import '../../providers/course_provider.dart';
 
@@ -34,6 +34,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
   bool _isChecking = false;
   String _statusMessage = 'Waiting for admin approval...';
   Color _statusColor = Colors.orange;
+  AppLocalizations? _l10n;
 
   @override
   void initState() {
@@ -50,6 +51,12 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
       // This makes the transition instant once approved
       ref.read(courseContentProvider(widget.course.id).future);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _l10n = AppLocalizations.of(context);
   }
 
   void _startAutoRefresh() {
@@ -140,10 +147,11 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
     final settingsAsync = ref.watch(platformSettingsProvider);
+    final l10n = _l10n ?? AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payment Pending Approval'),
+        title: Text(_l10n?.paymentPendingApproval ?? 'Payment Pending Approval'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -168,7 +176,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
               // Title
               Text(
-                'Payment Pending Approval',
+                _l10n?.paymentPendingApproval ?? 'Payment Pending Approval',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isWideScreen ? 28 : 24,
@@ -215,7 +223,10 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
               // Description
               Text(
-                'Your payment for "${widget.course.title}" is currently pending admin approval.',
+                (() {
+                  final template = _l10n?.paymentPendingDescription ?? 'Your payment for "{course}" is currently pending admin approval.';
+                  return (template as String).replaceAll('{course}', widget.course.title);
+                })(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isWideScreen ? 18 : 16,
@@ -241,7 +252,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         Icon(Icons.payment, color: Colors.green.shade700, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Direct Payment Available',
+                          _l10n?.directPaymentAvailable ?? 'Direct Payment Available',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -262,8 +273,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         children: [
                           Icon(Icons.copy, color: Colors.green.shade600, size: 18),
                           const SizedBox(width: 8),
-                          const Text(
-                            'MoMo Code:',
+                          Text(
+                            _l10n?.momoCode ?? 'MoMo Code',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
@@ -281,8 +292,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                               await Clipboard.setData(const ClipboardData(text: '81671517'));
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('MoMo code copied to clipboard!'),
+                                  SnackBar(
+                                    content: Text(_l10n?.momoCodeCopied ?? 'MoMo code copied to clipboard!'),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -299,7 +310,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'You can pay directly using the MoMo code above or contact us for other payment options.',
+                      _l10n?.directPaymentDescription ?? 'You can pay directly using the MoMo code above or contact us for other payment options.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.green.shade700,
@@ -328,7 +339,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                           Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'Course Access Duration',
+                            _l10n?.courseAccessDuration ?? 'Course Access Duration',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -339,7 +350,12 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'You will have access to this course for ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'}',
+                        (() {
+                          final template = _l10n?.courseAccessDurationDescription ?? 'You will have access to this course for {duration} {unit}';
+                          return (template as String)
+                              .replaceAll('{duration}', widget.course.accessDuration.toString())
+                              .replaceAll('{unit}', widget.course.accessDurationUnit ?? 'days');
+                        })(),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue.shade600,
@@ -359,7 +375,12 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Important: You must complete the course within this time period. Access will expire automatically after ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'} and you will need to repurchase to regain access.',
+                                (() {
+                                  final template = _l10n?.courseAccessDurationWarning ?? 'Important: You must complete the course within this time period. Access will expire automatically after {duration} {unit} and you will need to repurchase to regain access.';
+                                  return (template as String)
+                                      .replaceAll('{duration}', widget.course.accessDuration.toString())
+                                      .replaceAll('{unit}', widget.course.accessDurationUnit ?? 'days');
+                                })(),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange.shade700,
@@ -383,12 +404,12 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Icon(Icons.contact_phone, color: Colors.orange),
                           SizedBox(width: 8),
                           Text(
-                            'Need Help?',
+                            _l10n?.needHelp ?? 'Need Help?',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -398,8 +419,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'To complete your payment:',
+                      Text(
+                        _l10n?.toCompletePayment ?? 'To complete your payment:',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
@@ -425,7 +446,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Important: Keep your transaction ID for reference and send proof of payment to admin.',
+                                _l10n?.keepTransactionId ?? 'Important: Keep your transaction ID for reference and send proof of payment to admin.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.amber[800]!,
@@ -456,7 +477,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Automatically checking payment status every 5 seconds...',
+                        _l10n?.autoCheckingPayment ?? 'Automatically checking payment status every 5 seconds...',
                         style: TextStyle(
                           color: Colors.blue[700],
                           fontSize: 12,
@@ -478,7 +499,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            child: const Text('Back to Course'),
+                            child: Text(_l10n?.backToCourse ?? 'Back to Course'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -500,7 +521,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
                                   )
-                                : const Text('Check Status'),
+                                : Text(_l10n?.checkStatus ?? 'Check Status'),
                           ),
                         ),
                       ],
@@ -513,7 +534,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            child: const Text('Back to Course'),
+                            child: Text(_l10n?.backToCourse ?? 'Back to Course'),
                           ),
                         ),
                         ElevatedButton(
@@ -533,7 +554,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2),
                                 )
-                              : const Text('Check Status'),
+                              : Text(_l10n?.checkStatus ?? 'Check Status'),
                         ),
                       ],
                     ),
@@ -553,7 +574,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           (settings.paymentInfo.mtnMomo.accountName.isNotEmpty || 
            settings.paymentInfo.mtnMomo.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
-          'Payment via MTN MoMo:',
+          _l10n?.paymentViaMtnMomo ?? 'Payment via MTN MoMo:',
           '${settings.paymentInfo.mtnMomo.accountName} - ${settings.paymentInfo.mtnMomo.accountNumber}',
           Icons.phone_android,
         ));
@@ -564,7 +585,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           (settings.paymentInfo.airtelMoney.accountName.isNotEmpty ||
            settings.paymentInfo.airtelMoney.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
-          'Payment via Airtel Money:',
+          _l10n?.paymentViaAirtelMoney ?? 'Payment via Airtel Money:',
           '${settings.paymentInfo.airtelMoney.accountName} - ${settings.paymentInfo.airtelMoney.accountNumber}',
           Icons.phone_android,
         ));
@@ -575,7 +596,10 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           (settings.paymentInfo.bankTransfer.accountName.isNotEmpty ||
            settings.paymentInfo.bankTransfer.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
-          'Payment via Bank Transfer (${settings.paymentInfo.bankTransfer.bankName}):',
+          (() {
+            final template = _l10n?.paymentViaBankTransfer ?? 'Payment via Bank Transfer ({bank}):';
+            return (template as String).replaceAll('{bank}', settings.paymentInfo.bankTransfer.bankName);
+          })(),
           '${settings.paymentInfo.bankTransfer.accountName} - ${settings.paymentInfo.bankTransfer.accountNumber}',
           Icons.account_balance,
         ));
@@ -586,7 +610,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
       final support = settings.paymentInfo.contactSupport;
       if (support.phone.isNotEmpty) {
         instructions.add(_buildContactInstruction(
-          'Contact Support Phone:',
+          _l10n?.contactSupportPhone ?? 'Contact Support Phone:',
           support.phone,
           Icons.phone,
         ));
@@ -595,7 +619,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
       if (support.email.isNotEmpty) {
         instructions.add(_buildContactInstruction(
-          'Contact Support Email:',
+          _l10n?.contactSupportEmail ?? 'Contact Support Email:',
           support.email,
           Icons.email,
         ));
@@ -604,7 +628,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
       if (support.whatsapp.isNotEmpty) {
         instructions.add(_buildContactInstruction(
-          'Contact on WhatsApp:',
+          _l10n?.contactOnWhatsapp ?? 'Contact on WhatsApp:',
           support.whatsapp,
           Icons.chat,
         ));
@@ -618,31 +642,31 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildContactInstruction(
-            '1. Contact for payment via:',
+            _l10n?.contactForPayment ?? '1. Contact for payment via:',
             'MTN: +250 793 828 834',
             Icons.phone,
           ),
           const SizedBox(height: 8),
           _buildContactInstruction(
-            '2. Also available via:',
+            _l10n?.alsoAvailableVia ?? '2. Also available via:',
             'MTN: +250 788 535 156',
             Icons.phone,
           ),
           const SizedBox(height: 8),
           _buildContactInstruction(
-            '3. Additional contact:',
+            _l10n?.additionalContact ?? '3. Additional contact:',
             'MTN: +250 781 671 517',
             Icons.phone,
           ),
           const SizedBox(height: 8),
           _buildContactInstruction(
-            '4. Contact via email:',
+            _l10n?.contactViaEmail ?? '4. Contact via email:',
             'info@excellencecoachinghub.com',
             Icons.email,
           ),
           const SizedBox(height: 8),
           _buildContactInstruction(
-            '5. Or contact us on WhatsApp:',
+            _l10n?.contactOnWhatsappNumber ?? '5. Or contact us on WhatsApp:',
             '+250 793 828 834 / +250 788 535 156 / +250 781 671 517',
             Icons.chat,
           ),

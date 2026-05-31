@@ -36,7 +36,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get save => 'Bika';
 
   @override
-  String get done => 'Byarangiye';
+  String get done => 'Byakozwe';
 
   @override
   String get loading => 'Birimo gutunganywa...';
@@ -671,7 +671,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get startLearningToday => 'Tangira kwiga nonaha winjire mu isomo!';
 
   @override
-  String get browseCourses => 'Reba Amasomo';
+  String get browseCourses => 'Shakisha Amesomo';
 
   @override
   String get completed => 'Byarangiye';
@@ -692,7 +692,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get allCourses => 'Amasomo Yose';
 
   @override
-  String get courseDetails => 'Ibisobanuro by\'Isomo';
+  String get courseDetails => 'Amakuru y\'Isomo';
 
   @override
   String get coursePrice => 'IGICIRO CYISOMO';
@@ -2571,4 +2571,267 @@ class AppLocalizationsRw extends AppLocalizations {
   @override
   String get reminderMomentumBody =>
       'Uri Gukora neza cyane! Ntuhagarare nonaha.';
+
+  @override
+  String get paymentPendingApproval => 'Kwishyura Birategereje';
+
+  @override
+  String get waitingForAdminApproval =>
+      'Birategereje imyitwarire y\'umuyobozi...';
+
+  @override
+  String get stillWaitingForAdminApproval =>
+      'Biracyi tegereje imyitwarire y\'umuyobozi...';
+
+  @override
+  String get noPaymentFoundForCourse => 'Nta ubwishyu bubonetse kuri iri somo';
+
+  @override
+  String get paymentApprovedRedirecting =>
+      'Ubwishyu bwemewe! Turimo kukujyana kuri somo...';
+
+  @override
+  String paymentPendingDescription(Object course) {
+    return 'Ubwishyu bwawe bw\'ishuri \"$course\" ubu birategereje imyitwarire y\'umuyobozi.';
+  }
+
+  @override
+  String get directPaymentAvailable => 'Ubwishyu Bwo Kugira';
+
+  @override
+  String get momoCode => 'Kode ya MoMo';
+
+  @override
+  String get momoCodeCopied => 'Kode ya MoMo yacopyiwe!';
+
+  @override
+  String get directPaymentDescription =>
+      'Ushobora kwishyura ukoresha kode ya MoMo hejuru cyangwa twandikire ubundi buryo bwo kwishyura.';
+
+  @override
+  String get courseAccessDuration => 'Igihe Cyo Kwinjira Muri Somo';
+
+  @override
+  String courseAccessDurationDescription(Object duration, Object unit) {
+    return 'Uzaba ufite uburenganzira bwo kwinjira muri iri somo kugira ngo $duration $unit';
+  }
+
+  @override
+  String courseAccessDurationWarning(Object duration, Object unit) {
+    return 'By\'ingenzi: Ugomba kurangiza iri somo muri iri gihe. Uburenganzira buzagaruka nyuma ya $duration $unit uzakeneye gusubira kugura kugirango ubone uburenganzira.';
+  }
+
+  @override
+  String get needHelp => 'Ukeneye Ubufasha?';
+
+  @override
+  String get toCompletePayment => 'Kugira ngo urangize ubwishyu:';
+
+  @override
+  String get paymentViaMtnMomo => 'Kwishyura ukoresheje MTN MoMo:';
+
+  @override
+  String get paymentViaAirtelMoney => 'Kwishyura ukoresheje Airtel Money:';
+
+  @override
+  String paymentViaBankTransfer(Object bank) {
+    return 'Kwishyura ukoresheje Banki ($bank):';
+  }
+
+  @override
+  String get contactSupportPhone => 'Telefone y\'Ubufasha:';
+
+  @override
+  String get contactSupportEmail => 'Imeyili y\'Ubufasha:';
+
+  @override
+  String get contactOnWhatsapp => 'Twandikire kuri WhatsApp:';
+
+  @override
+  String get contactForPayment => '1. Twandikire ubwishyu ukoresheje:';
+
+  @override
+  String get alsoAvailableVia => '2. Bihari kandi ukoresheje:';
+
+  @override
+  String get additionalContact => '3. Ubundi buryo bwo kutwandikira:';
+
+  @override
+  String get contactViaEmail => '4. Twandikire ukoresheje Imeyili:';
+
+  @override
+  String get contactOnWhatsappNumber => '5. Cyangwa twandikire kuri WhatsApp:';
+
+  @override
+  String get keepTransactionId =>
+      'By\'ingenzi: Uraho nomero y\'igikorwa yawe kugirango ukoreshawe ntwohereze ubuziranenge bw\'ubwishyu kuri umuyobozi.';
+
+  @override
+  String get autoCheckingPayment =>
+      'Birimo gusuzuma imiterere y\'ubwishyu buri segonda 5...';
+
+  @override
+  String get backToCourse => 'Subira Kuri Somo';
+
+  @override
+  String get checkStatus => 'Suzuma Imiterere';
+
+  @override
+  String get myPayments => 'Ubwishyu Bwanjye';
+
+  @override
+  String get errorLoadingPayments => 'Ikosa mu gufungura ubwishyu';
+
+  @override
+  String get noPaymentsFound => 'Nta ubwishyu bubonetse';
+
+  @override
+  String get tryAdjustingSearchCriteria => 'Gerageza guhindura ibyo ushakisha';
+
+  @override
+  String get noPaymentsYet => 'Nta ubwishyu wakoze';
+
+  @override
+  String get searchByTransactionOrCourse =>
+      'Shakisha nomero y\'igikorwa cyangwa isomo...';
+
+  @override
+  String get paymentMethodLabel => 'Uburyo bwo Kwishyura';
+
+  @override
+  String get contactInfoLabel => 'Amakuru yo Kwandikira';
+
+  @override
+  String get cancelPayment => 'Hagarika Ubwishyu';
+
+  @override
+  String areYouSureCancelPayment(Object transactionId) {
+    return 'Urifuza guhagarika ubwishyu $transactionId? Iki gikorwa ntigishobora gusubizwa inyuma.';
+  }
+
+  @override
+  String get yesCancel => 'Yego, Hagarika';
+
+  @override
+  String get paymentDetails => 'Ibisobanuro by\'Ubwishyu';
+
+  @override
+  String get transactionIdLabel => 'Nomero y\'Igikorwa';
+
+  @override
+  String get statusLabel => 'Imiterere';
+
+  @override
+  String get amountLabel => 'Amafaranga';
+
+  @override
+  String get paymentMethodLabelDetail => 'Uburyo bwo Kwishyura';
+
+  @override
+  String get contactInfoLabelDetail => 'Amakuru yo Kwandikira';
+
+  @override
+  String get courseLabel => 'Isomo';
+
+  @override
+  String get paymentDateLabel => 'Itariki y\'Ubwishyu';
+
+  @override
+  String get adminApproval => 'Imyitwarire y\'Umuyobozi';
+
+  @override
+  String get approvedBy => 'Yemewe na';
+
+  @override
+  String get approvedAt => 'Yemewe ku';
+
+  @override
+  String get notesLabel => 'Inyandiko';
+
+  @override
+  String get initiatePaymentTitle => 'Tangira Ubwishyu';
+
+  @override
+  String get totalAmount => 'Igiteranyo:';
+
+  @override
+  String get discountApplied => '(20% Y\'icyo Gucururwa Yashyizweho)';
+
+  @override
+  String get selectPaymentMethod => 'Hitamo Uburyo bwo Kwishyura';
+
+  @override
+  String get payUsingMtnMomo =>
+      'Kwishyura ukoresheje konti yawe ya MTN Mobile Money';
+
+  @override
+  String get payUsingAirtelMoney =>
+      'Kwishyura ukoresheje konti yawe ya Airtel Money';
+
+  @override
+  String get contactInformation => 'Amakuru yo Kwandikira';
+
+  @override
+  String get phoneNumberOrEmail => 'Telefone cyangwa Imeyili';
+
+  @override
+  String get enterContactInformation => 'Injiza amakuru yawe yo kwandikira';
+
+  @override
+  String get pleaseEnterContactInfo =>
+      'Nyamuneka injiza amakuru yawe yo kwandikira';
+
+  @override
+  String get pleaseEnterValidContactInfo =>
+      'Nyamuneka injiza amakuru yemewe yo kwandikira';
+
+  @override
+  String get processing => 'Birimo gutunganywa...';
+
+  @override
+  String get needOtherPaymentOptions => 'Ukeneye Ubundi Buryo bwo Kwishyura?';
+
+  @override
+  String get contactForAlternativePayment =>
+      'Twandikire ubundi buryo bwo kwishyura birimo:';
+
+  @override
+  String get bankTransferOption => 'Kohereza muri Banki';
+
+  @override
+  String get creditDebitCards => 'Ikarita za Banki';
+
+  @override
+  String get cashPayment => 'Kwishyura Amafaranga';
+
+  @override
+  String get otherMobileMoneyProviders => 'Abandi Bakoresha Mobile Money';
+
+  @override
+  String get contactNumbers => 'Numero zo Kwandikira:';
+
+  @override
+  String get emailLabel => 'Imeyili:';
+
+  @override
+  String get whatsappLabel => 'WhatsApp:';
+
+  @override
+  String get termsAndConditions =>
+      'Ukongera gutangira ubwishyu, uba wemeye amategeko ya serivisi. Ubwishyu bwawe buzatunganywa maze uhabwa imyitwarire nyuma yo kurangiza ubwishyu. Kwinjira muri somo bifite igihe cy\'ibanze nk\'uko byavuze hejuru.';
+
+  @override
+  String get paymentInitiated => 'Ubwishyu Bwatangiye';
+
+  @override
+  String get paymentInitiatedSuccess => 'Ubwishyu bwawe bwatangiye neza.';
+
+  @override
+  String get nextSteps => 'Intambwe Zikurikira:';
+
+  @override
+  String get contactLabel => 'Kwandikira:';
+
+  @override
+  String get unknownCourse => 'Isomo Ntabonetse';
 }

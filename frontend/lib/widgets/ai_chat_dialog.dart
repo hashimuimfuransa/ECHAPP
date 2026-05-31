@@ -23,6 +23,7 @@ class ModernAIChatDialog extends StatefulWidget {
   final String conversationId;
   final VoidCallback onClose;
   final GlobalKey<StudentGuideWidgetState>? guideKey;
+  final AIChatContext? context;
 
   const ModernAIChatDialog({
     super.key,
@@ -34,6 +35,7 @@ class ModernAIChatDialog extends StatefulWidget {
     required this.conversationId,
     required this.onClose,
     this.guideKey,
+    this.context,
   });
 
   @override
@@ -169,31 +171,36 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   }
 
   Future<void> _sendWelcomeMessage() async {
-    final context = AIChatContext(
+    final chatContext = widget.context ?? AIChatContext(
       currentCourse: widget.currentCourse,
       currentLesson: widget.currentLesson,
       allSections: widget.allSections,
       sectionLessons: widget.sectionLessons,
     );
 
-    final welcomeMessage = 'Hello! I\'m your AI Learning Assistant. ';
-    String message = welcomeMessage;
+    String message;
     
-    if (widget.currentCourse != null) {
-      message += 'I see you\'re studying "${widget.currentCourse!.title}". ';
+    if (chatContext.isPlatformSupport) {
+      message = 'Hello! I\'m your Platform Support Assistant. I\'m here to help you navigate the Excellence Coaching Hub platform. I can assist you with: enrolling in courses, making payments, accessing video lessons, taking exams, managing your account, and any other platform-related questions. How can I help you today?';
+    } else {
+      message = 'Hello! I\'m your AI Learning Assistant. ';
       
-      if (widget.currentLesson != null) {
-        message += 'Currently working on "${widget.currentLesson!.title}". ';
+      if (widget.currentCourse != null) {
+        message += 'I see you\'re studying "${widget.currentCourse!.title}". ';
+        
+        if (widget.currentLesson != null) {
+          message += 'Currently working on "${widget.currentLesson!.title}". ';
+        }
+        
+        if (widget.allSections != null && widget.allSections!.isNotEmpty) {
+          message += 'I have access to all ${widget.allSections!.length} sections and their lessons. ';
+        }
+      } else if (widget.currentLesson != null) {
+        message += 'I see you\'re studying "${widget.currentLesson!.title}". ';
       }
       
-      if (widget.allSections != null && widget.allSections!.isNotEmpty) {
-        message += 'I have access to all ${widget.allSections!.length} sections and their lessons. ';
-      }
-    } else if (widget.currentLesson != null) {
-      message += 'I see you\'re studying "${widget.currentLesson!.title}". ';
+      message += 'Ask me anything about your learning materials, and I\'ll help you summarize lessons, understand concepts, or answer any questions!';
     }
-    
-    message += 'Ask me anything about your learning materials, and I\'ll help you summarize lessons, understand concepts, or answer any questions!';
 
     final aiMessage = AIChatMessage(
       id: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
@@ -234,7 +241,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     }
 
     try {
-      final context = AIChatContext(
+      final chatContext = widget.context ?? AIChatContext(
         currentCourse: widget.currentCourse,
         currentLesson: widget.currentLesson,
         allSections: widget.allSections,
@@ -246,7 +253,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
         userMessage.message,
         file,
         fileType,
-        context,
+        chatContext,
       );
 
       setState(() {
@@ -290,7 +297,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     }
 
     try {
-      final context = AIChatContext(
+      final chatContext = widget.context ?? AIChatContext(
         currentCourse: widget.currentCourse,
         currentLesson: widget.currentLesson,
       );
@@ -298,7 +305,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
       final aiResponse = await widget.chatService.sendMessage(
         widget.conversationId,
         message.trim(),
-        context,
+        chatContext,
       );
 
       setState(() {
@@ -345,9 +352,9 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        width: isDesktop ? 550 : screenWidth * 0.95,
-        height: isDesktop ? math.min(750.0, screenHeight * 0.85) : screenHeight * 0.8,
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: isDesktop ? 40 : 16),
+        width: isDesktop ? 550 : screenWidth,
+        height: isDesktop ? math.min(750.0, screenHeight * 0.85) : screenHeight * 0.85,
+        margin: EdgeInsets.zero,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           color: isDarkMode 
