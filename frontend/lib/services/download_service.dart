@@ -8,11 +8,23 @@ import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
   factory DownloadService() => _instance;
   DownloadService._internal();
+
+  @override
+  void notifyListeners() {
+    // Safely notify listeners, ignoring errors when widgets are disposed
+    try {
+      super.notifyListeners();
+    } catch (e) {
+      // Ignore errors when widgets are disposed during active downloads
+      print('DownloadService: Error notifying listeners (widget likely disposed): $e');
+    }
+  }
 
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 30), // Reduced for faster connection
@@ -46,24 +58,120 @@ class DownloadService extends ChangeNotifier {
   }
   final Map<String, Download> _downloads = {}; // Key: lessonId
   final Map<String, CancelToken> _cancelTokens = {}; // Key: lessonId
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final Map<String, int> _lastNotificationProgress = {}; // Key: lessonId, Value: last progress shown
+  final Map<String, int> _notificationIds = {}; // Key: lessonId, Value: notification ID
   final Map<String, String> _filenameToLessonId = {}; // Key: filename (without ext), Value: lessonId
   static const String _downloadsKey = 'downloaded_videos';
   static const String _filenameMapKey = 'filename_to_lesson_id_map';
+  bool _isInitialized = false;
+  Future<void>? _initFuture;
 
   // Initialize the service and load persisted downloads
   Future<void> init() async {
+    if (_isInitialized) {
+      print('Download service already initialized');
+      return;
+    }
+
     print('Initializing download service...');
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: false,
-      responseBody: false,
-      error: true,
-      logPrint: (obj) => print('Dio: $obj'),
-    ));
-    await _loadFilenameMap();
-    await _loadDownloadsFromStorage();
-    print('Loaded ${_downloads.length} downloads from storage');
-    await _scanForExistingDownloads();
-    print('Scan complete. Total downloads now: ${_downloads.length}');
+
+    try {
+      // Initialize local notifications
+      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows) {
+        const AndroidInitializationSettings initializationSettingsAndroid =
+            AndroidInitializationSettings('@mipmap/ic_launcher');
+
+        final DarwinInitializationSettings initializationSettingsIOS =
+            DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+
+        final InitializationSettings initializationSettings = InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+        await _notifications.initialize(
+          initializationSettings,
+          onDidReceiveNotificationResponse: (NotificationResponse response) {
+            // Handle notification tap
+            print('Notification tapped: ${response.payload}');
+          },
+        );
+
+        // Create download progress notification channel with higher importance
+        const AndroidNotificationChannel progressChannel = AndroidNotificationChannel(
+          'download_progress_channel',
+          'Download Progress',
+          description: 'Shows download progress notifications',
+          importance: Importance.high,
+          showBadge: true,
+          playSound: false,
+        );
+
+        await _notifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(progressChannel);
+
+        // Create high importance channel for completion/failure notifications
+        const AndroidNotificationChannel highImportanceChannel = AndroidNotificationChannel(
+          'high_importance_channel',
+          'High Importance Notifications',
+          description: 'This channel is used for important notifications.',
+          importance: Importance.max,
+          showBadge: true,
+          playSound: true,
+        );
+
+        await _notifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(highImportanceChannel);
+      }
+
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: false,
+        responseBody: false,
+        error: true,
+        logPrint: (obj) => print('Dio: $obj'),
+      ));
+    } catch (e) {
+      print('Error initializing notifications: $e');
+      // Continue anyway - notifications are optional
+    }
+
+    // Always load from storage, even if other initialization fails
+    try {
+      await _loadFilenameMap();
+      await _loadDownloadsFromStorage();
+      print('Loaded ${_downloads.length} downloads from storage');
+      await _scanForExistingDownloads();
+      print('Scan complete. Total downloads now: ${_downloads.length}');
+    } catch (e) {
+      print('Error loading downloads from storage: $e');
+      // Try to load from storage again with error handling
+      try {
+        await _loadDownloadsFromStorage();
+        print('Retry: Loaded ${_downloads.length} downloads from storage');
+      } catch (e2) {
+        print('Retry failed: $e2');
+      }
+    }
+
+    _isInitialized = true;
+    print('Download service initialization complete');
+  }
+
+  // Ensure initialization before accessing downloads
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      if (_initFuture == null) {
+        _initFuture = init();
+      }
+      await _initFuture;
+    }
   }
 
   // Load the filename→lessonId map from shared prefs
@@ -87,6 +195,150 @@ class DownloadService extends ChangeNotifier {
       await prefs.setString(_filenameMapKey, jsonEncode(_filenameToLessonId));
     } catch (e) {
       print('DownloadService: Error saving filename map: $e');
+    }
+  }
+
+  // Show download progress notification
+  Future<void> _showDownloadProgressNotification(String lessonId, String title, double progress) async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
+
+    // Only update notification every 10% to avoid spam
+    final progressPercent = (progress * 100).floor();
+    final lastProgress = _lastNotificationProgress[lessonId] ?? 0;
+    if (progressPercent - lastProgress < 10 && progress < 1.0) return;
+
+    _lastNotificationProgress[lessonId] = progressPercent;
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'download_progress_channel',
+      'Download Progress',
+      channelDescription: 'Shows download progress notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+      showProgress: true,
+      maxProgress: 100,
+      progress: progressPercent,
+      ongoing: true,
+      autoCancel: false,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: false,
+      presentBadge: true,
+      presentSound: false,
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final notificationId = _notificationIds[lessonId] ?? lessonId.hashCode;
+    _notificationIds[lessonId] = notificationId;
+
+    try {
+      await _notifications.show(
+        notificationId,
+        'Downloading: $title',
+        '${progressPercent}% complete',
+        platformDetails,
+        payload: '/downloads',
+      );
+    } catch (e) {
+      print('Error showing download progress notification: $e');
+    }
+  }
+
+  // Show download completion notification
+  Future<void> _showDownloadCompleteNotification(String lessonId, String title) async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
+
+    // Cancel progress notification
+    final notificationId = _notificationIds[lessonId];
+    if (notificationId != null) {
+      await _notifications.cancel(notificationId);
+      _notificationIds.remove(lessonId);
+      _lastNotificationProgress.remove(lessonId);
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      badgeNumber: 1,
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    try {
+      await _notifications.show(
+        DateTime.now().millisecondsSinceEpoch % 100000,
+        'Download Complete',
+        '$title is ready to watch',
+        platformDetails,
+        payload: '/downloads',
+      );
+    } catch (e) {
+      print('Error showing download complete notification: $e');
+    }
+  }
+
+  // Show download failed notification
+  Future<void> _showDownloadFailedNotification(String lessonId, String title, String error) async {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
+
+    // Cancel progress notification
+    final notificationId = _notificationIds[lessonId];
+    if (notificationId != null) {
+      await _notifications.cancel(notificationId);
+      _notificationIds.remove(lessonId);
+      _lastNotificationProgress.remove(lessonId);
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    try {
+      await _notifications.show(
+        DateTime.now().millisecondsSinceEpoch % 100000,
+        'Download Failed',
+        '$title: $error',
+        platformDetails,
+        payload: '/downloads',
+      );
+    } catch (e) {
+      print('Error showing download failed notification: $e');
     }
   }
 
@@ -284,6 +536,8 @@ class DownloadService extends ChangeNotifier {
         notifyListeners();
         await _saveDownloadsToStorage();
 
+        print('Download record created with localPath: $filePath');
+
         final cancelToken = CancelToken();
         _cancelTokens[lessonId] = cancelToken;
 
@@ -310,33 +564,18 @@ class DownloadService extends ChangeNotifier {
             print('Could not get file size, falling back to single stream: $e');
           }
 
-          // Use chunked download if we got the file size and it's large enough (> 2MB)
-          if (totalFileSize != null && totalFileSize > 2 * 1024 * 1024) {
-            print('Using chunked download for large file');
-            await _downloadWithChunks(
-              url: url,
-              filePath: filePath,
-              totalSize: totalFileSize,
-              downloadedBytes: downloadedBytes,
-              authHeaders: authHeaders,
-              cancelToken: cancelToken,
-              download: download,
-              lessonId: lessonId,
-              onProgress: onProgress,
-            );
-          } else {
-            // Fall back to single stream download for small files or when size is unknown
-            await _downloadSingleStream(
-              url: url,
-              filePath: filePath,
-              downloadedBytes: downloadedBytes,
-              authHeaders: authHeaders,
-              cancelToken: cancelToken,
-              download: download,
-              lessonId: lessonId,
-              onProgress: onProgress,
-            );
-          }
+          // Use single stream download for reliability (chunked download has concurrency issues)
+          print('Using single stream download for reliability');
+          await _downloadSingleStream(
+            url: url,
+            filePath: filePath,
+            downloadedBytes: downloadedBytes,
+            authHeaders: authHeaders,
+            cancelToken: cancelToken,
+            download: download,
+            lessonId: lessonId,
+            onProgress: onProgress,
+          );
       
           print('Download completed successfully');
           _downloads[lessonId] = download.copyWith(
@@ -347,6 +586,7 @@ class DownloadService extends ChangeNotifier {
           _cancelTokens.remove(lessonId);
           notifyListeners();
           await _saveDownloadsToStorage();
+          await _showDownloadCompleteNotification(lessonId, originalTitle);
           onSuccess?.call();
 
           return filePath;
@@ -405,6 +645,7 @@ class DownloadService extends ChangeNotifier {
           );
           notifyListeners();
           await _saveDownloadsToStorage();
+          await _showDownloadFailedNotification(lessonId, originalTitle, e.toString());
         }
         onError?.call(e.toString());
         rethrow;
@@ -413,110 +654,7 @@ class DownloadService extends ChangeNotifier {
     return ''; // Should never reach here due to rethrows and returns inside loop
   }
 
-  // Download using multiple chunks in parallel for faster downloads
-  Future<void> _downloadWithChunks({
-    required String url,
-    required String filePath,
-    required int totalSize,
-    required int downloadedBytes,
-    required Map<String, String> authHeaders,
-    required CancelToken cancelToken,
-    required Download download,
-    required String lessonId,
-    Function(double)? onProgress,
-  }) async {
-    // Adaptive chunk size based on network type
-    final networkType = await _getNetworkType();
-    final chunkSize = _getAdaptiveChunkSize(networkType);
-    final maxParallelChunks = _getAdaptiveParallelChunks(networkType);
-    
-    print('Network type: $networkType, Chunk size: ${chunkSize / (1024 * 1024)}MB, Parallel chunks: $maxParallelChunks');
-    
-    final file = File(filePath);
-    final totalChunks = (totalSize / chunkSize).ceil();
-    final chunksToDownload = <int>[];
-    
-    // Determine which chunks need to be downloaded
-    for (int i = 0; i < totalChunks; i++) {
-      final chunkStart = i * chunkSize;
-      final chunkEnd = (chunkStart + chunkSize - 1).clamp(0, totalSize - 1);
-      
-      // Check if this chunk is already downloaded
-      if (downloadedBytes > chunkStart) {
-        continue; // Skip already downloaded chunks
-      }
-      chunksToDownload.add(i);
-    }
-    
-    print('Total chunks: $totalChunks, Chunks to download: ${chunksToDownload.length}');
-    
-    int totalBytesDownloaded = downloadedBytes;
-    final downloadProgress = <int, int>{}; // chunkIndex -> bytes downloaded
-    
-    // Download chunks in parallel batches
-    for (int i = 0; i < chunksToDownload.length; i += maxParallelChunks) {
-      final batch = chunksToDownload.skip(i).take(maxParallelChunks).toList();
-      final futures = batch.map((chunkIndex) async {
-        final chunkStart = chunkIndex * chunkSize;
-        final chunkEnd = (chunkStart + chunkSize - 1).clamp(0, totalSize - 1);
-        
-        try {
-          final response = await _dio.get<ResponseBody>(
-            url,
-            options: Options(
-              responseType: ResponseType.stream,
-              headers: {
-                ...authHeaders,
-                'range': 'bytes=$chunkStart-$chunkEnd',
-              },
-            ),
-            cancelToken: cancelToken,
-          );
-          
-          // Write chunk to file at correct position
-          final raf = await file.open(mode: FileMode.writeOnly);
-          await raf.setPosition(chunkStart);
-          
-          int chunkBytesDownloaded = 0;
-          await response.data!.stream.listen(
-            (List<int> chunk) {
-              raf.writeFrom(chunk);
-              chunkBytesDownloaded += chunk.length;
-              totalBytesDownloaded += chunk.length;
-              
-              // Update progress
-              final progress = totalBytesDownloaded / totalSize;
-              if (progress > (download.downloadProgress + 0.01) || progress >= 1.0) {
-                download.downloadProgress = progress;
-                _downloads[lessonId] = download.copyWith(downloadProgress: progress);
-                onProgress?.call(progress);
-                notifyListeners();
-                
-                if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
-                  _saveDownloadsToStorage();
-                }
-              }
-            },
-            onError: (e) {
-              if (CancelToken.isCancel(e)) return;
-              throw e;
-            },
-            cancelOnError: true,
-          ).asFuture();
-          
-          await raf.close();
-          downloadProgress[chunkIndex] = chunkBytesDownloaded;
-        } catch (e) {
-          print('Error downloading chunk $chunkIndex: $e');
-          rethrow;
-        }
-      });
-      
-      await Future.wait(futures);
-    }
-  }
-
-  // Single stream download (fallback for small files or when size is unknown)
+  // Single stream download (reliable method for all file sizes)
   Future<void> _downloadSingleStream({
     required String url,
     required String filePath,
@@ -561,13 +699,14 @@ class DownloadService extends ChangeNotifier {
 
           if (actualTotal != -1) {
             double progress = currentReceived / actualTotal;
-            
+
             // Update progress more frequently for smoother UI (every 1% instead of 2%)
             if (progress > (download.downloadProgress + 0.01) || progress >= 1.0 || progress < download.downloadProgress) {
               download.downloadProgress = progress;
               _downloads[lessonId] = download.copyWith(downloadProgress: progress);
               onProgress?.call(progress);
               notifyListeners();
+              _showDownloadProgressNotification(lessonId, download.originalTitle, progress);
               
               // Save to storage on major milestones (every 5%) or completion for better performance
               if (progress >= 1.0 || (progress * 20).floor() > ((download.downloadProgress - 0.05) * 20).floor()) {
@@ -683,6 +822,8 @@ class DownloadService extends ChangeNotifier {
 
   // Get all downloads
   List<Download> getAllDownloads() {
+    // Ensure initialization is triggered (non-blocking)
+    _ensureInitialized();
     return _downloads.values.toList();
   }
 

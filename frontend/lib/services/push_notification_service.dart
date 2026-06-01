@@ -219,6 +219,18 @@ class PushNotificationService {
   static Future<void> scheduleDailyReminder([BuildContext? context]) async {
     if (defaultTargetPlatform == TargetPlatform.windows) return;
 
+    // Create the daily reminder channel first
+    const AndroidNotificationChannel reminderChannel = AndroidNotificationChannel(
+      'daily_reminder_channel',
+      'Daily Reminders',
+      description: 'Notifications to remind you to keep learning',
+      importance: Importance.max,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(reminderChannel);
+
     final reminder = _getRandomReminder(context);
     
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(

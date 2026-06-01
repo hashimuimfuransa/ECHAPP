@@ -451,8 +451,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
       ),
       body: Container(
         padding: const EdgeInsets.all(16),
-        child: download.url.endsWith('.pdf') 
-            ? SfPdfViewer.network(download.url)
+        child: download.url.toLowerCase().endsWith('.pdf') || download.localPath.toLowerCase().endsWith('.pdf')
+            ? SfPdfViewer.file(File(download.localPath))
             : SingleChildScrollView(
                 child: MarkdownBody(
                   data: download.url, // For text notes, URL contains the content
@@ -475,7 +475,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SfPdfViewer.network(download.url),
+      body: SfPdfViewer.file(File(download.localPath)),
     );
   }
 
@@ -503,7 +503,105 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     );
   }
 
-  void _playVideo(Download download) {
+  void _playVideo(Download download) async {
+    print('Playing downloaded video:');
+    print('  localPath: ${download.localPath}');
+    print('  fileName: ${download.fileName}');
+    print('  lessonId: ${download.lessonId}');
+
+    // Verify the file exists before trying to play
+    final file = File(download.localPath);
+    if (!await file.exists()) {
+      print('File does not exist at: ${download.localPath}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video file not found. Please download again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check file size to ensure it's not empty
+    final fileSize = await file.length();
+    print('  File size: $fileSize bytes');
+    if (fileSize == 0) {
+      print('File is empty, cannot play');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video file is corrupted. Please download again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check file header to verify it's a valid MP4
+    try {
+      final bytes = await file.openRead(0, 12).first;
+      if (bytes.length < 12) {
+        print('File is too small to be a valid video');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Video file is corrupted. Please download again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // MP4 files start with 'ftyp' (bytes: 66 74 79 70) at offset 4
+      final isMp4 = bytes[4] == 0x66 && bytes[5] == 0x74 && bytes[6] == 0x79 && bytes[7] == 0x70;
+      print('  File header check: isMp4=$isMp4');
+      print('  First 12 bytes: $bytes');
+
+      if (!isMp4) {
+        print('File is not a valid MP4 file');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Video file is corrupted or invalid format. Please download again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      print('Error reading file header: $e');
+      // If header check fails, continue anyway - the file might still be valid
+      print('Skipping header check, attempting to play video anyway');
+    }
+
+    // Check if file has .mp4 extension, if not add it
+    String videoPath = download.localPath;
+    if (!videoPath.toLowerCase().endsWith('.mp4')) {
+      videoPath = '$videoPath.mp4';
+      final fileWithExt = File(videoPath);
+      if (!await fileWithExt.exists()) {
+        print('File with .mp4 extension does not exist at: $videoPath');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Video file not found. Please download again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    // For Android, use raw path without file:// prefix (ExoPlayer needs raw path)
+    // For iOS, use file:// prefix
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (videoPath.startsWith('file://')) {
+        videoPath = videoPath.replaceFirst('file://', '');
+      }
+    } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      if (!videoPath.startsWith('file://')) {
+        videoPath = 'file://$videoPath';
+      }
+    }
+
+    print('  Final video path: $videoPath');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -512,7 +610,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           if (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
             return OptimizedVideoPlayer(
               videoId: download.lessonId,
-              videoUrl: download.localPath,
+              videoUrl: videoPath,
               title: download.originalTitle,
               description: 'Local video file',
               showAppBar: true,
@@ -520,7 +618,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           } else {
             return CustomVideoPlayer(
               videoId: download.lessonId,
-              videoUrl: download.localPath,
+              videoUrl: videoPath,
               title: download.originalTitle,
               description: 'Local video file',
               showAppBar: true,

@@ -3,9 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/models/wishlist.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
 
 class WishlistService {
-  static const String _baseUrl = 'http://localhost:3000/api';
+  static String get _baseUrl => ApiConfig.baseUrl;
   
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

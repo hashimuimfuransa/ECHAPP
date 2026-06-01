@@ -8,6 +8,8 @@ import 'dart:io';
 class GoogleSignInDesktopService {
   static final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   
+  // Use HTTPS for OAuth callback to comply with network security policies
+  // Note: This requires a local HTTPS server or proper port forwarding setup
   static const String _redirectUrl = 'http://localhost:8080/callback';
   
   static String get _desktopClientId {

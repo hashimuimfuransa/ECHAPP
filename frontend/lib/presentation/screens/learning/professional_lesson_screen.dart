@@ -127,6 +127,7 @@ class _ProfessionalLessonScreenState
 
   // ── Services ──────────────────────────────────────────────────────────────
   final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
+  final GlobalKey<StudentGuideWidgetState> _aiTabGuideKey = GlobalKey<StudentGuideWidgetState>();
   final RealAIChatService _aiChatService = RealAIChatService();
   final String _conversationId =
       'conversation_${DateTime.now().millisecondsSinceEpoch}';
@@ -1726,7 +1727,10 @@ class _ProfessionalLessonScreenState
   Widget _buildVideoTab() {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isDesktop ? 24 : 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 24 : 0,
+        vertical: isDesktop ? 24 : 16,
+      ),
       child: isDesktop
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1737,17 +1741,16 @@ class _ProfessionalLessonScreenState
               ],
             )
           : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Video player takes full width on mobile (no horizontal padding)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: _buildVideoPlayer(),
-                ),
+                _buildVideoPlayer(),
                 const SizedBox(height: 16),
                 // Other content keeps normal padding
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _buildVideoActions(),
                       const SizedBox(height: 16),
@@ -1804,42 +1807,39 @@ class _ProfessionalLessonScreenState
 
   Widget _buildVideoPlayer() {
     final videoUrl = _extractVideoUrl();
-    return SizedBox(
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    return Container(
       width: double.infinity,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: _lesson!.videoId != null && videoUrl.isNotEmpty
-              ? (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                  ? OptimizedVideoPlayer(
-                      videoId: _lesson!.videoId!,
-                      videoUrl: videoUrl,
-                      title: _lesson!.title,
-                      description: _lesson!.description ?? '',
-                      showAppBar: true,
-                    )
-                  : CustomVideoPlayer(
-                      videoId: _lesson!.videoId!,
-                      videoUrl: videoUrl,
-                      title: _lesson!.title,
-                      description: _lesson!.description ?? '',
-                      showAppBar: true,
-                    ))
-              : _buildVideoPlaceholder(),
-        ),
+      height: isDesktop ? null : (MediaQuery.of(context).size.width * 9 / 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(isDesktop ? 16 : 0),
+        boxShadow: isDesktop ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ] : [],
       ),
+      clipBehavior: Clip.antiAlias,
+      child: _lesson!.videoId != null && videoUrl.isNotEmpty
+          ? (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
+              ? OptimizedVideoPlayer(
+                  videoId: _lesson!.videoId!,
+                  videoUrl: videoUrl,
+                  title: _lesson!.title,
+                  description: _lesson!.description ?? '',
+                  showAppBar: true,
+                )
+              : CustomVideoPlayer(
+                  videoId: _lesson!.videoId!,
+                  videoUrl: videoUrl,
+                  title: _lesson!.title,
+                  description: _lesson!.description ?? '',
+                  showAppBar: true,
+                ))
+          : _buildVideoPlaceholder(),
     );
   }
 
@@ -3687,7 +3687,7 @@ class _ProfessionalLessonScreenState
           sectionLessons: null,
           chatService: _aiChatService,
           conversationId: _conversationId,
-          guideKey: _guideKey,
+          guideKey: _aiTabGuideKey,
           onClose: () {},
         ),
       ),
@@ -4423,7 +4423,7 @@ class _ProfessionalLessonScreenState
     if (!mounted || _lesson == null) return;
     
     try {
-      context.push('/downloads');
+      context.go('/downloads');
     } catch (e) {
       _showSnack('Navigation error: $e', isError: true);
     }

@@ -445,7 +445,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Widget _buildMobilePlayer() {
-    if (_isOffline) {
+    final isNetworkVideo = widget.videoUrl != null && (widget.videoUrl!.startsWith('http') || kIsWeb);
+    
+    // Only show offline error for network videos
+    if (_isOffline && isNetworkVideo) {
       return _buildErrorPlaceholder(
         icon: Icons.wifi_off_outlined,
         title: 'No Internet Connection',
@@ -471,8 +474,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       );
     }
 
-    return AspectRatio(
-      aspectRatio: 16 / 9,
+    return SizedBox(
+      width: double.infinity,
+      height: double.infinity,
       child: Stack(
         children: [
           Chewie(controller: _chewieController!),
@@ -629,14 +633,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 height: isDesktop ? (isLargeDesktop ? 675 : 506) : null,
               ),
             ),
-            if (_isOffline)
+            if (_isOffline && (widget.videoUrl?.startsWith('http') ?? false || kIsWeb))
               _buildErrorPlaceholder(
                 icon: Icons.wifi_off_outlined,
                 title: 'No Internet Connection',
                 message: 'Please check your network settings and try again.',
                 onRetry: _retryPlayback,
               ),
-            if (_errorMessage != null && !_isOffline)
+            if (_errorMessage != null && !(_isOffline && !(widget.videoUrl?.startsWith('http') ?? false)))
               _buildErrorPlaceholder(
                 icon: Icons.error_outline,
                 title: 'Playback Error',

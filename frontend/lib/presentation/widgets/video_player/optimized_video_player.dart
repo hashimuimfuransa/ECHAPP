@@ -92,7 +92,24 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
 
   String _getOptimizedUrl(String? url) {
     if (url == null || url.isEmpty) return '';
-    
+
+    // Check if it's a local file path
+    if (url.startsWith('/') || url.startsWith('file://')) {
+      // It's a local file - return as-is for mobile, convert for Windows
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+        return url.startsWith('file://') ? url.replaceFirst('file://', '').replaceAll('/', '\\') : url.replaceAll('/', '\\');
+      }
+      // For iOS, ensure file:// prefix
+      if (!url.startsWith('file://') && defaultTargetPlatform == TargetPlatform.iOS) {
+        return 'file://$url';
+      }
+      // For Android, use raw path without file:// prefix (ExoPlayer needs raw path)
+      if (url.startsWith('file://') && defaultTargetPlatform == TargetPlatform.android) {
+        return url.replaceFirst('file://', '');
+      }
+      return url;
+    }
+
     // Convert S3 URL to CloudFront URL and ensure HTTPS
     String processedUrl = url;
     if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
@@ -109,10 +126,6 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
       // For production, you should convert videos to HLS format
     }
 
-    // Handle local files
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-      return processedUrl.replaceAll('/', '\\');
-    }
     return processedUrl;
   }
 
@@ -126,6 +139,9 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
     }
 
     final optimizedUrl = _getOptimizedUrl(widget.videoUrl);
+    print('OptimizedVideoPlayer: Original URL: ${widget.videoUrl}');
+    print('OptimizedVideoPlayer: Optimized URL: $optimizedUrl');
+
     if (optimizedUrl.isEmpty) {
       setState(() {
         _errorMessage = "Video URL is empty";
@@ -141,9 +157,9 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
     }
 
     final isNetwork = optimizedUrl.startsWith('http') || kIsWeb;
+    print('OptimizedVideoPlayer: isNetwork: $isNetwork');
 
     BetterPlayerConfiguration betterPlayerConfiguration = BetterPlayerConfiguration(
-      aspectRatio: 16 / 9,
       autoPlay: false,
       looping: false,
       fit: BoxFit.contain,
@@ -271,7 +287,10 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isOffline) {
+    final isNetworkVideo = widget.videoUrl != null && (widget.videoUrl!.startsWith('http') || kIsWeb);
+    
+    // Only show offline error for network videos
+    if (_isOffline && isNetworkVideo) {
       return _buildErrorPlaceholder(
         icon: Icons.wifi_off_outlined,
         title: 'No Internet Connection',
@@ -334,8 +353,9 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
   }
 
   Widget _buildPlayer() {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
+    return SizedBox(
+      width: double.infinity,
+      height: double.infinity,
       child: BetterPlayer(
         controller: _betterPlayerController!,
       ),

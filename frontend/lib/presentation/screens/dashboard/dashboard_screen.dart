@@ -25,6 +25,7 @@ import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/widgets/support_floating_button.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -203,6 +204,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   String? _selectedCategoryId;
   String? _selectedCategoryName;
   bool _showCategoryDropdown = false;
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySubscription;
 
   AppLocalizations? get l10n => AppLocalizations.of(context);
 
@@ -229,6 +232,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     PushNotificationService.clearNotifications();
+
+    _initConnectivityListener();
 
     _animationController = AnimationController(
       vsync: this,
@@ -390,7 +395,81 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _phraseTimer?.cancel();
     _animationController?.dispose();
     _searchController.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
+  }
+
+  void _initConnectivityListener() async {
+    // Check initial connectivity state
+    final initialResults = await Connectivity().checkConnectivity();
+    final isInitiallyOffline = initialResults.isEmpty || initialResults.contains(ConnectivityResult.none);
+    if (mounted) {
+      setState(() {
+        _isOffline = isInitiallyOffline;
+      });
+    }
+    print('Initial offline state: $_isOffline');
+
+    // Listen for connectivity changes
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      final isNowOffline = results.isEmpty || results.contains(ConnectivityResult.none);
+      print('Connectivity changed: offline=$isNowOffline');
+      if (mounted) {
+        setState(() {
+          _isOffline = isNowOffline;
+        });
+      }
+    });
+  }
+
+  Widget _buildOfflineBanner(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off, color: Colors.orange, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'You\'re offline',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Some content may not be available. Go to Downloads to view offline content.',
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => context.push('/downloads'),
+            icon: const Icon(Icons.download, color: AppTheme.primaryGreen),
+            label: const Text(
+              'Downloads',
+              style: TextStyle(color: AppTheme.primaryGreen),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // Handle search submission with category filtering
@@ -507,90 +586,116 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           SliverToBoxAdapter(
             child: _buildModernHeader(context, user),
           ),
+          // Offline Banner
+          if (_isOffline)
+            SliverToBoxAdapter(
+              child: _buildOfflineBanner(context),
+            ),
           // Main Content
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
-            sliver: SliverToBoxAdapter(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1180),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 18),
-                      _buildModernSearchBar(context),
-                      const SizedBox(height: 24),
-                      userEnrollmentsAsync.when(
-                        data: (enrollments) {
-                          // Check milestones whenever enrollments load
-                          WidgetsBinding.instance.addPostFrameCallback(
-                              (_) => _checkProgressMilestone(enrollments));
-                          return _buildContinueLearningCard(
-                              context, enrollments);
-                        },
-                        loading: () =>
-                            _buildLoadingCard(context, l10n?.continueLearning ?? 'Continue Learning'),
-                        error: (_, __) => const SizedBox.shrink(),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildQuickActions(context),
-                      const SizedBox(height: 24),
-                      userEnrollmentsAsync.when(
-                        data: (enrollments) =>
-                            _buildProgressStats(context, enrollments),
-                        loading: () => _buildProgressStats(context, []),
-                        error: (_, __) => _buildProgressStats(context, []),
-                      ),
-                      const SizedBox(height: 24),
-                      userEnrollmentsAsync.when(
-                        data: (enrollments) {
-                          final enrolledCourses = enrollments
-                              .map((e) => e.course)
-                              .where((course) => course != null)
-                              .cast<Course>()
-                              .toList();
-                          final coursesToShow = recommendedCourses.isNotEmpty
-                              ? recommendedCourses
-                              : popularCourses;
-                          return _buildRecommendedCourses(
-                            context,
-                            coursesToShow,
-                            enrolledCourses,
-                          );
-                        },
-                        loading: () {
-                          final coursesToShow = recommendedCourses.isNotEmpty
-                              ? recommendedCourses
-                              : popularCourses;
-                          return _buildRecommendedCourses(
-                              context, coursesToShow, []);
-                        },
-                        error: (_, __) {
-                          final coursesToShow = recommendedCourses.isNotEmpty
-                              ? recommendedCourses
-                              : popularCourses;
-                          return _buildRecommendedCourses(
-                              context, coursesToShow, []);
-                        },
-                      ),
-                      const SizedBox(height: 18),
-                      _buildUpdateInterestsCard(context),
-                      const SizedBox(height: 18),
-                      _buildLiveClassesContactCard(context),
-                      const SizedBox(height: 18),
-                      _buildExamPreparationCard(context),
-                      const SizedBox(height: 24),
-                      const DownloadsSection(),
-                      const SizedBox(height: 32),
-                      if (ref.watch(authProvider.notifier).isAdmin)
-                        _buildAdminAccessButton(context),
-                      const SizedBox(height: 40),
-                    ],
+          if (!_isOffline)
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 18),
+                        _buildModernSearchBar(context),
+                        const SizedBox(height: 24),
+                        userEnrollmentsAsync.when(
+                          data: (enrollments) {
+                            // Check milestones whenever enrollments load
+                            WidgetsBinding.instance.addPostFrameCallback(
+                                (_) => _checkProgressMilestone(enrollments));
+                            return _buildContinueLearningCard(
+                                context, enrollments);
+                          },
+                          loading: () =>
+                              _buildLoadingCard(context, l10n?.continueLearning ?? 'Continue Learning'),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildQuickActions(context),
+                        const SizedBox(height: 24),
+                        userEnrollmentsAsync.when(
+                          data: (enrollments) =>
+                              _buildProgressStats(context, enrollments),
+                          loading: () => _buildProgressStats(context, []),
+                          error: (_, __) => _buildProgressStats(context, []),
+                        ),
+                        const SizedBox(height: 24),
+                        userEnrollmentsAsync.when(
+                          data: (enrollments) {
+                            final enrolledCourses = enrollments
+                                .map((e) => e.course)
+                                .where((course) => course != null)
+                                .cast<Course>()
+                                .toList();
+                            final coursesToShow = recommendedCourses.isNotEmpty
+                                ? recommendedCourses
+                                : popularCourses;
+                            return _buildRecommendedCourses(
+                              context,
+                              coursesToShow,
+                              enrolledCourses,
+                            );
+                          },
+                          loading: () {
+                            final coursesToShow = recommendedCourses.isNotEmpty
+                                ? recommendedCourses
+                                : popularCourses;
+                            return _buildRecommendedCourses(
+                                context, coursesToShow, []);
+                          },
+                          error: (_, __) {
+                            final coursesToShow = recommendedCourses.isNotEmpty
+                                ? recommendedCourses
+                                : popularCourses;
+                            return _buildRecommendedCourses(
+                                context, coursesToShow, []);
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        _buildUpdateInterestsCard(context),
+                        const SizedBox(height: 18),
+                        _buildLiveClassesContactCard(context),
+                        const SizedBox(height: 18),
+                        _buildExamPreparationCard(context),
+                        const SizedBox(height: 24),
+                        const DownloadsSection(),
+                        const SizedBox(height: 32),
+                        if (ref.watch(authProvider.notifier).isAdmin)
+                          _buildAdminAccessButton(context),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          // Show only downloads when offline
+          if (_isOffline)
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        const DownloadsSection(),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
           ),

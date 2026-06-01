@@ -59,13 +59,17 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     
     lint {
-        checkReleaseBuilds = false
+        checkReleaseBuilds = true
         abortOnError = false
     }
 }
@@ -78,9 +82,6 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
-    
-    // AndroidX Activity for enableEdgeToEdge support (Android 15+ compatibility)
-    implementation("androidx.activity:activity-ktx:1.9.0")
     
     // Core desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

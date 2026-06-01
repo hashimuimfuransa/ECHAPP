@@ -26,7 +26,10 @@ class _SettingsDeviceBindingPolicy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -66,6 +69,13 @@ class _SettingsDeviceBindingPolicy extends StatelessWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     // Use selective watching to minimize rebuilds
     final isDarkMode = ref.watch(darkModeProvider);
     final notificationsEnabled = ref.watch(notificationsProvider);
@@ -100,25 +110,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Account Settings
                   _buildSection(
                     context,
-                    AppLocalizations.of(context)!.accountSettings,
+                    l10n.accountSettings,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.person_outline,
-                        title: AppLocalizations.of(context)!.profileInformation,
-                        subtitle: AppLocalizations.of(context)!.updatePersonalDetails,
+                        title: l10n.profileInformation,
+                        subtitle: l10n.updatePersonalDetails,
                         onTap: () => context.push('/profile'),
                       ),
                       _buildNotificationTile(
                         context,
                         icon: Icons.notifications_outlined,
-                        title: AppLocalizations.of(context)!.pushNotifications,
-                        subtitle: AppLocalizations.of(context)!.receiveUpdates,
+                        title: l10n.pushNotifications,
+                        subtitle: l10n.receiveUpdates,
                         value: notificationsEnabled,
                         onChanged: (value) {
                           ref.read(notificationsProvider.notifier).state = value;
                           _showSnackbar(context, 
-                            value ? AppLocalizations.of(context)!.notificationsEnabled : AppLocalizations.of(context)!.notificationsDisabled);
+                            value ? l10n.notificationsEnabled : l10n.notificationsDisabled);
                         },
                       ),
                     ],
@@ -129,20 +139,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Preferences
                   _buildSection(
                     context,
-                    AppLocalizations.of(context)!.preferences,
+                    l10n.preferences,
                     [
                       _buildThemeTile(
                         context,
                         icon: Icons.dark_mode_outlined,
-                        title: AppLocalizations.of(context)!.darkMode,
-                        subtitle: isDarkMode ? AppLocalizations.of(context)!.darkTheme : AppLocalizations.of(context)!.lightTheme,
+                        title: l10n.darkMode,
+                        subtitle: isDarkMode ? l10n.darkTheme : l10n.lightTheme,
                         value: isDarkMode,
                         onChanged: (value) {
                           ref.read(darkModeProvider.notifier).state = value;
                           ref.read(themeModeProvider.notifier).state = 
                             value ? ThemeMode.dark : ThemeMode.light;
                           _showSnackbar(context, 
-                            value ? AppLocalizations.of(context)!.darkModeEnabled : AppLocalizations.of(context)!.lightModeEnabled);
+                            value ? l10n.darkModeEnabled : l10n.lightModeEnabled);
                         },
                       ),
                     ],
@@ -153,27 +163,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Support
                   _buildSection(
                     context,
-                    AppLocalizations.of(context)!.support,
+                    l10n.support,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.help_outline,
-                        title: AppLocalizations.of(context)!.helpCenter,
-                        subtitle: AppLocalizations.of(context)!.helpCenterSubtitle,
+                        title: l10n.helpCenter,
+                        subtitle: l10n.helpCenterSubtitle,
                         onTap: () => context.push('/help'),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.feedback_outlined,
-                        title: AppLocalizations.of(context)!.sendFeedback,
-                        subtitle: AppLocalizations.of(context)!.shareThoughts,
+                        title: l10n.sendFeedback,
+                        subtitle: l10n.shareThoughts,
                         onTap: () => _showFeedbackDialog(context),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.info_outline,
-                        title: AppLocalizations.of(context)!.about,
-                        subtitle: AppLocalizations.of(context)!.appVersion,
+                        title: l10n.about,
+                        subtitle: l10n.appVersion,
                         onTap: () => _showAboutDialog(context),
                       ),
                     ],
@@ -184,20 +194,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Legal
                   _buildSection(
                     context,
-                    AppLocalizations.of(context)!.legal,
+                    l10n.legal,
                     [
                       _buildSettingTile(
                         context,
                         icon: Icons.privacy_tip_outlined,
-                        title: AppLocalizations.of(context)!.privacyPolicy,
-                        subtitle: AppLocalizations.of(context)!.readPrivacyPolicy,
+                        title: l10n.privacyPolicy,
+                        subtitle: l10n.readPrivacyPolicy,
                         onTap: () => context.push('/privacy'),
                       ),
                       _buildSettingTile(
                         context,
                         icon: Icons.description_outlined,
-                        title: AppLocalizations.of(context)!.termsOfService,
-                        subtitle: AppLocalizations.of(context)!.readTerms,
+                        title: l10n.termsOfService,
+                        subtitle: l10n.readTerms,
                         onTap: () => context.push('/terms'),
                       ),
                     ],
@@ -206,7 +216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 30),
                   
                   // Danger Zone
-                  _buildDangerZone(context, AppLocalizations.of(context)!),
+                  _buildDangerZone(context, l10n),
                 ],
               ),
             );
@@ -594,7 +604,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // Dialog methods
   void _showFeedbackDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final dialogL10n = AppLocalizations.of(context);
+    if (dialogL10n == null) return;
     final feedbackController = TextEditingController();
     bool isSubmitting = false;
 
@@ -618,7 +629,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     controller: feedbackController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.howCanWeImprove,
+                      hintText: dialogL10n.howCanWeImprove,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -645,7 +656,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : () async {
                       final content = feedbackController.text.trim();
                       if (content.isEmpty) {
-                        _showSnackbar(context, AppLocalizations.of(context)!.enterFeedback);
+                        _showSnackbar(context, dialogL10n.enterFeedback);
                         return;
                       }
 
@@ -656,9 +667,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (mounted) {
                         Navigator.of(context).pop();
                         if (success) {
-                          _showSnackbar(context, AppLocalizations.of(context)!.feedbackSent);
+                          _showSnackbar(context, dialogL10n.feedbackSent);
                         } else {
-                          _showSnackbar(context, AppLocalizations.of(context)!.feedbackFailed);
+                          _showSnackbar(context, dialogL10n.feedbackFailed);
                         }
                       }
                     },
@@ -670,16 +681,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showAboutDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final dialogL10n = AppLocalizations.of(context);
+    if (dialogL10n == null) return;
     showAboutDialog(
       context: context,
-      applicationName: l10n.appName,
+      applicationName: dialogL10n.appName,
       applicationVersion: '1.0.0',
-      applicationLegalese: l10n.copyright,
+      applicationLegalese: dialogL10n.copyright,
       children: [
         Flexible(
           child: Text(
-            l10n.aboutApp,
+            dialogL10n.aboutApp,
             style: TextStyle(
               color: Theme.of(context).brightness == Brightness.dark
                 ? AppTheme.white70
@@ -735,7 +747,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final dialogL10n = AppLocalizations.of(context);
+    if (dialogL10n == null) return;
     final passwordController = TextEditingController();
     bool isDeleting = false;
     String? localError;
@@ -752,7 +765,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.areYouSureDelete,
+                dialogL10n.areYouSureDelete,
                 style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
               ),
               const SizedBox(height: 20),
@@ -765,7 +778,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               Text(
-                l10n.enterPasswordConfirm,
+                dialogL10n.enterPasswordConfirm,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -776,7 +789,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.currentPassword,
+                  hintText: dialogL10n.currentPassword,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -804,7 +817,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : () async {
                       final password = passwordController.text.trim();
                       if (password.isEmpty) {
-                        setDialogState(() => localError = AppLocalizations.of(context)!.passwordRequired);
+                        setDialogState(() => localError = dialogL10n.passwordRequired);
                         return;
                       }
 
@@ -818,7 +831,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (context.mounted) {
                           Navigator.of(context).pop();
                           context.go('/splash');
-                          _showSnackbar(context, AppLocalizations.of(context)!.deleteAccount);
+                          _showSnackbar(context, dialogL10n.deleteAccount);
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -837,12 +850,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showSignOutDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final dialogL10n = AppLocalizations.of(context);
+    if (dialogL10n == null) return;
     showModernDialog(
       context: context,
-      title: l10n.signOut,
+      title: dialogL10n.signOut,
       content: Text(
-        l10n.areYouSureSignOut,
+        dialogL10n.areYouSureSignOut,
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14, color: AppTheme.greyColor),
       ),
@@ -854,9 +868,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Navigator.of(context).pop();
             ref.read(authProvider.notifier).logout();
             context.go('/login');
-            _showSnackbar(context, l10n.signOut);
+            _showSnackbar(context, dialogL10n.signOut);
           },
-          text: l10n.signOut,
+          text: dialogL10n.signOut,
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
         ),

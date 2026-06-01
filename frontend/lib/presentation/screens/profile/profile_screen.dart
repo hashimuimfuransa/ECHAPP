@@ -80,8 +80,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.errorPickingImage}: $e')),
+          SnackBar(content: Text('${l10n?.errorPickingImage ?? 'Error picking image'}: $e')),
         );
       }
     }
@@ -101,18 +102,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _imageFile = null;
         });
         
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.profileUpdated),
+            content: Text(l10n?.profileUpdated ?? 'Profile updated'),
             backgroundColor: AppTheme.primaryGreen,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.profileUpdateError}: $e'),
+            content: Text('${l10n?.profileUpdateError ?? 'Error updating profile'}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -122,6 +125,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);

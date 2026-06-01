@@ -9,6 +9,9 @@ import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 final courseRepositoryProvider = Provider<CourseRepository>((ref) {
   return CourseRepository();
@@ -49,26 +52,44 @@ final courseContentProvider = FutureProvider.family<Map<String, dynamic>, String
 
 final popularCoursesProvider = FutureProvider<List<Course>>((ref) async {
   print('PopularCoursesProvider: Starting to fetch courses');
-  final repository = ref.read(courseRepositoryProvider);
-  final allCourses = await repository.getCourses();
-  print('PopularCoursesProvider: Got ${allCourses.length} courses');
-  if (allCourses.isNotEmpty) {
-    print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
-  }
-  // Sort by popularity: highest enrollment count first, then highest rating
-  final sortedByPopularity = List<Course>.from(allCourses)..sort((a, b) {
-    final enrollmentDiff = (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0);
-    if (enrollmentDiff != 0) return enrollmentDiff;
-    // Tie-breaker: use average rating
-    return (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0);
-  });
   
-  final result = sortedByPopularity.take(8).toList();
-  print('PopularCoursesProvider: Returning ${result.length} popular courses');
-  if (result.isNotEmpty) {
-    print('PopularCoursesProvider: First popular course thumbnail: ${result[0].thumbnail ?? "null"}');
+  // Check connectivity
+  final connectivityResult = await Connectivity().checkConnectivity();
+  final isOffline = connectivityResult.isEmpty || 
+                   connectivityResult.every((result) => result == ConnectivityResult.none);
+  
+  if (isOffline) {
+    print('Device is offline, loading popular courses from cache');
+    return await _loadCachedPopularCourses();
   }
-  return result;
+  
+  final repository = ref.read(courseRepositoryProvider);
+  try {
+    final allCourses = await repository.getCourses();
+    print('PopularCoursesProvider: Got ${allCourses.length} courses');
+    if (allCourses.isNotEmpty) {
+      print('PopularCoursesProvider: First course thumbnail: ${allCourses[0].thumbnail ?? "null"}');
+    }
+    // Sort by popularity: highest enrollment count first, then highest rating
+    final sortedByPopularity = List<Course>.from(allCourses)..sort((a, b) {
+      final enrollmentDiff = (b.enrollmentCount ?? 0).compareTo(a.enrollmentCount ?? 0);
+      if (enrollmentDiff != 0) return enrollmentDiff;
+      // Tie-breaker: use average rating
+      return (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0);
+    });
+    
+    final result = sortedByPopularity.take(8).toList();
+    print('PopularCoursesProvider: Returning ${result.length} popular courses');
+    if (result.isNotEmpty) {
+      print('PopularCoursesProvider: First popular course thumbnail: ${result[0].thumbnail ?? "null"}');
+    }
+    // Cache the popular courses for offline use
+    await _cachePopularCourses(result);
+    return result;
+  } catch (e) {
+    print('Error fetching popular courses: $e, trying cache');
+    return await _loadCachedPopularCourses();
+  }
 });
 
 final recommendedCoursesProvider = FutureProvider<List<Course>>((ref) async {
@@ -238,3 +259,32 @@ final featuredCategoriesProvider = Provider<List<dynamic>>((ref) {
   final allCategories = ref.read(allCategoriesProvider);
   return CategoriesService.getFeaturedCategories(allCategories.cast());
 });
+
+// Cache popular courses to SharedPreferences
+Future<void> _cachePopularCourses(List<Course> courses) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final coursesJson = courses.map((c) => c.toJson()).toList();
+    await prefs.setString('cached_popular_courses', json.encode(coursesJson));
+    print('Cached ${courses.length} popular courses');
+  } catch (e) {
+    print('Error caching popular courses: $e');
+  }
+}
+
+// Load cached popular courses from SharedPreferences
+Future<List<Course>> _loadCachedPopularCourses() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final coursesJson = prefs.getString('cached_popular_courses');
+    if (coursesJson != null) {
+      final List<dynamic> decoded = json.decode(coursesJson);
+      final courses = decoded.map((json) => Course.fromJson(json)).toList();
+      print('Loaded ${courses.length} cached popular courses');
+      return courses;
+    }
+  } catch (e) {
+    print('Error loading cached popular courses: $e');
+  }
+  return [];
+}

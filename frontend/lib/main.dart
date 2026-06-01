@@ -10,13 +10,13 @@ import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/l10n/kinyarwanda_material_localizations.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:excellencecoachinghub/l10n/kinyarwanda_material_localizations.dart';
 
 
 Future<void> main() async {

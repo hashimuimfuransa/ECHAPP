@@ -381,11 +381,27 @@ const firebaseLogin = async (req, res) => {
           ...(deviceId && { deviceId })
         });
       } catch (createError) {
-        // Handle race condition or stale non-sparse index: if duplicate key on email/firebaseUid,
-        // the user was already created — fetch them instead of failing
+        // Handle race condition or duplicate key on any unique field (firebaseUid, phone, email)
         if (createError.code === 11000) {
-          console.log('Duplicate key on create, fetching existing user by firebaseUid:', decodedToken.uid);
+          console.log('Duplicate key on create, attempting recovery. Error:', createError.message);
+          // Try finding by firebaseUid first, then phone, then email
           user = await User.findOne({ firebaseUid: decodedToken.uid });
+          if (!user && phoneNumber) {
+            user = await User.findOne({ phone: phoneNumber });
+            if (user) {
+              console.log('Found existing user by phone, updating firebaseUid to:', decodedToken.uid);
+              user.firebaseUid = decodedToken.uid;
+              await user.save();
+            }
+          }
+          if (!user && decodedToken.email) {
+            user = await User.findOne({ email: decodedToken.email });
+            if (user) {
+              console.log('Found existing user by email, updating firebaseUid to:', decodedToken.uid);
+              user.firebaseUid = decodedToken.uid;
+              await user.save();
+            }
+          }
           if (!user) {
             throw createError;
           }
@@ -484,9 +500,17 @@ const firebaseLogin = async (req, res) => {
       return sendError(res, 'Invalid authentication token', 401);
     }
     if (error.code === 11000) {
-      return sendError(res, 'Account conflict: duplicate key. Please contact support.', 409, error.message);
+      const conflictField = error.keyValue ? Object.keys(error.keyValue)[0] : 'unknown field';
+      const conflictValue = error.keyValue ? Object.values(error.keyValue)[0] : '';
+      console.error(`Unrecoverable duplicate key on field "${conflictField}":`, conflictValue);
+      return sendError(
+        res,
+        `An account with this ${conflictField === 'phone' ? 'phone number' : conflictField === 'email' ? 'email address' : conflictField} already exists. Please sign in instead.`,
+        409,
+        error.message
+      );
     }
-    return sendError(res, 'Authentication failed', 500, error.message);
+    return sendError(res, 'Authentication failed. Please try again.', 500, error.message);
   }
 };
 
