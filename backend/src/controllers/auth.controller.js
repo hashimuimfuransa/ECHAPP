@@ -384,22 +384,43 @@ const firebaseLogin = async (req, res) => {
         // Handle race condition or duplicate key on any unique field (firebaseUid, phone, email)
         if (createError.code === 11000) {
           console.log('Duplicate key on create, attempting recovery. Error:', createError.message);
-          // Try finding by firebaseUid first, then phone, then email
+          // Try finding by firebaseUid first (race condition on same user)
           user = await User.findOne({ firebaseUid: decodedToken.uid });
           if (!user && phoneNumber) {
-            user = await User.findOne({ phone: phoneNumber });
-            if (user) {
-              console.log('Found existing user by phone, updating firebaseUid to:', decodedToken.uid);
-              user.firebaseUid = decodedToken.uid;
-              await user.save();
+            const existingByPhone = await User.findOne({ phone: phoneNumber });
+            if (existingByPhone) {
+              if (!existingByPhone.firebaseUid) {
+                // Orphaned record (registered without Firebase) - safe to link
+                console.log('Found orphaned user by phone, linking firebaseUid:', decodedToken.uid);
+                existingByPhone.firebaseUid = decodedToken.uid;
+                await existingByPhone.save();
+                user = existingByPhone;
+              } else if (existingByPhone.firebaseUid === decodedToken.uid) {
+                // Same Firebase user (race condition) - just use it
+                user = existingByPhone;
+              } else {
+                // Phone belongs to a DIFFERENT Firebase user - reject to prevent account takeover
+                console.warn(`Phone ${phoneNumber} already belongs to firebaseUid ${existingByPhone.firebaseUid}, rejecting uid ${decodedToken.uid}`);
+                return sendError(res, 'An account with this phone number already exists. Please sign in with your original method.', 409);
+              }
             }
           }
           if (!user && decodedToken.email) {
-            user = await User.findOne({ email: decodedToken.email });
-            if (user) {
-              console.log('Found existing user by email, updating firebaseUid to:', decodedToken.uid);
-              user.firebaseUid = decodedToken.uid;
-              await user.save();
+            const existingByEmail = await User.findOne({ email: decodedToken.email });
+            if (existingByEmail) {
+              if (!existingByEmail.firebaseUid) {
+                // Orphaned record - safe to link
+                console.log('Found orphaned user by email, linking firebaseUid:', decodedToken.uid);
+                existingByEmail.firebaseUid = decodedToken.uid;
+                await existingByEmail.save();
+                user = existingByEmail;
+              } else if (existingByEmail.firebaseUid === decodedToken.uid) {
+                user = existingByEmail;
+              } else {
+                // Email belongs to a DIFFERENT Firebase user - reject
+                console.warn(`Email ${decodedToken.email} already belongs to firebaseUid ${existingByEmail.firebaseUid}, rejecting uid ${decodedToken.uid}`);
+                return sendError(res, 'An account with this email address already exists. Please sign in with your original method.', 409);
+              }
             }
           }
           if (!user) {
