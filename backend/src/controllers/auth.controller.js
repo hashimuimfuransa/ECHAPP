@@ -203,9 +203,17 @@ const updateProfile = async (req, res) => {
     if (!user) {
       return sendError(res, 'User not found', 404);
     }
+
+    // Check phone uniqueness if being changed
+    if (phone !== undefined && phone !== '' && phone !== user.phone) {
+      const phoneExists = await User.findOne({ phone, _id: { $ne: user._id } });
+      if (phoneExists) {
+        return sendError(res, 'This phone number is already associated with another account', 409);
+      }
+    }
     
     if (fullName) user.fullName = fullName;
-    if (phone !== undefined) user.phone = phone;
+    if (phone !== undefined) user.phone = phone || undefined;
     if (avatar !== undefined) user.avatar = avatar;
     if (interests !== undefined) user.interests = interests;
     if (shortTermGoal !== undefined) user.shortTermGoal = shortTermGoal;

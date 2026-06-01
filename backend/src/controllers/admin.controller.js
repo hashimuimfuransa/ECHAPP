@@ -1442,6 +1442,76 @@ const unenrollStudent = async (req, res) => {
   }
 };
 
+// Update student information (admin only)
+const updateStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, phone, role, isActive } = req.body;
+
+    // Find user in MongoDB (support both ObjectId and firebaseUid)
+    let user;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      try { user = await User.findById(id); } catch (e) { /* not a valid ObjectId */ }
+    }
+    if (!user) user = await User.findOne({ firebaseUid: id });
+    if (!user) return sendError(res, 'Student not found', 404);
+
+    // Check phone uniqueness if being changed
+    if (phone !== undefined && phone !== '' && phone !== user.phone) {
+      const phoneExists = await User.findOne({ phone, _id: { $ne: user._id } });
+      if (phoneExists) return sendError(res, 'This phone number is already used by another account', 409);
+    }
+
+    // Check email uniqueness only when a non-empty email is provided AND it differs from stored value
+    const incomingEmail = (email || '').trim().toLowerCase();
+    if (incomingEmail && incomingEmail !== (user.email || '')) {
+      const emailExists = await User.findOne({ email: incomingEmail, _id: { $ne: user._id } });
+      if (emailExists) return sendError(res, 'This email address is already used by another account', 409);
+    }
+
+    // Validate role if provided
+    if (role !== undefined && !['student', 'admin', 'instructor'].includes(role)) {
+      return sendError(res, 'Invalid role', 400);
+    }
+
+    if (fullName !== undefined && fullName.trim()) user.fullName = fullName.trim();
+    if (incomingEmail && incomingEmail !== (user.email || '')) {
+      user.email = incomingEmail;
+    }
+    if (phone !== undefined) user.phone = phone.trim() || undefined;
+    if (role !== undefined) user.role = role;
+    if (isActive !== undefined) user.isActive = isActive;
+
+    await user.save();
+
+    // Sync name to Firebase if changed
+    if (fullName !== undefined && user.firebaseUid) {
+      try {
+        await admin.auth().updateUser(user.firebaseUid, { displayName: user.fullName });
+      } catch (firebaseError) {
+        console.warn('Could not update Firebase display name:', firebaseError.message);
+      }
+    }
+
+    sendSuccess(res, {
+      id: user._id,
+      firebaseUid: user.firebaseUid,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive
+    }, 'Student information updated successfully');
+  } catch (error) {
+    console.error('Error in updateStudent:', error);
+    if (error.code === 11000) {
+      const field = error.keyValue ? Object.keys(error.keyValue)[0] : 'field';
+      return sendError(res, `This ${field} is already in use by another account`, 409);
+    }
+    sendError(res, 'Failed to update student information', 500, error.message);
+  }
+};
+
 // Delete a student and all related data
 const deleteStudent = async (req, res) => {
   try {
@@ -1545,6 +1615,7 @@ module.exports = {
   getStudents,
   getAdmins,
   updateUserRole,
+  updateStudent,
   getStudentDetail,
   deleteStudent,
   getCourseStats,

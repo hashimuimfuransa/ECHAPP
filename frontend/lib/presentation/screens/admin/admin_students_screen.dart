@@ -437,6 +437,149 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     );
   }
 
+  void _showEditStudentDialog(User student) {
+    final nameController = TextEditingController(text: student.fullName);
+    final emailController = TextEditingController(text: student.email);
+    final phoneController = TextEditingController(text: student.phone ?? '');
+    String selectedRole = student.role;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.edit, color: AppTheme.primaryGreen),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Edit — ${student.fullName}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email Address',
+                      prefixIcon: Icon(Icons.email),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                      hintText: '+250...',
+                      prefixIcon: Icon(Icons.phone),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<String>(
+                    value: selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Role',
+                      prefixIcon: Icon(Icons.badge),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'student', child: Text('Student')),
+                      DropdownMenuItem(value: 'instructor', child: Text('Instructor')),
+                      DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setDialogState(() => selectedRole = value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Full name cannot be empty')),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isLoading = true);
+                      try {
+                        await _adminService.updateStudent(
+                          student.id,
+                          fullName: nameController.text.trim(),
+                          email: emailController.text.trim().isNotEmpty
+                              ? emailController.text.trim()
+                              : null,
+                          phone: phoneController.text.trim(),
+                          role: selectedRole,
+                        );
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${nameController.text.trim()} updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _loadStudents(searchQuery: _searchController.text);
+                        }
+                      } catch (e) {
+                        setDialogState(() => isLoading = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.save),
+              label: const Text('Save Changes'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDeleteConfirmationDialog(User student) {
     showDialog(
       context: context,
@@ -876,6 +1019,9 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       case 'view':
                         _loadStudentDetail(student.id);
                         break;
+                      case 'edit_info':
+                        _showEditStudentDialog(student);
+                        break;
                       case 'enrollments':
                         _loadStudentEnrollments(student.id);
                         break;
@@ -901,6 +1047,16 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                           Icon(Icons.visibility, color: AppTheme.primaryGreen),
                           SizedBox(width: 10),
                           Text('View Details'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'edit_info',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: AppTheme.primaryGreen),
+                          SizedBox(width: 10),
+                          Text('Edit Info'),
                         ],
                       ),
                     ),
@@ -2104,7 +2260,7 @@ class StudentDetailModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedCourseId,
+                    initialValue: selectedCourseId,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Select a course',
@@ -2162,7 +2318,7 @@ class StudentDetailModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedPaymentMethod,
+                    initialValue: selectedPaymentMethod,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Select payment method',

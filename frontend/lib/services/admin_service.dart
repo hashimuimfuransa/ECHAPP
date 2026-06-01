@@ -219,6 +219,37 @@ class AdminService {
     }
   }
 
+  /// Update student information (admin)
+  Future<User> updateStudent(
+    String studentId, {
+    String? fullName,
+    String? email,
+    String? phone,
+    String? role,
+    bool? isActive,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (fullName != null) body['fullName'] = fullName;
+      if (email != null) body['email'] = email;
+      if (phone != null) body['phone'] = phone;
+      if (role != null) body['role'] = role;
+      if (isActive != null) body['isActive'] = isActive;
+
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/students/$studentId',
+        body: body,
+      );
+      response.validateStatus();
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+      return User.fromJson(data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update student: $e');
+    }
+  }
+
   /// Update user role
   Future<void> updateUserRole(String userId, String role) async {
     try {

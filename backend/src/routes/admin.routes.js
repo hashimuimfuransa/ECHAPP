@@ -19,7 +19,8 @@ const {
   resetUserDevice,
   toggleStudentStatus,
   unenrollStudent,
-  resetStudentPassword
+  resetStudentPassword,
+  updateStudent
 } = require('../controllers/admin.controller');
 const { manualExpirationCheck } = require('../controllers/admin-expiration.controller');
 const notificationController = require('../controllers/notification.controller');
@@ -54,6 +55,7 @@ router.get('/students/:id/device-info', protect, authorize('admin'), getUserDevi
 router.put('/students/:id/device-reset', protect, authorize('admin'), resetUserDevice);
 router.put('/students/:id/toggle-status', protect, authorize('admin'), toggleStudentStatus);
 router.put('/students/:id/reset-password', protect, authorize('admin'), resetStudentPassword);
+router.put('/students/:id', protect, authorize('admin'), updateStudent);
 router.delete('/courses/:courseId/enrollments/:studentId', protect, authorize('admin'), unenrollStudent);
 
 // Manual expiration check
