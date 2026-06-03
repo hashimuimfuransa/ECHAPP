@@ -167,7 +167,9 @@ class NavigationState {
 /// Widget for optimized route transitions
 class OptimizedPageRoute<T> extends PageRouteBuilder<T> {
   final Widget child;
+  @override
   final Duration transitionDuration;
+  @override
   final bool maintainState;
   
   OptimizedPageRoute({

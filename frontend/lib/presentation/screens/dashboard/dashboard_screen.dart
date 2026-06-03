@@ -2467,7 +2467,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             child: categoriesAsync.when(
               data: (categories) {
                 // Ensure categories is not null and is a list
-                if (categories == null || categories.isEmpty) {
+                if (categories.isEmpty) {
                   return Container(
                     padding: const EdgeInsets.all(20),
                     child: Center(
@@ -3027,7 +3027,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             },
             decoration: InputDecoration(
               hintText: _selectedCategoryId != null
-                  ? 'Search in ${_selectedCategoryName}...'
+                  ? 'Search in $_selectedCategoryName...'
                   : 'Search courses, topics, instructors...',
               hintStyle: TextStyle(
                 color: AppTheme.getSecondaryTextColor(context),
@@ -3903,7 +3903,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       isDark: isDark,
                     ),
                   ))
-              .toList(),
+              ,
         ],
       ),
     );
@@ -5123,7 +5123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildCategoryLoading(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 100,
       child: const Center(
         child: CircularProgressIndicator(color: Color(0xFF10B981)),
@@ -5132,7 +5132,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildCategoryError(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 100,
       child: Center(
         child: Text(
@@ -5212,7 +5212,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Level badge
-                    if (course.level != null && course.level!.isNotEmpty)
+                    if (course.level.isNotEmpty)
                       Container(
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.symmetric(
@@ -5222,8 +5222,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          course.level![0].toUpperCase() +
-                              course.level!.substring(1),
+                          course.level[0].toUpperCase() +
+                              course.level.substring(1),
                           style: const TextStyle(
                             color: Color(0xFF059669),
                             fontSize: 10,

@@ -497,7 +497,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     decoration: const InputDecoration(
                       labelText: 'Role',
                       prefixIcon: Icon(Icons.badge),

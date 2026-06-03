@@ -6,7 +6,6 @@ import 'package:excellencecoachinghub/presentation/providers/course_payment_prov
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_stats_provider.dart';
-import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
@@ -27,6 +26,8 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   bool _hasRedirected = false;
+  bool _isPaymentLoading = false;
+  bool _isEnrollmentLoading = false;
 
   AppLocalizations? get l10n => AppLocalizations.of(context);
 
@@ -81,6 +82,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
 
   // Method to handle enrollment
   void _handleEnrollment(WidgetRef ref, String courseId) async {
+    // Set loading state immediately
+    setState(() {
+      _isEnrollmentLoading = true;
+    });
+
     // PRE-FETCH: Start pre-fetching course content immediately
     ref.read(courseContentProvider(courseId).future);
     
@@ -116,11 +122,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEnrollmentLoading = false;
+        });
+      }
     }
   }
 
   // Method to handle payment
   void _handlePayment(WidgetRef ref, Course course) async {
+    // Set loading state immediately
+    setState(() {
+      _isPaymentLoading = true;
+    });
+
     print('Initiating payment for course: \${course.title} (ID: \${course.id})');
     print('Course price: ${course.price}');
     
@@ -159,16 +176,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         
         // Now navigate to the payment pending screen
         if (ref.context.mounted) {
-          Navigator.pushReplacement(
-            ref.context,
-            MaterialPageRoute(
-              builder: (context) => PaymentPendingScreen(
-                course: course,
-                transactionId: paymentResponse.transactionId,
-                amount: paymentResponse.amount,
-              ),
-            ),
-          );
+          ref.context.go('/payment/pending', extra: {
+            'course': course,
+            'transactionId': paymentResponse.transactionId,
+            'amount': paymentResponse.amount,
+          });
         }
       }
     } catch (e) {
@@ -194,18 +206,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           
           // Navigate to payment pending screen after a short delay
           Future.delayed(const Duration(seconds: 2)).then((_) {
-            // Navigate to payment pending screen
             if (ref.context.mounted) {
-              Navigator.push(
-                ref.context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentPendingScreen(
-                    course: course,
-                    transactionId: 'pending',
-                    amount: course.price ?? 0.0,
-                  ),
-                ),
-              );
+              ref.context.go('/payment/pending', extra: {
+                'course': course,
+                'transactionId': 'pending',
+                'amount': course.price ?? 0.0,
+              });
             }
           });
           return; // Exit early since we're navigating
@@ -218,6 +224,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             duration: const Duration(seconds: 4),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPaymentLoading = false;
+        });
       }
     }
   }
@@ -928,16 +940,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                   child: TextButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PaymentPendingScreen(
-                            course: course,
-                            transactionId: 'pending',
-                            amount: course.price ?? 0.0,
-                          ),
-                        ),
-                      );
+                      context.go('/payment/pending', extra: {
+                        'course': course,
+                        'transactionId': 'pending',
+                        'amount': course.price ?? 0.0,
+                      });
                     },
                     child: Text(
                       l10n?.paymentPending ?? 'Payment Pending',
@@ -953,8 +960,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               
               // Show regular enrollment or payment button
               final isFree = (course.price ?? 0) == 0;
+              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+              
               return ElevatedButton(
-                onPressed: () {
+                onPressed: isLoading ? null : () {
                   if (isFree) {
                     _handleEnrollment(ref, course.id);
                   } else {
@@ -970,13 +979,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: Text(
-                  isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
               );
             },
             loading: () => Container(
@@ -999,8 +1017,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               print('⚠️ Pending payment check error: $error');
               // Show regular enrollment or payment button as fallback
               final isFree = (course.price ?? 0) == 0;
+              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+              
               return ElevatedButton(
-                onPressed: () {
+                onPressed: isLoading ? null : () {
                   if (isFree) {
                     _handleEnrollment(ref, course.id);
                   } else {
@@ -1016,13 +1036,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: Text(
-                  isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
               );
             },
           ),
@@ -1032,7 +1061,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildEnhancedEnrollButton(Course course, WidgetRef ref) {
-    if (course.price == 0) {
+    final isFree = course.price == 0;
+    final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+    
+    if (isFree) {
       return Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -1048,17 +1080,26 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           ],
         ),
         child: TextButton(
-          onPressed: () {
+          onPressed: isLoading ? null : () {
             _handleEnrollment(ref, course.id);
           },
-          child: const Text(
-            'Enroll Now',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Enroll Now',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
         ),
       );
     } else {
@@ -1077,17 +1118,26 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           ],
         ),
         child: TextButton(
-          onPressed: () {
+          onPressed: isLoading ? null : () {
             _handlePayment(ref, course);
           },
-          child: Text(
-            'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
         ),
       );
     }
@@ -1120,16 +1170,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   return AnimatedButton(
                     text: 'Payment Pending',
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PaymentPendingScreen(
-                            course: course,
-                            transactionId: 'pending',
-                            amount: course.price ?? 0.0,
-                          ),
-                        ),
-                      );
+                      context.go('/payment/pending', extra: {
+                        'course': course,
+                        'transactionId': 'pending',
+                        'amount': course.price ?? 0.0,
+                      });
                     },
                     color: Colors.orange,
                   );

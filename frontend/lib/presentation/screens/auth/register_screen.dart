@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
@@ -676,8 +675,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with SingleTick
           suffixIcon: IconButton(
             icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: _iconColor),
             onPressed: () => setState(() {
-              if (label.contains('Confirm')) _obscureConfirm = !_obscureConfirm;
-              else _obscurePassword = !_obscurePassword;
+              if (label.contains('Confirm')) {
+                _obscureConfirm = !_obscureConfirm;
+              } else {
+                _obscurePassword = !_obscurePassword;
+              }
             }),
           ),
           filled: false,

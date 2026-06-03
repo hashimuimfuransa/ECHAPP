@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
-import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/models/download.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/link.dart';
 import 'package:flutter/services.dart';
@@ -25,7 +25,7 @@ class BookReaderScreen extends ConsumerStatefulWidget {
 class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   final PageController _pageController = PageController();
   final PdfViewerController _pdfViewerController = PdfViewerController();
-  int _currentPage = 0;
+  final int _currentPage = 0;
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
   bool _isDarkMode = false;
@@ -41,17 +41,17 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   String _selectedVoice = '';
   List<String> _availableVoices = [];
   String _currentText = '';
-  int _currentWordIndex = 0;
+  final int _currentWordIndex = 0;
   
   // PDF State
-  double _pdfZoomLevel = 1.0;
+  final double _pdfZoomLevel = 1.0;
   int _pdfPageCount = 0;
   int _currentPdfPage = 1;
   bool _isPdfLoading = true;
   bool _isFullScreen = false;
   
   // Reading Progress
-  double _readingProgress = 0.0;
+  final double _readingProgress = 0.0;
 
   @override
   void initState() {
@@ -756,12 +756,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
         });
         break;
       case 'download':
-        if (widget.book is Book) {
-          final book = widget.book as Book;
-          if (book.formats != null && book.formats!.isNotEmpty) {
-            _downloadBook(book.formats!.values.first);
-          }
-        }
+        _handleDownloadFromMenu();
         break;
       case 'tts':
         _showTTSSettings();
@@ -850,21 +845,126 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     );
   }
 
+  void _handleDownloadFromMenu() {
+    // Try to get download URL from different book formats
+    String? url;
+
+    print('Book type: ${widget.book.runtimeType}');
+    print('Book data: ${widget.book}');
+
+    if (widget.book is Book) {
+      // Gutenberg Book type
+      final book = widget.book as Book;
+      if (book.formats != null && book.formats!.isNotEmpty) {
+        // Prefer PDF format, otherwise use first available
+        url = book.formats!['application/pdf'] ??
+              book.formats!['text/html'] ??
+              book.formats!['text/plain'] ??
+              book.formats!.values.first;
+      }
+    } else if (widget.book is Map) {
+      // Map type from local library - handle any Map type
+      final bookMap = widget.book as Map;
+      url = bookMap['url']?.toString() ??
+            bookMap['pdfUrl']?.toString() ??
+            bookMap['fileUrl']?.toString() ??
+            bookMap['downloadUrl']?.toString() ??
+            bookMap['file_url']?.toString() ??
+            bookMap['download_url']?.toString();
+      print('Extracted URL from Map: $url');
+    }
+
+    if (url != null && url.isNotEmpty) {
+      _downloadBook(url);
+    } else {
+      // Show error if no URL found
+      print('No URL found for book');
+      // Get title safely
+      String bookTitle = 'this book';
+      if (widget.book is Book) {
+        bookTitle = (widget.book as Book).title;
+      } else if (widget.book is Map) {
+        final bookMap = widget.book as Map;
+        bookTitle = bookMap['title']?.toString() ??
+                    bookMap['name']?.toString() ??
+                    'this book';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No download URL available for $bookTitle'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
   void _downloadBook(String url) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final downloadService = DownloadService();
+
+      // Extract title and id safely based on book type
+      String bookTitle;
+      String bookId;
+
+      if (widget.book is Book) {
+        final book = widget.book as Book;
+        bookTitle = book.title;
+        bookId = book.id.toString();
+      } else if (widget.book is Map) {
+        final bookMap = widget.book as Map;
+        bookTitle = bookMap['title']?.toString() ??
+                    bookMap['name']?.toString() ??
+                    'Unknown Book';
+        bookId = bookMap['id']?.toString() ??
+                 bookMap['_id']?.toString() ??
+                 DateTime.now().millisecondsSinceEpoch.toString();
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open download link'),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
-        }
+        bookTitle = 'Unknown Book';
+        bookId = DateTime.now().millisecondsSinceEpoch.toString();
       }
+
+      // Show download started snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Downloading "$bookTitle"...'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Use DownloadService to download to app's internal storage
+      await downloadService.downloadNotesOrMaterial(
+        url: url,
+        title: bookTitle,
+        lessonId: 'book_$bookId',
+        type: DownloadType.material,
+        onProgress: (progress) {
+          // Progress is handled internally by DownloadService
+        },
+        onSuccess: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('"$bookTitle" downloaded successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Download failed: $error'),
+                backgroundColor: const Color(0xFFEF4444),
+              ),
+            );
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1246,7 +1346,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
               const Text('Voice', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedVoice,
+                initialValue: _selectedVoice,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),

@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/category.dart';
-import 'dart:async';
 
 // Provider for categories
 class CategoriesCache {

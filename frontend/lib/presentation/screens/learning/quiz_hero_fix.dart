@@ -169,5 +169,5 @@ Widget _buildQuizHero() {
         ),
       ],
     ),
-  );
+  )
 }

@@ -31,7 +31,7 @@ class ContentManagementState {
   }) {
     return ContentManagementState(
       sections: sections ?? this.sections,
-      lessonsBySection: lessonsBySection ?? this._lessonsBySection,
+      lessonsBySection: lessonsBySection ?? _lessonsBySection,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       isReordering: isReordering ?? this.isReordering,

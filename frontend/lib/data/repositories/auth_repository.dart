@@ -402,7 +402,8 @@ class AuthRepository {
   }
 
   Future<User> updateProfile(String token, {
-    String? fullName, 
+    String? fullName,
+    String? email,
     String? phone, 
     String? avatar,
     List<String>? interests,
@@ -420,6 +421,7 @@ class AuthRepository {
         },
         body: jsonEncode({
           if (fullName != null) 'fullName': fullName,
+          if (email != null) 'email': email,
           if (phone != null) 'phone': phone,
           if (avatar != null) 'avatar': avatar,
           if (interests != null) 'interests': interests,

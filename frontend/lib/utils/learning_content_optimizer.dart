@@ -194,19 +194,17 @@ class LearningContentOptimizer {
       final courseRepository = CourseRepository();
       final course = await courseRepository.getCourseById(courseId);
       
-      if (course != null) {
-        _loadProgress[courseId] = _LoadProgress(progress: 0.7, status: 'Caching course');
-        
-        _courseCache[courseId] = course;
-        _cacheTimestamps[courseId] = DateTime.now();
-        
-        _loadProgress[courseId] = _LoadProgress(progress: 1.0, status: 'Completed');
-        debugPrint('✅ Course preloaded: $courseId');
-        
-        // Trigger memory management
-        _manageMemory();
-      }
-    } catch (e) {
+      _loadProgress[courseId] = _LoadProgress(progress: 0.7, status: 'Caching course');
+      
+      _courseCache[courseId] = course;
+      _cacheTimestamps[courseId] = DateTime.now();
+      
+      _loadProgress[courseId] = _LoadProgress(progress: 1.0, status: 'Completed');
+      debugPrint('✅ Course preloaded: $courseId');
+      
+      // Trigger memory management
+      _manageMemory();
+        } catch (e) {
       debugPrint('❌ Failed to preload course $courseId: $e');
       _loadProgress[courseId] = _LoadProgress(progress: 0.0, status: 'Failed');
     } finally {
@@ -280,26 +278,24 @@ class LearningContentOptimizer {
       final sectionService = SectionService();
       final lessonsData = await sectionService.getLessonsBySection(sectionId);
       
-      if (lessonsData != null) {
-        _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 0.6, status: 'Processing lessons');
-        
-        final lessons = lessonsData
-            .map((l) => Lesson.fromJson(l as Map<String, dynamic>))
-            .toList();
-        lessons.sort((a, b) => a.order.compareTo(b.order));
-        
-        _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 0.8, status: 'Caching lessons');
-        
-        _lessonsCache[sectionId] = lessons;
-        _cacheTimestamps['lessons_$sectionId'] = DateTime.now();
-        
-        _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 1.0, status: 'Completed');
-        debugPrint('✅ Lessons preloaded: $sectionId (${lessons.length} lessons)');
-        
-        // Trigger memory management
-        _manageMemory();
-      }
-    } catch (e) {
+      _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 0.6, status: 'Processing lessons');
+      
+      final lessons = lessonsData
+          .map((l) => Lesson.fromJson(l as Map<String, dynamic>))
+          .toList();
+      lessons.sort((a, b) => a.order.compareTo(b.order));
+      
+      _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 0.8, status: 'Caching lessons');
+      
+      _lessonsCache[sectionId] = lessons;
+      _cacheTimestamps['lessons_$sectionId'] = DateTime.now();
+      
+      _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 1.0, status: 'Completed');
+      debugPrint('✅ Lessons preloaded: $sectionId (${lessons.length} lessons)');
+      
+      // Trigger memory management
+      _manageMemory();
+        } catch (e) {
       debugPrint('❌ Failed to preload lessons $sectionId: $e');
       _loadProgress['lessons_$sectionId'] = _LoadProgress(progress: 0.0, status: 'Failed');
     } finally {

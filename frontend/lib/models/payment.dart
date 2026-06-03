@@ -66,7 +66,7 @@ class Payment {
       currency: json['currency'] as String? ?? 'RWF',
       paymentMethod: json['paymentMethod'] as String? ?? '',
       transactionId: json['transactionId'] as String? ?? '',
-      status: PaymentStatus.fromString(json['status'] as String? ?? 'pending'),
+      status: _parsePaymentStatus(json['status']),
       contactInfo: json['contactInfo'] as String? ?? '',
       paymentDate: json['paymentDate'] != null 
           ? DateTime.parse(json['paymentDate'].toString()) 
@@ -101,6 +101,23 @@ class Payment {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+
+  /// Helper to safely parse payment status from various types
+  static PaymentStatus _parsePaymentStatus(dynamic statusValue) {
+    if (statusValue == null) return PaymentStatus.pending;
+    if (statusValue is String) {
+      return PaymentStatus.fromString(statusValue);
+    }
+    if (statusValue is int) {
+      // Handle numeric enum index
+      if (statusValue >= 0 && statusValue < PaymentStatus.values.length) {
+        return PaymentStatus.values[statusValue];
+      }
+      return PaymentStatus.pending;
+    }
+    // Fallback: convert to string
+    return PaymentStatus.fromString(statusValue.toString());
   }
 
   /// Get status display name

@@ -655,8 +655,8 @@ class _AuthOptionButton extends StatefulWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
-    this.delay = 0,
     this.compact = false,
+    this.delay = 0,
   });
 
   @override

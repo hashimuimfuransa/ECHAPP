@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/models/question.dart';
 import 'package:excellencecoachinghub/services/api/quiz_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Enhanced quiz taking screen supporting all interactive question types
 class EnhancedQuizScreen extends ConsumerStatefulWidget {
@@ -28,7 +25,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
   List<Map<String, dynamic>> _questions = [];
   int _currentQuestionIndex = 0;
   Map<String, dynamic>? _currentQuestion;
-  Map<String, dynamic> _userAnswers = {};
+  final Map<String, dynamic> _userAnswers = {};
   bool _isLoading = true;
   bool _isSubmitting = false;
   bool _quizCompleted = false;
@@ -249,7 +246,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
           // Programming questions are graded based on test case results
           final codeAnswer = userAnswer as Map<String, dynamic>?;
           if (codeAnswer != null) {
-            isCorrect = _evaluateProgrammingAnswer(question, codeAnswer!);
+            isCorrect = _evaluateProgrammingAnswer(question, codeAnswer);
           }
           break;
         default:
@@ -1162,7 +1159,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -1294,7 +1291,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                   border: InputBorder.none,
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.all(16),
+                  contentPadding: EdgeInsets.all(16),
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -1430,7 +1427,7 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                   border: InputBorder.none,
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.all(12),
+                  contentPadding: EdgeInsets.all(12),
                 ),
                 onChanged: (value) {
                   setState(() {

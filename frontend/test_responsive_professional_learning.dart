@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 /// Test widget to verify professional learning screen responsiveness

@@ -257,8 +257,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   /// Get category name from course
   String _getCourseCategoryName(Course course) {
-    if (course.category != null && course.category! is Map<String, dynamic>) {
-      final categoryMap = course.category! as Map<String, dynamic>;
+    if (course.category != null) {
+      final categoryMap = course.category!;
       return categoryMap['name'] as String? ?? '';
     }
     
@@ -2341,7 +2341,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             ),
             child: categoriesAsync.when(
               data: (categories) {
-                if (categories == null || categories.isEmpty) {
+                if (categories.isEmpty) {
                   return Container(
                     padding: const EdgeInsets.all(20),
                     child: Center(

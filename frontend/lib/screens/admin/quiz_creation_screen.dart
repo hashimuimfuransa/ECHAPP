@@ -7,10 +7,6 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/models/question.dart';
 import 'package:excellencecoachinghub/services/api/quiz_service.dart';
-import 'package:excellencecoachinghub/widgets/quiz/drag_drop_question_widget.dart';
-import 'package:excellencecoachinghub/widgets/quiz/multiple_choice_question_widget.dart';
-import 'package:excellencecoachinghub/widgets/quiz/essay_question_widget.dart';
-import 'package:excellencecoachinghub/widgets/quiz/true_false_question_widget.dart';
 
 class QuizCreationScreen extends ConsumerStatefulWidget {
   final String? sectionId;
@@ -43,7 +39,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
   // Questions
   List<Question> _questions = [];
   List<QuestionTemplate> _questionTemplates = [];
-  Set<int> _editingQuestions = {}; // Track which questions are being edited
+  final Set<int> _editingQuestions = {}; // Track which questions are being edited
   
   @override
   void initState() {
@@ -116,10 +112,6 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
   Future<void> _loadExistingQuiz() async {
     try {
       final quiz = await QuizService.getQuiz(widget.quizId!);
-      if (quiz == null) {
-        _showError('Quiz not found');
-        return;
-      }
 
       setState(() {
         _titleController.text = quiz['title'] ?? '';
@@ -867,7 +859,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
   }
 
   Widget _buildQuestionTemplate(QuestionTemplate template) {
-    return Container(
+    return SizedBox(
       width: 160,
       height: 120,
       child: Material(
@@ -1240,7 +1232,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -1507,7 +1499,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -1719,7 +1711,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -1906,7 +1898,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -2156,7 +2148,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
     ];
     
     return DropdownButtonFormField<String>(
-      value: _quizType,
+      initialValue: _quizType,
       decoration: const InputDecoration(
         labelText: 'Quiz Type',
         border: OutlineInputBorder(),
@@ -2182,7 +2174,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -2271,7 +2263,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.primaryGreen,
+          activeThumbColor: AppTheme.primaryGreen,
         ),
       ],
     );
@@ -2339,7 +2331,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -2568,7 +2560,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: question.difficulty ?? 'medium',
+                  initialValue: question.difficulty ?? 'medium',
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -2831,7 +2823,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -2894,7 +2886,7 @@ class _QuizCreationScreenState extends ConsumerState<QuizCreationScreen>
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                       const SizedBox(height: 8),
                       Row(
                         children: [

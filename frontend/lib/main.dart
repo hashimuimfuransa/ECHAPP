@@ -7,11 +7,11 @@ import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/app_router.dart';
 import 'package:excellencecoachinghub/services/firebase_auth_service.dart';
-import 'package:excellencecoachinghub/services/categories_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/l10n/kinyarwanda_material_localizations.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
@@ -139,6 +139,30 @@ class ExcellenceCoachingHubApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+
+    // Wire static services so local notifications are also saved to the
+    // backend and appear on the Notifications page.
+    PushNotificationService.onNotificationCreated ??= ({
+      required String title,
+      required String message,
+      required String type,
+    }) async {
+      try {
+        await ref.read(notificationProvider.notifier).createAndSave(
+          title: title,
+          message: message,
+          type: type,
+        );
+      } catch (_) {}
+    };
+
+    // When a backend FCM message arrives in the foreground, reload the
+    // notifications list so the new entry immediately appears in the page.
+    PushNotificationService.onFcmMessageReceived ??= () async {
+      try {
+        await ref.read(notificationProvider.notifier).loadNotifications();
+      } catch (_) {}
+    };
     
     return MaterialApp.router(
       title: 'ExcellenceCoachingHub',

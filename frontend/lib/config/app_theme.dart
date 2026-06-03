@@ -163,7 +163,7 @@ class AppTheme {
       onSurface: blackColor,
       onPrimary: Colors.white,
       // Enhanced color scheme
-      surfaceVariant: elevatedSurface,
+      surfaceContainerHighest: elevatedSurface,
       onSurfaceVariant: greyColor,
     ),
 
@@ -302,7 +302,7 @@ class AppTheme {
       surface: darkSurface,
       onSurface: darkTextPrimary,
       onPrimary: Colors.white,
-      surfaceVariant: elevatedSurfaceDark,
+      surfaceContainerHighest: elevatedSurfaceDark,
       onSurfaceVariant: darkTextSecondary,
     ),
 

@@ -67,6 +67,11 @@ class DownloadService extends ChangeNotifier {
   bool _isInitialized = false;
   Future<void>? _initFuture;
 
+  // Optional callback: called when a download completes or fails so the
+  // caller (e.g. NotificationNotifier via the provider) can persist the
+  // notification to the backend and surface it in the Notifications page.
+  Future<void> Function({required String title, required String message, required String type})? onNotificationCreated;
+
   // Initialize the service and load persisted downloads
   Future<void> init() async {
     if (_isInitialized) {
@@ -167,9 +172,7 @@ class DownloadService extends ChangeNotifier {
   // Ensure initialization before accessing downloads
   Future<void> _ensureInitialized() async {
     if (!_isInitialized) {
-      if (_initFuture == null) {
-        _initFuture = init();
-      }
+      _initFuture ??= init();
       await _initFuture;
     }
   }
@@ -242,7 +245,7 @@ class DownloadService extends ChangeNotifier {
       await _notifications.show(
         notificationId,
         'Downloading: $title',
-        '${progressPercent}% complete',
+        '$progressPercent% complete',
         platformDetails,
         payload: '/downloads',
       );
@@ -587,6 +590,11 @@ class DownloadService extends ChangeNotifier {
           notifyListeners();
           await _saveDownloadsToStorage();
           await _showDownloadCompleteNotification(lessonId, originalTitle);
+          await onNotificationCreated?.call(
+            title: 'Download Complete',
+            message: '$originalTitle is ready to watch',
+            type: 'success',
+          );
           onSuccess?.call();
 
           return filePath;
@@ -646,6 +654,11 @@ class DownloadService extends ChangeNotifier {
           notifyListeners();
           await _saveDownloadsToStorage();
           await _showDownloadFailedNotification(lessonId, originalTitle, e.toString());
+          await onNotificationCreated?.call(
+            title: 'Download Failed',
+            message: '$originalTitle: ${e.toString()}',
+            type: 'error',
+          );
         }
         onError?.call(e.toString());
         rethrow;

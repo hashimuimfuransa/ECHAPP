@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
-import 'dart:io' show File;
-import 'dart:typed_data';
 import 'package:http_parser/http_parser.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -148,7 +146,7 @@ class LessonDocumentService {
       print('=== DOCUMENT UPLOAD ERROR ===');
       print('Error type: ${e.runtimeType}');
       print('Error message: $e');
-      print('Stack trace: ${e is Error ? (e as Error).stackTrace : 'No stack trace'}');
+      print('Stack trace: ${e is Error ? (e).stackTrace : 'No stack trace'}');
       print('=============================');
       
       if (e is DocumentUploadException) rethrow;

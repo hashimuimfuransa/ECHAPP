@@ -12,7 +12,7 @@ class EnterResetCodeScreen extends ConsumerStatefulWidget {
 class _EnterResetCodeScreenState extends ConsumerState<EnterResetCodeScreen> {
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String? _errorMessage;
 
   @override

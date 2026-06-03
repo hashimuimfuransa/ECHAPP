@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:io' show Platform, File, Directory;
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
@@ -9,6 +8,23 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+/// Helper to safely parse payment status from various types
+PaymentStatus _parsePaymentStatus(dynamic statusValue) {
+  if (statusValue == null) return PaymentStatus.pending;
+  if (statusValue is String) {
+    return PaymentStatus.fromString(statusValue);
+  }
+  if (statusValue is int) {
+    // Handle numeric enum index
+    if (statusValue >= 0 && statusValue < PaymentStatus.values.length) {
+      return PaymentStatus.values[statusValue];
+    }
+    return PaymentStatus.pending;
+  }
+  // Fallback: convert to string
+  return PaymentStatus.fromString(statusValue.toString());
+}
 
 /// Clean Payment API Service that integrates with backend endpoints
 class PaymentApiService {
@@ -105,7 +121,7 @@ class PaymentApiService {
       print('PaymentApiService: Fetching payments with params: $queryParams');
       
       final response = await _apiClient.get(
-        '${ApiConfig.payments}',
+        ApiConfig.payments,
         queryParams: queryParams,
       );
       
@@ -158,7 +174,7 @@ class PaymentApiService {
         );
       }
       
-      final data = dataField as Map<String, dynamic>;
+      final data = dataField;
       print('PaymentApiService: Data field keys: ${data.keys.toList()}');
       
       // Check payments field specifically before passing to fromJson
@@ -204,7 +220,19 @@ class PaymentApiService {
       if (jsonBody['success'] == true) {
         final data = jsonBody['data'];
         if (data is List) {
-          return data.map((item) => Payment.fromJson(item as Map<String, dynamic>)).toList();
+          final payments = <Payment>[];
+          for (final item in data) {
+            if (item is Map<String, dynamic>) {
+              try {
+                payments.add(Payment.fromJson(item));
+              } catch (e) {
+                print('PaymentApiService: Error parsing payment item: $e');
+              }
+            } else {
+              print('PaymentApiService: Skipping non-map item: ${item.runtimeType}');
+            }
+          }
+          return payments;
         }
         return [];
       } else {
@@ -449,14 +477,14 @@ class PaymentInitiationResponse {
 
   factory PaymentInitiationResponse.fromJson(Map<String, dynamic> json) {
     return PaymentInitiationResponse(
-      paymentId: json['paymentId'] as String,
-      transactionId: json['transactionId'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      currency: json['currency'] as String,
-      status: PaymentStatus.fromString(json['status'] as String),
-      contactInfo: json['contactInfo'] as String,
-      adminContact: json['adminContact'] as String,
-      instructions: json['instructions'] as String,
+      paymentId: json['paymentId'] as String? ?? '',
+      transactionId: json['transactionId'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] as String? ?? 'RWF',
+      status: _parsePaymentStatus(json['status']),
+      contactInfo: json['contactInfo'] as String? ?? '',
+      adminContact: json['adminContact'] as String? ?? '',
+      instructions: json['instructions'] as String? ?? '',
     );
   }
 }
@@ -576,17 +604,19 @@ class PaymentVerificationResponse {
 
   factory PaymentVerificationResponse.fromJson(Map<String, dynamic> json) {
     return PaymentVerificationResponse(
-      paymentId: json['paymentId'] as String,
-      transactionId: json['transactionId'] as String,
-      status: PaymentStatus.fromString(json['status'] as String),
-      userId: json['userId'] as String,
-      userName: json['userName'] as String,
-      userEmail: json['userEmail'] as String,
-      courseId: json['courseId'] as String,
-      courseTitle: json['courseTitle'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      approvedBy: json['approvedBy'] as String,
-      approvedAt: DateTime.parse(json['approvedAt'] as String),
+      paymentId: json['paymentId'] as String? ?? '',
+      transactionId: json['transactionId'] as String? ?? '',
+      status: _parsePaymentStatus(json['status']),
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      userEmail: json['userEmail'] as String? ?? '',
+      courseId: json['courseId'] as String? ?? '',
+      courseTitle: json['courseTitle'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      approvedBy: json['approvedBy'] as String? ?? '',
+      approvedAt: json['approvedAt'] != null
+          ? DateTime.tryParse(json['approvedAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
       adminNotes: json['adminNotes'] as String?,
     );
   }
@@ -616,18 +646,53 @@ class PaymentStatsResponse {
   });
 
   factory PaymentStatsResponse.fromJson(Map<String, dynamic> json) {
+    // Safely parse recentPayments
+    List<Payment> recentPaymentsList = [];
+    final recentPaymentsData = json['recentPayments'];
+    if (recentPaymentsData is List) {
+      for (final item in recentPaymentsData) {
+        if (item is Map<String, dynamic>) {
+          try {
+            recentPaymentsList.add(Payment.fromJson(item));
+          } catch (e) {
+            print('PaymentStatsResponse: Error parsing payment: $e');
+          }
+        }
+      }
+    }
+
     return PaymentStatsResponse(
-      totalPayments: json['totalPayments'] as int,
-      pendingPayments: json['pendingPayments'] as int,
-      adminReviewPayments: json['adminReviewPayments'] as int,
-      approvedPayments: json['approvedPayments'] as int,
-      completedPayments: json['completedPayments'] as int,
-      failedPayments: json['failedPayments'] as int,
-      cancelledPayments: json['cancelledPayments'] as int,
-      totalRevenue: (json['totalRevenue'] as num).toDouble(),
-      recentPayments: (json['recentPayments'] as List)
-          .map((item) => Payment.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      totalPayments: _safeIntParse(json['totalPayments'], 0),
+      pendingPayments: _safeIntParse(json['pendingPayments'], 0),
+      adminReviewPayments: _safeIntParse(json['adminReviewPayments'], 0),
+      approvedPayments: _safeIntParse(json['approvedPayments'], 0),
+      completedPayments: _safeIntParse(json['completedPayments'], 0),
+      failedPayments: _safeIntParse(json['failedPayments'], 0),
+      cancelledPayments: _safeIntParse(json['cancelledPayments'], 0),
+      totalRevenue: _safeDoubleParse(json['totalRevenue'], 0.0),
+      recentPayments: recentPaymentsList,
     );
   }
+}
+
+// Helper to safely parse integers from various types
+int _safeIntParse(dynamic value, int defaultValue) {
+  if (value == null) return defaultValue;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) {
+    return int.tryParse(value) ?? defaultValue;
+  }
+  return defaultValue;
+}
+
+// Helper to safely parse doubles from various types
+double _safeDoubleParse(dynamic value, double defaultValue) {
+  if (value == null) return defaultValue;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    return double.tryParse(value) ?? defaultValue;
+  }
+  return defaultValue;
 }

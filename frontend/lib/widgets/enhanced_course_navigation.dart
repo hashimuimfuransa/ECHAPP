@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/utils/course_navigation_utils.dart';
-import 'package:excellencecoachinghub/utils/navigation_optimizer.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 

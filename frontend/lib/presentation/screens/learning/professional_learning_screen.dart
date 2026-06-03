@@ -2,17 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
-import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
-import 'package:excellencecoachinghub/data/repositories/section_repository.dart' as section_repo;
-import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart' as lesson_repo;
 import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
-import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
@@ -25,6 +20,9 @@ import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/services/book_service.dart';
+import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 
 // ─────────────────────────────────────────────
@@ -97,13 +95,13 @@ class _ProfessionalLearningScreenState
 
   Course? _course;
   List<Section>? _chapters;
-  Map<String, List<Lesson>> _chapterLessons = {};
-  Map<String, bool> _chapterCompletionStatus = {};
-  Map<String, bool> _lessonCompletionStatus = {};
+  final Map<String, List<Lesson>> _chapterLessons = {};
+  final Map<String, bool> _chapterCompletionStatus = {};
+  final Map<String, bool> _lessonCompletionStatus = {};
   int _currentSectionIndex = 0;
   bool _isChatExpanded = false;
   bool _isLoading = false;
-  bool _isLoadingChapterDetails = false;
+  final bool _isLoadingChapterDetails = false;
   final GlobalKey<StudentGuideWidgetState> _guideKey = GlobalKey<StudentGuideWidgetState>();
   List<Certificate>? _courseCertificates;
   Map<String, dynamic>? _courseAccessData;
@@ -201,11 +199,11 @@ class _ProfessionalLearningScreenState
       debugPrint('Course sections is null: ${courseSections == null}');
       debugPrint('Course sections is List: ${courseSections is List}');
       if (courseSections is List) {
-        debugPrint('Course sections length: ${(courseSections as List).length}');
+        debugPrint('Course sections length: ${(courseSections).length}');
       }
 
       if (courseSections != null && courseSections is List && courseSections.isNotEmpty) {
-        final sectionsData = courseSections as List;
+        final sectionsData = courseSections;
         _chapters =
             sectionsData.map((s) => Section.fromJson(s as Map<String, dynamic>)).toList();
         _chapters?.sort((a, b) => a.order.compareTo(b.order));
@@ -224,7 +222,9 @@ class _ProfessionalLearningScreenState
                 .toList();
             _chapterLessons[chapterId] = lessons;
             _totalLessons += lessons.length;
-            for (var l in lessons) _totalDurationMinutes += l.duration;
+            for (var l in lessons) {
+              _totalDurationMinutes += l.duration;
+            }
           }
         }
       } else {
@@ -757,7 +757,7 @@ class _ProfessionalLearningScreenState
                             color: Colors.white, size: 12),
                         const SizedBox(width: 4),
                         Text(
-                          _course?.level?.toUpperCase() ?? 'BEGINNER',
+                          _course?.level.toUpperCase() ?? 'BEGINNER',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -963,8 +963,8 @@ class _ProfessionalLearningScreenState
     }
 
     return isDesktop && screenW > 1100
-        ? _buildChaptersGrid(chapters!)
-        : _buildChaptersList(chapters!);
+        ? _buildChaptersGrid(chapters)
+        : _buildChaptersList(chapters);
   }
 
   Widget _buildChaptersGrid(List<Section> chapters) {
@@ -1787,7 +1787,7 @@ class _ProfessionalLearningScreenState
                   ),
                   _PaymentDetailRow(
                     label: 'Payment ID',
-                    value: payment.id.substring(0, 8) + '...',
+                    value: '${payment.id.substring(0, 8)}...',
                     isDark: _isDark,
                   ),
                   _PaymentDetailRow(
@@ -1931,7 +1931,7 @@ class _ProfessionalLearningScreenState
         borderRadius: _DT.r16,
         onTap: () {
           if (pdfUrl.isNotEmpty) {
-            _launchUrl(pdfUrl);
+            _openBookReader(book);
           }
         },
         child: Column(
@@ -2049,6 +2049,37 @@ class _ProfessionalLearningScreenState
                       Icon(Icons.arrow_forward_rounded, size: 16, color: _DT.primary),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: pdfUrl.isNotEmpty ? () => _openBookReader(book) : null,
+                          icon: const Icon(Icons.menu_book_rounded, size: 18),
+                          label: const Text('Read'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _DT.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: _DT.r12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: pdfUrl.isNotEmpty ? () => _downloadBookToApp(book) : null,
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: const Text('Download'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _DT.primary,
+                            side: BorderSide(color: _DT.primary),
+                            shape: RoundedRectangleBorder(borderRadius: _DT.r12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -2056,6 +2087,75 @@ class _ProfessionalLearningScreenState
         ),
       ),
     );
+  }
+
+  void _openBookReader(dynamic book) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookReaderScreen(book: book),
+      ),
+    );
+  }
+
+  Future<void> _downloadBookToApp(dynamic book) async {
+    final String pdfUrl = book['pdfUrl'] ?? '';
+    final String title = book['title'] ?? 'Untitled';
+
+    if (pdfUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No PDF available for download'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Downloading "$title"...'),
+        backgroundColor: _DT.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      final downloadService = DownloadService();
+      final bookId = book['_id'] ?? book['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+      await downloadService.downloadNotesOrMaterial(
+        url: pdfUrl,
+        title: title,
+        lessonId: 'book_$bookId',
+        type: DownloadType.material,
+        onProgress: (progress) {
+          // Optional: Show progress updates
+        },
+        onSuccess: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"$title" downloaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        onError: (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Download failed: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Download error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _launchUrl(String url) async {
@@ -2242,7 +2342,7 @@ class _ProfessionalLearningScreenState
       Section section, List<Lesson> lessons) {
     final materials = <Map<String, dynamic>>[];
     for (var lesson in lessons) {
-      if (lesson.hasVideo)
+      if (lesson.hasVideo) {
         materials.add({
           'title': lesson.title,
           'type': 'video',
@@ -2253,7 +2353,8 @@ class _ProfessionalLearningScreenState
           'lessonId': lesson.id,
           'subtitle': '${lesson.duration} min video',
         });
-      if (lesson.hasNotes)
+      }
+      if (lesson.hasNotes) {
         materials.add({
           'title': '${lesson.title} — Notes',
           'type': 'notes',
@@ -2264,7 +2365,8 @@ class _ProfessionalLearningScreenState
           'lessonId': lesson.id,
           'subtitle': 'Study notes',
         });
-      if (lesson.hasQuiz)
+      }
+      if (lesson.hasQuiz) {
         materials.add({
           'title': '${lesson.title} — Quiz',
           'type': 'quiz',
@@ -2274,8 +2376,9 @@ class _ProfessionalLearningScreenState
           'lessonId': lesson.id,
           'subtitle': 'Knowledge check',
         });
+      }
       if (lesson.hasMaterials)
-        for (var url in lesson.materials!)
+        for (var url in lesson.materials!) {
           materials.add({
             'title': url.split('/').last,
             'type': 'document',
@@ -2285,6 +2388,7 @@ class _ProfessionalLearningScreenState
             'lessonId': lesson.id,
             'subtitle': 'Resource file',
           });
+        }
     }
     return materials;
   }
@@ -2373,21 +2477,23 @@ class _ProfessionalLearningScreenState
         break;
       case 'quiz':
         final qid = m['quizId'] as String;
-        if (qid.isNotEmpty)
+        if (qid.isNotEmpty) {
           context.push(
               '/enhanced-quiz/$qid?lessonTitle=${Uri.encodeComponent(_course?.title ?? "Quiz")}');
+        }
         break;
       case 'document':
         final url = m['url'] as String? ?? m['notesPdfUrl'] as String?;
-        if (url != null && url.isNotEmpty && url.startsWith('http'))
+        if (url != null && url.isNotEmpty && url.startsWith('http')) {
           launchUrl(Uri.parse(url));
+        }
         break;
     }
   }
 
   Future<void> _refreshData() async {
     await _loadCourseData();
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Content refreshed'),
@@ -2399,6 +2505,7 @@ class _ProfessionalLearningScreenState
           duration: const Duration(seconds: 2),
         ),
       );
+    }
   }
 
   Widget _buildEmptyState(

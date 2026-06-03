@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:better_player_enhanced/better_player.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
-import 'dart:io';
 import 'dart:async';
 
 class OptimizedVideoPlayer extends StatefulWidget {
@@ -38,7 +36,7 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
   bool _isOffline = false;
   StreamSubscription? _connectivitySubscription;
   bool _isDataSaver = false;
-  double _playbackSpeed = 1.0;
+  final double _playbackSpeed = 1.0;
   bool _isSlowNetwork = false;
 
   @override

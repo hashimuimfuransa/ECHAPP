@@ -92,6 +92,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await ref.read(authProvider.notifier).updateProfile(
         fullName: _nameController.text.trim(),
+        email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
         phone: _phoneController.text.trim(),
         imageFile: _imageFile,
       );
@@ -131,7 +132,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    
+
+    // Sync text controllers whenever the user object changes (e.g. after backend fetch)
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (!_isEditing && next.user != null && next.user != previous?.user) {
+        _nameController.text = next.user!.fullName;
+        _emailController.text = next.user!.email;
+        _phoneController.text = next.user!.phone ?? '';
+      }
+    });
+
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
@@ -432,8 +442,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: AppLocalizations.of(context)!.emailAddress,
             controller: _emailController,
             hint: AppLocalizations.of(context)!.enterEmail,
-            isEnabled: false,
+            isEnabled: _isEditing,
             icon: Icons.email_rounded,
+            keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 20),
           _buildInfoField(
@@ -733,35 +744,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             child: PopupMenuButton<String>(
-              child: Row(
-                children: [
-                  Icon(Icons.language_rounded, color: AppTheme.primaryGreen, size: 24),
-                  const SizedBox(width: 15),
-                  Text(
-                    AppLocalizations.of(context)!.language,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        currentLang == 'en' ? '🇬🇧' : '🇷🇼',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
               color: AppTheme.getCardColor(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -774,7 +756,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   value: 'en',
                   child: Row(
                     children: [
-                      const Text('🇬🇧', style: TextStyle(fontSize: 20)),
+                      const Text('��', style: TextStyle(fontSize: 20)),
                       const SizedBox(width: 12),
                       Text(
                         'English',
@@ -817,6 +799,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
               ],
+              child: Row(
+                children: [
+                  Icon(Icons.language_rounded, color: AppTheme.primaryGreen, size: 24),
+                  const SizedBox(width: 15),
+                  Text(
+                    AppLocalizations.of(context)!.language,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.getTextColor(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        currentLang == 'en' ? '🇬🇧' : '🇷🇼',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppTheme.getSecondaryTextColor(context).withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );

@@ -435,29 +435,29 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
                   const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: state.isProcessing ? null : () => _showRejectDialog(context, payment, notifier, state.isProcessing),
-                    child: const Text('Reject'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
+                    child: const Text('Reject'),
                   ),
                 ],
                 const SizedBox(width: 8),
                 OutlinedButton(
                   onPressed: state.isProcessing ? null : () => _showDeleteDialog(context, payment, notifier, state.isProcessing),
-                  child: const Text('Delete'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     backgroundColor: Colors.red.withOpacity(0.1),
                   ),
+                  child: const Text('Delete'),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   onPressed: state.isProcessing ? null : () => _downloadInvoice(context, payment, notifier, state.isProcessing),
-                  child: const Text('Download Invoice'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.blue,
                     backgroundColor: Colors.blue.withOpacity(0.1),
                   ),
+                  child: const Text('Download Invoice'),
                 ),
                 const SizedBox(width: 8),
                 TextButton(

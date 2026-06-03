@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
-import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../infrastructure/api_client.dart';
 import '../../models/certificate.dart';
@@ -48,6 +47,7 @@ class CertificateService {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch certificates: $e');
     }
+    return null;
   }
 
   /// Verify a certificate by serial number (Public)

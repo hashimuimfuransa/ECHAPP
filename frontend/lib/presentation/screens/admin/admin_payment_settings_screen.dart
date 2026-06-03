@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/platform_settings.dart';
 import '../../providers/platform_settings_provider.dart';
@@ -308,7 +307,7 @@ class _AdminPaymentSettingsScreenState extends ConsumerState<AdminPaymentSetting
               Switch(
                 value: enabled,
                 onChanged: onEnabledChanged,
-                activeColor: AppTheme.primaryGreen,
+                activeThumbColor: AppTheme.primaryGreen,
               ),
             ],
           ),

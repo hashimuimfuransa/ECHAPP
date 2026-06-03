@@ -53,12 +53,6 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _l10n = AppLocalizations.of(context);
-  }
-
   void _startAutoRefresh() {
     // Check payment status every 5 seconds
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -145,20 +139,33 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paymentState = ref.watch(paymentProvider);
-    final settingsAsync = ref.watch(platformSettingsProvider);
-    final l10n = _l10n ?? AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context);
+    _l10n ??= l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_l10n?.paymentPendingApproval ?? 'Payment Pending Approval'),
+        title: Text(l10n?.paymentPendingApproval ?? 'Payment Pending Approval'),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: settingsAsync.when(
-        data: (settings) => _buildContent(context, settings),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => _buildContent(context, null), // Fallback to hardcoded on error
+      body: _buildSafeContent(context),
+    );
+  }
+
+  Widget _buildSafeContent(BuildContext context) {
+    final settingsAsync = ref.watch(platformSettingsProvider);
+    
+    return Container(
+      color: Colors.white,
+      child: SafeArea(
+        child: settingsAsync.when(
+          data: (settings) => _buildContent(context, settings),
+          loading: () => _buildContent(context, null), // Show content immediately with fallbacks while loading
+          error: (err, stack) {
+            debugPrint('PlatformSettings error: $err');
+            return _buildContent(context, null); // Fallback to hardcoded on error
+          },
+        ),
       ),
     );
   }
@@ -223,10 +230,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
               // Description
               Text(
-                (() {
-                  final template = _l10n?.paymentPendingDescription ?? 'Your payment for "{course}" is currently pending admin approval.';
-                  return (template as String).replaceAll('{course}', widget.course.title);
-                })(),
+                _l10n?.paymentPendingDescription(widget.course.title) ??
+                    'Your payment for "${widget.course.title}" is currently pending admin approval.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isWideScreen ? 18 : 16,
@@ -350,12 +355,11 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        (() {
-                          final template = _l10n?.courseAccessDurationDescription ?? 'You will have access to this course for {duration} {unit}';
-                          return (template as String)
-                              .replaceAll('{duration}', widget.course.accessDuration.toString())
-                              .replaceAll('{unit}', widget.course.accessDurationUnit ?? 'days');
-                        })(),
+                        _l10n?.courseAccessDurationDescription(
+                              widget.course.accessDuration.toString(),
+                              widget.course.accessDurationUnit ?? 'days',
+                            ) ??
+                            'You will have access to this course for ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue.shade600,
@@ -375,12 +379,11 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                (() {
-                                  final template = _l10n?.courseAccessDurationWarning ?? 'Important: You must complete the course within this time period. Access will expire automatically after {duration} {unit} and you will need to repurchase to regain access.';
-                                  return (template as String)
-                                      .replaceAll('{duration}', widget.course.accessDuration.toString())
-                                      .replaceAll('{unit}', widget.course.accessDurationUnit ?? 'days');
-                                })(),
+                                _l10n?.courseAccessDurationWarning(
+                                      widget.course.accessDuration.toString(),
+                                      widget.course.accessDurationUnit ?? 'days',
+                                    ) ??
+                                    'Important: You must complete the course within this time period. Access will expire automatically after ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'} and you will need to repurchase to regain access.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange.shade700,
@@ -497,7 +500,11 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              Navigator.pop(context);
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/courses');
+                              }
                             },
                             child: Text(_l10n?.backToCourse ?? 'Back to Course'),
                           ),
@@ -532,7 +539,11 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: OutlinedButton(
                             onPressed: () {
-                              Navigator.pop(context);
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/courses');
+                              }
                             },
                             child: Text(_l10n?.backToCourse ?? 'Back to Course'),
                           ),
@@ -596,10 +607,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           (settings.paymentInfo.bankTransfer.accountName.isNotEmpty ||
            settings.paymentInfo.bankTransfer.accountNumber.isNotEmpty)) {
         instructions.add(_buildContactInstruction(
-          (() {
-            final template = _l10n?.paymentViaBankTransfer ?? 'Payment via Bank Transfer ({bank}):';
-            return (template as String).replaceAll('{bank}', settings.paymentInfo.bankTransfer.bankName);
-          })(),
+          _l10n?.paymentViaBankTransfer(settings.paymentInfo.bankTransfer.bankName) ??
+              'Payment via Bank Transfer (${settings.paymentInfo.bankTransfer.bankName}):',
           '${settings.paymentInfo.bankTransfer.accountName} - ${settings.paymentInfo.bankTransfer.accountNumber}',
           Icons.account_balance,
         ));

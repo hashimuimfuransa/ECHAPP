@@ -271,7 +271,7 @@ class _StatPill extends StatelessWidget {
 
 class _StarRating extends StatelessWidget {
   final int count;
-  const _StarRating({this.count = 5});
+  const _StarRating({required this.count});
   @override
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
@@ -986,7 +986,7 @@ class _FadeInSlide extends StatefulWidget {
   const _FadeInSlide({
     required this.child,
     this.delay = Duration.zero,
-    this.offset = const Offset(0, 20),
+    this.offset = Offset.zero,
   });
 
   @override

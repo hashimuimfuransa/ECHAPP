@@ -12,7 +12,6 @@ import 'dart:convert';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
-import 'package:excellencecoachinghub/services/api/course_service.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
@@ -502,7 +501,7 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: editLanguage,
+                            initialValue: editLanguage,
                             dropdownColor: cardColor,
                             style: TextStyle(color: textColor),
                             decoration: InputDecoration(
@@ -1405,7 +1404,7 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                   const SizedBox(height: 16),
                   // Language
                   DropdownButtonFormField<String>(
-                    value: widget.selectedLanguage,
+                    initialValue: widget.selectedLanguage,
                     style: TextStyle(color: textColor),
                     dropdownColor: cardColor,
                     decoration: InputDecoration(

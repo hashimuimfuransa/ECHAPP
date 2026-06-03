@@ -16,6 +16,14 @@ class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   static BuildContext? _context;
 
+  // Optional callback: set this to persist local notifications to the
+  // backend so they appear on the Notifications page.
+  static Future<void> Function({required String title, required String message, required String type})? onNotificationCreated;
+
+  // Optional callback: called when a backend FCM message is received in
+  // foreground so the Notifications page can reload its list immediately.
+  static Future<void> Function()? onFcmMessageReceived;
+
   // Set context for navigation
   static void setContext(BuildContext context) {
     _context = context;
@@ -62,6 +70,8 @@ class PushNotificationService {
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         print('Got a message in foreground: ${message.notification?.title}');
         _showLocalNotification(message, channel);
+        // Reload the in-app Notifications page so it reflects the new entry.
+        onFcmMessageReceived?.call();
       });
       
       // 6. Handle when app is opened from terminated state
@@ -322,6 +332,11 @@ class PushNotificationService {
         body,
         platformDetails,
         payload: '/dashboard',
+      );
+      await onNotificationCreated?.call(
+        title: title,
+        message: body,
+        type: 'achievement',
       );
     } catch (e) {
       print('Error sending congratulatory notification: $e');

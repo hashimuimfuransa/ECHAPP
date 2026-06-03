@@ -103,24 +103,23 @@ class EnhancedCourseCard extends ConsumerWidget {
                   const Spacer(),
                   
                   // Duration or lessons count
-                  if (course.duration != null)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 14,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        course.duration,
+                        style: TextStyle(
+                          fontSize: 12,
                           color: Colors.grey[600],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          course.duration!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               

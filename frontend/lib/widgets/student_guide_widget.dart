@@ -62,13 +62,12 @@ class _Particle {
     required this.x,
     required this.y,
     required this.vx,
+    this.isEmoji = false,
     required this.vy,
     required this.opacity,
     required this.scale,
     required this.rotation,
     required this.color,
-    this.isEmoji = false,
-    this.emoji,
   });
 }
 
@@ -546,6 +545,7 @@ class StudentGuideWidgetState extends State<StudentGuideWidget>
         scale: 0.5 + _rng.nextDouble() * 1.0,
         rotation: _rng.nextDouble() * math.pi * 2,
         color: colors[_rng.nextInt(colors.length)],
+        isEmoji: false,
       ));
     }
     _particleTick?.cancel();
@@ -944,7 +944,7 @@ class _GuideDemoState extends State<GuideDemo> {
   final _guideKey = GlobalKey<StudentGuideWidgetState>();
   GuideCharacter _char = GuideCharacter.guide;
   int _xp = 42;
-  int _streak = 7;
+  final int _streak = 7;
 
   @override
   Widget build(BuildContext context) {
@@ -1025,7 +1025,7 @@ class _GuideDemoState extends State<GuideDemo> {
       _Btn('🚀 Level Up', const Color(0xFFFFD900),
           () => _guideKey.currentState?.triggerLevelUp(5)),
       _Btn('🔥 Streak', const Color(0xFFFF4B4B),
-          () => _guideKey.currentState?.updateState(StudentGuideState.streakAlert, message: '${_streak}🔥 streak!')),
+          () => _guideKey.currentState?.updateState(StudentGuideState.streakAlert, message: '$_streak🔥 streak!')),
       _Btn('💡 Hint', const Color(0xFF1CB0F6),
           () => _guideKey.currentState?.updateState(StudentGuideState.hintReady, message: 'Hint! 💡')),
       _Btn('➕ XP', const Color(0xFF58CC02),

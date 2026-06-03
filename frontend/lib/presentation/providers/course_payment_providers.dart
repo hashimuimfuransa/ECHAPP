@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/payment_status.dart';
-import '../providers/payment_riverpod_provider.dart';
 import '../../services/api/payment_api_service.dart';
 
 // Provider to check if user has pending payment for a course

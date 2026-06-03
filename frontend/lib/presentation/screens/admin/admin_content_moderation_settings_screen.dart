@@ -169,7 +169,7 @@ class _AdminContentModerationSettingsScreenState extends ConsumerState<AdminCont
             Text(subtitle, style: const TextStyle(color: AppTheme.greyColor, fontSize: 12)),
           ]),
         ),
-        Switch(value: value, onChanged: onChanged, activeColor: AppTheme.primaryGreen),
+        Switch(value: value, onChanged: onChanged, activeThumbColor: AppTheme.primaryGreen),
       ],
     );
   }

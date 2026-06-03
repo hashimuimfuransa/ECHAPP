@@ -651,7 +651,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> updateProfile({
-    String? fullName, 
+    String? fullName,
+    String? email,
     String? phone, 
     File? imageFile,
     List<String>? interests,
@@ -686,6 +687,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final updatedUser = await _authRepository.updateProfile(
           token,
           fullName: fullName,
+          email: email,
           phone: phone,
           avatar: avatarUrl,
           interests: interests,
@@ -712,6 +714,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           final updatedUser = await _authRepository.updateProfile(
             token,
             fullName: fullName,
+            email: email,
             phone: phone,
             avatar: avatarUrl,
             interests: interests,

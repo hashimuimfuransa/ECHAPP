@@ -168,4 +168,50 @@ class NotificationService {
       rethrow;
     }
   }
+
+  Future<Notification?> createNotification({
+    required String title,
+    required String message,
+    String type = 'info',
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final token = await TokenManager().getIdToken();
+      if (token == null) return null;
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'title': title,
+          'message': message,
+          'type': type,
+          if (data != null) 'data': data,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          final d = responseData['data'];
+          return Notification(
+            id: d['id'] ?? '',
+            title: d['title'] ?? title,
+            message: d['message'] ?? message,
+            type: d['type'] ?? type,
+            timestamp: d['timestamp'] != null
+                ? DateTime.parse(d['timestamp'])
+                : DateTime.now(),
+            isRead: d['isRead'] ?? false,
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

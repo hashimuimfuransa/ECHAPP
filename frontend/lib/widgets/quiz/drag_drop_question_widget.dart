@@ -252,8 +252,8 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
     final isSmallScreen = screenHeight < 600;
 
     return DragTarget<String>(
-      onWillAccept: (data) => data != null && !placedItems.containsKey(data),
-      onAccept: (itemId) => _placeItem(itemId, zoneId),
+      onWillAcceptWithDetails: (data) => !placedItems.containsKey(data),
+      onAcceptWithDetails: (details) => _placeItem(details.data, zoneId),
       builder: (context, candidateData, rejectedData) {
         return GestureDetector(
           onTap: () {
@@ -466,7 +466,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
                   const SizedBox(height: 12),
                   ...widget.question.dropZones!
                       .map((zone) => _buildDropZone(zone.id))
-                      .toList(),
+                      ,
                   SizedBox(height: isSmallScreen ? 16 : 24),
                 ],
 
@@ -557,7 +557,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
                       if (widget.question.dropZones != null)
                         ...widget.question.dropZones!
                             .map((zone) => _buildDropZone(zone.id))
-                            .toList(),
+                            ,
                     ],
                   ),
                 ),

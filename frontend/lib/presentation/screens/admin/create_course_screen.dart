@@ -951,7 +951,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 Expanded(
                   flex: 1,
                   child: DropdownButtonFormField<String>(
-                    value: _selectedDurationUnit,
+                    initialValue: _selectedDurationUnit,
                     decoration: const InputDecoration(
                       labelText: 'Unit',
                       border: OutlineInputBorder(),
@@ -1005,7 +1005,7 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
                 Expanded(
                   flex: 1,
                   child: DropdownButtonFormField<String>(
-                    value: _selectedAccessDurationUnit,
+                    initialValue: _selectedAccessDurationUnit,
                     decoration: const InputDecoration(
                       labelText: 'Unit',
                       border: OutlineInputBorder(),

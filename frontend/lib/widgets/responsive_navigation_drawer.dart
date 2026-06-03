@@ -335,7 +335,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                   item['key'] as String,
                   currentPage == item['key'],
                   false, // Mobile is never collapsed
-                )).toList(),
+                )),
               ],
             ),
           ),

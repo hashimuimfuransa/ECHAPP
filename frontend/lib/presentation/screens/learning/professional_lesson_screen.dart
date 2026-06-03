@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:excellencecoachinghub/models/lesson.dart';
 import 'package:excellencecoachinghub/models/video.dart';
-import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/data/repositories/lesson_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/video_repository.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
@@ -24,7 +22,6 @@ import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_v
 import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
 import 'package:excellencecoachinghub/services/api/enrollment_service.dart';
@@ -34,7 +31,6 @@ import 'package:excellencecoachinghub/data/repositories/certificate_repository.d
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 class _T {
@@ -210,10 +206,7 @@ class _ProfessionalLessonScreenState
           print('=== QUIZ DATA DEBUG ===');
           print('Quiz data: $quizData');
           exam = quizData['data']['quiz'] as Map<String, dynamic>?;
-          if (exam == null) {
-            // Fallback to different response structures
-            exam = quizData['data'] as Map<String, dynamic>?;
-          }
+          exam ??= quizData['data'] as Map<String, dynamic>?;
           print('Extracted exam data: $exam');
         } catch (e) {
           print('Warning: Failed to load quiz for lesson: $e');
@@ -314,7 +307,7 @@ class _ProfessionalLessonScreenState
     setState(() => _isLoadingCertificates = true);
     try {
       final certificateRepo = CertificateRepository();
-      final certificates = await certificateRepo.getCertificatesByCourse(_lesson!.courseId!);
+      final certificates = await certificateRepo.getCertificatesByCourse(_lesson!.courseId);
       
       print('=== CERTIFICATES DEBUG ===');
       print('Course ID: ${_lesson!.courseId}');
@@ -2692,7 +2685,7 @@ class _ProfessionalLessonScreenState
                     bgColor: _bgColor,
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         );
@@ -3168,7 +3161,7 @@ class _ProfessionalLessonScreenState
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -3539,7 +3532,7 @@ class _ProfessionalLessonScreenState
               final index = entry.key;
               final feedback = entry.value;
               return _buildFeedbackItem(feedback, index != _courseFeedback.length - 1);
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -5034,7 +5027,7 @@ class _QuestionItem extends StatelessWidget {
             const SizedBox(height: 12),
             ...options.asMap().entries.map((entry) {
               final optionIndex = entry.key;
-              final option = entry.value as Map<String, dynamic>;
+              final option = entry.value;
               final optionText = option['text'] as String? ?? '';
               final isCorrect = option['isCorrect'] as bool? ?? false;
               
@@ -5088,7 +5081,7 @@ class _QuestionItem extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ],
       ),

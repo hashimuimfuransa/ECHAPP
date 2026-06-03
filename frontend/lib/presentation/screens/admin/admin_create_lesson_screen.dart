@@ -61,7 +61,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
   bool _shuffleQuestions = false; // Whether to shuffle questions for students
   bool _shuffleOptions = false; // Whether to shuffle options within questions
   final List<Map<String, dynamic>> _quizQuestions = [];
-  bool _isCreatingQuiz = false;
+  final bool _isCreatingQuiz = false;
   
   // Question creation fields
   bool _showQuestionForm = false;
@@ -183,10 +183,9 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
       } else if (quizResponse['quiz'] != null) {
         quiz = quizResponse['quiz'] as Map<String, dynamic>?;
         questions = quizResponse['questions'] as List<dynamic>?;
-      } else if (quizResponse is Map<String, dynamic>) {
-        quiz = quizResponse;
-        questions = quizResponse['questions'] as List<dynamic>?;
-      }
+      } else      quiz = quizResponse;
+      questions = quizResponse['questions'] as List<dynamic>?;
+    
       
       if (quiz != null) {
         print('Extracted quiz data: $quiz');
@@ -195,13 +194,13 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
         setState(() {
           // Load quiz basic info
           _quizTitleController.text = quiz!['title'] ?? '';
-          _quizDescriptionController.text = quiz!['description'] ?? '';
-          _selectedQuizType = quiz!['type'] ?? 'quiz';
-          _quizTimeLimit = quiz!['timeLimit'] ?? 30;
-          _quizNumberOfQuestions = quiz!['questionsCount'] ?? quiz!['numberOfQuestions'] ?? questions?.length ?? 5;
-          _maxAttempts = quiz!['maxAttempts'] ?? 3;
-          _shuffleQuestions = quiz!['shuffleQuestions'] ?? false;
-          _shuffleOptions = quiz!['shuffleOptions'] ?? false;
+          _quizDescriptionController.text = quiz['description'] ?? '';
+          _selectedQuizType = quiz['type'] ?? 'quiz';
+          _quizTimeLimit = quiz['timeLimit'] ?? 30;
+          _quizNumberOfQuestions = quiz['questionsCount'] ?? quiz['numberOfQuestions'] ?? questions?.length ?? 5;
+          _maxAttempts = quiz['maxAttempts'] ?? 3;
+          _shuffleQuestions = quiz['shuffleQuestions'] ?? false;
+          _shuffleOptions = quiz['shuffleOptions'] ?? false;
           
           // Clear existing questions
           _quizQuestions.clear();
@@ -234,7 +233,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                   'matchingPairs': question['matchingPairs'] ?? [],
                   'correctOrder': question['correctOrder'] ?? [],
                   'hotspots': question['hotspots'] ?? [],
-                  'hotspotImage': question['hotspotImage'] ?? null,
+                  'hotspotImage': question['hotspotImage'],
                   'partialCredit': question['partialCredit'] ?? false,
                 };
                 
@@ -454,7 +453,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Quiz "${quizTitle}" created successfully with ${_quizQuestions.length} questions!'),
+          content: Text('Quiz "$quizTitle" created successfully with ${_quizQuestions.length} questions!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -491,7 +490,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
         correctAnswer = question['correctAnswer'];
       } else if (question['type'] == 'mcq' && options != null) {
         // For MCQ, find the correct option text
-        final correctOption = options?.firstWhere(
+        final correctOption = options.firstWhere(
           (option) => option.isCorrect,
           orElse: () => options!.first,
         ) ?? Option(text: '', isCorrect: false);
@@ -566,13 +565,27 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     _editingQuestionIndex = -1;
     
     // Clear all controller lists
-    for (final controller in _optionControllers) controller.clear();
-    for (final controller in _dragItemControllers) controller.clear();
-    for (final controller in _dragTargetControllers) controller.clear();
-    for (final controller in _matchingLeftControllers) controller.clear();
-    for (final controller in _matchingRightControllers) controller.clear();
-    for (final controller in _orderingItemControllers) controller.clear();
-    for (final controller in _hotspotControllers) controller.clear();
+    for (final controller in _optionControllers) {
+      controller.clear();
+    }
+    for (final controller in _dragItemControllers) {
+      controller.clear();
+    }
+    for (final controller in _dragTargetControllers) {
+      controller.clear();
+    }
+    for (final controller in _matchingLeftControllers) {
+      controller.clear();
+    }
+    for (final controller in _matchingRightControllers) {
+      controller.clear();
+    }
+    for (final controller in _orderingItemControllers) {
+      controller.clear();
+    }
+    for (final controller in _hotspotControllers) {
+      controller.clear();
+    }
     
     _correctAnswers.fillRange(0, _correctAnswers.length, false);
     _fillBlankController.clear();
@@ -590,8 +603,12 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     _programmingInstructionsController.clear();
     _allowMultipleAttempts = true;
     _maxAttempts = 3;
-    for (final controller in _testCaseInputControllers) controller.clear();
-    for (final controller in _testCaseOutputControllers) controller.clear();
+    for (final controller in _testCaseInputControllers) {
+      controller.clear();
+    }
+    for (final controller in _testCaseOutputControllers) {
+      controller.clear();
+    }
     
     _questionPoints = 1;
     _questionDifficulty = 'medium';
@@ -1517,7 +1534,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedVideoId,
+                        initialValue: _selectedVideoId,
                         decoration: const InputDecoration(
                           labelText: 'Select Existing Video',
                           border: OutlineInputBorder(),
@@ -1874,7 +1891,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                       _includeQuiz = value;
                     });
                   },
-                  activeColor: Colors.orange,
+                  activeThumbColor: Colors.orange,
                 ),
               ],
             ),
@@ -1910,7 +1927,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             
             // Quiz Type
             DropdownButtonFormField<String>(
-              value: _selectedQuizType,
+              initialValue: _selectedQuizType,
               decoration: const InputDecoration(
                 labelText: 'Quiz Type',
                 border: OutlineInputBorder(),
@@ -2002,7 +2019,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                         _shuffleQuestions = value;
                       });
                     },
-                    activeColor: Colors.blue,
+                    activeThumbColor: Colors.blue,
                   ),
                   
                   const SizedBox(height: 8),
@@ -2017,7 +2034,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                         _shuffleOptions = value;
                       });
                     },
-                    activeColor: Colors.blue,
+                    activeThumbColor: Colors.blue,
                   ),
                 ],
               ),
@@ -2273,7 +2290,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           
           // Question Type Selection
           DropdownButtonFormField<String>(
-            value: _selectedQuestionType,
+            initialValue: _selectedQuestionType,
             decoration: const InputDecoration(
               labelText: 'Question Type',
               border: OutlineInputBorder(),
@@ -2344,7 +2361,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
               const SizedBox(width: 15),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _questionDifficulty,
+                  initialValue: _questionDifficulty,
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -2636,7 +2653,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
-                  value: _dragItemTargets[index].isEmpty ? null : _dragItemTargets[index],
+                  initialValue: _dragItemTargets[index].isEmpty ? null : _dragItemTargets[index],
                   decoration: InputDecoration(
                     labelText: 'Target Zone',
                     border: const OutlineInputBorder(),
@@ -2870,7 +2887,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
         
         // Programming Language Selection
         DropdownButtonFormField<String>(
-          value: _selectedProgrammingLanguage,
+          initialValue: _selectedProgrammingLanguage,
           decoration: const InputDecoration(
             labelText: 'Programming Language',
             border: OutlineInputBorder(),
@@ -3095,7 +3112,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      value: _maxAttempts,
+                      initialValue: _maxAttempts,
                       decoration: const InputDecoration(
                         labelText: 'Max Attempts',
                         border: OutlineInputBorder(),
@@ -3128,7 +3145,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                               _allowMultipleAttempts = value;
                             });
                           },
-                          activeColor: Colors.purple,
+                          activeThumbColor: Colors.purple,
                         ),
                       ],
                     ),
@@ -3248,21 +3265,39 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     _hotspotImageController.dispose();
     
     // Dispose all controller lists
-    for (final controller in _optionControllers) controller.dispose();
-    for (final controller in _dragItemControllers) controller.dispose();
-    for (final controller in _dragTargetControllers) controller.dispose();
-    for (final controller in _matchingLeftControllers) controller.dispose();
-    for (final controller in _matchingRightControllers) controller.dispose();
-    for (final controller in _orderingItemControllers) controller.dispose();
-    for (final controller in _hotspotControllers) controller.dispose();
+    for (final controller in _optionControllers) {
+      controller.dispose();
+    }
+    for (final controller in _dragItemControllers) {
+      controller.dispose();
+    }
+    for (final controller in _dragTargetControllers) {
+      controller.dispose();
+    }
+    for (final controller in _matchingLeftControllers) {
+      controller.dispose();
+    }
+    for (final controller in _matchingRightControllers) {
+      controller.dispose();
+    }
+    for (final controller in _orderingItemControllers) {
+      controller.dispose();
+    }
+    for (final controller in _hotspotControllers) {
+      controller.dispose();
+    }
     
     // Dispose programming controllers
     _programmingLanguageController.dispose();
     _starterCodeController.dispose();
     _expectedOutputController.dispose();
     _programmingInstructionsController.dispose();
-    for (final controller in _testCaseInputControllers) controller.dispose();
-    for (final controller in _testCaseOutputControllers) controller.dispose();
+    for (final controller in _testCaseInputControllers) {
+      controller.dispose();
+    }
+    for (final controller in _testCaseOutputControllers) {
+      controller.dispose();
+    }
     
     _apiClient.dispose();
     super.dispose();

@@ -197,7 +197,7 @@ const getProfile = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, phone, avatar, interests, shortTermGoal, midTermGoal, longTermGoal, hasCompletedOnboarding } = req.body;
+    const { fullName, email, phone, avatar, interests, shortTermGoal, midTermGoal, longTermGoal, hasCompletedOnboarding } = req.body;
     
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -211,8 +211,17 @@ const updateProfile = async (req, res) => {
         return sendError(res, 'This phone number is already associated with another account', 409);
       }
     }
+
+    // Check email uniqueness if being changed
+    if (email !== undefined && email !== '' && email !== user.email) {
+      const emailExists = await User.findOne({ email: email.toLowerCase(), _id: { $ne: user._id } });
+      if (emailExists) {
+        return sendError(res, 'This email address is already associated with another account', 409);
+      }
+    }
     
     if (fullName) user.fullName = fullName;
+    if (email !== undefined && email !== '') user.email = email.toLowerCase();
     if (phone !== undefined) user.phone = phone || undefined;
     if (avatar !== undefined) user.avatar = avatar;
     if (interests !== undefined) user.interests = interests;

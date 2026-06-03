@@ -3,7 +3,6 @@ import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/section_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
-import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/data/repositories/category_repository.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';

@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/api/quiz_service.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
-import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:excellencecoachinghub/models/question.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:url_launcher/url_launcher.dart';
 import 'exam_question_details_screen.dart';
 import 'package:excellencecoachinghub/widgets/quiz/drag_drop_question_widget.dart';

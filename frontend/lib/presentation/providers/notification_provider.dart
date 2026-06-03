@@ -127,6 +127,31 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       state = state.copyWith(error: e.toString());
     }
   }
+
+  Future<void> createAndSave({
+    required String title,
+    required String message,
+    String type = 'info',
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final notificationService = NotificationService();
+      final created = await notificationService.createNotification(
+        title: title,
+        message: message,
+        type: type,
+        data: data,
+      );
+
+      if (created != null) {
+        state = state.copyWith(
+          notifications: [created, ...state.notifications],
+        );
+      }
+    } catch (e) {
+      // Silently ignore — notification page will refresh on next load
+    }
+  }
 }
 
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {

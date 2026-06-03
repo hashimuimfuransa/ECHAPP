@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/lesson.dart';
-import '../../../services/api/lesson_service.dart';
 
 class OrganizedNotesViewerScreen extends StatefulWidget {
   final String lessonId;

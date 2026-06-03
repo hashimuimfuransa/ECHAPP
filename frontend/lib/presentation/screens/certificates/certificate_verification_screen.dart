@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
-import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:intl/intl.dart';
 
 class CertificateVerificationScreen extends ConsumerStatefulWidget {

@@ -310,10 +310,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 if (payment.canBeCancelled)
                   OutlinedButton(
                     onPressed: provider.isProcessing ? null : () => _showCancelDialog(payment, provider),
-                    child: Text(_l10n?.cancel ?? 'Cancel'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
+                    child: Text(_l10n?.cancel ?? 'Cancel'),
                   ),
                 const SizedBox(width: 8),
                 TextButton(

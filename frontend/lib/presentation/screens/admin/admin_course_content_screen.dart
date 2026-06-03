@@ -12,10 +12,10 @@ class AdminCourseContentScreen extends StatefulWidget {
   final String courseTitle;
 
   const AdminCourseContentScreen({
-    Key? key,
+    super.key,
     required this.courseId,
     required this.courseTitle,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminCourseContentScreen> createState() =>
@@ -698,7 +698,7 @@ class _AdminCourseContentScreenState
               contentPadding: EdgeInsets.zero,
               title: const Text('Shuffle Questions'),
               value: isShuffled,
-              activeColor: AppTheme.primaryGreen,
+              activeThumbColor: AppTheme.primaryGreen,
               onChanged: (v) => setLocal(() => isShuffled = v),
             ),
           ],
@@ -750,7 +750,7 @@ class _AdminCourseContentScreenState
               contentPadding: EdgeInsets.zero,
               title: const Text('Shuffle Questions'),
               value: isShuffled,
-              activeColor: AppTheme.primaryGreen,
+              activeThumbColor: AppTheme.primaryGreen,
               onChanged: (v) => setLocal(() => isShuffled = v),
             ),
           ],
@@ -1039,7 +1039,7 @@ class _AdminCourseContentScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: selectedType,
+              initialValue: selectedType,
               decoration: _inputDecoration('Question Type'),
               items: const [
                 DropdownMenuItem(value: 'mcq', child: Text('Multiple Choice')),

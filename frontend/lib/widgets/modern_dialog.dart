@@ -205,7 +205,7 @@ Future<T?> showModernDialog<T>({
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: materialLocalizations?.modalBarrierDismissLabel ?? 'Dismiss',
+    barrierLabel: materialLocalizations.modalBarrierDismissLabel ?? 'Dismiss',
     barrierColor: Colors.black.withOpacity(0.5),
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (context, animation, secondaryAnimation) {

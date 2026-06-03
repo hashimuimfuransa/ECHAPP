@@ -206,7 +206,7 @@ class Enrollment {
   
   bool get isExpired => accessExpirationDate != null && DateTime.now().isAfter(accessExpirationDate!);
   
-  Duration? get timeRemaining => accessExpirationDate != null ? accessExpirationDate!.difference(DateTime.now()) : null;
+  Duration? get timeRemaining => accessExpirationDate?.difference(DateTime.now());
   
   bool get isExpiringSoon => accessExpirationDate != null && 
       !isExpired && 

@@ -3,7 +3,6 @@ import 'package:window_manager/window_manager.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:process/process.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

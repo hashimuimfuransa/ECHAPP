@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/utils/navigation_optimizer.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 

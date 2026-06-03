@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/widgets/desktop_brand_panel.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
@@ -570,7 +569,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    l10n?.phoneAuthTitle ?? 'Kwiyemeza ukoresheje Telefone',
+                    l10n.phoneAuthTitle ?? 'Kwiyemeza ukoresheje Telefone',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _textColor,
@@ -580,7 +579,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    l10n?.phoneAuthSubtitle ?? 'Injiza numero ya telefone yawe wemerwe',
+                    l10n.phoneAuthSubtitle ?? 'Injiza numero ya telefone yawe wemerwe',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _secondaryTextColor,
@@ -634,7 +633,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  l10n?.phoneAuthBrowserWarning ?? 'Phone authentication may open a browser for verification. Please allow the process to complete.',
+                                  l10n.phoneAuthBrowserWarning ?? 'Phone authentication may open a browser for verification. Please allow the process to complete.',
                                   style: TextStyle(
                                     color: _isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
                                     fontSize: 12,
@@ -705,7 +704,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n?.secureProtected.split('.').first ?? 'Amakuru yawe arinzwe kandi ararindwa',
+                                      l10n.secureProtected.split('.').first ?? 'Amakuru yawe arinzwe kandi ararindwa',
                                       style: TextStyle(
                                           color: _textColor,
                                           fontSize: 12,

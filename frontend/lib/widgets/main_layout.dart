@@ -19,8 +19,6 @@ import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/categories_service.dart';
-import 'package:excellencecoachinghub/services/notification_service.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class MainLayout extends ConsumerWidget {
   final Widget child;

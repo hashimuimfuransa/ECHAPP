@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:async';
 
 /// Navigation performance monitoring utility
 class NavigationPerformanceMonitor {

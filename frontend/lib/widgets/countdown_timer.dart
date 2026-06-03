@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'dart:async';
 
 class CountdownTimer extends StatefulWidget {
@@ -10,13 +9,13 @@ class CountdownTimer extends StatefulWidget {
   final bool showSeconds;
 
   const CountdownTimer({
-    Key? key,
+    super.key,
     this.expirationDate,
     this.onExpiration,
     this.textColor,
     this.backgroundColor,
     this.showSeconds = true,
-  }) : super(key: key);
+  });
 
   @override
   State<CountdownTimer> createState() => _CountdownTimerState();

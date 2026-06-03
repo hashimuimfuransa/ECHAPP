@@ -186,7 +186,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       'All',
       ..._allBooks
           .where((book) => book.languages.isNotEmpty)
-          .map((book) => book.languages.first as String)
+          .map((book) => book.languages.first)
           .where((lang) => lang.isNotEmpty)
           .toSet()
     ];
@@ -206,7 +206,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       'All',
       ..._allBooks
           .where((book) => book.subjects.isNotEmpty)
-          .map((book) => book.subjects.first as String)
+          .map((book) => book.subjects.first)
           .where((subj) => subj.isNotEmpty)
           .toSet(),
       ..._adminBooks
@@ -349,7 +349,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     _applyFilters();
                   });
                 },
-                activeColor: const Color(0xFF10B981),
+                activeThumbColor: const Color(0xFF10B981),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -385,7 +385,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(category.length > 15 ? category.substring(0, 15) + '...' : category),
+                    label: Text(category.length > 15 ? '${category.substring(0, 15)}...' : category),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
@@ -428,7 +428,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(subject.length > 15 ? subject.substring(0, 15) + '...' : subject),
+                    label: Text(subject.length > 15 ? '${subject.substring(0, 15)}...' : subject),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {

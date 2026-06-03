@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
-import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -166,7 +165,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
             // Check if course category matches user interests
             return userInterests.any((interest) => 
               interest.toLowerCase().contains(course.categoryId!.toLowerCase()) ||
-              course.title?.toLowerCase().contains(interest.toLowerCase()) == true
+              course.title.toLowerCase().contains(interest.toLowerCase()) == true
             );
           }).toList();
 

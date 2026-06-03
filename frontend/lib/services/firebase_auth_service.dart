@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/firebase_options.dart';
 import 'package:excellencecoachinghub/services/google_sign_in_desktop_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/material.dart';
 
 class FirebaseAuthService {
   static firebase_auth.FirebaseAuth get _auth => firebase_auth.FirebaseAuth.instance;

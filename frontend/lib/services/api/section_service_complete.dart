@@ -3,7 +3,6 @@ import '../../models/section.dart';
 import '../../models/lesson.dart';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
-import '../../models/api_exception.dart';
 
 class SectionService {
   final ApiClient _apiClient;
@@ -18,7 +17,7 @@ class SectionService {
   }) async {
     try {
       final response = await _apiClient.post(
-        '${ApiConfig.sections}',
+        ApiConfig.sections,
         body: {
           'courseId': courseId,
           'title': title,

@@ -13,7 +13,6 @@ import 'package:excellencecoachinghub/presentation/screens/auth/phone_collection
 import 'package:excellencecoachinghub/presentation/screens/auth/name_collection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/auth/phone_auth_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/onboarding/interest_selection_screen.dart';
-import 'package:excellencecoachinghub/presentation/screens/onboarding/personalization_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/language/language_selection_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/courses/courses_screen.dart';
@@ -48,7 +47,6 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_books_screen.dart';
-import 'package:excellencecoachinghub/screens/admin/quiz_creation_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_quiz_screen.dart';
@@ -56,13 +54,11 @@ import 'package:excellencecoachinghub/presentation/screens/notifications/notific
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_history_screen.dart';
 import 'package:excellencecoachinghub/widgets/main_layout.dart';
 import 'package:excellencecoachinghub/presentation/screens/downloads/downloads_screen.dart';
-import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/screens/landing/landing_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_history_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
-import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
-import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 
 /// Custom page transition for smooth navigation with performance monitoring
@@ -539,6 +535,31 @@ class AppRouter {
                   return _SlideUpTransitionPage(
                     name: state.matchedLocation,
                     child: CourseDetailScreen(courseId: courseId),
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/payment/pending',
+                pageBuilder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  if (extra == null) {
+                    return _FadeTransitionPage(
+                      name: state.matchedLocation,
+                      child: Scaffold(
+                        appBar: AppBar(title: const Text('Error')),
+                        body: const Center(
+                          child: Text('Payment information not found'),
+                        ),
+                      ),
+                    );
+                  }
+                  return _FadeTransitionPage(
+                    name: state.matchedLocation,
+                    child: PaymentPendingScreen(
+                      course: extra['course'],
+                      transactionId: extra['transactionId'] as String,
+                      amount: extra['amount'] as double,
+                    ),
                   );
                 },
               ),
