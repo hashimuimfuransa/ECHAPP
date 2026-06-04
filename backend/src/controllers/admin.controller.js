@@ -653,9 +653,11 @@ const getStudentDetail = async (req, res) => {
         disabled: firebaseUser.disabled
       };
       
-      // Try to find the corresponding MongoDB user
+      // Try to find the corresponding MongoDB user (to get avatar and deviceId)
       const mongoUser = await User.findOne({ firebaseUid: id });
       mongoUserId = mongoUser?._id;
+      if (mongoUser?.avatar) user.avatar = mongoUser.avatar;
+      if (mongoUser?.deviceId) user.deviceId = mongoUser.deviceId;
       
     } catch (firebaseError) {
       console.log(`Firebase user ${id} not found, falling back to MongoDB:`, firebaseError.message);
@@ -688,6 +690,7 @@ const getStudentDetail = async (req, res) => {
         phone: mongoUser.phone,
         role: mongoUser.role,
         provider: mongoUser.provider,
+        avatar: mongoUser.avatar,
         disabled: mongoUser.isActive === false,
         createdAt: mongoUser.createdAt,
         lastLogin: mongoUser.lastLogin,
@@ -756,7 +759,10 @@ const getStudentDetail = async (req, res) => {
     }
     
     sendSuccess(res, {
-      user,
+      user: {
+        ...user,
+        profilePicture: user.avatar || user.profilePicture || null,
+      },
       enrollments,
       examResults,
       payments,
@@ -1220,7 +1226,8 @@ const getUserDeviceInfo = async (req, res) => {
         email: user.email,
         deviceId: user.deviceId,
         role: user.role,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        profilePicture: user.avatar || user.profilePicture || null,
       },
       enrolledCourses: enrollments,
       totalEnrollments: enrollments.length

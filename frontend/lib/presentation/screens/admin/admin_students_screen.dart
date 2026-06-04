@@ -12,6 +12,7 @@ import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
   final String? studentId;
@@ -466,6 +467,38 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Center(
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                      child: student.profilePicture != null && student.profilePicture!.isNotEmpty
+                          ? ClipOval(
+                              child: NetworkImageWidget(
+                                imageUrl: student.profilePicture!,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorWidget: Text(
+                                  student.fullName.substring(0, 1).toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppTheme.primaryGreen,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 30,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              student.fullName.substring(0, 1).toUpperCase(),
+                              style: const TextStyle(
+                                color: AppTheme.primaryGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 30,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: nameController,
                     decoration: const InputDecoration(
@@ -882,14 +915,31 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
             leading: CircleAvatar(
               radius: 25,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-              child: Text(
-                student.fullName.substring(0, 1).toUpperCase(),
-                style: const TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              child: student.profilePicture != null && student.profilePicture!.isNotEmpty
+                  ? ClipOval(
+                      child: NetworkImageWidget(
+                        imageUrl: student.profilePicture!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorWidget: Text(
+                          student.fullName.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: AppTheme.primaryGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Text(
+                      student.fullName.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(
+                        color: AppTheme.primaryGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
             ),
             title: Text(
               student.fullName,
@@ -1205,14 +1255,31 @@ class StudentEnrollmentsModal extends StatelessWidget {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(
-                      studentDetail.user.fullName.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: studentDetail.user.profilePicture != null && studentDetail.user.profilePicture!.isNotEmpty
+                        ? ClipOval(
+                            child: NetworkImageWidget(
+                              imageUrl: studentDetail.user.profilePicture!,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorWidget: Text(
+                                studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
@@ -1558,14 +1625,31 @@ class StudentDetailModal extends StatelessWidget {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(
-                      studentDetail.user.fullName.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: studentDetail.user.profilePicture != null && studentDetail.user.profilePicture!.isNotEmpty
+                        ? ClipOval(
+                            child: NetworkImageWidget(
+                              imageUrl: studentDetail.user.profilePicture!,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorWidget: Text(
+                                studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(

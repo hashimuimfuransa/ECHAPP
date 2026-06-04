@@ -656,7 +656,6 @@ class _AuthOptionButton extends StatefulWidget {
     required this.color,
     required this.onTap,
     this.compact = false,
-    this.delay = 0,
   });
 
   @override
@@ -828,7 +827,7 @@ class _StatItem extends StatelessWidget {
 
 class _TermsFooter extends StatelessWidget {
   final AppLocalizations? l10n;
-  const _TermsFooter({this.l10n});
+  const _TermsFooter();
   
   @override
   Widget build(BuildContext context) {

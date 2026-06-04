@@ -31,7 +31,7 @@ const conversationSchema = new mongoose.Schema({
   },
   studentLevel: {
     type: String,
-    enum: ['beginner', 'intermediate', 'advanced', 'platform_user'],
+    enum: ['beginner', 'intermediate', 'advanced', 'platform_user', 'student', 'instructor', 'admin'],
     default: 'beginner'
   },
   isActive: {
