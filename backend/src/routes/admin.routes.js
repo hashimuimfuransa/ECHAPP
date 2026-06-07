@@ -11,6 +11,7 @@ const {
   unassignTeacherFromCourse,
   getTeacherAssignments,
   getCourseTeachers,
+  getTeacherActivity,
   updateUserRole,
   getStudentDetail,
   deleteStudent,
@@ -77,6 +78,7 @@ router.delete('/teachers/:id', protect, authorize('admin'), deleteTeacher);
 router.post('/teachers/assign', protect, authorize('admin'), assignTeacherToCourse);
 router.post('/teachers/unassign', protect, authorize('admin'), unassignTeacherFromCourse);
 router.get('/teachers/:teacherId/assignments', protect, authorize('admin'), getTeacherAssignments);
+router.get('/teachers/:teacherId/activity', protect, authorize('admin'), getTeacherActivity);
 router.get('/courses/:courseId/teachers', protect, authorize('admin'), getCourseTeachers);
 
 module.exports = router;

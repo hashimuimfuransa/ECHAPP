@@ -2010,6 +2010,132 @@ const getCourseTeachers = async (req, res) => {
   }
 };
 
+// Get teacher activity and performance tracking
+const getTeacherActivity = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { days = 30 } = req.query;
+    
+    const teacher = await User.findById(teacherId).select('-password');
+    if (!teacher) {
+      return sendError(res, 'Teacher not found', 404);
+    }
+    
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const LiveSession = require('../models/LiveSession');
+    const Conversation = require('../models/Conversation');
+    const ChatMessage = require('../models/ChatMessage');
+    
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - parseInt(days));
+    
+    // Get assigned courses
+    const assignments = await TeacherAssignment.find({
+      teacherId,
+      isActive: true
+    }).populate('courseId', 'title thumbnail level');
+    
+    // Get live sessions conducted
+    const liveSessions = await LiveSession.find({
+      teacherId,
+      createdAt: { $gte: sinceDate }
+    }).sort({ createdAt: -1 });
+    
+    // Get total students across all assigned courses
+    const courseIds = assignments.map(a => a.courseId._id);
+    const totalStudents = await Enrollment.countDocuments({
+      courseId: { $in: courseIds }
+    });
+    
+    const activeStudents = await Enrollment.countDocuments({
+      courseId: { $in: courseIds },
+      completionStatus: { $in: ['enrolled', 'in-progress'] }
+    });
+    
+    // Get chat conversations (student interactions)
+    const chatConversations = await Conversation.countDocuments({
+      'participants.userId': teacherId,
+      updatedAt: { $gte: sinceDate }
+    });
+    
+    // Get messages sent by teacher
+    const messagesSent = await ChatMessage.countDocuments({
+      senderId: teacherId,
+      createdAt: { $gte: sinceDate }
+    });
+    
+    // Calculate activity stats
+    const completedSessions = liveSessions.filter(s => s.status === 'completed').length;
+    const upcomingSessions = liveSessions.filter(s => s.status === 'scheduled' && s.scheduledAt > new Date()).length;
+    
+    // Get daily activity for chart
+    const dailyActivity = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayStart = new Date(date.setHours(0, 0, 0, 0));
+      const dayEnd = new Date(date.setHours(23, 59, 59, 999));
+      
+      const daySessions = await LiveSession.countDocuments({
+        teacherId,
+        scheduledAt: { $gte: dayStart, $lte: dayEnd }
+      });
+      
+      dailyActivity.unshift({
+        date: dayStart.toISOString().split('T')[0],
+        sessions: daySessions
+      });
+    }
+    
+    sendSuccess(res, {
+      teacher: {
+        id: teacher._id,
+        fullName: teacher.fullName,
+        email: teacher.email,
+        phone: teacher.phone,
+        avatar: teacher.avatar,
+        isActive: teacher.isActive,
+        createdAt: teacher.createdAt,
+        lastActive: teacher.lastActive
+      },
+      overview: {
+        totalCourses: assignments.length,
+        totalStudents,
+        activeStudents,
+        totalSessions: liveSessions.length,
+        completedSessions,
+        upcomingSessions,
+        chatConversations,
+        messagesSent
+      },
+      courses: assignments.map(a => ({
+        id: a.courseId._id,
+        title: a.courseId.title,
+        thumbnail: a.courseId.thumbnail,
+        level: a.courseId.level,
+        assignedAt: a.assignedAt
+      })),
+      recentSessions: liveSessions.slice(0, 10).map(s => ({
+        id: s._id,
+        title: s.title,
+        scheduledAt: s.scheduledAt,
+        duration: s.duration,
+        status: s.status,
+        maxParticipants: s.maxParticipants,
+        recordingUrl: s.recordingUrl
+      })),
+      dailyActivity,
+      period: {
+        days: parseInt(days),
+        since: sinceDate
+      }
+    }, 'Teacher activity retrieved successfully');
+  } catch (error) {
+    console.error('Error in getTeacherActivity:', error);
+    sendError(res, 'Failed to retrieve teacher activity', 500, error.message);
+  }
+};
+
 module.exports = {
   getStudents,
   getAdmins,
@@ -2021,6 +2147,7 @@ module.exports = {
   unassignTeacherFromCourse,
   getTeacherAssignments,
   getCourseTeachers,
+  getTeacherActivity,
   updateUserRole,
   updateStudent,
   getStudentDetail,

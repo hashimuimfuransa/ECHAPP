@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
@@ -54,11 +56,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
 
     try {
       final response = await _apiClient.get(
-        '/api/admin/teachers?page=$_currentPage&limit=20${
-          _searchQuery != null && _searchQuery!.isNotEmpty 
-              ? '&search=${Uri.encodeComponent(_searchQuery!)}' 
-              : ''
-        }',
+        '${ApiConfig.baseUrl}/admin/teachers?page=$_currentPage&limit=20${_searchQuery != null && _searchQuery!.isNotEmpty ? '&search=${Uri.encodeComponent(_searchQuery!)}' : ''}',
       );
 
       if (response.statusCode == 200) {
@@ -90,22 +88,39 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     });
 
     try {
-      final response = await _apiClient.get('/api/courses?limit=100');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)['data'];
-        final courses = (data['courses'] as List)
-            .map((c) => Course.fromJson(c))
-            .toList();
+      final response = await _apiClient.get('${ApiConfig.baseUrl}/admin/courses?limit=100&includeUnpublished=true');
+      debugPrint('LoadCourses: Status ${response.statusCode}');
+      debugPrint('LoadCourses: Body ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
 
+      if (response.statusCode == 200) {
+        final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = jsonBody['data'];
+
+        List<Course> courses = [];
+        if (data is List) {
+          // Direct array response
+          courses = data.map((c) => Course.fromJson(c as Map<String, dynamic>)).toList();
+        } else if (data is Map<String, dynamic>) {
+          // Object with courses property
+          final coursesList = data['courses'] as List?;
+          if (coursesList != null) {
+            courses = coursesList.map((c) => Course.fromJson(c as Map<String, dynamic>)).toList();
+          }
+        }
+
+        debugPrint('LoadCourses: Loaded ${courses.length} courses');
         setState(() {
           _courses = courses;
           _isLoadingCourses = false;
         });
+      } else {
+        debugPrint('LoadCourses: Failed with status ${response.statusCode}');
+        setState(() => _isLoadingCourses = false);
       }
-    } catch (e) {
-      setState(() {
-        _isLoadingCourses = false;
-      });
+    } catch (e, stack) {
+      debugPrint('LoadCourses Error: $e');
+      debugPrint('LoadCourses Stack: $stack');
+      setState(() => _isLoadingCourses = false);
     }
   }
 
@@ -126,7 +141,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     if (result != null) {
       try {
         final response = await _apiClient.post(
-          '/api/admin/teachers',
+          '${ApiConfig.baseUrl}/admin/teachers',
           body: jsonEncode(result),
         );
 
@@ -155,7 +170,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     if (result != null) {
       try {
         final response = await _apiClient.put(
-          '/api/admin/teachers/${teacher.id}',
+          '${ApiConfig.baseUrl}/admin/teachers/${teacher.id}',
           body: jsonEncode(result),
         );
 
@@ -197,7 +212,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
 
     if (confirm == true) {
       try {
-        final response = await _apiClient.delete('/api/admin/teachers/${teacher.id}');
+        final response = await _apiClient.delete('${ApiConfig.baseUrl}/admin/teachers/${teacher.id}');
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -219,7 +234,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     // Get current assignments
     List<String> assignedCourseIds = [];
     try {
-      final response = await _apiClient.get('/api/admin/teachers/${teacher.id}/assignments');
+      final response = await _apiClient.get('${ApiConfig.baseUrl}/admin/teachers/${teacher.id}/assignments');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body)['data'];
         final assignments = data['assignments'] as List;
@@ -235,12 +250,31 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
 
     if (!mounted) return;
 
+    debugPrint('_assignCourses: Opening dialog with ${_courses.length} courses, isLoading: $_isLoadingCourses');
+
+    // Reload courses if empty
+    if (_courses.isEmpty && !_isLoadingCourses) {
+      debugPrint('_assignCourses: Courses empty, reloading...');
+      await _loadCourses();
+    }
+
+    if (!mounted) return;
+
     final result = await showDialog<List<String>>(
       context: context,
       builder: (context) => AssignCoursesDialog(
         courses: _courses,
         assignedCourseIds: assignedCourseIds,
         teacherName: teacher.fullName,
+        isLoading: _isLoadingCourses,
+        onRefresh: () async {
+          debugPrint('AssignCoursesDialog: Manual refresh requested');
+          await _loadCourses();
+          // Force rebuild of dialog
+          if (mounted) {
+            setState(() {});
+          }
+        },
       ),
     );
 
@@ -250,7 +284,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
         if (!result.contains(courseId)) {
           try {
             await _apiClient.post(
-              '/api/admin/teachers/unassign',
+              '${ApiConfig.baseUrl}/admin/teachers/unassign',
               body: jsonEncode({
                 'teacherId': teacher.id,
                 'courseId': courseId,
@@ -267,7 +301,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
         if (!assignedCourseIds.contains(courseId)) {
           try {
             await _apiClient.post(
-              '/api/admin/teachers/assign',
+              '${ApiConfig.baseUrl}/admin/teachers/assign',
               body: jsonEncode({
                 'teacherId': teacher.id,
                 'courseId': courseId,
@@ -283,6 +317,36 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
         const SnackBar(content: Text('Course assignments updated')),
       );
       _loadTeachers();
+    }
+  }
+
+  Future<void> _viewTeacherActivity(TeacherData teacher) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.baseUrl}/admin/teachers/${teacher.id}/activity?days=30',
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        if (!mounted) return;
+
+        await showDialog(
+          context: context,
+          builder: (context) => TeacherActivityDialog(
+            teacherName: teacher.fullName,
+            activityData: data,
+          ),
+        );
+      } else {
+        throw Exception('Failed to load activity: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error loading teacher activity: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading activity: $e')),
+        );
+      }
     }
   }
 
@@ -502,6 +566,11 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
                         tooltip: 'Assign Courses',
                       ),
                       IconButton(
+                        icon: const Icon(Icons.analytics, color: Colors.purple),
+                        onPressed: () => _viewTeacherActivity(teacher),
+                        tooltip: 'View Activity',
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () => _deleteTeacher(teacher),
                         tooltip: 'Delete',
@@ -575,6 +644,7 @@ class _CreateTeacherDialogState extends State<CreateTeacherDialog> {
   final _passwordController = TextEditingController();
   bool _generatePassword = true;
   bool _sendCredentials = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -630,11 +700,21 @@ class _CreateTeacherDialogState extends State<CreateTeacherDialog> {
               if (!_generatePassword)
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock),
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                   ),
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   validator: (value) {
                     if (!_generatePassword && (value == null || value.length < 6)) {
                       return 'Password must be at least 6 characters';
@@ -798,12 +878,16 @@ class AssignCoursesDialog extends StatefulWidget {
   final List<Course> courses;
   final List<String> assignedCourseIds;
   final String teacherName;
+  final bool isLoading;
+  final VoidCallback? onRefresh;
 
   const AssignCoursesDialog({
     super.key,
     required this.courses,
     required this.assignedCourseIds,
     required this.teacherName,
+    this.isLoading = false,
+    this.onRefresh,
   });
 
   @override
@@ -812,38 +896,163 @@ class AssignCoursesDialog extends StatefulWidget {
 
 class _AssignCoursesDialogState extends State<AssignCoursesDialog> {
   late List<String> _selectedCourseIds = List.from(widget.assignedCourseIds);
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Course> get _filteredCourses {
+    if (_searchQuery.isEmpty) {
+      return widget.courses;
+    }
+    final query = _searchQuery.toLowerCase();
+    return widget.courses.where((course) {
+      return course.title.toLowerCase().contains(query) ||
+          course.level.toLowerCase().contains(query);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filteredCourses = _filteredCourses;
+    debugPrint('AssignCoursesDialog: courses count = ${widget.courses.length}, isLoading = ${widget.isLoading}');
+
     return AlertDialog(
       title: Text('Assign Courses to ${widget.teacherName}'),
       content: SizedBox(
         width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: widget.courses.length,
-          itemBuilder: (context, index) {
-            final course = widget.courses[index];
-            final isSelected = _selectedCourseIds.contains(course.id);
-
-            return CheckboxListTile(
-              value: isSelected,
+        height: 400,
+        child: Column(
+          children: [
+            // Search field
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search courses...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
               onChanged: (value) {
                 setState(() {
-                  if (value == true) {
-                    _selectedCourseIds.add(course.id);
-                  } else {
-                    _selectedCourseIds.remove(course.id);
-                  }
+                  _searchQuery = value;
                 });
               },
-              title: Text(course.title),
-              subtitle: Text('${course.level} • ${course.enrollmentCount} students'),
-              secondary: course.thumbnail != null
-                  ? Image.network(course.thumbnail!, width: 48, height: 48, fit: BoxFit.cover)
-                  : const Icon(Icons.school),
-            );
-          },
+            ),
+            const SizedBox(height: 8),
+            // Results count
+            Text(
+              '${_selectedCourseIds.length} selected • ${filteredCourses.length} of ${widget.courses.length} courses',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Course list
+            Expanded(
+              child: widget.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredCourses.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.school_outlined, size: 48, color: Colors.grey[400]),
+                              const SizedBox(height: 12),
+                              Text(
+                                _searchQuery.isEmpty
+                                    ? 'No courses available\n(${widget.courses.length} total loaded)'
+                                    : 'No courses found for "$_searchQuery"',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                              if (_searchQuery.isEmpty && widget.onRefresh != null) ...[
+                                const SizedBox(height: 16),
+                                TextButton.icon(
+                                  onPressed: widget.onRefresh,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Reload Courses'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filteredCourses.length,
+                      itemBuilder: (context, index) {
+                        final course = filteredCourses[index];
+                        final isSelected = _selectedCourseIds.contains(course.id);
+
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (value) {
+                            setState(() {
+                              if (value == true) {
+                                _selectedCourseIds.add(course.id);
+                              } else {
+                                _selectedCourseIds.remove(course.id);
+                              }
+                            });
+                          },
+                          title: Row(
+                            children: [
+                              Expanded(child: Text(course.title)),
+                              if (!course.isPublished)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[100],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Draft',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.orange[800],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Text('${course.level} • ${course.enrollmentCount} students'),
+                          secondary: course.thumbnail != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Image.network(
+                                    course.thumbnail!,
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.school, size: 48),
+                                  ),
+                                )
+                              : const Icon(Icons.school, size: 48),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
       actions: [
@@ -857,6 +1066,279 @@ class _AssignCoursesDialogState extends State<AssignCoursesDialog> {
           child: const Text('Save'),
         ),
       ],
+    );
+  }
+}
+
+/// Teacher Activity Dialog - Shows teacher performance and activity tracking
+class TeacherActivityDialog extends StatelessWidget {
+  final String teacherName;
+  final Map<String, dynamic> activityData;
+
+  const TeacherActivityDialog({
+    super.key,
+    required this.teacherName,
+    required this.activityData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final overview = activityData['overview'] as Map<String, dynamic>? ?? {};
+    final courses = activityData['courses'] as List? ?? [];
+    final recentSessions = activityData['recentSessions'] as List? ?? [];
+    final dailyActivity = activityData['dailyActivity'] as List? ?? [];
+    final teacher = activityData['teacher'] as Map<String, dynamic>? ?? {};
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.primaryGreen,
+            child: Text(
+              teacherName.isNotEmpty ? teacherName[0].toUpperCase() : '?',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(teacherName, style: const TextStyle(fontSize: 18)),
+                Text(
+                  'Activity Tracking (Last 30 Days)',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Overview Stats Grid
+              _buildStatsGrid(overview),
+              const SizedBox(height: 20),
+
+              // Daily Activity Chart
+              if (dailyActivity.isNotEmpty) ...[
+                const Text(
+                  'Daily Activity (Last 7 Days)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                _buildDailyActivityChart(dailyActivity),
+                const SizedBox(height: 20),
+              ],
+
+              // Assigned Courses
+              if (courses.isNotEmpty) ...[
+                const Text(
+                  'Assigned Courses',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                _buildCoursesList(courses),
+                const SizedBox(height: 20),
+              ],
+
+              // Recent Sessions
+              if (recentSessions.isNotEmpty) ...[
+                const Text(
+                  'Recent Live Sessions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                _buildRecentSessionsList(recentSessions),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid(Map<String, dynamic> overview) {
+    final stats = [
+      _StatItem('Courses', overview['totalCourses']?.toString() ?? '0', Colors.blue),
+      _StatItem('Students', overview['totalStudents']?.toString() ?? '0', Colors.green),
+      _StatItem('Active', overview['activeStudents']?.toString() ?? '0', Colors.orange),
+      _StatItem('Sessions', overview['totalSessions']?.toString() ?? '0', Colors.purple),
+      _StatItem('Completed', overview['completedSessions']?.toString() ?? '0', Colors.teal),
+      _StatItem('Upcoming', overview['upcomingSessions']?.toString() ?? '0', Colors.indigo),
+    ];
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 3,
+      childAspectRatio: 1.2,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      children: stats,
+    );
+  }
+
+  Widget _buildDailyActivityChart(List<dynamic> dailyActivity) {
+    return Container(
+      height: 100,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: dailyActivity.map((day) {
+          final sessions = (day['sessions'] as int?) ?? 0;
+          final date = day['date'] as String? ?? '';
+          final maxSessions = dailyActivity.fold<int>(
+            1,
+            (max, d) => math.max(max, (d['sessions'] as int?) ?? 0),
+          );
+          final height = maxSessions > 0 ? (sessions / maxSessions * 60).toDouble() : 0.0;
+
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text('$sessions', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+              const SizedBox(height: 4),
+              Container(
+                width: 24,
+                height: math.max(height, 4),
+                decoration: BoxDecoration(
+                  color: sessions > 0 ? AppTheme.primaryGreen : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                date.split('-').last,
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCoursesList(List<dynamic> courses) {
+    return Column(
+      children: courses.take(5).map((course) {
+        final title = course['title'] as String? ?? 'Untitled';
+        final level = course['level'] as String? ?? 'N/A';
+        final assignedAt = course['assignedAt'] as String?;
+
+        return ListTile(
+          dense: true,
+          leading: const Icon(Icons.school, color: AppTheme.primaryGreen),
+          title: Text(title, style: const TextStyle(fontSize: 13)),
+          subtitle: Text('$level • Assigned ${_formatDate(assignedAt)}', style: const TextStyle(fontSize: 11)),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRecentSessionsList(List<dynamic> sessions) {
+    return Column(
+      children: sessions.take(5).map((session) {
+        final title = session['title'] as String? ?? 'Untitled';
+        final status = session['status'] as String? ?? 'unknown';
+        final scheduledAt = session['scheduledAt'] as String?;
+        final duration = session['duration'] as int? ?? 0;
+
+        Color statusColor;
+        IconData statusIcon;
+        switch (status) {
+          case 'completed':
+            statusColor = Colors.green;
+            statusIcon = Icons.check_circle;
+            break;
+          case 'scheduled':
+            statusColor = Colors.blue;
+            statusIcon = Icons.schedule;
+            break;
+          case 'cancelled':
+            statusColor = Colors.red;
+            statusIcon = Icons.cancel;
+            break;
+          default:
+            statusColor = Colors.grey;
+            statusIcon = Icons.help;
+        }
+
+        return ListTile(
+          dense: true,
+          leading: Icon(statusIcon, color: statusColor, size: 20),
+          title: Text(title, style: const TextStyle(fontSize: 13)),
+          subtitle: Text('${_formatDate(scheduledAt)} • ${duration}min', style: const TextStyle(fontSize: 11)),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'Unknown';
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatItem(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
