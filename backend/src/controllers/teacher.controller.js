@@ -478,7 +478,7 @@ const getDashboardStats = async (req, res) => {
 
     // Calculate total teaching hours from ended sessions
     const teachingHoursData = await LiveSession.aggregate([
-      { $match: { teacherId: require('mongoose').Types.ObjectId(teacherId), status: 'ended' } },
+      { $match: { teacherId: new (require('mongoose').Types.ObjectId)(teacherId), status: 'ended' } },
       {
         $group: {
           _id: null,

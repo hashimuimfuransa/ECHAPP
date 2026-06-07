@@ -510,6 +510,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) context.go('/admin');
           });
+        } else if (authState.user?.role == 'instructor') {
+          debugPrint(
+              'DashboardScreen: Instructor detected, redirecting to teacher dashboard');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) context.go('/teacher/dashboard');
+          });
         } else {
           final userHasCompletedOnboarding =
               authState.user?.hasCompletedOnboarding ?? false;

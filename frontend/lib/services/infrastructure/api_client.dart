@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/api_response.dart';
 import '../../models/course.dart';
 
@@ -14,40 +15,46 @@ class ApiClient {
   ApiClient({http.Client? httpClient}) 
       : _httpClient = httpClient ?? http.Client();
 
-  /// Get authorization header with Firebase ID token
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+
+  /// Get authorization header — Firebase ID token first, stored JWT as fallback
   Future<Map<String, String>> _getAuthHeaders() async {
+    // 1. Try Firebase (primary path: mobile / web / Google sign-in)
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       print('ApiClient: Current user: ${user?.uid ?? 'null'}');
-      print('ApiClient: Current user email: ${user?.email ?? 'null'}');
-      
       if (user != null) {
-        print('ApiClient: Attempting to get ID token...');
-        // Force refresh to ensure we have a valid token
-        final token = await user.getIdToken(true); // Force refresh
-        print('ApiClient: Token acquired successfully, length: ${token?.length ?? 0}');
+        final token = await user.getIdToken(true);
         if (token != null) {
-          print('ApiClient: Token preview: ${token.substring(0, token.length > 50 ? 50 : token.length)}...');
           return {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           };
-        } else {
-          print('ApiClient: Token is null despite having user - this should not happen');
-          // Fall through to return basic headers
         }
-      } else {
-        print('ApiClient: No current user found - request will be unauthenticated');
       }
     } catch (e) {
-      print('ApiClient: Error getting auth token: $e');
-      print('ApiClient: Stack trace: ${e is Error ? e.stackTrace : 'No stack trace'}');
+      print('ApiClient: Firebase token error: $e');
     }
-    
-    // Return basic headers when no valid token is available
-    return {
-      'Content-Type': 'application/json',
-    };
+
+    // 2. Fall back to stored backend JWT (used after direct backend login on Windows desktop)
+    try {
+      final storedToken = await _storage.read(key: 'access_token');
+      if (storedToken != null && storedToken.isNotEmpty) {
+        print('ApiClient: Using stored backend JWT token');
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $storedToken',
+        };
+      }
+    } catch (e) {
+      print('ApiClient: Error reading stored token: $e');
+    }
+
+    print('ApiClient: No auth token available - request will be unauthenticated');
+    return {'Content-Type': 'application/json'};
   }
 
   /// Make HTTP GET request

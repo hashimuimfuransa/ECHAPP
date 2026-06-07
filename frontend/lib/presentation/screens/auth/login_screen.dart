@@ -71,6 +71,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               );
               if (current.user!.role == 'admin') {
                 context.go('/admin');
+              } else if (current.user!.role == 'instructor') {
+                context.go('/teacher/dashboard');
               } else {
                 final userName = current.user!.fullName;
                 final needsName = userName.isEmpty || userName == 'Unknown User';
