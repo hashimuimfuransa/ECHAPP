@@ -86,7 +86,11 @@ const courseSchema = new mongoose.Schema({
   averageRating: {
     type: Number,
     default: 0
-  }
+  },
+  assignedTeacherIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });
@@ -96,5 +100,6 @@ courseSchema.index({ title: 'text', description: 'text' });
 courseSchema.index({ level: 1 });
 courseSchema.index({ price: 1 });
 courseSchema.index({ isPublished: 1 });
+courseSchema.index({ assignedTeacherIds: 1 });
 
 module.exports = mongoose.model('Course', courseSchema);

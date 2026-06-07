@@ -3,6 +3,14 @@ const router = express.Router();
 const { 
   getStudents,
   getAdmins,
+  getTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher,
+  assignTeacherToCourse,
+  unassignTeacherFromCourse,
+  getTeacherAssignments,
+  getCourseTeachers,
   updateUserRole,
   getStudentDetail,
   deleteStudent,
@@ -60,5 +68,15 @@ router.delete('/courses/:courseId/enrollments/:studentId', protect, authorize('a
 
 // Manual expiration check
 router.post('/trigger-expiration-check', protect, authorize('admin'), manualExpirationCheck);
+
+// Teacher management routes
+router.get('/teachers', protect, authorize('admin'), getTeachers);
+router.post('/teachers', protect, authorize('admin'), createTeacher);
+router.put('/teachers/:id', protect, authorize('admin'), updateTeacher);
+router.delete('/teachers/:id', protect, authorize('admin'), deleteTeacher);
+router.post('/teachers/assign', protect, authorize('admin'), assignTeacherToCourse);
+router.post('/teachers/unassign', protect, authorize('admin'), unassignTeacherFromCourse);
+router.get('/teachers/:teacherId/assignments', protect, authorize('admin'), getTeacherAssignments);
+router.get('/courses/:courseId/teachers', protect, authorize('admin'), getCourseTeachers);
 
 module.exports = router;

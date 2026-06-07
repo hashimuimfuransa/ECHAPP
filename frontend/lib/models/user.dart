@@ -140,6 +140,17 @@ class User {
 
   @override
   int get hashCode => id.hashCode;
+
+  /// Creates an empty User instance for fallback scenarios
+  factory User.empty() {
+    return User(
+      id: '',
+      fullName: 'Unknown User',
+      email: '',
+      role: 'user',
+      createdAt: DateTime.now(),
+    );
+  }
 }
 
 /// Authentication response model

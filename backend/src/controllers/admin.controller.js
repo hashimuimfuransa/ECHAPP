@@ -1618,9 +1618,409 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+// Get all teachers (instructors)
+const getTeachers = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    
+    const filter = { role: 'instructor' };
+    
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const teachers = await User.find(filter)
+      .select('-password')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+    
+    // Get course counts for each teacher
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const teachersWithStats = await Promise.all(
+      teachers.map(async (teacher) => {
+        const courseCount = await TeacherAssignment.countDocuments({
+          teacherId: teacher._id,
+          isActive: true
+        });
+        
+        return {
+          ...teacher.toObject(),
+          id: teacher._id,
+          assignedCourseCount: courseCount
+        };
+      })
+    );
+    
+    const total = await User.countDocuments(filter);
+    
+    sendSuccess(res, {
+      teachers: teachersWithStats,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      total
+    }, 'Teachers retrieved successfully');
+  } catch (error) {
+    console.error('Error in getTeachers:', error);
+    sendError(res, 'Failed to retrieve teachers', 500, error.message);
+  }
+};
+
+// Create a new teacher (instructor)
+const createTeacher = async (req, res) => {
+  try {
+    const { fullName, email, phone, password, sendCredentials } = req.body;
+    
+    if (!fullName || (!email && !phone)) {
+      return sendError(res, 'Full name and at least one contact method (email or phone) required', 400);
+    }
+    
+    // Check for existing user
+    const existingQuery = [];
+    if (email) existingQuery.push({ email });
+    if (phone) existingQuery.push({ phone });
+    
+    const existingUser = await User.findOne({ $or: existingQuery });
+    if (existingUser) {
+      return sendError(res, 'User with this email or phone already exists', 409);
+    }
+    
+    let firebaseUid = null;
+    
+    // Create Firebase user if credentials provided
+    if (email && password) {
+      try {
+        const firebaseUser = await admin.auth().createUser({
+          email,
+          password,
+          displayName: fullName,
+          phoneNumber: phone || undefined
+        });
+        
+        // Set custom claims for role
+        await admin.auth().setCustomUserClaims(firebaseUser.uid, { role: 'instructor' });
+        firebaseUid = firebaseUser.uid;
+      } catch (firebaseError) {
+        console.error('Firebase user creation error:', firebaseError.message);
+        // Continue without Firebase - user can be created in MongoDB only
+      }
+    }
+    
+    // Create user in MongoDB
+    const user = await User.create({
+      fullName,
+      email: email || undefined,
+      phone: phone || undefined,
+      password: password || undefined,
+      role: 'instructor',
+      firebaseUid,
+      isVerified: true,
+      isActive: true
+    });
+    
+    // TODO: Send credentials email if sendCredentials is true
+    
+    sendSuccess(res, {
+      id: user._id,
+      firebaseUid: user.firebaseUid,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt
+    }, 'Teacher created successfully', 201);
+  } catch (error) {
+    console.error('Error in createTeacher:', error);
+    if (error.code === 11000) {
+      const field = error.keyValue ? Object.keys(error.keyValue)[0] : 'field';
+      return sendError(res, `This ${field} is already in use`, 409);
+    }
+    sendError(res, 'Failed to create teacher', 500, error.message);
+  }
+};
+
+// Update teacher information
+const updateTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, phone, isActive, resetPassword, newPassword } = req.body;
+    
+    const user = await User.findOne({ _id: id, role: 'instructor' });
+    if (!user) {
+      return sendError(res, 'Teacher not found', 404);
+    }
+    
+    // Update basic info
+    if (fullName) user.fullName = fullName;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (typeof isActive === 'boolean') user.isActive = isActive;
+    
+    // Handle password reset
+    if (resetPassword && newPassword) {
+      user.password = newPassword;
+      
+      // Also update Firebase if applicable
+      if (user.firebaseUid) {
+        try {
+          await admin.auth().updateUser(user.firebaseUid, { password: newPassword });
+        } catch (firebaseError) {
+          console.error('Firebase password update error:', firebaseError.message);
+        }
+      }
+    }
+    
+    await user.save();
+    
+    sendSuccess(res, {
+      id: user._id,
+      firebaseUid: user.firebaseUid,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      updatedAt: user.updatedAt
+    }, 'Teacher updated successfully');
+  } catch (error) {
+    console.error('Error in updateTeacher:', error);
+    if (error.code === 11000) {
+      const field = error.keyValue ? Object.keys(error.keyValue)[0] : 'field';
+      return sendError(res, `This ${field} is already in use`, 409);
+    }
+    sendError(res, 'Failed to update teacher', 500, error.message);
+  }
+};
+
+// Delete a teacher
+const deleteTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findOne({ _id: id, role: 'instructor' });
+    if (!user) {
+      return sendError(res, 'Teacher not found', 404);
+    }
+    
+    // Check if teacher has active course assignments
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const activeAssignments = await TeacherAssignment.countDocuments({
+      teacherId: id,
+      isActive: true
+    });
+    
+    if (activeAssignments > 0) {
+      return sendError(res, `Cannot delete teacher with ${activeAssignments} active course assignments. Please unassign from all courses first.`, 400);
+    }
+    
+    // Delete from Firebase if applicable
+    if (user.firebaseUid) {
+      try {
+        await admin.auth().deleteUser(user.firebaseUid);
+      } catch (firebaseError) {
+        console.error('Firebase deletion error:', firebaseError.message);
+      }
+    }
+    
+    // Delete inactive assignments
+    await TeacherAssignment.deleteMany({ teacherId: id });
+    
+    // Delete the user
+    await User.findByIdAndDelete(id);
+    
+    sendSuccess(res, {
+      id,
+      fullName: user.fullName,
+      message: 'Teacher deleted successfully'
+    }, 'Teacher deleted successfully');
+  } catch (error) {
+    console.error('Error in deleteTeacher:', error);
+    sendError(res, 'Failed to delete teacher', 500, error.message);
+  }
+};
+
+// Assign teacher to a course
+const assignTeacherToCourse = async (req, res) => {
+  try {
+    const { teacherId, courseId } = req.body;
+    const assignedBy = req.user.id;
+    const notes = req.body.notes || '';
+    
+    if (!teacherId || !courseId) {
+      return sendError(res, 'Teacher ID and Course ID are required', 400);
+    }
+    
+    // Verify teacher exists
+    const teacher = await User.findOne({ _id: teacherId, role: 'instructor' });
+    if (!teacher) {
+      return sendError(res, 'Teacher not found', 404);
+    }
+    
+    // Verify course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return sendError(res, 'Course not found', 404);
+    }
+    
+    // Check if already assigned
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const existingAssignment = await TeacherAssignment.findOne({ teacherId, courseId });
+    
+    if (existingAssignment) {
+      if (existingAssignment.isActive) {
+        return sendError(res, 'Teacher is already assigned to this course', 409);
+      } else {
+        // Reactivate assignment
+        existingAssignment.isActive = true;
+        existingAssignment.assignedBy = assignedBy;
+        existingAssignment.assignedAt = new Date();
+        await existingAssignment.save();
+      }
+    } else {
+      // Create new assignment
+      await TeacherAssignment.create({
+        teacherId,
+        courseId,
+        assignedBy,
+        notes
+      });
+    }
+    
+    // Update course with teacher reference
+    if (!course.assignedTeacherIds.includes(teacherId)) {
+      course.assignedTeacherIds.push(teacherId);
+      await course.save();
+    }
+    
+    sendSuccess(res, {
+      teacherId,
+      courseId,
+      courseName: course.title,
+      teacherName: teacher.fullName,
+      assignedAt: new Date()
+    }, 'Teacher assigned to course successfully');
+  } catch (error) {
+    console.error('Error in assignTeacherToCourse:', error);
+    sendError(res, 'Failed to assign teacher to course', 500, error.message);
+  }
+};
+
+// Unassign teacher from a course
+const unassignTeacherFromCourse = async (req, res) => {
+  try {
+    const { teacherId, courseId } = req.body;
+    
+    if (!teacherId || !courseId) {
+      return sendError(res, 'Teacher ID and Course ID are required', 400);
+    }
+    
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const assignment = await TeacherAssignment.findOne({ teacherId, courseId, isActive: true });
+    
+    if (!assignment) {
+      return sendError(res, 'Active assignment not found', 404);
+    }
+    
+    // Deactivate assignment
+    assignment.isActive = false;
+    await assignment.save();
+    
+    // Update course - remove teacher from assignedTeacherIds
+    const course = await Course.findById(courseId);
+    if (course) {
+      course.assignedTeacherIds = course.assignedTeacherIds.filter(
+        id => id.toString() !== teacherId
+      );
+      await course.save();
+    }
+    
+    sendSuccess(res, {
+      teacherId,
+      courseId,
+      message: 'Teacher unassigned from course successfully'
+    }, 'Teacher unassigned from course successfully');
+  } catch (error) {
+    console.error('Error in unassignTeacherFromCourse:', error);
+    sendError(res, 'Failed to unassign teacher from course', 500, error.message);
+  }
+};
+
+// Get course assignments for a teacher
+const getTeacherAssignments = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const assignments = await TeacherAssignment.find({ teacherId, isActive: true })
+      .populate('courseId', 'title thumbnail level isPublished enrollmentCount')
+      .populate('assignedBy', 'fullName')
+      .sort({ assignedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await TeacherAssignment.countDocuments({ teacherId, isActive: true });
+    
+    sendSuccess(res, {
+      assignments: assignments.map(a => ({
+        id: a._id,
+        course: a.courseId,
+        assignedBy: a.assignedBy,
+        assignedAt: a.assignedAt,
+        notes: a.notes
+      })),
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      total
+    }, 'Teacher assignments retrieved successfully');
+  } catch (error) {
+    console.error('Error in getTeacherAssignments:', error);
+    sendError(res, 'Failed to retrieve teacher assignments', 500, error.message);
+  }
+};
+
+// Get all teachers assigned to a specific course
+const getCourseTeachers = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    const TeacherAssignment = require('../models/TeacherAssignment');
+    const assignments = await TeacherAssignment.find({ courseId, isActive: true })
+      .populate('teacherId', 'fullName email phone avatar isActive')
+      .populate('assignedBy', 'fullName')
+      .sort({ assignedAt: -1 });
+    
+    sendSuccess(res, {
+      teachers: assignments.map(a => ({
+        assignmentId: a._id,
+        ...a.teacherId.toObject(),
+        id: a.teacherId._id,
+        assignedBy: a.assignedBy,
+        assignedAt: a.assignedAt,
+        notes: a.notes
+      }))
+    }, 'Course teachers retrieved successfully');
+  } catch (error) {
+    console.error('Error in getCourseTeachers:', error);
+    sendError(res, 'Failed to retrieve course teachers', 500, error.message);
+  }
+};
+
 module.exports = {
   getStudents,
   getAdmins,
+  getTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher,
+  assignTeacherToCourse,
+  unassignTeacherFromCourse,
+  getTeacherAssignments,
+  getCourseTeachers,
   updateUserRole,
   updateStudent,
   getStudentDetail,

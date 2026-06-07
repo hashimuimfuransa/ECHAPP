@@ -188,4 +188,18 @@ class Course {
 
   @override
   int get hashCode => id.hashCode;
+
+  /// Creates an empty Course instance for fallback scenarios
+  factory Course.empty() {
+    return Course(
+      id: '',
+      title: 'Untitled Course',
+      description: '',
+      duration: 0,
+      level: 'Beginner',
+      isPublished: false,
+      createdBy: User.empty(),
+      createdAt: DateTime.now(),
+    );
+  }
 }

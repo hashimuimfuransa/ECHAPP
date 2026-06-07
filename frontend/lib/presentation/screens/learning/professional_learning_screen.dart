@@ -24,6 +24,8 @@ import 'package:excellencecoachinghub/presentation/screens/library/book_reader_s
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
+import 'package:excellencecoachinghub/services/live_session_service.dart';
+import 'package:excellencecoachinghub/models/live_session.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -140,7 +142,7 @@ class _ProfessionalLearningScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
 
     _heroAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
@@ -161,6 +163,30 @@ class _ProfessionalLearningScreenState
     _loadCourseData();
     _loadCourseBooks();
     _tabController.addListener(() => setState(() {}));
+    
+    // Check for live sessions early to determine default tab
+    _checkAndSwitchToLiveSessions();
+  }
+  
+  /// Check for upcoming live sessions and switch to Live tab if any exist
+  Future<void> _checkAndSwitchToLiveSessions() async {
+    try {
+      final service = LiveSessionService();
+      final response = await service.getCourseSessions(
+        widget.courseId,
+        status: 'scheduled',
+        limit: 1,
+      );
+      
+      if (response.sessions.isNotEmpty && mounted) {
+        // There are upcoming sessions, switch to Live tab (index 1)
+        setState(() {
+          _tabController.animateTo(1);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking live sessions: $e');
+    }
   }
 
   @override
@@ -619,6 +645,7 @@ class _ProfessionalLearningScreenState
         controller: _tabController,
         children: [
           _buildChaptersTab(),
+          _buildLiveSessionsTab(),
           _buildProgressTab(),
           _buildBookmarksTab(),
           _buildMaterialsTab(),
@@ -924,6 +951,7 @@ class _ProfessionalLearningScreenState
             dividerHeight: 0.5,
             tabs: const [
               Tab(text: 'Chapters'),
+              Tab(text: 'Live'),
               Tab(text: 'Progress'),
               Tab(text: 'Bookmarks'),
               Tab(text: 'Materials'),
@@ -1026,6 +1054,312 @@ class _ProfessionalLearningScreenState
           isLoading: _markingCompleteChapterId == s.id,
         );
       },
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  LIVE SESSIONS TAB
+  // ─────────────────────────────────────────────
+  List<LiveSession> _courseSessions = [];
+  bool _isLoadingSessions = false;
+
+  Future<void> _loadLiveSessions() async {
+    setState(() => _isLoadingSessions = true);
+    try {
+      final service = LiveSessionService();
+      final response = await service.getCourseSessions(
+        widget.courseId,
+        status: 'scheduled',
+      );
+      setState(() {
+        _courseSessions = response.sessions;
+        _isLoadingSessions = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading live sessions: $e');
+      setState(() => _isLoadingSessions = false);
+    }
+  }
+
+  Future<void> _joinStudentSession(LiveSession session) async {
+    try {
+      final service = LiveSessionService();
+      final response = await service.joinSession(session.id);
+      
+      if (mounted && response.joinUrl.isNotEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Join ${session.title}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.video_call, size: 64, color: Color(0xFF00C853)),
+                const SizedBox(height: 16),
+                Text('Scheduled for: ${_formatDateTime(session.scheduledAt)}'),
+                const SizedBox(height: 8),
+                Text('Duration: ${session.duration} minutes'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Launch URL - in production, use url_launcher
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Opening BigBlueButton...')),
+                  );
+                },
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Join Session'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error joining session: $e')),
+        );
+      }
+    }
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return '${dt.day}/${dt.month}/${dt.year} at ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildLiveSessionsTab() {
+    // Load sessions on first build
+    if (!_isLoadingSessions && _courseSessions.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadLiveSessions());
+    }
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    
+    return ListView(
+      padding: EdgeInsets.fromLTRB(isMobile ? 12 : 20, 16, isMobile ? 12 : 20, 100),
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00C853), Color(0xFF00897B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.video_call, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Live Sessions',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    onPressed: _loadLiveSessions,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Join live classes with your instructor via BigBlueButton',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Sessions List
+        if (_isLoadingSessions)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_courseSessions.isEmpty)
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                Icon(
+                  Icons.video_call_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No upcoming live sessions',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check back later for scheduled sessions',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._courseSessions.map((session) => _buildSessionCard(session)),
+      ],
+    );
+  }
+
+  Widget _buildSessionCard(LiveSession session) {
+    final isLive = session.status == 'live';
+    final isUpcoming = session.scheduledAt.isAfter(DateTime.now());
+    final canJoin = isLive || (isUpcoming && session.scheduledAt.difference(DateTime.now()).inHours < 1);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isLive ? Colors.red[50] : Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLive)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      if (isLive) const SizedBox(width: 6),
+                      Text(
+                        isLive ? 'LIVE NOW' : 'UPCOMING',
+                        style: TextStyle(
+                          color: isLive ? Colors.red : Colors.orange[700],
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  _formatDateTime(session.scheduledAt),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              session.title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (session.description != null && session.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                session.description!,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  '${session.duration} minutes',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+                const Spacer(),
+                if (canJoin)
+                  ElevatedButton.icon(
+                    onPressed: () => _joinStudentSession(session),
+                    icon: const Icon(Icons.video_call),
+                    label: const Text('Join'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00C853),
+                      foregroundColor: Colors.white,
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.schedule),
+                    label: const Text('Scheduled'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[600],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

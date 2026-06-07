@@ -47,6 +47,11 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_user_mgmt
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_moderation_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_books_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_teachers_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_dashboard_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_course_detail_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/schedule_live_session_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/live_sessions_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_quiz_screen.dart';
@@ -440,6 +445,45 @@ class AppRouter {
               screenName: 'Admin Books',
               child: AdminBooksScreen(),
             ),
+          ),
+          GoRoute(
+            path: '/admin/teachers',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Teachers',
+              child: AdminTeachersScreen(),
+            ),
+          ),
+
+          // Teacher Routes - Outside MainLayout for full-screen experience
+          GoRoute(
+            path: '/teacher/dashboard',
+            builder: (context, state) => const TeacherDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/teacher/courses',
+            builder: (context, state) => const TeacherDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/teacher/courses/:courseId',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return TeacherCourseDetailScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
+            path: '/teacher/sessions',
+            builder: (context, state) => const LiveSessionsScreen(),
+          ),
+          GoRoute(
+            path: '/teacher/sessions/create',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return ScheduleLiveSessionScreen(
+                courseId: extra?['courseId'],
+                sectionId: extra?['sectionId'],
+                lessonId: extra?['lessonId'],
+              );
+            },
           ),
 
           // Learning Routes - Outside MainLayout for full-screen focus
