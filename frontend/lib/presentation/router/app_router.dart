@@ -52,6 +52,8 @@ import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_dashb
 import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_course_detail_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/teacher/schedule_live_session_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/teacher/live_sessions_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_create_section_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_create_lesson_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_learning_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/professional_lesson_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/learning/enhanced_quiz_screen.dart';
@@ -65,6 +67,7 @@ import 'package:excellencecoachinghub/presentation/screens/payments/payment_pend
 import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
+import 'package:excellencecoachinghub/config/app_theme.dart';
 
 /// Custom page transition for smooth navigation with performance monitoring
 class _FadeTransitionPage extends CustomTransitionPage<void> {
@@ -482,6 +485,59 @@ class AppRouter {
                 courseId: extra?['courseId'],
                 sectionId: extra?['sectionId'],
                 lessonId: extra?['lessonId'],
+              );
+            },
+          ),
+          GoRoute(
+            path: '/teacher/courses/:courseId/students/:studentId',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              final studentId = state.pathParameters['studentId'] ?? '';
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Student Details'),
+                  backgroundColor: AppTheme.primaryGreen,
+                ),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.person, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Student ID: $studentId',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        'Course ID: $courseId',
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'Student detail screen coming soon',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/teacher/courses/:courseId/create-section',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              return TeacherCreateSectionScreen(courseId: courseId);
+            },
+          ),
+          GoRoute(
+            path: '/teacher/courses/:courseId/sections/:sectionId/create-lesson',
+            builder: (context, state) {
+              final courseId = state.pathParameters['courseId'] ?? '';
+              final sectionId = state.pathParameters['sectionId'] ?? '';
+              return TeacherCreateLessonScreen(
+                courseId: courseId,
+                sectionId: sectionId,
               );
             },
           ),

@@ -13,10 +13,10 @@ const { authorize } = require('../middleware/role.middleware');
 // Get sections for a course (public)
 router.get('/course/:courseId', getSectionsByCourse);
 
-// Admin routes
-router.post('/course/:courseId', protect, authorize('admin'), createSection);
-router.put('/:sectionId', protect, authorize('admin'), updateSection);
+// Admin and Instructor routes
+router.post('/course/:courseId', protect, authorize('admin', 'instructor'), createSection);
+router.put('/:sectionId', protect, authorize('admin', 'instructor'), updateSection);
 router.delete('/:sectionId', protect, authorize('admin'), deleteSection);
-router.post('/course/:courseId/reorder', protect, authorize('admin'), reorderSections);
+router.post('/course/:courseId/reorder', protect, authorize('admin', 'instructor'), reorderSections);
 
 module.exports = router;

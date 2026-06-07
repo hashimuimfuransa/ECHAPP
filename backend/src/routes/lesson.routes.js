@@ -17,10 +17,10 @@ router.get('/section/:sectionId', protect, getLessonsBySection);
 router.get('/:lessonId', protect, getLessonById);
 router.get('/course/:courseId/content', protect, getCourseContent);
 
-// Admin routes
-router.post('/section/:sectionId', protect, authorize('admin'), createLesson);
-router.put('/:lessonId', protect, authorize('admin'), updateLesson);
+// Admin and Instructor routes
+router.post('/section/:sectionId', protect, authorize('admin', 'instructor'), createLesson);
+router.put('/:lessonId', protect, authorize('admin', 'instructor'), updateLesson);
 router.delete('/:lessonId', protect, authorize('admin'), deleteLesson);
-router.post('/section/:sectionId/reorder', protect, authorize('admin'), reorderLessons);
+router.post('/section/:sectionId/reorder', protect, authorize('admin', 'instructor'), reorderLessons);
 
 module.exports = router;

@@ -123,6 +123,14 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
     });
   }
 
+  void _createSection() {
+    context.push('/teacher/courses/${widget.courseId}/create-section');
+  }
+
+  void _createLesson(String sectionId) {
+    context.push('/teacher/courses/${widget.courseId}/sections/$sectionId/create-lesson');
+  }
+
   Future<void> _joinSession(LiveSession session) async {
     try {
       final response = await _liveSessionService.joinSession(session.id);
@@ -266,73 +274,161 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
 
   // Content Tab
   Widget _buildContentTab() {
-    if (_courseContent == null || _courseContent!.sections.isEmpty) {
-      return const Center(
-        child: Text('No content available for this course'),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _courseContent!.sections.length,
-      itemBuilder: (context, sectionIndex) {
-        final section = _courseContent!.sections[sectionIndex];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: ExpansionTile(
-            title: Text(
-              section.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('${section.lessons.length} lessons'),
-            children: section.lessons.map((lesson) {
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: lesson.hasRecording ? Colors.green : Colors.grey[300],
-                  child: Icon(
-                    lesson.hasRecording ? Icons.play_circle : Icons.play_arrow,
-                    color: lesson.hasRecording ? Colors.white : Colors.grey[600],
-                    size: 20,
-                  ),
+    return Column(
+      children: [
+        // Create Section Button
+        if (_courseContent != null)
+          Container(
+            margin: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              onPressed: _createSection,
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Create New Section'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                title: Text(lesson.title),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${lesson.duration} min • ${lesson.lessonType}'),
-                    if (lesson.liveSessionCount > 0)
+              ),
+            ),
+          ),
+        
+        // Sections List
+        Expanded(
+          child: _courseContent == null || _courseContent!.sections.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.library_books,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
                       Text(
-                        '${lesson.liveSessionCount} live session${lesson.liveSessionCount > 1 ? 's' : ''}',
+                        'No sections available',
                         style: TextStyle(
-                          color: Colors.orange[700],
-                          fontSize: 12,
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.schedule, color: AppTheme.primaryGreen),
-                      onPressed: () => _scheduleSession(section.id, lesson.id),
-                      tooltip: 'Schedule Live Session',
-                    ),
-                    if (lesson.hasRecording)
-                      IconButton(
-                        icon: const Icon(Icons.video_library, color: Colors.blue),
-                        onPressed: () {
-                          // View recordings
-                        },
-                        tooltip: 'View Recording',
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create your first section to get started',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
                       ),
-                  ],
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _createSection,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create First Section'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _courseContent!.sections.length,
+                  itemBuilder: (context, sectionIndex) {
+                    final section = _courseContent!.sections[sectionIndex];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        children: [
+                          // Section Header
+                          ListTile(
+                            title: Text(
+                              section.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text('${section.lessons.length} lessons'),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryGreen),
+                              onPressed: () => _createLesson(section.id),
+                              tooltip: 'Add Lesson',
+                            ),
+                          ),
+                          
+                          // Lessons
+                          if (section.lessons.isNotEmpty)
+                            ...section.lessons.map((lesson) {
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: lesson.hasRecording ? Colors.green : Colors.grey[300],
+                                  child: Icon(
+                                    lesson.hasRecording ? Icons.play_circle : Icons.play_arrow,
+                                    color: lesson.hasRecording ? Colors.white : Colors.grey[600],
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(lesson.title),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${lesson.duration} min • ${lesson.lessonType}'),
+                                    if (lesson.liveSessionCount > 0)
+                                      Text(
+                                        '${lesson.liveSessionCount} live session${lesson.liveSessionCount > 1 ? 's' : ''}',
+                                        style: TextStyle(
+                                          color: Colors.orange[700],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.schedule, color: AppTheme.primaryGreen),
+                                      onPressed: () => _scheduleSession(section.id, lesson.id),
+                                      tooltip: 'Schedule Live Session',
+                                    ),
+                                    if (lesson.hasRecording)
+                                      IconButton(
+                                        icon: const Icon(Icons.video_library, color: Colors.blue),
+                                        onPressed: () {
+                                          // View recordings
+                                        },
+                                        tooltip: 'View Recording',
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          
+                          // Add Lesson Button for Empty Sections
+                          if (section.lessons.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: OutlinedButton.icon(
+                                onPressed: () => _createLesson(section.id),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add First Lesson'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryGreen,
+                                  side: const BorderSide(color: AppTheme.primaryGreen),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            }).toList(),
-          ),
-        );
-      },
+        ),
+      ],
     );
   }
 

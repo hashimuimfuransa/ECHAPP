@@ -308,8 +308,10 @@ const getCourseContent = async (req, res) => {
       return sendNotFound(res, 'Course not found');
     }
 
-    // Check if user is enrolled in course (skip for admins)
-    if (req.user && req.user.role !== 'admin') {
+    // Check if user is enrolled in course (skip for admins and instructors)
+    const isStudent = req.user && req.user.role !== 'admin' && req.user.role !== 'instructor';
+    
+    if (isStudent) {
       const Enrollment = require('../models/Enrollment');
       const enrollment = await Enrollment.findOne({
         userId: req.user.id,
@@ -353,9 +355,14 @@ const getCourseContent = async (req, res) => {
       })
     );
     
+    // Filter out empty sections for students (but not for admins/instructors)
+    const filteredSections = isStudent 
+      ? sectionsWithLessons.filter(section => section.lessons && section.lessons.length > 0)
+      : sectionsWithLessons;
+    
     sendSuccess(res, transformUrls({
       course,
-      sections: sectionsWithLessons
+      sections: filteredSections
     }), 'Course content retrieved successfully');
   } catch (error) {
     sendError(res, 'Failed to retrieve course content', 500, error.message);
