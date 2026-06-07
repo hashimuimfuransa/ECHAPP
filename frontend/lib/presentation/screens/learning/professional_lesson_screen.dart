@@ -1801,9 +1801,26 @@ class _ProfessionalLessonScreenState
   Widget _buildVideoPlayer() {
     final videoUrl = _extractVideoUrl();
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
+        ? (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
+            ? OptimizedVideoPlayer(
+                videoId: _lesson!.videoId!,
+                videoUrl: videoUrl,
+                title: _lesson!.title,
+                description: _lesson!.description ?? '',
+                showAppBar: true,
+              )
+            : CustomVideoPlayer(
+                videoId: _lesson!.videoId!,
+                videoUrl: videoUrl,
+                title: _lesson!.title,
+                description: _lesson!.description ?? '',
+                showAppBar: true,
+              ))
+        : _buildVideoPlaceholder();
+
     return Container(
       width: double.infinity,
-      height: isDesktop ? null : (MediaQuery.of(context).size.width * 9 / 16),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(isDesktop ? 16 : 0),
@@ -1816,23 +1833,12 @@ class _ProfessionalLessonScreenState
         ] : [],
       ),
       clipBehavior: Clip.antiAlias,
-      child: _lesson!.videoId != null && videoUrl.isNotEmpty
-          ? (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-              ? OptimizedVideoPlayer(
-                  videoId: _lesson!.videoId!,
-                  videoUrl: videoUrl,
-                  title: _lesson!.title,
-                  description: _lesson!.description ?? '',
-                  showAppBar: true,
-                )
-              : CustomVideoPlayer(
-                  videoId: _lesson!.videoId!,
-                  videoUrl: videoUrl,
-                  title: _lesson!.title,
-                  description: _lesson!.description ?? '',
-                  showAppBar: true,
-                ))
-          : _buildVideoPlaceholder(),
+      child: isDesktop
+          ? AspectRatio(aspectRatio: 16 / 9, child: videoChild)
+          : SizedBox(
+              height: MediaQuery.of(context).size.width * 9 / 16,
+              child: videoChild,
+            ),
     );
   }
 

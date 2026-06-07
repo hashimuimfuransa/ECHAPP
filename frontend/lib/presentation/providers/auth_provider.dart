@@ -95,12 +95,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       
       // Step 1: Login with Firebase Auth
+      // Note: On Windows desktop, Firebase email/password auth can fail with unknown-error.
+      // We attempt Firebase first, then fall back to direct backend login on failure.
       debugPrint('AuthProvider: Step 1: Logging in with Firebase Auth...');
       final firebaseStartTime = DateTime.now();
-      final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
-        email: emailOrPhone,
-        password: password,
-      );
+      firebase_auth.UserCredential? userCredential;
+      try {
+        userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
+          email: emailOrPhone,
+          password: password,
+        );
+      } catch (firebaseError) {
+        final errMsg = firebaseError.toString().toLowerCase();
+        final isFirebaseInternalError = errMsg.contains('unknown-error') ||
+            errMsg.contains('internal-error') ||
+            errMsg.contains('an internal error has occurred') ||
+            errMsg.contains('wrong-password');
+        if (isFirebaseInternalError && !Platform.isAndroid && !Platform.isIOS) {
+          // Firebase failed on desktop — fall back to direct backend login
+          debugPrint('AuthProvider: Firebase failed on desktop, falling back to backend login: $firebaseError');
+          await _loginWithEmailAndPasswordBackend(emailOrPhone, password, deviceId: deviceId);
+          return;
+        }
+        rethrow;
+      }
       final firebaseEndTime = DateTime.now();
       debugPrint('AuthProvider: Firebase login took ${firebaseEndTime.difference(firebaseStartTime).inSeconds}s');
       
@@ -240,6 +258,52 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isEmailLoading: false,
         error: 'No cached credentials found. Please connect to internet and login first.'
       );
+    }
+  }
+
+  // Email + Password direct backend login — used as fallback when Firebase fails on desktop
+  Future<void> _loginWithEmailAndPasswordBackend(String email, String password, {String? deviceId}) async {
+    debugPrint('AuthProvider: Starting direct backend email+password login for $email');
+    try {
+      final authResponse = await _authRepository.login(email, password, deviceId: deviceId);
+
+      await _storageManager.saveAccessToken(authResponse.token);
+      await _storageManager.saveRefreshToken(authResponse.refreshToken);
+      await _storageManager.saveUserRole(authResponse.user.role);
+      await _storageManager.saveUserId(authResponse.user.id);
+      await _storageManager.saveUserPhone(authResponse.user.phone);
+      await _storageManager.saveUserName(authResponse.user.fullName);
+      await _storageManager.saveUserAvatar(authResponse.user.profilePicture);
+      await _storageManager.saveUserInterests(authResponse.user.interests);
+      await _storageManager.saveUserShortTermGoal(authResponse.user.shortTermGoal);
+      await _storageManager.saveUserMidTermGoal(authResponse.user.midTermGoal);
+      await _storageManager.saveUserLongTermGoal(authResponse.user.longTermGoal);
+      await _storageManager.saveHasCompletedOnboarding(authResponse.user.hasCompletedOnboarding);
+
+      debugPrint('AuthProvider: Direct backend login successful for $email');
+      state = state.copyWith(
+        isLoading: false,
+        isEmailLoading: false,
+        user: authResponse.user,
+        error: 'Welcome back! Login successful.',
+      );
+      FCMTokenService.initializeAndSyncToken();
+      await Future.delayed(const Duration(milliseconds: 50));
+    } catch (e) {
+      debugPrint('AuthProvider: Direct backend login error: $e');
+      String errorMessage = e.toString().replaceFirst('Exception: ', '');
+      final msgLower = errorMessage.toLowerCase();
+      if (msgLower.contains('invalid') || msgLower.contains('unauthorized') ||
+          msgLower.contains('password') || msgLower.contains('email or password')) {
+        errorMessage = 'Oops! It looks like the email or password you entered isn\'t correct. If you\'ve forgotten your password, you can reset it using the "Forgot password?" link below.';
+      } else if (msgLower.contains('network') || msgLower.contains('connection') || msgLower.contains('socket')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (msgLower.contains('deactivated') || msgLower.contains('disabled')) {
+        errorMessage = 'Your account has been deactivated. Please contact support.';
+      } else if (msgLower.contains('another device') || msgLower.contains('device binding')) {
+        errorMessage = 'This account is already registered on another device. For security, you can only use it on one device at a time. Please contact support if you need to reset your device.';
+      }
+      state = state.copyWith(isLoading: false, isEmailLoading: false, error: errorMessage);
     }
   }
 

@@ -320,6 +320,112 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     }
   }
 
+  Future<void> _resetTeacherPassword(TeacherData teacher) async {
+    final newPasswordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool obscure = true;
+    final formKey = GlobalKey<FormState>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.lock_reset, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Reset Password — ${teacher.fullName}', overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: newPasswordController,
+                  obscureText: obscure,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setSt(() => obscure = !obscure),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password is required';
+                    if (v.length < 6) return 'Password must be at least 6 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: confirmController,
+                  obscureText: obscure,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  validator: (v) {
+                    if (v != newPasswordController.text) return 'Passwords do not match';
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () {
+                if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+              },
+              child: const Text('Reset Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final response = await _apiClient.put(
+        '${ApiConfig.baseUrl}/admin/teachers/${teacher.id}',
+        body: jsonEncode({
+          'resetPassword': true,
+          'newPassword': newPasswordController.text,
+        }),
+      );
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset successfully for ${teacher.fullName}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final msg = jsonDecode(response.body)['message'] ?? 'Failed to reset password';
+        throw Exception(msg);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error resetting password: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _viewTeacherActivity(TeacherData teacher) async {
     try {
       final response = await _apiClient.get(
@@ -564,6 +670,11 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
                         icon: const Icon(Icons.assignment, color: Colors.orange),
                         onPressed: () => _assignCourses(teacher),
                         tooltip: 'Assign Courses',
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.lock_reset, color: Colors.orange),
+                        onPressed: () => _resetTeacherPassword(teacher),
+                        tooltip: 'Reset Password',
                       ),
                       IconButton(
                         icon: const Icon(Icons.analytics, color: Colors.purple),

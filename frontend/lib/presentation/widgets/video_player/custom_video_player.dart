@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import 'package:video_player/video_player.dart';
@@ -233,8 +234,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     
     if (_vpController!.value.hasError) {
       if (mounted) {
-        setState(() {
-          _errorMessage = "Playback Error: ${_vpController!.value.errorDescription}";
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _errorMessage = "Playback Error: ${_vpController!.value.errorDescription}";
+            });
+          }
         });
       }
       return;
@@ -248,17 +253,20 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
 
     if (mounted) {
-      setState(() {
-        _position = position;
-        _duration = _vpController!.value.duration;
-        _isPlaying = _vpController!.value.isPlaying;
-        _isBuffering = _vpController!.value.isBuffering;
-        
-        // Start buffering timer if it's buffering and playing
-        if (_isBuffering && _isPlaying) {
-          _startBufferingTimer();
-        } else {
-          _stopBufferingTimer();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _position = position;
+            _duration = _vpController!.value.duration;
+            _isPlaying = _vpController!.value.isPlaying;
+            _isBuffering = _vpController!.value.isBuffering;
+            
+            if (_isBuffering && _isPlaying) {
+              _startBufferingTimer();
+            } else {
+              _stopBufferingTimer();
+            }
+          });
         }
       });
     }
@@ -353,48 +361,66 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _subscriptions = [
       _mkPlayer!.stream.buffering.listen((buffering) {
         if (mounted) {
-          setState(() {
-            _isBuffering = buffering;
-            // Handle slow internet detection
-            if (_isBuffering && _isPlaying) {
-              _startBufferingTimer();
-            } else {
-              _stopBufferingTimer();
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isBuffering = buffering;
+                if (_isBuffering && _isPlaying) {
+                  _startBufferingTimer();
+                } else {
+                  _stopBufferingTimer();
+                }
+              });
             }
           });
         }
       }),
       _mkPlayer!.stream.playing.listen((playing) {
         if (mounted) {
-          setState(() {
-            _isPlaying = playing;
-            if (_isBuffering && _isPlaying) {
-              _startBufferingTimer();
-            } else {
-              _stopBufferingTimer();
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isPlaying = playing;
+                if (_isBuffering && _isPlaying) {
+                  _startBufferingTimer();
+                } else {
+                  _stopBufferingTimer();
+                }
+              });
             }
           });
         }
       }),
       _mkPlayer!.stream.position.listen((position) {
         if (mounted) {
-          setState(() => _position = position);
-          // Save progress periodically (every 5 seconds)
-          if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
-            videoProgressService.saveProgress(widget.videoId!, position);
-          }
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _position = position);
+              if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
+                videoProgressService.saveProgress(widget.videoId!, position);
+              }
+            }
+          });
         }
       }),
       _mkPlayer!.stream.duration.listen((duration) {
         if (mounted) {
-          setState(() {
-            _duration = duration;
-            _isInitialized = true;
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _duration = duration;
+                _isInitialized = true;
+              });
+            }
           });
         }
       }),
       _mkPlayer!.stream.error.listen((error) {
-        if (mounted) setState(() => _errorMessage = error.toString());
+        if (mounted) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _errorMessage = error.toString());
+          });
+        }
       }),
     ];
   }
