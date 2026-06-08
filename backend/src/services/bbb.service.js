@@ -174,7 +174,10 @@ class BBBService {
       params.role = 'moderator';
     }
 
-    return this.buildUrl('join', params, config);
+    const url = this.buildUrl('join', params, config);
+    console.log('BBB Join URL generated:', url);
+    console.log('BBB Config used:', { serverUrl: config.serverUrl, hasSecret: !!config.sharedSecret });
+    return url;
   }
 
   /**

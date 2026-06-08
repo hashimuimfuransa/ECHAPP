@@ -57,6 +57,14 @@ const liveSessionSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  bbbModeratorPw: {
+    type: String,
+    default: null
+  },
+  bbbAttendeePw: {
+    type: String,
+    default: null
+  },
   status: {
     type: String,
     enum: ['scheduled', 'live', 'ended', 'cancelled'],

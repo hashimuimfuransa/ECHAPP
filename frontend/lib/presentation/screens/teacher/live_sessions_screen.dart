@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
@@ -138,16 +139,29 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // Launch URL - in real app, use url_launcher
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening BigBlueButton...')),
-              );
+              // Launch BBB meeting URL in external browser
+              final uri = Uri.parse(joinUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not launch meeting URL')),
+                  );
+                }
+              }
             },
-            icon: const Icon(Icons.video_call),
-            label: const Text('Join Meeting'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+            icon: const Icon(Icons.video_call, color: Colors.white),
+            label: const Text('Join Meeting', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),

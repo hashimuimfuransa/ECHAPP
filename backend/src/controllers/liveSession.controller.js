@@ -92,6 +92,8 @@ const createSession = async (req, res) => {
       maxParticipants: maxParticipants || 100,
       bbbMeetingId: bbbMeeting.meetingId,
       bbbInternalMeetingId: bbbMeeting.internalMeetingId,
+      bbbModeratorPw: bbbMeeting.moderatorPw,
+      bbbAttendeePw: bbbMeeting.attendeePw,
       settings: {
         enableChat: settings?.enableChat ?? true,
         enableWebcam: settings?.enableWebcam ?? true,
