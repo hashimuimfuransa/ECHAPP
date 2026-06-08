@@ -228,8 +228,15 @@ class ApiClient {
         if (response.statusCode == 401 && !isRetry) {
           print('Got 401 Unauthorized, attempting to refresh token...');
           
-          // Try to refresh Firebase token
-          final refreshed = await _refreshFirebaseToken();
+          // Try to refresh Firebase token first
+          var refreshed = await _refreshFirebaseToken();
+          
+          // If Firebase refresh fails, try backend token refresh
+          if (!refreshed) {
+            print('Firebase token refresh failed, trying backend token refresh...');
+            refreshed = await _refreshBackendToken();
+          }
+          
           if (refreshed) {
             print('Token refreshed successfully, retrying request...');
             // Get the original request details and retry with new token
@@ -246,8 +253,7 @@ class ApiClient {
                   headers: authHeaders,
                 ), isRetry: true);
               case 'POST':
-                // For POST requests, we need to recreate the body, but we don't have access to it here
-                // So we'll just return the original 401 response and let the calling code handle it
+                // For POST, we can't retry as body is lost - return 401 to trigger re-auth
                 print('Cannot retry POST request automatically, returning original 401');
                 return response;
               case 'PUT':
@@ -332,6 +338,46 @@ class ApiClient {
       }
     } catch (e) {
       print('Failed to refresh Firebase token: $e');
+    }
+    return false;
+  }
+
+  /// Try to refresh backend JWT token using refresh token
+  Future<bool> _refreshBackendToken() async {
+    try {
+      final refreshToken = await _storage.read(key: 'refresh_token');
+      if (refreshToken == null || refreshToken.isEmpty) {
+        print('No refresh token available');
+        return false;
+      }
+
+      final response = await _httpClient.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/refresh-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      ).timeout(Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          final data = json['data'];
+          // Store new tokens
+          await _storage.write(key: 'access_token', value: data['token']);
+          await _storage.write(key: 'refresh_token', value: data['refreshToken']);
+          print('Backend token refreshed successfully');
+          return true;
+        }
+      } else {
+        print('Backend token refresh failed: ${response.statusCode}');
+        // If refresh token is expired/invalid, clear stored tokens
+        if (response.statusCode == 401) {
+          await _storage.delete(key: 'access_token');
+          await _storage.delete(key: 'refresh_token');
+          print('Cleared expired tokens');
+        }
+      }
+    } catch (e) {
+      print('Failed to refresh backend token: $e');
     }
     return false;
   }
