@@ -68,6 +68,7 @@ const voiceChatRoutes = require('./routes/voice_chat'); // Voice Chat routes
 const bookRoutes = require('./src/routes/book.routes'); // Book routes
 const teacherRoutes = require('./src/routes/teacher.routes'); // Teacher routes
 const liveSessionRoutes = require('./src/routes/liveSession.routes'); // Live Session routes
+const bbbAdminRoutes = require('./src/routes/admin/bbb.routes'); // BBB Admin routes
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -76,6 +77,7 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/bbb', bbbAdminRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/lessons', lessonRoutes);
@@ -125,6 +127,19 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     // Schedule notification checks (every 24 hours)
     NotificationSchedulerService.schedule(24);
     console.log('📧 Notification checks scheduled (every 24 hours)');
+
+    // Initialize BBB config from environment variables (if not already in database)
+    const BBBConfig = require('./src/models/BBBConfig');
+    try {
+      const bbbConfig = await BBBConfig.initializeFromEnv();
+      if (bbbConfig) {
+        console.log('✅ BBB configuration initialized');
+      } else {
+        console.log('⚠️  No BBB configuration found. Set BBB_SERVER_URL and BBB_SHARED_SECRET in .env');
+      }
+    } catch (bbbError) {
+      console.error('⚠️  BBB config initialization failed:', bbbError.message);
+    }
     
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);

@@ -21,14 +21,16 @@ class ApiClient {
   );
 
   /// Get authorization header — Firebase ID token first, stored JWT as fallback
-  Future<Map<String, String>> _getAuthHeaders() async {
+  Future<Map<String, String>> _getAuthHeaders({bool forceRefresh = false}) async {
     // 1. Try Firebase (primary path: mobile / web / Google sign-in)
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       print('ApiClient: Current user: ${user?.uid ?? 'null'}');
       if (user != null) {
-        final token = await user.getIdToken(true);
+        // Force refresh if requested or if token might be stale
+        final token = await user.getIdToken(forceRefresh);
         if (token != null) {
+          print('ApiClient: Using Firebase token (refreshed: $forceRefresh)');
           return {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -206,8 +208,9 @@ class ApiClient {
 
   /// Execute HTTP request with error handling, timeout, and retry mechanism
   Future<http.Response> _makeRequest(
-    Future<http.Response> Function() requestFn,
-  ) async {
+    Future<http.Response> Function() requestFn, {
+    bool isRetry = false,
+  }) async {
     int maxRetries = 2;
     int retryCount = 0;
     
@@ -220,6 +223,51 @@ class ApiClient {
         // Log request for debugging
         print('API Request: ${response.request?.method} ${response.request?.url}');
         print('Response Status: ${response.statusCode}');
+        
+        // Handle 401 Unauthorized - try to refresh token and retry once
+        if (response.statusCode == 401 && !isRetry) {
+          print('Got 401 Unauthorized, attempting to refresh token...');
+          
+          // Try to refresh Firebase token
+          final refreshed = await _refreshFirebaseToken();
+          if (refreshed) {
+            print('Token refreshed successfully, retrying request...');
+            // Get the original request details and retry with new token
+            final originalRequest = response.request!;
+            final url = originalRequest.url.toString();
+            final method = originalRequest.method;
+            
+            // Recreate the request with refreshed token
+            switch (method) {
+              case 'GET':
+                final authHeaders = await _getAuthHeaders(forceRefresh: true);
+                return await _makeRequest(() => _httpClient.get(
+                  Uri.parse(url),
+                  headers: authHeaders,
+                ), isRetry: true);
+              case 'POST':
+                // For POST requests, we need to recreate the body, but we don't have access to it here
+                // So we'll just return the original 401 response and let the calling code handle it
+                print('Cannot retry POST request automatically, returning original 401');
+                return response;
+              case 'PUT':
+                print('Cannot retry PUT request automatically, returning original 401');
+                return response;
+              case 'DELETE':
+                final deleteAuthHeaders = await _getAuthHeaders(forceRefresh: true);
+                return await _makeRequest(() => _httpClient.delete(
+                  Uri.parse(url),
+                  headers: deleteAuthHeaders,
+                ), isRetry: true);
+              default:
+                print('Cannot retry $method request automatically, returning original 401');
+                return response;
+            }
+          } else {
+            print('Failed to refresh token, returning original 401');
+            return response;
+          }
+        }
         
         return response;
       } on SocketException catch (e) {
@@ -268,6 +316,24 @@ class ApiClient {
         throw ApiException.unknown('An unexpected error occurred: $e');
       }
     }
+  }
+
+  /// Try to refresh Firebase token
+  Future<bool> _refreshFirebaseToken() async {
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Force refresh the token
+        final token = await user.getIdToken(true);
+        if (token != null) {
+          print('Firebase token refreshed successfully');
+          return true;
+        }
+      }
+    } catch (e) {
+      print('Failed to refresh Firebase token: $e');
+    }
+    return false;
   }
 
   /// Dispose of the HTTP client

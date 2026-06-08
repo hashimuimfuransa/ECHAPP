@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/teacher_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
+import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/models/teacher_course.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 
@@ -28,6 +29,7 @@ class ScheduleLiveSessionScreen extends ConsumerStatefulWidget {
 class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionScreen> {
   final TeacherService _teacherService = TeacherService();
   final LiveSessionService _liveSessionService = LiveSessionService();
+  final SectionService _sectionService = SectionService();
 
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
@@ -182,6 +184,129 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     }
   }
 
+  // Show dialog to create a new section
+  Future<void> _showCreateSectionDialog() async {
+    if (!mounted) return;
+
+    // Defer to next frame to avoid build cycle issues
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _CreateSectionDialog(),
+    );
+
+    if (result != null && result.isNotEmpty && _selectedCourseId != null) {
+      await _createNewSection(result);
+    }
+  }
+
+  // Create a new section via API
+  Future<void> _createNewSection(String title) async {
+    if (_selectedCourseId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Calculate order as next available
+      final order = (_selectedCourseContent?.sections.length ?? 0) + 1;
+
+      final newSection = await _sectionService.createSection(
+        courseId: _selectedCourseId!,
+        title: title,
+        order: order,
+      );
+
+      // Refresh course content to include new section
+      await _loadCourseContent(_selectedCourseId!);
+
+      // Auto-select the newly created section
+      setState(() {
+        _selectedSectionId = newSection.id;
+        _selectedLessonId = null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Section "$title" created successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating section: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // Show dialog to create a new lesson
+  Future<void> _showCreateLessonDialog() async {
+    if (_selectedSectionId == null || _selectedCourseContent == null) return;
+    if (!mounted) return;
+
+    // Defer to next frame to avoid build cycle issues
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _CreateLessonDialog(),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await _createNewLesson(result);
+    }
+  }
+
+  // Create a new lesson via API
+  Future<void> _createNewLesson(String title) async {
+    if (_selectedSectionId == null || _selectedCourseId == null || _selectedCourseContent == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Get current section's lessons count for order
+      final section = _selectedCourseContent!.sections.firstWhere((s) => s.id == _selectedSectionId);
+      final order = section.lessons.length + 1;
+
+      final newLesson = await _sectionService.createLesson(
+        sectionId: _selectedSectionId!,
+        courseId: _selectedCourseId!,
+        title: title,
+        order: order,
+        isPublished: false, // New lessons start unpublished
+      );
+
+      // Refresh course content to include new lesson
+      await _loadCourseContent(_selectedCourseId!);
+
+      // Auto-select the newly created lesson
+      setState(() {
+        _selectedLessonId = newLesson.id;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lesson "$title" created successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating lesson: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -331,63 +456,107 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                     ),
                     const SizedBox(height: 16),
 
-                    // Section Dropdown
+                    // Section Dropdown with Create Button
                     if (_selectedCourseContent != null)
-                      DropdownButtonFormField<String>(
-                        value: _selectedSectionId,
-                        decoration: const InputDecoration(
-                          labelText: 'Section *',
-                          prefixIcon: Icon(Icons.folder),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _selectedCourseContent!.sections.map((section) {
-                          return DropdownMenuItem(
-                            value: section.id,
-                            child: Text(section.title),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSectionId = value;
-                            _selectedLessonId = null;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select a section';
-                          }
-                          return null;
-                        },
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedSectionId,
+                              decoration: const InputDecoration(
+                                labelText: 'Section *',
+                                prefixIcon: Icon(Icons.folder),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: _selectedCourseContent!.sections.map((section) {
+                                return DropdownMenuItem(
+                                  value: section.id,
+                                  child: Text(section.title),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSectionId = value;
+                                  _selectedLessonId = null;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return 'Please select a section';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: 'Create New Section',
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.green),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.add_circle, color: Colors.green),
+                                onPressed: _showCreateSectionDialog,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                     if (_selectedSectionId != null && _selectedCourseContent != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedLessonId,
-                          decoration: const InputDecoration(
-                            labelText: 'Lesson (Optional)',
-                            prefixIcon: Icon(Icons.play_circle),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: [
-                            const DropdownMenuItem(
-                              value: null,
-                              child: Text('General Section Session'),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedLessonId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Lesson (Optional)',
+                                  prefixIcon: Icon(Icons.play_circle),
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('General Section Session'),
+                                  ),
+                                  ..._selectedCourseContent!.sections
+                                      .firstWhere((s) => s.id == _selectedSectionId)
+                                      .lessons
+                                      .map((lesson) {
+                                    return DropdownMenuItem(
+                                      value: lesson.id,
+                                      child: Text(lesson.title),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (value) {
+                                  setState(() => _selectedLessonId = value);
+                                },
+                              ),
                             ),
-                            ..._selectedCourseContent!.sections
-                                .firstWhere((s) => s.id == _selectedSectionId)
-                                .lessons
-                                .map((lesson) {
-                              return DropdownMenuItem(
-                                value: lesson.id,
-                                child: Text(lesson.title),
-                              );
-                            }),
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              message: 'Create New Lesson',
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.green),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                                  onPressed: _showCreateLessonDialog,
+                                ),
+                              ),
+                            ),
                           ],
-                          onChanged: (value) {
-                            setState(() => _selectedLessonId = value);
-                          },
                         ),
                       ),
                   ],
@@ -609,6 +778,130 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dialog for creating a new section
+class _CreateSectionDialog extends StatefulWidget {
+  const _CreateSectionDialog();
+
+  @override
+  State<_CreateSectionDialog> createState() => _CreateSectionDialogState();
+}
+
+class _CreateSectionDialogState extends State<_CreateSectionDialog> {
+  final _titleController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create New Section'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _titleController,
+          decoration: const InputDecoration(
+            labelText: 'Section Title *',
+            hintText: 'e.g., Chapter 1: Introduction',
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a section title';
+            }
+            return null;
+          },
+          autofocus: true,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop(_titleController.text.trim());
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryGreen,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Create'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Dialog for creating a new lesson
+class _CreateLessonDialog extends StatefulWidget {
+  const _CreateLessonDialog();
+
+  @override
+  State<_CreateLessonDialog> createState() => _CreateLessonDialogState();
+}
+
+class _CreateLessonDialogState extends State<_CreateLessonDialog> {
+  final _titleController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create New Lesson'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _titleController,
+          decoration: const InputDecoration(
+            labelText: 'Lesson Title *',
+            hintText: 'e.g., Introduction to Topic',
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a lesson title';
+            }
+            return null;
+          },
+          autofocus: true,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop(_titleController.text.trim());
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryGreen,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Create'),
+        ),
+      ],
     );
   }
 }

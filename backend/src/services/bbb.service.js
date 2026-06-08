@@ -1,8 +1,10 @@
 const crypto = require('crypto');
 const axios = require('axios');
+const BBBConfig = require('../models/BBBConfig');
 
-const BBB_SERVER_URL = process.env.BBB_SERVER_URL?.replace(/\/$/, '') || '';
-const BBB_SHARED_SECRET = process.env.BBB_SHARED_SECRET || '';
+// Fallback environment variables
+const ENV_BBB_SERVER_URL = process.env.BBB_SERVER_URL?.replace(/\/$/, '') || '';
+const ENV_BBB_SHARED_SECRET = process.env.BBB_SHARED_SECRET || '';
 
 /**
  * BigBlueButton API Service
@@ -10,13 +12,39 @@ const BBB_SHARED_SECRET = process.env.BBB_SHARED_SECRET || '';
  */
 class BBBService {
   /**
+   * Get BBB configuration from database or environment
+   * @returns {Promise<Object>} BBB config with serverUrl and sharedSecret
+   */
+  static async getConfig() {
+    // Try database first
+    const dbConfig = await BBBConfig.getActiveConfig();
+    if (dbConfig) {
+      return {
+        serverUrl: dbConfig.serverUrl.replace(/\/$/, ''),
+        sharedSecret: dbConfig.sharedSecret
+      };
+    }
+    
+    // Fallback to environment variables
+    if (ENV_BBB_SERVER_URL && ENV_BBB_SHARED_SECRET) {
+      return {
+        serverUrl: ENV_BBB_SERVER_URL,
+        sharedSecret: ENV_BBB_SHARED_SECRET
+      };
+    }
+    
+    return null;
+  }
+
+  /**
    * Generate SHA1 checksum for BBB API call
    * @param {string} apiCall - The API call name (e.g., 'create', 'join')
    * @param {string} queryString - The query string parameters
+   * @param {string} sharedSecret - The shared secret
    * @returns {string} SHA1 checksum
    */
-  static generateChecksum(apiCall, queryString) {
-    const stringToHash = `${apiCall}${queryString}${BBB_SHARED_SECRET}`;
+  static generateChecksum(apiCall, queryString, sharedSecret) {
+    const stringToHash = `${apiCall}${queryString}${sharedSecret}`;
     return crypto.createHash('sha1').update(stringToHash).digest('hex');
   }
 
@@ -24,12 +52,13 @@ class BBBService {
    * Build BBB API URL with checksum
    * @param {string} apiCall - The API call name
    * @param {Object} params - Query parameters
+   * @param {Object} config - BBB config with serverUrl and sharedSecret
    * @returns {string} Full API URL
    */
-  static buildUrl(apiCall, params = {}) {
+  static buildUrl(apiCall, params = {}, config) {
     const queryString = new URLSearchParams(params).toString();
-    const checksum = this.generateChecksum(apiCall, queryString);
-    return `${BBB_SERVER_URL}/api/${apiCall}?${queryString}&checksum=${checksum}`;
+    const checksum = this.generateChecksum(apiCall, queryString, config.sharedSecret);
+    return `${config.serverUrl}/api/${apiCall}?${queryString}&checksum=${checksum}`;
   }
 
   /**
@@ -38,8 +67,9 @@ class BBBService {
    * @returns {Promise<Object>} Meeting creation response
    */
   static async createMeeting(options) {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
-      throw new Error('BBB configuration missing. Check BBB_SERVER_URL and BBB_SHARED_SECRET env vars.');
+    const config = await this.getConfig();
+    if (!config) {
+      throw new Error('BBB configuration missing. Please configure BBB in admin settings or set environment variables.');
     }
 
     const {
@@ -78,10 +108,13 @@ class BBBService {
       params.welcome = welcomeMsg;
     }
 
-    const url = this.buildUrl('create', params);
+    const url = this.buildUrl('create', params, config);
     
     try {
+      console.log('BBB Create URL:', url);
       const response = await axios.get(url, { timeout: 30000 });
+      console.log('BBB Response:', response.data);
+      
       const parser = new (require('xml2js').Parser)({ explicitArray: false });
       const result = await parser.parseStringPromise(response.data);
       
@@ -100,6 +133,7 @@ class BBBService {
       }
     } catch (error) {
       console.error('BBB Create Meeting Error:', error.message);
+      console.error('BBB Response data:', error.response?.data || 'No response data');
       throw new Error(`Failed to create BBB meeting: ${error.message}`);
     }
   }
@@ -107,10 +141,11 @@ class BBBService {
   /**
    * Generate join URL for a meeting
    * @param {Object} options - Join options
-   * @returns {string} Join URL
+   * @returns {Promise<string>} Join URL
    */
-  static getJoinUrl(options) {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
+  static async getJoinUrl(options) {
+    const config = await this.getConfig();
+    if (!config) {
       throw new Error('BBB configuration missing');
     }
 
@@ -139,7 +174,7 @@ class BBBService {
       params.role = 'moderator';
     }
 
-    return this.buildUrl('join', params);
+    return this.buildUrl('join', params, config);
   }
 
   /**
@@ -149,7 +184,8 @@ class BBBService {
    * @returns {Promise<Object>} End meeting response
    */
   static async endMeeting(meetingId, moderatorPw) {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
+    const config = await this.getConfig();
+    if (!config) {
       throw new Error('BBB configuration missing');
     }
 
@@ -158,7 +194,7 @@ class BBBService {
       password: moderatorPw
     };
 
-    const url = this.buildUrl('end', params);
+    const url = this.buildUrl('end', params, config);
     
     try {
       const response = await axios.get(url, { timeout: 10000 });
@@ -182,7 +218,8 @@ class BBBService {
    * @returns {Promise<Object>} Meeting info
    */
   static async getMeetingInfo(meetingId, moderatorPw) {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
+    const config = await this.getConfig();
+    if (!config) {
       throw new Error('BBB configuration missing');
     }
 
@@ -191,7 +228,7 @@ class BBBService {
       password: moderatorPw
     };
 
-    const url = this.buildUrl('getMeetingInfo', params);
+    const url = this.buildUrl('getMeetingInfo', params, config);
     
     try {
       const response = await axios.get(url, { timeout: 10000 });
@@ -224,7 +261,8 @@ class BBBService {
    * @returns {Promise<Array>} Recordings list
    */
   static async getRecordings(meetingId = null) {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
+    const config = await this.getConfig();
+    if (!config) {
       throw new Error('BBB configuration missing');
     }
 
@@ -233,7 +271,7 @@ class BBBService {
       params.meetingID = meetingId;
     }
 
-    const url = this.buildUrl('getRecordings', params);
+    const url = this.buildUrl('getRecordings', params, config);
     
     try {
       const response = await axios.get(url, { timeout: 10000 });
@@ -275,13 +313,14 @@ class BBBService {
    * @returns {Promise<boolean>}
    */
   static async isAvailable() {
-    if (!BBB_SERVER_URL || !BBB_SHARED_SECRET) {
+    const config = await this.getConfig();
+    if (!config) {
       return false;
     }
 
     try {
       const params = {};
-      const url = this.buildUrl('getMeetings', params);
+      const url = this.buildUrl('getMeetings', params, config);
       const response = await axios.get(url, { timeout: 5000 });
       return response.status === 200;
     } catch (error) {
