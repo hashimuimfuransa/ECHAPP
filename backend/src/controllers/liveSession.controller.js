@@ -138,12 +138,12 @@ const getTeacherSessions = async (req, res) => {
     const total = await LiveSession.countDocuments(query);
 
     // Add BBB URLs to each session
-    const sessionsWithUrls = sessions.map(session => {
+    const sessionsWithUrls = await Promise.all(sessions.map(async (session) => {
       const sessionObj = session.toObject();
       
       // Generate URLs if session has BBB meeting
       if (session.bbbMeetingId && session.status !== 'cancelled') {
-        sessionObj.bbbModeratorUrl = BBBService.getJoinUrl({
+        sessionObj.bbbModeratorUrl = await BBBService.getJoinUrl({
           fullName: req.user.fullName || 'Teacher',
           meetingId: session.bbbMeetingId,
           password: session.bbbModeratorPw || '',
@@ -155,7 +155,7 @@ const getTeacherSessions = async (req, res) => {
       }
       
       return sessionObj;
-    });
+    }));
 
     sendSuccess(res, {
       sessions: sessionsWithUrls,
@@ -202,14 +202,14 @@ const getCourseSessions = async (req, res) => {
     const total = await LiveSession.countDocuments(query);
 
     // For students, only include necessary info (no moderator URLs)
-    const sanitizedSessions = sessions.map(session => {
+    const sanitizedSessions = await Promise.all(sessions.map(async (session) => {
       const sessionObj = session.toObject();
       delete sessionObj.bbbModeratorUrl;
       delete sessionObj.bbbModeratorPw;
       
       // Generate attendee URL if session is live or scheduled and has BBB meeting
       if (session.bbbMeetingId && (session.status === 'scheduled' || session.status === 'live')) {
-        sessionObj.joinUrl = BBBService.getJoinUrl({
+        sessionObj.joinUrl = await BBBService.getJoinUrl({
           fullName: req.user.fullName || 'Student',
           meetingId: session.bbbMeetingId,
           password: session.bbbAttendeePw || '',
@@ -219,7 +219,7 @@ const getCourseSessions = async (req, res) => {
       }
       
       return sessionObj;
-    });
+    }));
 
     sendSuccess(res, {
       sessions: sanitizedSessions,
@@ -265,7 +265,7 @@ const joinSession = async (req, res) => {
     const teacherId = session.teacherId._id ? session.teacherId._id.toString() : session.teacherId.toString();
     if (userRole === 'instructor' && teacherId === userId) {
       isModerator = true;
-      joinUrl = BBBService.getJoinUrl({
+      joinUrl = await BBBService.getJoinUrl({
         fullName: user.fullName || 'Teacher',
         meetingId: session.bbbMeetingId,
         password: session.bbbModeratorPw || '',
@@ -287,7 +287,7 @@ const joinSession = async (req, res) => {
         return sendError(res, 'You must be enrolled in this course to join', 403);
       }
 
-      joinUrl = BBBService.getJoinUrl({
+      joinUrl = await BBBService.getJoinUrl({
         fullName: user.fullName || 'Student',
         meetingId: session.bbbMeetingId,
         password: session.bbbAttendeePw || '',
@@ -510,17 +510,20 @@ const getLessonSessions = async (req, res) => {
       .sort({ scheduledAt: -1 });
 
     // Sanitize based on user role
-    const sanitizedSessions = sessions.map(session => {
+    const sanitizedSessions = await Promise.all(sessions.map(async (session) => {
       const sessionObj = session.toObject();
       
+      // Handle populated teacherId
+      const sessionTeacherId = session.teacherId._id ? session.teacherId._id.toString() : session.teacherId.toString();
+      
       // Only teachers see moderator info
-      if (userRole !== 'instructor' || session.teacherId._id.toString() !== userId) {
+      if (userRole !== 'instructor' || sessionTeacherId !== userId) {
         delete sessionObj.bbbModeratorUrl;
         delete sessionObj.bbbModeratorPw;
         
         // Add attendee join URL for scheduled/live sessions
         if ((session.status === 'scheduled' || session.status === 'live') && session.bbbMeetingId) {
-          sessionObj.joinUrl = BBBService.getJoinUrl({
+          sessionObj.joinUrl = await BBBService.getJoinUrl({
             fullName: req.user.fullName || 'Student',
             meetingId: session.bbbMeetingId,
             password: session.bbbAttendeePw || '',
@@ -531,7 +534,7 @@ const getLessonSessions = async (req, res) => {
       }
       
       return sessionObj;
-    });
+    }));
 
     sendSuccess(res, {
       sessions: sanitizedSessions
