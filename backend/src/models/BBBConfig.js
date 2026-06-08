@@ -36,7 +36,7 @@ const bbbConfigSchema = new mongoose.Schema({
 });
 
 // Ensure only one active config exists
-bbbConfigSchema.pre('save', async function(next) {
+bbbConfigSchema.pre('save', async function() {
   if (this.isActive) {
     // Deactivate other configs
     await this.constructor.updateMany(
@@ -44,7 +44,6 @@ bbbConfigSchema.pre('save', async function(next) {
       { isActive: false }
     );
   }
-  next();
 });
 
 // Static method to get active config
