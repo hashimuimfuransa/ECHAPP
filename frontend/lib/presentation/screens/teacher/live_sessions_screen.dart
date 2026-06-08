@@ -113,9 +113,13 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
   }
 
   void _showJoinDialog(String joinUrl, LiveSession session) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.getCardColor(context),
         title: Text('Join ${session.title}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,7 +128,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
             const SizedBox(height: 8),
             Text(
               'This will open in a new window.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: TextStyle(color: textSecondary, fontSize: 12),
             ),
           ],
         ),
@@ -154,6 +158,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.getCardColor(context),
         title: const Text('End Session'),
         content: Text('Are you sure you want to end "${session.title}"?\n\nThis will close the meeting for all participants.'),
         actions: [
@@ -193,6 +198,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.getCardColor(context),
         title: const Text('Cancel Session'),
         content: Text('Are you sure you want to cancel "${session.title}"?'),
         actions: [
@@ -252,18 +258,22 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
   }
 
   void _showRecordingDialog(RecordingResponse recording) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.getCardColor(context),
         title: Text(recording.sessionTitle ?? 'Session Recording'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.play_circle, size: 64, color: AppTheme.primaryGreen),
             const SizedBox(height: 16),
-            Text('Duration: ${recording.duration} minutes'),
+            Text('Duration: ${recording.duration} minutes', style: TextStyle(color: textPrimary)),
             const SizedBox(height: 8),
-            Text('Format: ${recording.format ?? 'Video'}'),
+            Text('Format: ${recording.format ?? 'Video'}', style: TextStyle(color: textPrimary)),
           ],
         ),
         actions: [
@@ -294,8 +304,13 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
         title: const Text('Live Sessions'),
         backgroundColor: AppTheme.primaryGreen,
@@ -362,6 +377,11 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
       return _buildEmptyState(type);
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: sessions.length,
@@ -374,6 +394,10 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           onEnd: () => _endSession(session),
           onCancel: () => _cancelSession(session),
           onViewRecording: () => _viewRecording(session),
+          isDark: isDark,
+          cardColor: cardColor,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         );
       },
     );
@@ -397,15 +421,18 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
         icon = Icons.video_call;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: Colors.grey[400]),
+          Icon(icon, size: 64, color: textSecondary.withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: textSecondary),
           ),
           const SizedBox(height: 16),
           if (type == 'upcoming')
@@ -429,6 +456,10 @@ class _SessionCard extends StatelessWidget {
   final VoidCallback onEnd;
   final VoidCallback onCancel;
   final VoidCallback onViewRecording;
+  final bool isDark;
+  final Color cardColor;
+  final Color textPrimary;
+  final Color textSecondary;
 
   const _SessionCard({
     required this.session,
@@ -437,6 +468,10 @@ class _SessionCard extends StatelessWidget {
     required this.onEnd,
     required this.onCancel,
     required this.onViewRecording,
+    required this.isDark,
+    required this.cardColor,
+    required this.textPrimary,
+    required this.textSecondary,
   });
 
   @override
@@ -468,6 +503,7 @@ class _SessionCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: cardColor,
       child: Column(
         children: [
           ListTile(
@@ -476,7 +512,7 @@ class _SessionCard extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -487,9 +523,10 @@ class _SessionCard extends StatelessWidget {
             ),
             title: Text(
               session.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
+                color: textPrimary,
               ),
             ),
             subtitle: Column(
@@ -500,7 +537,7 @@ class _SessionCard extends StatelessWidget {
                   Text(
                     session.course!['title'] ?? '',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -510,7 +547,7 @@ class _SessionCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withOpacity(isDark ? 0.2 : 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -523,11 +560,11 @@ class _SessionCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.schedule, size: 14, color: textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       DateFormat('MMM d, h:mm a').format(session.scheduledAt),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(color: textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -536,10 +573,13 @@ class _SessionCard extends StatelessWidget {
             trailing: canJoin
                 ? ElevatedButton.icon(
                     onPressed: onJoin,
-                    icon: const Icon(Icons.video_call),
-                    label: isLive ? const Text('Join') : const Text('Start'),
+                    icon: const Icon(Icons.video_call, color: Colors.white),
+                    label: isLive
+                        ? const Text('Join', style: TextStyle(color: Colors.white))
+                        : const Text('Start', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isLive ? Colors.green : AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
                     ),
                   )
                 : hasRecording
@@ -550,7 +590,7 @@ class _SessionCard extends StatelessWidget {
                     : null,
           ),
           if (isScheduled || isLive || hasRecording)
-            Divider(height: 1, color: Colors.grey[300]),
+            Divider(height: 1, color: isDark ? AppTheme.darkTextSecondary.withOpacity(0.2) : Colors.grey[300]),
           if (isScheduled || isLive || hasRecording)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -572,20 +612,22 @@ class _SessionCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: onJoin,
-                      icon: const Icon(Icons.video_call, size: 18),
-                      label: const Text('Start Early'),
+                      icon: const Icon(Icons.video_call, size: 18, color: Colors.white),
+                      label: const Text('Start Early', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ],
                   if (isLive)
                     ElevatedButton.icon(
                       onPressed: onEnd,
-                      icon: const Icon(Icons.stop, size: 18),
-                      label: const Text('End Session'),
+                      icon: const Icon(Icons.stop, size: 18, color: Colors.white),
+                      label: const Text('End Session', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
                       ),
                     ),
                 ],

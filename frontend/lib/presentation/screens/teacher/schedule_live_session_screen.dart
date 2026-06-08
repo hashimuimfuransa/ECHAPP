@@ -195,7 +195,7 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const _CreateSectionDialog(),
+      builder: (context) => _CreateSectionDialog(isDark: Theme.of(context).brightness == Brightness.dark),
     );
 
     if (result != null && result.isNotEmpty && _selectedCourseId != null) {
@@ -256,7 +256,7 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const _CreateLessonDialog(),
+      builder: (context) => _CreateLessonDialog(isDark: Theme.of(context).brightness == Brightness.dark),
     );
 
     if (result != null && result.isNotEmpty) {
@@ -309,8 +309,13 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600];
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
         title: const Text('Schedule Live Session'),
         backgroundColor: AppTheme.primaryGreen,
@@ -343,6 +348,11 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
   }
 
   Widget _buildForm() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Form(
@@ -352,16 +362,18 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
           children: [
             // Session Details Card
             Card(
+              color: cardColor,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Session Details',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -404,16 +416,18 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
 
             // Course & Section Card
             Card(
+              color: cardColor,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Course & Location',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -495,11 +509,11 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                             child: Container(
                               height: 56,
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.green),
+                                border: Border.all(color: AppTheme.primaryGreen),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.add_circle, color: Colors.green),
+                                icon: const Icon(Icons.add_circle, color: AppTheme.primaryGreen),
                                 onPressed: _showCreateSectionDialog,
                               ),
                             ),
@@ -547,11 +561,11 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                               child: Container(
                                 height: 56,
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.green),
+                                  border: Border.all(color: AppTheme.primaryGreen),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                                  icon: const Icon(Icons.add_circle, color: AppTheme.primaryGreen),
                                   onPressed: _showCreateLessonDialog,
                                 ),
                               ),
@@ -568,16 +582,18 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
 
             // Schedule Card
             Card(
+              color: cardColor,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Schedule',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -623,9 +639,9 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                     // Duration Slider
                     Row(
                       children: [
-                        const Icon(Icons.timer, color: Colors.grey),
+                        Icon(Icons.timer, color: textSecondary),
                         const SizedBox(width: 8),
-                        const Text('Duration:'),
+                        Text('Duration:', style: TextStyle(color: textPrimary)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Slider(
@@ -645,6 +661,32 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    // Max Participants Slider
+                    Row(
+                      children: [
+                        Icon(Icons.people, color: textSecondary),
+                        const SizedBox(width: 8),
+                        Text('Max Participants:', style: TextStyle(color: textPrimary)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Slider(
+                            value: _maxParticipants.toDouble(),
+                            min: 2,
+                            max: 100,
+                            divisions: 49,
+                            label: '$_maxParticipants',
+                            onChanged: (value) {
+                              setState(() => _maxParticipants = value.toInt());
+                            },
+                          ),
+                        ),
+                        Text(
+                          '$_maxParticipants',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -654,16 +696,18 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
 
             // Settings Card
             Card(
+              color: cardColor,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Meeting Settings',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -784,7 +828,9 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
 
 /// Dialog for creating a new section
 class _CreateSectionDialog extends StatefulWidget {
-  const _CreateSectionDialog();
+  final bool isDark;
+
+  const _CreateSectionDialog({this.isDark = false});
 
   @override
   State<_CreateSectionDialog> createState() => _CreateSectionDialogState();
@@ -803,7 +849,8 @@ class _CreateSectionDialogState extends State<_CreateSectionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create New Section'),
+      backgroundColor: AppTheme.getCardColor(context),
+      title: Text('Create New Section', style: TextStyle(color: widget.isDark ? AppTheme.darkTextPrimary : Colors.black87)),
       content: Form(
         key: _formKey,
         child: TextFormField(
@@ -846,7 +893,9 @@ class _CreateSectionDialogState extends State<_CreateSectionDialog> {
 
 /// Dialog for creating a new lesson
 class _CreateLessonDialog extends StatefulWidget {
-  const _CreateLessonDialog();
+  final bool isDark;
+
+  const _CreateLessonDialog({this.isDark = false});
 
   @override
   State<_CreateLessonDialog> createState() => _CreateLessonDialogState();
@@ -865,7 +914,8 @@ class _CreateLessonDialogState extends State<_CreateLessonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create New Lesson'),
+      backgroundColor: AppTheme.getCardColor(context),
+      title: Text('Create New Lesson', style: TextStyle(color: widget.isDark ? AppTheme.darkTextPrimary : Colors.black87)),
       content: Form(
         key: _formKey,
         child: TextFormField(

@@ -68,26 +68,34 @@ class LiveSession {
   factory LiveSession.fromJson(Map<String, dynamic> json) {
     return LiveSession(
       id: json['_id'] ?? json['id'] ?? '',
-      teacherId: json['teacherId'] ?? '',
-      courseId: json['courseId'] ?? '',
-      sectionId: json['sectionId'] ?? '',
-      lessonId: json['lessonId'],
-      title: json['title'] ?? '',
-      description: json['description'],
+      teacherId: (json['teacherId'] is Map
+          ? json['teacherId']['_id'] ?? json['teacherId']['id'] ?? ''
+          : json['teacherId'] ?? '') as String,
+      courseId: (json['courseId'] is Map
+          ? json['courseId']['_id'] ?? json['courseId']['id'] ?? ''
+          : json['courseId'] ?? '') as String,
+      sectionId: (json['sectionId'] is Map
+          ? json['sectionId']['_id'] ?? json['sectionId']['id'] ?? ''
+          : json['sectionId'] ?? '') as String,
+      lessonId: json['lessonId'] is Map
+          ? (json['lessonId']['_id'] ?? json['lessonId']['id']) as String?
+          : json['lessonId'] as String?,
+      title: json['title'] is String ? json['title'] : '',
+      description: json['description'] is String ? json['description'] : null,
       scheduledAt: json['scheduledAt'] != null
           ? DateTime.parse(json['scheduledAt'])
           : DateTime.now(),
       duration: json['duration'] ?? 60,
-      bbbMeetingId: json['bbbMeetingId'],
-      bbbInternalMeetingId: json['bbbInternalMeetingId'],
-      bbbModeratorUrl: json['bbbModeratorUrl'],
-      bbbAttendeeUrl: json['bbbAttendeeUrl'],
-      bbbModeratorPw: json['bbbModeratorPw'],
-      bbbAttendeePw: json['bbbAttendeePw'],
-      status: json['status'] ?? 'scheduled',
-      recordingUrl: json['recordingUrl'],
+      bbbMeetingId: json['bbbMeetingId'] is String ? json['bbbMeetingId'] : null,
+      bbbInternalMeetingId: json['bbbInternalMeetingId'] is String ? json['bbbInternalMeetingId'] : null,
+      bbbModeratorUrl: json['bbbModeratorUrl'] is String ? json['bbbModeratorUrl'] : null,
+      bbbAttendeeUrl: json['bbbAttendeeUrl'] is String ? json['bbbAttendeeUrl'] : null,
+      bbbModeratorPw: json['bbbModeratorPw'] is String ? json['bbbModeratorPw'] : null,
+      bbbAttendeePw: json['bbbAttendeePw'] is String ? json['bbbAttendeePw'] : null,
+      status: json['status'] is String ? json['status'] : 'scheduled',
+      recordingUrl: json['recordingUrl'] is String ? json['recordingUrl'] : null,
       recordingDuration: json['recordingDuration'] ?? 0,
-      recordingFormat: json['recordingFormat'],
+      recordingFormat: json['recordingFormat'] is String ? json['recordingFormat'] : null,
       endedAt: json['endedAt'] != null
           ? DateTime.parse(json['endedAt'])
           : null,

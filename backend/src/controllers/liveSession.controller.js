@@ -262,7 +262,8 @@ const joinSession = async (req, res) => {
     let isModerator = false;
 
     // Teacher/Moderator join
-    if (userRole === 'instructor' && session.teacherId.toString() === userId) {
+    const teacherId = session.teacherId._id ? session.teacherId._id.toString() : session.teacherId.toString();
+    if (userRole === 'instructor' && teacherId === userId) {
       isModerator = true;
       joinUrl = BBBService.getJoinUrl({
         fullName: user.fullName || 'Teacher',

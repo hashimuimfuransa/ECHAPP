@@ -86,8 +86,13 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.getBackgroundColor(context),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
@@ -165,14 +170,14 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             
                             // Recent Sessions
                             if (_recentSessions.isNotEmpty) ...[
-                              _buildSectionHeader('Upcoming Sessions', onSeeAll: _navigateToSessions),
-                              _buildRecentSessionsList(),
+                              _buildSectionHeader('Upcoming Sessions', onSeeAll: _navigateToSessions, textColor: textPrimary),
+                              _buildRecentSessionsList(isDark: isDark, cardColor: cardColor, textPrimary: textPrimary, textSecondary: textSecondary),
                               const SizedBox(height: 24),
                             ],
-                            
+
                             // My Courses
-                            _buildSectionHeader('My Courses', onSeeAll: () => context.push('/teacher/courses')),
-                            _buildCoursesList(),
+                            _buildSectionHeader('My Courses', onSeeAll: () => context.push('/teacher/courses'), textColor: textPrimary),
+                            _buildCoursesList(isDark: isDark, cardColor: cardColor, textPrimary: textPrimary, textSecondary: textSecondary),
                             
                             const SizedBox(height: 32),
                           ],
@@ -283,15 +288,16 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll}) {
+  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll, Color? textColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
         TextButton(
@@ -302,7 +308,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _buildRecentSessionsList() {
+  Widget _buildRecentSessionsList({required bool isDark, required Color cardColor, required Color textPrimary, required Color textSecondary}) {
     return SizedBox(
       height: 160,
       child: ListView.builder(
@@ -313,25 +319,30 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           return _SessionCard(
             session: session,
             onTap: () => context.push('/teacher/sessions'),
+            isDark: isDark,
+            cardColor: cardColor,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
           );
         },
       ),
     );
   }
 
-  Widget _buildCoursesList() {
+  Widget _buildCoursesList({required bool isDark, required Color cardColor, required Color textPrimary, required Color textSecondary}) {
     if (_courses.isEmpty) {
-      return const Card(
+      return Card(
+        color: cardColor,
         child: Padding(
-          padding: EdgeInsets.all(32.0),
+          padding: const EdgeInsets.all(32.0),
           child: Center(
             child: Column(
               children: [
-                Icon(Icons.school_outlined, size: 48, color: Colors.grey),
-                SizedBox(height: 8),
+                Icon(Icons.school_outlined, size: 48, color: textSecondary),
+                const SizedBox(height: 8),
                 Text(
                   'No courses assigned yet',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: textSecondary),
                 ),
               ],
             ),
@@ -350,6 +361,10 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           course: course,
           onTap: () => _navigateToCourse(course.course.id),
           onSchedule: () => _navigateToScheduleSession(course.course.id),
+          isDark: isDark,
+          cardColor: cardColor,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
         );
       },
     );
@@ -372,7 +387,11 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
     return Card(
+      color: AppTheme.getCardColor(context),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -381,7 +400,7 @@ class _StatCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -398,7 +417,7 @@ class _StatCard extends StatelessWidget {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: textSecondary,
               ),
             ),
           ],
@@ -424,15 +443,17 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(isDark ? 0.15 : 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withOpacity(isDark ? 0.3 : 0.2)),
         ),
         child: Column(
           children: [
@@ -457,18 +478,30 @@ class _QuickActionButton extends StatelessWidget {
 class _SessionCard extends StatelessWidget {
   final LiveSession session;
   final VoidCallback onTap;
+  final bool isDark;
+  final Color cardColor;
+  final Color textPrimary;
+  final Color textSecondary;
 
   const _SessionCard({
     required this.session,
     required this.onTap,
+    required this.isDark,
+    required this.cardColor,
+    required this.textPrimary,
+    required this.textSecondary,
   });
 
   @override
   Widget build(BuildContext context) {
     final isUpcoming = session.scheduledAt.isAfter(DateTime.now());
-    
+    final statusBgColor = isUpcoming
+        ? (isDark ? Colors.orange.withOpacity(0.2) : Colors.orange[50])
+        : (isDark ? Colors.green.withOpacity(0.2) : Colors.green[50]);
+
     return Card(
       margin: const EdgeInsets.only(right: 12),
+      color: cardColor,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -483,7 +516,7 @@ class _SessionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isUpcoming ? Colors.orange[50] : Colors.green[50],
+                      color: statusBgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -506,9 +539,10 @@ class _SessionCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 session.title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: textPrimary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -518,7 +552,7 @@ class _SessionCard extends StatelessWidget {
                 Text(
                   session.course!['title'] ?? '',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: textSecondary,
                     fontSize: 12,
                   ),
                   maxLines: 1,
@@ -528,7 +562,7 @@ class _SessionCard extends StatelessWidget {
               Text(
                 DateFormat('MMM d, yyyy • h:mm a').format(session.scheduledAt),
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -545,17 +579,26 @@ class _CourseCard extends StatelessWidget {
   final TeacherCourse course;
   final VoidCallback onTap;
   final VoidCallback onSchedule;
+  final bool isDark;
+  final Color cardColor;
+  final Color textPrimary;
+  final Color textSecondary;
 
   const _CourseCard({
     required this.course,
     required this.onTap,
     required this.onSchedule,
+    required this.isDark,
+    required this.cardColor,
+    required this.textPrimary,
+    required this.textSecondary,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: cardColor,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -575,8 +618,8 @@ class _CourseCard extends StatelessWidget {
                     : Container(
                         width: 80,
                         height: 80,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.school, color: Colors.grey),
+                        color: isDark ? AppTheme.darkSurface : Colors.grey[300],
+                        child: Icon(Icons.school, color: textSecondary),
                       ),
               ),
               const SizedBox(width: 16),
@@ -586,9 +629,10 @@ class _CourseCard extends StatelessWidget {
                   children: [
                     Text(
                       course.course.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: textPrimary,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -597,7 +641,7 @@ class _CourseCard extends StatelessWidget {
                     Text(
                       '${course.course.level} • ${course.enrollmentCount} students',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -627,7 +671,7 @@ class _CourseCard extends StatelessWidget {
                     onPressed: onSchedule,
                     tooltip: 'Schedule Session',
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
+                  Icon(Icons.chevron_right, color: textSecondary),
                 ],
               ),
             ],
