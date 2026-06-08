@@ -315,17 +315,33 @@ class BBBService {
   static async isAvailable() {
     const config = await this.getConfig();
     if (!config) {
+      console.log('BBB isAvailable: No config found');
       return false;
     }
 
     try {
       const params = {};
       const url = this.buildUrl('getMeetings', params, config);
+      console.log('BBB isAvailable: Testing URL:', url);
       const response = await axios.get(url, { timeout: 5000 });
-      return response.status === 200;
+      console.log('BBB isAvailable: Response status:', response.status);
+      console.log('BBB isAvailable: Response preview:', response.data.substring(0, 200));
+      return response.status === 200 && response.data.includes('<response>');
     } catch (error) {
+      console.log('BBB isAvailable: Error:', error.message);
       return false;
     }
+  }
+
+  /**
+   * Get raw API URL for testing
+   * @returns {Promise<string|null>}
+   */
+  static async getApiUrl() {
+    const config = await this.getConfig();
+    if (!config) return null;
+    const params = {};
+    return this.buildUrl('getMeetings', params, config);
   }
 }
 

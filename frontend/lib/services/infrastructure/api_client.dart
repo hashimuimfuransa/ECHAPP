@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/api_response.dart';
 import '../../models/course.dart';
+import '../../config/api_config.dart';
 
 /// Centralized HTTP client with interceptors and error handling
 class ApiClient {

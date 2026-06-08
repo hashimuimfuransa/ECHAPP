@@ -170,10 +170,30 @@ const deleteBBBConfig = async (req, res) => {
   }
 };
 
+/**
+ * Debug BBB URL construction
+ */
+const debugBBBUrl = async (req, res) => {
+  try {
+    const apiUrl = await BBBService.getApiUrl();
+    const config = await BBBConfig.getActiveConfig();
+    
+    sendSuccess(res, {
+      apiUrl: apiUrl,
+      serverUrl: config?.serverUrl || 'Not configured',
+      hasSharedSecret: !!config?.sharedSecret,
+      configSource: config ? 'database' : (process.env.BBB_SERVER_URL ? 'environment' : 'none')
+    }, 'BBB URL debug info');
+  } catch (error) {
+    sendError(res, 'Failed to get debug info', 500, error.message);
+  }
+};
+
 module.exports = {
   getBBBConfig,
   updateBBBConfig,
   testBBBConnection,
   getAllBBBConfigs,
-  deleteBBBConfig
+  deleteBBBConfig,
+  debugBBBUrl
 };

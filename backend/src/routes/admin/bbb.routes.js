@@ -39,4 +39,11 @@ router.post('/test', protect, authorize('admin'), bbbController.testBBBConnectio
  */
 router.delete('/config/:id', protect, authorize('admin'), bbbController.deleteBBBConfig);
 
+/**
+ * @route   GET /api/admin/bbb/debug
+ * @desc    Debug BBB URL construction
+ * @access  Admin only
+ */
+router.get('/debug', protect, authorize('admin'), bbbController.debugBBBUrl);
+
 module.exports = router;
