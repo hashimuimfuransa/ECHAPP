@@ -210,6 +210,20 @@ class LiveSessionService {
     }
   }
 
+  /// Delete a session (teacher only) - works for any status
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      final response = await _apiClient.delete(
+        '${ApiConfig.baseUrl}/live/sessions/$sessionId',
+      );
+      response.validateStatus();
+    } catch (e) {
+      debugPrint('Delete Session Error: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to delete session: $e');
+    }
+  }
+
   /// Get recording for a session
   Future<RecordingResponse> getSessionRecording(String sessionId) async {
     try {

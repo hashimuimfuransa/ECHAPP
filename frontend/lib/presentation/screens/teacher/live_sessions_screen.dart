@@ -248,6 +248,46 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     }
   }
 
+  Future<void> _deleteSession(LiveSession session) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.getCardColor(context),
+        title: const Text('Delete Session'),
+        content: Text('Are you sure you want to permanently delete "${session.title}"?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _liveSessionService.deleteSession(session.id);
+        _loadSessions();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Session deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting session: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _viewRecording(LiveSession session) async {
     try {
       final recording = await _liveSessionService.getSessionRecording(session.id);
@@ -407,6 +447,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           onJoin: () => _joinSession(session),
           onEnd: () => _endSession(session),
           onCancel: () => _cancelSession(session),
+          onDelete: () => _deleteSession(session),
           onViewRecording: () => _viewRecording(session),
           isDark: isDark,
           cardColor: cardColor,
@@ -469,6 +510,7 @@ class _SessionCard extends StatelessWidget {
   final VoidCallback onJoin;
   final VoidCallback onEnd;
   final VoidCallback onCancel;
+  final VoidCallback onDelete;
   final VoidCallback onViewRecording;
   final bool isDark;
   final Color cardColor;
@@ -481,6 +523,7 @@ class _SessionCard extends StatelessWidget {
     required this.onJoin,
     required this.onEnd,
     required this.onCancel,
+    required this.onDelete,
     required this.onViewRecording,
     required this.isDark,
     required this.cardColor,
@@ -644,6 +687,13 @@ class _SessionCard extends StatelessWidget {
                         foregroundColor: Colors.white,
                       ),
                     ),
+                  // Delete button for all sessions
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    tooltip: 'Delete Session',
+                  ),
                 ],
               ),
             ),

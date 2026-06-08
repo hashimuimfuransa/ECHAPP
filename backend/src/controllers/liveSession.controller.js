@@ -416,6 +416,46 @@ const cancelSession = async (req, res) => {
 };
 
 /**
+ * Delete a session (teacher only) - works for any status
+ */
+const deleteSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const teacherId = req.user.id;
+
+    const session = await LiveSession.findOne({
+      _id: sessionId,
+      teacherId
+    });
+
+    if (!session) {
+      return sendError(res, 'Session not found or you are not the teacher', 404);
+    }
+
+    // If session is live, end the BBB meeting first
+    if (session.status === 'live' && session.bbbMeetingId && session.bbbModeratorPw) {
+      try {
+        await BBBService.endMeeting(session.bbbMeetingId, session.bbbModeratorPw);
+      } catch (bbbError) {
+        console.warn('BBB End Meeting Warning (session delete):', bbbError.message);
+        // Continue even if BBB end fails
+      }
+    }
+
+    // Delete the session from database
+    await LiveSession.deleteOne({ _id: sessionId, teacherId });
+
+    sendSuccess(res, {
+      deleted: true,
+      sessionId: sessionId
+    }, 'Session deleted successfully');
+  } catch (error) {
+    console.error('Delete Session Error:', error);
+    sendError(res, 'Failed to delete session', 500, error.message);
+  }
+};
+
+/**
  * Get session recordings
  */
 const getSessionRecordings = async (req, res) => {
@@ -554,6 +594,7 @@ module.exports = {
   joinSession,
   endSession,
   cancelSession,
+  deleteSession,
   getSessionRecordings,
   getLessonSessions
 };

@@ -9,6 +9,7 @@ const {
   joinSession,
   endSession,
   cancelSession,
+  deleteSession,
   getSessionRecordings,
   getLessonSessions
 } = require('../controllers/liveSession.controller');
@@ -21,6 +22,7 @@ router.post('/sessions', authorize('instructor'), createSession);
 router.get('/teacher/sessions', authorize('instructor'), getTeacherSessions);
 router.put('/sessions/:sessionId/end', authorize('instructor'), endSession);
 router.put('/sessions/:sessionId/cancel', authorize('instructor'), cancelSession);
+router.delete('/sessions/:sessionId', authorize('instructor'), deleteSession);
 
 // Student routes (enrollment checked in controller)
 router.get('/courses/:courseId/sessions', getCourseSessions);
