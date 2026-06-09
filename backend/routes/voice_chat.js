@@ -96,16 +96,27 @@ router.post('/send', upload.single('audio'), async (req, res) => {
     // Transcribe the audio to text
     const transcribedText = await transcribeAudio(req.file.path);
     
-    // Get or create conversation (using DB if possible)
-    const Conversation = require('../src/models/Conversation');
-    let conversation;
-    
-    if (conversationId && conversationId.length > 5 && !conversationId.startsWith('conversation_')) {
-      conversation = await Conversation.findById(conversationId);
-    }
-    
     // Prepare enriched context
     const enrichedContext = context || {};
+
+    // Get or create conversation (using DB if possible)
+    const Conversation = require('../src/models/Conversation');
+    const userId = req.user?._id?.toString();
+    let conversation;
+
+    if (conversationId && !conversationId.startsWith('conversation_')) {
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(conversationId);
+      if (isValidObjectId) {
+        conversation = await Conversation.findById(conversationId);
+      } else {
+        conversation = await Conversation.findOne({ customId: conversationId, userId });
+        if (!conversation) {
+          conversation = await Conversation.getOrCreateConversation(userId, { customId: conversationId, ...enrichedContext });
+        }
+      }
+    } else if (userId) {
+      conversation = await Conversation.getOrCreateConversation(userId, { customId: 'support_chat' });
+    }
     
     // Generate AI response using ChatController logic for consistency
     const messagesForAI = [

@@ -96,6 +96,7 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
         timestamp: DateTime.now(),
       ));
     });
+    _scrollToBottom(jump: true);
   }
 
   void _sendMessage() async {
@@ -123,26 +124,29 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
       // Generate AI response based on context
       final response = await _generateAIResponse(messageText);
       
-      setState(() {
-        _messages.add(ChatMessage(
-          text: response,
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
-        _isSending = false;
-      });
-      
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: response,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
-      setState(() {
-        _messages.add(ChatMessage(
-          text: 'Sorry, I encountered an error. Please try again.',
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
-        _isSending = false;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'Sorry, I encountered an error. Please try again.',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
 
@@ -207,13 +211,17 @@ class _AILearningChatbotState extends ConsumerState<AILearningChatbot>
         'You can ask me about specific topics, request explanations, or ask for practice questions.';
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool jump = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
+      if (!_chatScrollController.hasClients) return;
+      final maxExtent = _chatScrollController.position.maxScrollExtent;
+      if (jump) {
+        _chatScrollController.jumpTo(maxExtent);
+      } else {
         _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
+          maxExtent,
           duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+          curve: Curves.easeOutCubic,
         );
       }
     });

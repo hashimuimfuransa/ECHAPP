@@ -17,6 +17,7 @@ class VoiceChatWidget extends StatefulWidget {
   final Function(String text)? onVoiceMessageReceived;
   final Function(String text)? onTextMessageReceived;
   final Function(String text)? onAIResponse;
+  final bool isSpeaking;
 
   const VoiceChatWidget({
     super.key,
@@ -25,6 +26,7 @@ class VoiceChatWidget extends StatefulWidget {
     this.onVoiceMessageReceived,
     this.onTextMessageReceived,
     this.onAIResponse,
+    this.isSpeaking = false,
   });
 
   @override
@@ -62,6 +64,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
   }
 
   Future<void> _startRecording() async {
+    if (widget.isSpeaking) return;
     try {
       if (await _recorder.hasPermission()) {
         final tempDir = await getTemporaryDirectory();
@@ -271,7 +274,9 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                   child: Text(
-                    _recordingText ?? 'Press and hold to speak...',
+                    widget.isSpeaking
+                        ? 'AI is speaking... wait to record'
+                        : _recordingText ?? 'Press and hold to speak...',
                     style: const TextStyle(
                       color: Color(0xFF8E8E93),
                       fontSize: 14,
@@ -283,13 +288,17 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
               ),
               const SizedBox(width: 12),
               GestureDetector(
-                onTapDown: (_) => _startRecording(),
-                onTapUp: (_) => _stopRecording(),
+                onTapDown: widget.isSpeaking ? null : (_) => _startRecording(),
+                onTapUp: widget.isSpeaking ? null : (_) => _stopRecording(),
                 child: Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: _isRecording ? Colors.red : AppTheme.primary,
+                    color: widget.isSpeaking
+                        ? Colors.grey
+                        : _isRecording
+                            ? Colors.red
+                            : AppTheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -300,7 +309,11 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                     ],
                   ),
                   child: Icon(
-                    _isRecording ? Icons.mic_off : Icons.mic,
+                    widget.isSpeaking
+                        ? Icons.volume_up
+                        : _isRecording
+                            ? Icons.mic_off
+                            : Icons.mic,
                     color: Colors.white,
                     size: 24,
                   ),

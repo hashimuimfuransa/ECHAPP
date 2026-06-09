@@ -19,21 +19,24 @@ class AIChatMessagesList extends StatefulWidget {
 
 class _AIChatMessagesListState extends State<AIChatMessagesList> {
   final ScrollController _scrollController = ScrollController();
+  int _previousMessageCount = 0;
 
   @override
   void initState() {
     super.initState();
+    _previousMessageCount = widget.messages.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
+      _jumpToBottom();
     });
   }
 
   @override
   void didUpdateWidget(AIChatMessagesList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.messages.length != oldWidget.messages.length) {
+    if (widget.messages.length != _previousMessageCount) {
+      _previousMessageCount = widget.messages.length;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+        _animateToBottom();
       });
     }
   }
@@ -44,12 +47,19 @@ class _AIChatMessagesListState extends State<AIChatMessagesList> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _jumpToBottom() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
+  }
+
+  void _animateToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
       );
     }
   }
@@ -58,6 +68,7 @@ class _AIChatMessagesListState extends State<AIChatMessagesList> {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: _scrollController,
+      padding: const EdgeInsets.only(bottom: 8),
       itemCount: widget.messages.length,
       itemBuilder: (context, index) {
         final message = widget.messages[index];

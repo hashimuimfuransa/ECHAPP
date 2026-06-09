@@ -51,6 +51,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   bool _isLoading = false;
   bool _showVoiceChat = false;
   bool _isTyping = false;
+  bool _isSpeaking = false;
   late FlutterTts _flutterTts;
   
   @override
@@ -84,6 +85,18 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
     _flutterTts.setSpeechRate(0.5); // Natural speed
     _flutterTts.setVolume(1.0);
     _flutterTts.setPitch(1.0); // Normal pitch for a male voice
+    _flutterTts.setStartHandler(() {
+      if (mounted) setState(() => _isSpeaking = true);
+    });
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+    _flutterTts.setCancelHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+    _flutterTts.setErrorHandler((_) {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
     
     // Try to set a male British voice explicitly if available
     _flutterTts.getVoices.then((voices) {
@@ -126,6 +139,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   }
 
   void _speakMessage(String message) {
+    _flutterTts.stop();
     _flutterTts.speak(message);
   }
 
@@ -530,6 +544,7 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                           padding: const EdgeInsets.all(16),
                           child: VoiceChatWidget(
                             conversationId: widget.conversationId,
+                            isSpeaking: _isSpeaking,
                             context: {
                               'courseTitle': widget.currentCourse?.title ?? '',
                               'lessonTitle': widget.currentLesson?.title ?? '',
