@@ -6,18 +6,17 @@ class TTSService {
   constructor() {
     this.apiKey = process.env.ELEVENLABS_API_KEY;
     this.voiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgnuM07pZNoR'; // Default: Adam (British Male)
-    // Previous invalid: 'nT6n6V0X6o7O6b6E6R6E' (not found)
+    this._disabled = false; // set true if account-level error encountered
   }
 
   /**
    * Generate speech from text and save to file
    * @param {string} text The text to convert to speech
    * @param {string} outputFile Path to save the audio file
-   * @returns {Promise<string>} Path to the generated audio file
+   * @returns {Promise<string|null>} Path to the generated audio file, or null on failure
    */
   async generateSpeech(text, outputFile) {
-    if (!this.apiKey) {
-      console.warn('ELEVENLABS_API_KEY not found in .env. Falling back to frontend TTS.');
+    if (!this.apiKey || this._disabled) {
       return null;
     }
 
@@ -27,7 +26,7 @@ class TTSService {
         url: `https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`,
         data: {
           text: text,
-          model_id: 'eleven_turbo_v2_5', // High quality turbo model
+          model_id: 'eleven_turbo_v2_5',
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -49,19 +48,26 @@ class TTSService {
       return new Promise((resolve, reject) => {
         writer.on('finish', () => resolve(outputFile));
         writer.on('error', (err) => {
-          if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile); // Clean up partial file
+          if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
           reject(err);
         });
       });
     } catch (error) {
       if (error.response && error.response.data && typeof error.response.data.on === 'function') {
-        // If the error response is a stream, read it
         const chunks = [];
         for await (const chunk of error.response.data) {
           chunks.push(chunk);
         }
-        const data = Buffer.concat(chunks).toString();
-        console.error('TTS Generation error (from API):', data);
+        const body = Buffer.concat(chunks).toString();
+        let parsed;
+        try { parsed = JSON.parse(body); } catch (_) { parsed = body; }
+        const status = parsed?.detail?.status ?? '';
+        if (status === 'detected_unusual_activity' || error.response.status === 402) {
+          console.warn('TTS: ElevenLabs account blocked or payment required — disabling TTS for this session. Frontend TTS will be used.');
+          this._disabled = true;
+        } else {
+          console.error('TTS Generation error (from API):', body);
+        }
       } else {
         console.error('TTS Generation error:', error.response?.data || error.message);
       }
