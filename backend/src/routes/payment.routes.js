@@ -39,7 +39,7 @@ router.get('/stats', protect, authorize('admin'), getPaymentStats);
 router.get('/admin-simple', protect, authorize('admin'), getAdminPaymentsSimple);
 router.delete('/cancel/:paymentId', protect, cancelPayment);
 router.delete('/:paymentId', protect, authorize('admin'), deletePayment);
-router.get('/:paymentId/invoice', protect, authorize('admin'), generateInvoice);
+router.get('/:paymentId/invoice', protect, generateInvoice);
 
 // Specific payment routes (must come BEFORE parameterized routes to avoid conflicts)
 router.post('/verify', protect, verifyPayment);

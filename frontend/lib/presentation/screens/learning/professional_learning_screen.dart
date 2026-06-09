@@ -23,6 +23,8 @@ import 'package:excellencecoachinghub/services/book_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
+import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
@@ -129,6 +131,12 @@ class _ProfessionalLearningScreenState
   bool _isLoadingBooks = false;
   String? _booksError;
   final BookService _bookService = BookService();
+
+  // Course-wide download state
+  bool _isCourseDownloading = false;
+  int _courseDownloadTotal = 0;
+  int _courseDownloadDone = 0;
+  int _courseDownloadFailed = 0;
 
   late TabController _tabController;
   late AnimationController _heroAnimCtrl;
@@ -659,7 +667,7 @@ class _ProfessionalLearningScreenState
   Widget _buildSliverAppBar(bool innerScrolled) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     return SliverAppBar(
-      expandedHeight: isMobile ? 240 : 270,
+      expandedHeight: isMobile ? 280 : 310,
       pinned: true,
       backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
       elevation: 0,
@@ -671,7 +679,7 @@ class _ProfessionalLearningScreenState
         background: _buildHeroHeader(),
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
+        preferredSize: const Size.fromHeight(72),
         child: _buildTabBar(),
       ),
     );
@@ -724,6 +732,16 @@ class _ProfessionalLearningScreenState
           cardBg: _cardBg,
           onTap: _downloadInvoice,
         ),
+      // Download whole course
+      _ActionChip(
+        icon: _isCourseDownloading
+            ? Icons.downloading_rounded
+            : Icons.download_for_offline_rounded,
+        active: _isCourseDownloading,
+        isDark: _isDark,
+        cardBg: _cardBg,
+        onTap: _isCourseDownloading ? null : _downloadWholeCourse,
+      ),
       // Exam history
       _ActionChip(
         icon: Icons.history_edu_rounded,
@@ -764,7 +782,7 @@ class _ProfessionalLearningScreenState
             bottom: false,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                  isMobile ? 16 : 24, 60, isMobile ? 16 : 24, 16),
+                  isMobile ? 16 : 24, 72, isMobile ? 16 : 24, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -937,25 +955,27 @@ class _ProfessionalLearningScreenState
           ),
           TabBar(
             controller: _tabController,
-            isScrollable: false,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelColor: _DT.primary,
             unselectedLabelColor: _textSecondary,
             indicatorColor: _DT.primary,
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.tab,
             labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700, fontSize: 12),
+                fontWeight: FontWeight.w700, fontSize: 11),
             unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w500, fontSize: 12),
+                fontWeight: FontWeight.w500, fontSize: 11),
             dividerColor: _borderColor,
             dividerHeight: 0.5,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             tabs: const [
-              Tab(text: 'Chapters'),
-              Tab(text: 'Live'),
-              Tab(text: 'Progress'),
-              Tab(text: 'Bookmarks'),
-              Tab(text: 'Materials'),
-              Tab(text: 'Library'),
+              Tab(icon: Icon(Icons.menu_book_rounded, size: 18), text: 'Chapters'),
+              Tab(icon: Icon(Icons.live_tv_rounded, size: 18), text: 'Live'),
+              Tab(icon: Icon(Icons.bar_chart_rounded, size: 18), text: 'Progress'),
+              Tab(icon: Icon(Icons.bookmark_rounded, size: 18), text: 'Saved'),
+              Tab(icon: Icon(Icons.folder_rounded, size: 18), text: 'Materials'),
+              Tab(icon: Icon(Icons.local_library_rounded, size: 18), text: 'Library'),
             ],
           ),
         ],
@@ -1931,32 +1951,42 @@ class _ProfessionalLearningScreenState
       return materials.isNotEmpty;
     }).toList();
 
+    // Fixed header count: download banner always present + optional description + optional invoice
+    final int descOffset = 1; // download banner is always index 0
+    final int invoiceOffset = descOffset + (_course?.description != null ? 1 : 0);
+    final int chaptersOffset = invoiceOffset + (_hasPaidForCourse ? 1 : 0);
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      itemCount: (_course?.description != null ? 1 : 0) + 
-                 (_hasPaidForCourse ? 1 : 0) + 
-                 chaptersWithMaterials.length,
+      itemCount: chaptersOffset + chaptersWithMaterials.length,
       itemBuilder: (context, index) {
+        // ── Download whole course banner (always at top) ──
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildCourseDownloadBanner(),
+          );
+        }
+
         // Course description card
-        if (_course?.description != null && index == 0) {
+        if (_course?.description != null && index == descOffset) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: _buildCourseSummaryCard(),
           );
         }
-        
+
         // Invoice download card
-        final invoiceOffset = _course?.description != null ? 1 : 0;
         if (_hasPaidForCourse && index == invoiceOffset) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: _buildInvoiceDownloadCard(),
           );
         }
-        
+
         // Chapter materials cards
-        final chapterIndex = index - invoiceOffset - (_hasPaidForCourse ? 1 : 0);
-        if (chapterIndex < chaptersWithMaterials.length) {
+        final chapterIndex = index - chaptersOffset;
+        if (chapterIndex >= 0 && chapterIndex < chaptersWithMaterials.length) {
           final e = chaptersWithMaterials[chapterIndex];
           final i = e.key;
           final s = e.value;
@@ -1973,9 +2003,172 @@ class _ProfessionalLearningScreenState
             ),
           );
         }
-        
+
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildCourseDownloadBanner() {
+    final downloadService = ref.watch(downloadServiceProvider);
+    final allLessons = <Lesson>[];
+    for (final chapter in _chapters ?? []) {
+      allLessons.addAll((_chapterLessons[chapter.id] ?? []).where((l) => l.hasVideo));
+    }
+    final totalVideos = allLessons.length;
+    final downloadedCount = allLessons.where((l) {
+      final s = downloadService.getDownloadStatus(l.id);
+      return s?.status == DownloadStatus.completed;
+    }).length;
+    final allDone = totalVideos > 0 && downloadedCount == totalVideos;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: allDone
+              ? [const Color(0xFF00C853).withOpacity(0.12), const Color(0xFF00897B).withOpacity(0.08)]
+              : [const Color(0xFF1A1F2E), const Color(0xFF111522)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: _DT.r20,
+        border: Border.all(
+          color: allDone ? _DT.primary.withOpacity(0.3) : Colors.white.withOpacity(0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: allDone
+                      ? _DT.primary.withOpacity(0.15)
+                      : Colors.white.withOpacity(0.1),
+                  borderRadius: _DT.r12,
+                ),
+                child: Icon(
+                  allDone ? Icons.offline_pin_rounded : Icons.download_for_offline_rounded,
+                  color: allDone ? _DT.primary : Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      allDone ? 'Course Downloaded' : 'Download Whole Course',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: allDone ? _textPrimary : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      allDone
+                          ? '$downloadedCount/$totalVideos lessons ready offline'
+                          : 'Watch all $totalVideos video lesson${totalVideos != 1 ? "s" : ""} offline',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: allDone ? _textSecondary : Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (_isCourseDownloading) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: _DT.r8,
+              child: LinearProgressIndicator(
+                value: _courseDownloadTotal > 0
+                    ? (_courseDownloadDone + _courseDownloadFailed) / _courseDownloadTotal
+                    : null,
+                backgroundColor: Colors.white.withOpacity(0.15),
+                valueColor: const AlwaysStoppedAnimation<Color>(_DT.primary),
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$_courseDownloadDone/$_courseDownloadTotal lessons downloaded'
+              '${_courseDownloadFailed > 0 ? " · $_courseDownloadFailed failed" : ""}',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+          ],
+          if (!_isCourseDownloading) ...[
+            const SizedBox(height: 16),
+            if (totalVideos > 0 && downloadedCount > 0 && !allDone)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: _DT.r8,
+                        child: LinearProgressIndicator(
+                          value: downloadedCount / totalVideos,
+                          backgroundColor: Colors.white.withOpacity(0.15),
+                          valueColor: const AlwaysStoppedAnimation<Color>(_DT.primary),
+                          minHeight: 5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '$downloadedCount/$totalVideos',
+                      style: const TextStyle(fontSize: 11, color: Colors.white60, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: totalVideos == 0 ? null : (allDone ? () => context.go('/downloads') : _downloadWholeCourse),
+                    icon: Icon(
+                      allDone ? Icons.folder_open_rounded : Icons.download_rounded,
+                      size: 18,
+                    ),
+                    label: Text(allDone ? 'View Downloads' : (downloadedCount > 0 ? 'Resume Download' : 'Download All')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _DT.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: _DT.r12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                ),
+                if (!allDone && downloadedCount > 0) ...[
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/downloads'),
+                    icon: const Icon(Icons.offline_pin_rounded, size: 16),
+                    label: const Text('My Downloads'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                      shape: RoundedRectangleBorder(borderRadius: _DT.r12),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -2116,7 +2309,7 @@ class _ProfessionalLearningScreenState
                   const SizedBox(height: 8),
                   _PaymentDetailRow(
                     label: 'Amount',
-                    value: '\$${payment.amount.toStringAsFixed(2)}',
+                    value: '${payment.currency} ${payment.amount.toStringAsFixed(0)}',
                     isDark: _isDark,
                   ),
                   _PaymentDetailRow(
@@ -2822,6 +3015,126 @@ class _ProfessionalLearningScreenState
           launchUrl(Uri.parse(url));
         }
         break;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  //  COURSE-WIDE DOWNLOAD
+  // ─────────────────────────────────────────────
+  Future<void> _downloadWholeCourse() async {
+    if (_isCourseDownloading) return;
+    if (_chapters == null || _chapters!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No course content to download yet'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Collect all lessons with videos
+    final videoLessons = <Lesson>[];
+    for (final chapter in _chapters!) {
+      final lessons = _chapterLessons[chapter.id] ?? [];
+      for (final lesson in lessons) {
+        if (lesson.hasVideo) videoLessons.add(lesson);
+      }
+    }
+
+    if (videoLessons.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No video lessons found in this course'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final downloadService = ref.read(downloadServiceProvider);
+
+    // Filter out already-downloaded lessons
+    final toDownload = videoLessons.where((l) {
+      final status = downloadService.getDownloadStatus(l.id);
+      return status == null || status.status != DownloadStatus.completed;
+    }).toList();
+
+    if (toDownload.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('All lessons are already downloaded!'),
+          backgroundColor: _DT.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCourseDownloading = true;
+      _courseDownloadTotal = toDownload.length;
+      _courseDownloadDone = 0;
+      _courseDownloadFailed = 0;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Starting download of ${toDownload.length} lesson${toDownload.length > 1 ? "s" : ""}…'),
+        backgroundColor: _DT.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    final videoApiService = VideoApiService();
+
+    for (final lesson in toDownload) {
+      if (!mounted) break;
+      try {
+        final signedUrl = await videoApiService.getVideoStreamUrl(lesson.id);
+        if (signedUrl.isEmpty) throw Exception('Empty URL');
+
+        await downloadService.downloadVideo(
+          url: signedUrl,
+          fileName: lesson.id,
+          originalTitle: lesson.title,
+          lessonId: lesson.id,
+          onSuccess: () {
+            if (mounted) setState(() => _courseDownloadDone++);
+          },
+          onError: (_) {
+            if (mounted) setState(() => _courseDownloadFailed++);
+          },
+        );
+      } catch (e) {
+        if (mounted) setState(() => _courseDownloadFailed++);
+        debugPrint('Course download: failed for lesson ${lesson.id}: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isCourseDownloading = false);
+      final failed = _courseDownloadFailed;
+      final done = _courseDownloadDone;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failed == 0
+                ? '$done lesson${done > 1 ? "s" : ""} downloaded successfully!'
+                : '$done downloaded, $failed failed.',
+          ),
+          backgroundColor: failed == 0 ? _DT.primary : Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
@@ -3774,7 +4087,7 @@ class _ActionChip extends StatelessWidget {
   final bool active;
   final bool isDark;
   final Color cardBg;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActionChip({
     required this.icon,

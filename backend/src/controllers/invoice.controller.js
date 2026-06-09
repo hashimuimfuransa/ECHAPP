@@ -22,6 +22,15 @@ const generateInvoice = async (req, res) => {
       return sendNotFound(res, 'Payment not found');
     }
 
+    // Students can only download their own invoice; admins can download any
+    const isAdmin = req.user?.role === 'admin';
+    const isOwner = payment.userId?._id?.toString() === req.user?.id?.toString() ||
+                    payment.userId?.toString() === req.user?.id?.toString();
+    if (!isAdmin && !isOwner) {
+      console.log('Access denied: user', req.user?.id, 'tried to access invoice for payment owned by', payment.userId);
+      return res.status(403).json({ success: false, message: 'Access denied. You can only download your own invoice.' });
+    }
+
     console.log('Payment found:', payment.transactionId, 'Status:', payment.status);
 
     // Generate PDF invoice
