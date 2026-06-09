@@ -1,5 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -340,6 +342,106 @@ class PushNotificationService {
       );
     } catch (e) {
       print('Error sending congratulatory notification: $e');
+    }
+  }
+
+  // ─── Live Session Notifications ──────────────────────────────────────────
+
+  /// Call this after fetching upcoming/live sessions.
+  /// - Schedules a "starting soon" notification 15 min before each scheduled session.
+  /// - Fires an immediate "session is live" notification for any live session.
+  static Future<void> scheduleLiveSessionNotifications(
+      List<dynamic> sessions) async {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
+
+    const AndroidNotificationChannel liveChannel = AndroidNotificationChannel(
+      'live_session_channel',
+      'Live Sessions',
+      description: 'Notifications for scheduled and live class sessions',
+      importance: Importance.max,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(liveChannel);
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'live_session_channel',
+      'Live Sessions',
+      channelDescription: 'Notifications for scheduled and live class sessions',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    // Track which session IDs we have already notified to avoid duplicates
+    final Set<String> fired = {};
+
+    for (final session in sessions) {
+      final String id = session.id as String;
+      final String title = session.title as String;
+      final bool isLive = session.isLive as bool;
+      final DateTime scheduledAt = session.scheduledAt as DateTime;
+      final notifId = id.hashCode.abs() % 100000;
+
+      if (fired.contains(id)) continue;
+      fired.add(id);
+
+      final int duration = session.duration as int;
+      final DateTime expectedEnd = scheduledAt.add(Duration(minutes: duration));
+      final now = DateTime.now();
+
+      if (isLive) {
+        // Fire immediately — session is live right now
+        await _localNotifications.show(
+          notifId,
+          '🔴 Live Now: $title',
+          'Your class is live! Tap to join.',
+          details,
+          payload: '/dashboard',
+        );
+      } else if (expectedEnd.isBefore(now)) {
+        // Session has fully ended and the student never joined (status never became live)
+        await _localNotifications.show(
+          notifId + 10000,
+          'You missed a live session 📺',
+          '"$title" has ended. Open the app to check for recordings or upcoming sessions.',
+          details,
+          payload: '/my-courses',
+        );
+      } else {
+        // Schedule 15 min before start (only if reminder time is still in the future)
+        final remind = scheduledAt.subtract(const Duration(minutes: 15));
+        if (remind.isAfter(now)) {
+          try {
+            tz_data.initializeTimeZones();
+            final local = tz.local;
+            final tzRemind = tz.TZDateTime.from(remind, local);
+            await _localNotifications.zonedSchedule(
+              notifId + 50000,
+              '📅 Starting Soon: $title',
+              'Your live class starts in 15 minutes.',
+              tzRemind,
+              details,
+              androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+              payload: '/dashboard',
+            );
+          } catch (_) {
+            // timezone scheduling unavailable; skip silently
+          }
+        }
+      }
     }
   }
 

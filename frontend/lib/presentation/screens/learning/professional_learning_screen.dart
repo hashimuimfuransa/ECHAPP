@@ -28,6 +28,7 @@ import 'package:excellencecoachinghub/presentation/providers/download_provider.d
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
+import 'package:excellencecoachinghub/widgets/live_session_countdown.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -242,8 +243,10 @@ class _ProfessionalLearningScreenState
           final chapterId = (cData['_id'] ?? cData['id']).toString();
           final lessonsData = cData['lessons'] as List?;
           if (lessonsData != null) {
+            // Only keep lessons that have real content (video / notes / quiz / materials)
             final lessons = lessonsData
                 .map((l) => Lesson.fromJson(l as Map<String, dynamic>))
+                .where((l) => l.hasVideo || l.hasNotes || l.hasQuiz || l.hasMaterials)
                 .toList();
             _chapterLessons[chapterId] = lessons;
             _totalLessons += lessons.length;
@@ -252,6 +255,13 @@ class _ProfessionalLearningScreenState
             }
           }
         }
+
+        // Remove chapters that have no content lessons at all
+        // (e.g. sections created only to host live sessions)
+        _chapters?.removeWhere((chapter) {
+          final lessons = _chapterLessons[chapter.id] ?? [];
+          return lessons.isEmpty;
+        });
       } else {
         // Keep chapters as null if sections data is missing or empty
         // This allows us to show loading state for lazy loading scenarios
@@ -1118,19 +1128,37 @@ class _ProfessionalLearningScreenState
 
   Future<void> _loadLiveSessions() async {
     if (_isLoadingSessions) return;
-    setState(() => _isLoadingSessions = true);
+    setState(() {
+      _isLoadingSessions = true;
+      _sessionsLoaded = false;
+    });
     try {
       final service = LiveSessionService();
       final response = await service.getCourseSessions(
         widget.courseId,
-        status: 'scheduled',
+        status: 'scheduled', // backend now returns scheduled + live
       );
       if (mounted) {
+        final now = DateTime.now();
+        // Filter out ended/cancelled and sessions past their expected end time
+        final active = response.sessions.where((s) =>
+            !s.isEnded &&
+            !s.isCancelled &&
+            !s.expectedEndTime.isBefore(now)).toList();
+        // Sort: live first, then by scheduledAt
+        final sorted = active
+          ..sort((a, b) {
+            if (a.isLive && !b.isLive) return -1;
+            if (!a.isLive && b.isLive) return 1;
+            return a.scheduledAt.compareTo(b.scheduledAt);
+          });
         setState(() {
-          _courseSessions = response.sessions;
+          _courseSessions = sorted;
           _isLoadingSessions = false;
           _sessionsLoaded = true;
         });
+        // Schedule push notifications
+        PushNotificationService.scheduleLiveSessionNotifications(sorted);
       }
     } catch (e) {
       debugPrint('Error loading live sessions: $e');
@@ -1142,44 +1170,16 @@ class _ProfessionalLearningScreenState
     try {
       final service = LiveSessionService();
       final response = await service.joinSession(session.id);
-      
-      if (mounted && response.joinUrl.isNotEmpty) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Join ${session.title}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.video_call, size: 64, color: Color(0xFF00C853)),
-                const SizedBox(height: 16),
-                Text('Scheduled for: ${_formatDateTime(session.scheduledAt)}'),
-                const SizedBox(height: 8),
-                Text('Duration: ${session.duration} minutes'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Launch URL - in production, use url_launcher
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening BigBlueButton...')),
-                  );
-                },
-                icon: const Icon(Icons.open_in_browser),
-                label: const Text('Join Session'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                ),
-              ),
-            ],
-          ),
-        );
+      if (!mounted) return;
+      if (response.joinUrl.isNotEmpty) {
+        final uri = Uri.parse(response.joinUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Cannot open: ${response.joinUrl}')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1250,7 +1250,7 @@ class _ProfessionalLearningScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                'Join live classes with your instructor via BigBlueButton',
+                'Join live classes and interact with your instructor in real time.',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.9),
                   fontSize: 14,
@@ -1305,9 +1305,16 @@ class _ProfessionalLearningScreenState
   }
 
   Widget _buildSessionCard(LiveSession session) {
-    final isLive = session.status == 'live';
-    final isUpcoming = session.scheduledAt.isAfter(DateTime.now());
-    final canJoin = isLive || (isUpcoming && session.scheduledAt.difference(DateTime.now()).inHours < 1);
+    final now = DateTime.now();
+    final isActuallyEnded = session.isEnded || session.expectedEndTime.isBefore(now);
+    final isLive = session.status == 'live' && !isActuallyEnded;
+    final hasStarted = !isActuallyEnded &&
+        (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
+    // Joinable if: live, already started, or starting within 15 min — never if ended
+    final canJoin = !isActuallyEnded &&
+        (isLive ||
+            (session.isScheduled &&
+                (hasStarted || session.scheduledAt.difference(now).inMinutes <= 15)));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1354,7 +1361,7 @@ class _ProfessionalLearningScreenState
                 Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  _formatDateTime(session.scheduledAt),
+                  '${session.formattedScheduledDate}',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -1382,26 +1389,30 @@ class _ProfessionalLearningScreenState
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            LiveSessionCountdown(
+              scheduledAt: session.scheduledAt,
+              durationMinutes: session.duration,
+              isLive: session.isLive,
+            ),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Icon(Icons.timer, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  '${session.duration} minutes',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  '${session.duration} min',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const Spacer(),
                 if (canJoin)
                   ElevatedButton.icon(
                     onPressed: () => _joinStudentSession(session),
-                    icon: const Icon(Icons.video_call),
-                    label: const Text('Join'),
+                    icon: const Icon(Icons.video_call, size: 18),
+                    label: Text(isLive ? 'Join Live' : 'Join'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
+                      backgroundColor:
+                          isLive ? Colors.red : const Color(0xFFFF8F00),
                       foregroundColor: Colors.white,
                     ),
                   )

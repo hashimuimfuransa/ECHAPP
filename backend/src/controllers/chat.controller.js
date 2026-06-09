@@ -228,10 +228,6 @@ class ChatController {
         return res.status(404).json({ error: 'Conversation not found' });
       }
 
-      if (!conversationId && conversation.isNew) {
-        await conversation.save();
-      }
-
       const performanceContext = {
         studentName: user?.fullName || 'Student',
         studentLevel: user?.role || 'student',
@@ -394,8 +390,6 @@ class ChatController {
         if (!conversation || (conversationId && conversation.userId !== userId)) {
           return res.status(404).json({ error: 'Conversation not found' });
         }
-        if (!conversationId && conversation.isNew) await conversation.save();
-
         // Detect file type
         const detectedType = fileType || (req.file.mimetype.startsWith('image/') ? 'image' : 'document');
 

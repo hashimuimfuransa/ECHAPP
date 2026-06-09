@@ -6,6 +6,8 @@ const Lesson = require('../models/Lesson');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const BBBService = require('../services/bbb.service');
+const notificationController = require('./notification.controller');
+const Notification = require('../models/Notification');
 const { sendSuccess, sendError } = require('../utils/response.utils');
 
 /**
@@ -377,6 +379,11 @@ const endSession = async (req, res) => {
     session.endedAt = new Date();
     await session.save();
 
+    // Notify enrolled students who missed the session (fire-and-forget)
+    _notifyMissedSession(session, 'ended').catch(e =>
+      console.warn('Missed-session notification error:', e.message)
+    );
+
     // Try to get recording info
     try {
       const recordings = await BBBService.getRecordings(session.bbbMeetingId);
@@ -428,6 +435,11 @@ const cancelSession = async (req, res) => {
 
     session.status = 'cancelled';
     await session.save();
+
+    // Notify enrolled students that the session was cancelled (fire-and-forget)
+    _notifyMissedSession(session, 'cancelled').catch(e =>
+      console.warn('Cancelled-session notification error:', e.message)
+    );
 
     sendSuccess(res, {
       session: {
@@ -612,6 +624,63 @@ const getLessonSessions = async (req, res) => {
     sendError(res, 'Failed to retrieve lesson sessions', 500, error.message);
   }
 };
+
+/**
+ * Internal helper: notify enrolled students about a missed or cancelled session.
+ * @param {Object} session - LiveSession mongoose document
+ * @param {'ended'|'cancelled'} reason
+ */
+async function _notifyMissedSession(session, reason) {
+  const courseId = session.courseId._id
+    ? session.courseId._id.toString()
+    : session.courseId.toString();
+
+  // All students enrolled in this course
+  const enrollments = await Enrollment.find({ courseId }).select('userId');
+  if (!enrollments.length) return;
+
+  const courseTitle = session.courseId.title || 'your course';
+  const sessionTitle = session.title;
+
+  for (const enrollment of enrollments) {
+    const userId = enrollment.userId.toString();
+    try {
+      if (reason === 'ended') {
+        const title = `You missed a live session 📺`;
+        const message = `"${sessionTitle}" from ${courseTitle} has ended. Check the course for recordings or upcoming sessions.`;
+        await notificationController.sendPushNotification(
+          userId, title, message,
+          { route: '/my-courses', type: 'missed_session' },
+          true
+        );
+        await Notification.createNotification({
+          userId,
+          title,
+          message,
+          type: 'missed_session',
+          data: { relatedId: session._id.toString(), relatedModel: 'LiveSession' }
+        });
+      } else if (reason === 'cancelled') {
+        const title = `Live session cancelled`;
+        const message = `"${sessionTitle}" from ${courseTitle} has been cancelled. Check the course for rescheduled sessions.`;
+        await notificationController.sendPushNotification(
+          userId, title, message,
+          { route: '/my-courses', type: 'session_cancelled' },
+          true
+        );
+        await Notification.createNotification({
+          userId,
+          title,
+          message,
+          type: 'session_cancelled',
+          data: { relatedId: session._id.toString(), relatedModel: 'LiveSession' }
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to notify user ${userId}:`, err.message);
+    }
+  }
+}
 
 module.exports = {
   createSession,

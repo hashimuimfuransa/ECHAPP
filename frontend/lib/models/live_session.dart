@@ -83,7 +83,7 @@ class LiveSession {
       title: json['title'] is String ? json['title'] : '',
       description: json['description'] is String ? json['description'] : null,
       scheduledAt: json['scheduledAt'] != null
-          ? DateTime.parse(json['scheduledAt'])
+          ? DateTime.parse(json['scheduledAt']).toLocal()
           : DateTime.now(),
       duration: json['duration'] ?? 60,
       bbbMeetingId: json['bbbMeetingId'] is String ? json['bbbMeetingId'] : null,
@@ -97,7 +97,7 @@ class LiveSession {
       recordingDuration: json['recordingDuration'] ?? 0,
       recordingFormat: json['recordingFormat'] is String ? json['recordingFormat'] : null,
       endedAt: json['endedAt'] != null
-          ? DateTime.parse(json['endedAt'])
+          ? DateTime.parse(json['endedAt']).toLocal()
           : null,
       maxParticipants: json['maxParticipants'] ?? 100,
       settings: json['settings'] != null
@@ -105,10 +105,10 @@ class LiveSession {
           : SessionSettings(),
       participantCount: json['participantCount'] ?? 0,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.parse(json['createdAt']).toLocal()
           : null,
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.parse(json['updatedAt']).toLocal()
           : null,
       course: json['courseId'] is Map ? json['courseId'] : null,
       section: json['sectionId'] is Map ? json['sectionId'] : null,
@@ -153,6 +153,28 @@ class LiveSession {
   bool get isCancelled => status == 'cancelled';
   bool get hasRecording => recordingUrl != null && recordingUrl!.isNotEmpty;
 
+  DateTime get expectedEndTime => scheduledAt.add(Duration(minutes: duration));
+
+  /// e.g. "Started 12 min ago · Ends at 15:30"
+  /// or "Starts at 14:00 · Ends at 15:00"
+  String get timeProgressInfo {
+    final now = DateTime.now();
+    final endTime = expectedEndTime;
+    final endStr = _hhmm(endTime);
+    if (isLive || scheduledAt.isBefore(now)) {
+      final elapsed = now.difference(scheduledAt);
+      final elapsedStr = elapsed.inMinutes < 60
+          ? '${elapsed.inMinutes} min ago'
+          : '${elapsed.inHours}h ${elapsed.inMinutes % 60}m ago';
+      return 'Started $elapsedStr · Ends at $endStr';
+    } else {
+      return 'Starts at ${_hhmm(scheduledAt)} · Ends at $endStr';
+    }
+  }
+
+  static String _hhmm(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
   String get formattedDuration {
     final hours = duration ~/ 60;
     final minutes = duration % 60;
@@ -160,6 +182,10 @@ class LiveSession {
       return minutes > 0 ? '${hours}h ${minutes}m' : '${hours}h';
     }
     return '${minutes}m';
+  }
+
+  String get formattedScheduledDate {
+    return '${scheduledAt.day}/${scheduledAt.month}/${scheduledAt.year}';
   }
 
   String get formattedScheduledTime {

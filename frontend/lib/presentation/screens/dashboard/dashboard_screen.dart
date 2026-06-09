@@ -24,6 +24,7 @@ import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
+import 'package:excellencecoachinghub/widgets/live_session_countdown.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/widgets/support_floating_button.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
@@ -202,6 +203,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Future<List<LiveSession>>? _upcomingSessionsFuture;
   List<String> _lastEnrolledCourseIds = [];
   Timer? _autoRefreshTimer;
+  Timer? _sessionRefreshTimer;
   Timer? _phraseTimer;
   AnimationController? _animationController;
   final TextEditingController _searchController = TextEditingController();
@@ -383,6 +385,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       _refreshPaymentStatus();
     });
+    // Re-fetch live sessions every 60s so ended sessions drop off
+    _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) {
+        setState(() {
+          _upcomingSessionsFuture = null;
+          _lastEnrolledCourseIds = [];
+        });
+      }
+    });
   }
 
   void _refreshPaymentStatus() {
@@ -396,6 +407,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _autoRefreshTimer?.cancel();
+    _sessionRefreshTimer?.cancel();
     _phraseTimer?.cancel();
     _animationController?.dispose();
     _searchController.dispose();
@@ -1944,56 +1956,83 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         all.addAll(result.sessions);
       } catch (_) {}
     }
+    // Remove truly ended sessions (status=ended, or past expectedEndTime)
+    final now = DateTime.now();
+    all.removeWhere((s) =>
+        s.isEnded ||
+        s.isCancelled ||
+        s.expectedEndTime.isBefore(now));
     // Live sessions first, then by scheduledAt ascending
     all.sort((a, b) {
       if (a.isLive && !b.isLive) return -1;
       if (!a.isLive && b.isLive) return 1;
       return a.scheduledAt.compareTo(b.scheduledAt);
     });
+    // Schedule push notifications for these sessions
+    PushNotificationService.scheduleLiveSessionNotifications(all);
     return all;
   }
 
   Widget _buildSessionCard(
       BuildContext context, LiveSession session, bool isDark, bool isMobile) {
-    final isLive = session.isLive;
     final now = DateTime.now();
-    // Live: always joinable. Scheduled: joinable within 15 min before start.
-    final canJoin = isLive ||
-        (session.isScheduled &&
-            session.scheduledAt.difference(now).inMinutes <= 15 &&
-            session.scheduledAt.isAfter(now.subtract(const Duration(hours: 2))));
+    final isActuallyEnded = session.isEnded || session.expectedEndTime.isBefore(now);
+    final isLive = session.isLive && !isActuallyEnded;
+    final hasStarted = !isActuallyEnded &&
+        (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
+    final isStarted = !isLive && session.isScheduled && hasStarted;
+    // Joinable if: live, already started, or starting within 15 min — never if ended
+    final canJoin = !isActuallyEnded &&
+        (isLive ||
+            (session.isScheduled &&
+                (hasStarted || session.scheduledAt.difference(now).inMinutes <= 15)));
     final courseTitle = session.course?['title'] as String? ?? '';
+
+    // Visual theme per state
+    final Color accentColor = isLive
+        ? Colors.red
+        : isStarted
+            ? const Color(0xFFFF8F00) // amber/orange
+            : AppTheme.primary;
+    final Color borderColor = isLive
+        ? Colors.red.withOpacity(0.7)
+        : isStarted
+            ? const Color(0xFFFF8F00).withOpacity(0.6)
+            : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E7EB));
+    final Color glowColor = isLive
+        ? Colors.red.withOpacity(0.18)
+        : isStarted
+            ? const Color(0xFFFF8F00).withOpacity(0.12)
+            : Colors.black.withOpacity(isDark ? 0.2 : 0.04);
+    final Color cardBg = isLive
+        ? (isDark ? const Color(0xFF2A0A0A) : const Color(0xFFFFF5F5))
+        : isStarted
+            ? (isDark ? const Color(0xFF1A1200) : const Color(0xFFFFFBF0))
+            : (isDark ? const Color(0xFF111C2F) : Colors.white);
 
     return Container(
       padding: EdgeInsets.all(isMobile ? 14 : 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111C2F) : Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isLive
-              ? AppTheme.primary.withOpacity(0.6)
-              : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E7EB)),
-        ),
+        border: Border.all(color: borderColor, width: isLive || isStarted ? 1.5 : 1.0),
         boxShadow: [
-          BoxShadow(
-            color: isLive
-                ? AppTheme.primary.withOpacity(0.12)
-                : Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: glowColor, blurRadius: isLive ? 20 : 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Row(
         children: [
+          // Icon container
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isLive
-                    ? [AppTheme.primary, AppTheme.accent]
-                    : [AppTheme.primaryDark, AppTheme.primary],
+                    ? [Colors.red.shade700, Colors.red.shade400]
+                    : isStarted
+                        ? [const Color(0xFFFF8F00), const Color(0xFFFFCA28)]
+                        : [AppTheme.primaryDark, AppTheme.primary],
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -2008,24 +2047,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isLive)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    margin: const EdgeInsets.only(bottom: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'LIVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
+                // Status badge row
+                Row(
+                  children: [
+                    if (isLive) ...[
+                      // Pulsing red dot
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'LIVE NOW',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                    ] else if (isStarted) ...[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF8F00),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF8F00),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'STARTED',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (isLive || isStarted) const SizedBox(height: 4),
                 Text(
                   session.title,
                   style: TextStyle(
@@ -2043,11 +2124,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       : session.formattedScheduledTime,
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.getSecondaryTextColor(context),
+                    color: isLive
+                        ? Colors.red.withOpacity(0.8)
+                        : isStarted
+                            ? const Color(0xFFFF8F00).withOpacity(0.85)
+                            : AppTheme.getSecondaryTextColor(context),
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 5),
+                LiveSessionCountdown(
+                  scheduledAt: session.scheduledAt,
+                  durationMinutes: session.duration,
+                  isLive: session.isLive,
+                  compact: true,
                 ),
               ],
             ),
@@ -2057,9 +2149,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ElevatedButton(
               onPressed: () => _joinStudentSession(context, session),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isLive ? Colors.red : AppTheme.primary,
+                backgroundColor: accentColor,
                 foregroundColor: Colors.white,
-                elevation: 0,
+                elevation: isLive || isStarted ? 2 : 0,
+                shadowColor: accentColor.withOpacity(0.4),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -2067,9 +2160,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text(
-                'Join',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              child: Text(
+                isLive ? 'Join Live' : 'Join',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
               ),
             )
           else

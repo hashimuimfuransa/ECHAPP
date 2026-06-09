@@ -8,7 +8,6 @@ const conversationSchema = new mongoose.Schema({
   },
   customId: {
     type: String,
-    unique: true,
     sparse: true,
     index: true
   },
@@ -63,6 +62,7 @@ const conversationSchema = new mongoose.Schema({
 conversationSchema.index({ userId: 1, lastMessageAt: -1 });
 conversationSchema.index({ userId: 1, isActive: 1 });
 conversationSchema.index({ courseId: 1, createdAt: -1 });
+conversationSchema.index({ userId: 1, customId: 1 }, { unique: true, sparse: true });
 
 // Virtual for message preview
 conversationSchema.virtual('preview').get(function() {
@@ -105,53 +105,50 @@ conversationSchema.statics.getUserConversations = async function(userId, limit =
 
 // Static method to create or get existing conversation
 conversationSchema.statics.getOrCreateConversation = async function(userId, context = {}) {
-  const query = {
-    userId: userId,
-    isActive: true
-  };
-  
-  // Add context-based query parameters if provided
-  if (context.customId) query.customId = context.customId;
-  if (context.courseId) query.courseId = context.courseId;
-  if (context.lessonId) query.lessonId = context.lessonId;
-  if (context.sectionTitle) query.sectionTitle = context.sectionTitle;
-  
-  // Try to find existing active conversation
-  let conversation = await this.findOne(query)
-    .sort({ lastMessageAt: -1 });
-  
-  // If no existing conversation found, create new one
-  if (!conversation) {
-    const title = context.sectionTitle || 
-                 (context.lessonId ? 'Lesson Chat' : 
-                 (context.courseId ? 'Course Chat' : 
-                 (context.customId ? 'Platform Support' : 'General Chat')));
-    
-    // Normalize studentLevel to match enum values
-    let normalizedStudentLevel = context.studentLevel || 'beginner';
-    if (normalizedStudentLevel.toLowerCase() === 'platform user') {
-      normalizedStudentLevel = 'platform_user';
-    }
-    
-    conversation = new this({
-      userId: userId,
-      customId: context.customId,
-      title: title,
-      courseId: context.courseId,
-      lessonId: context.lessonId,
-      sectionTitle: context.sectionTitle,
-      studentLevel: normalizedStudentLevel
-    });
+  const title = context.sectionTitle ||
+               (context.lessonId ? 'Lesson Chat' :
+               (context.courseId ? 'Course Chat' :
+               (context.customId ? 'Platform Support' : 'General Chat')));
+
+  let normalizedStudentLevel = context.studentLevel || 'beginner';
+  if (normalizedStudentLevel.toLowerCase() === 'platform user') {
+    normalizedStudentLevel = 'platform_user';
   }
-  
+
+  const filter = { userId };
+  if (context.customId) filter.customId = context.customId;
+  else if (context.courseId) filter.courseId = context.courseId;
+  else if (context.lessonId) filter.lessonId = context.lessonId;
+  else if (context.sectionTitle) filter.sectionTitle = context.sectionTitle;
+
+  const setOnInsert = {
+    title,
+    studentLevel: normalizedStudentLevel,
+    isActive: true,
+    messageCount: 0,
+    lastMessageAt: new Date()
+  };
+  if (context.courseId) setOnInsert.courseId = context.courseId;
+  if (context.lessonId) setOnInsert.lessonId = context.lessonId;
+  if (context.sectionTitle) setOnInsert.sectionTitle = context.sectionTitle;
+
+  const conversation = await this.findOneAndUpdate(
+    filter,
+    { $setOnInsert: setOnInsert },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
   return conversation;
 };
 
 // Method to increment message count
 conversationSchema.methods.incrementMessageCount = async function() {
+  await this.constructor.findByIdAndUpdate(this._id, {
+    $inc: { messageCount: 1 },
+    $set: { lastMessageAt: new Date() }
+  });
   this.messageCount += 1;
   this.lastMessageAt = new Date();
-  await this.save();
 };
 
 // Method to archive conversation
