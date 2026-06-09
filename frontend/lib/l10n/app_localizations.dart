@@ -1190,6 +1190,24 @@ abstract class AppLocalizations {
   /// **'Student Dashboard'**
   String get studentDashboard;
 
+  /// No description provided for @startYourJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Your Journey'**
+  String get startYourJourney;
+
+  /// No description provided for @findCourseForGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a course for your goals'**
+  String get findCourseForGoals;
+
+  /// No description provided for @explore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get explore;
+
   /// No description provided for @adminDashboard.
   ///
   /// In en, this message translates to:

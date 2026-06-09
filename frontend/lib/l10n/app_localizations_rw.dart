@@ -569,6 +569,15 @@ class AppLocalizationsRw extends AppLocalizations {
   String get studentDashboard => 'Ikibaho cy\'Umunyeshuri';
 
   @override
+  String get startYourJourney => 'Tangira Urugendo Rwawe';
+
+  @override
+  String get findCourseForGoals => 'Shaka isomo rigufasha gutera imbere';
+
+  @override
+  String get explore => 'Shakisha';
+
+  @override
   String get adminDashboard => 'Ikibaho cy\'Umuyobozi';
 
   @override

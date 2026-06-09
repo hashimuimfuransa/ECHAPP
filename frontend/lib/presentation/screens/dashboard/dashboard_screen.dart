@@ -12,6 +12,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
@@ -474,18 +475,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   // Handle search submission with category filtering
   void _performSearch(String query) {
-    if (query.trim().isEmpty && _selectedCategoryId == null) return;
+    final trimmedQuery = query.trim();
 
-    context.push('/courses', extra: {
-      'searchQuery': query.trim().isEmpty ? null : query.trim(),
+    // Allow search if either query is not empty OR a category is selected
+    if (trimmedQuery.isEmpty && _selectedCategoryId == null) {
+      // Show a hint to user that they need to enter something or select a category
+      debugPrint('Dashboard: Cannot search - empty query and no category selected');
+      return;
+    }
+
+    // Close keyboard before navigating
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // Close category dropdown if open
+    if (_showCategoryDropdown) {
+      setState(() => _showCategoryDropdown = false);
+    }
+
+    final extra = {
+      'searchQuery': trimmedQuery.isEmpty ? null : trimmedQuery,
       'categoryId': _selectedCategoryId,
       'categoryName': _selectedCategoryName,
+    };
+    
+    debugPrint('Dashboard: Navigating to courses with extra: $extra');
+
+    // Navigate and then clear after navigation completes
+    context.push('/courses', extra: extra).then((_) {
+      // Clear search after returning from courses screen
+      if (mounted) {
+        _searchController.clear();
+        setState(() {
+          _selectedCategoryId = null;
+          _selectedCategoryName = null;
+        });
+        debugPrint('Dashboard: Search state cleared after navigation');
+      }
     });
-    _searchController.clear();
-    setState(() {
-      _selectedCategoryId = null;
-      _selectedCategoryName = null;
-    });
+  }
+
+  // Trigger search with button tap
+  void _onSearchButtonTap() {
+    _performSearch(_searchController.text);
   }
 
   // FIX #10: Removed duplicate _checkUserRole call from didUpdateWidget.
@@ -608,33 +639,63 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
                         _buildModernSearchBar(context),
-                        const SizedBox(height: 24),
+                        // DEBUG: Temporary test button
+                        Row(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                final repo = CourseRepository();
+                                debugPrint('=== NORMAL FILTER (isPublished=true) ===');
+                                debugPrint('Testing category: 69c5017a27858856e87d001f');
+                                final result = await repo.getCoursesPaged(
+                                  page: 1,
+                                  limit: 10,
+                                  categoryId: '69c5017a27858856e87d001f',
+                                );
+                                debugPrint('Found ${result.courses.length} published courses');
+                                
+                                debugPrint('=== UNPUBLISHED FILTER (isPublished=any) ===');
+                                final result2 = await repo.getCoursesPaged(
+                                  page: 1,
+                                  limit: 10,
+                                  categoryId: '69c5017a27858856e87d001f',
+                                  showUnpublished: true,
+                                );
+                                debugPrint('Found ${result2.courses.length} total courses (including unpublished)');
+                                for (var c in result2.courses) {
+                                  debugPrint('  - ${c.title} (published: ${c.isPublished})');
+                                }
+                                debugPrint('=======================');
+                              },
+                              child: const Text('TEST API'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final repo = CourseRepository();
+                                debugPrint('=== ALL COURSES TEST ===');
+                                final result = await repo.getCoursesPaged(
+                                  page: 1,
+                                  limit: 10,
+                                );
+                                debugPrint('Found ${result.courses.length} total courses');
+                                for (var c in result.courses) {
+                                  debugPrint('  - ${c.title} (cat: ${c.categoryId})');
+                                }
+                                debugPrint('========================');
+                              },
+                              child: const Text('TEST ALL'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // For new users: Show recommended first, then popular
+                        // For returning users: Show continue learning first
                         userEnrollmentsAsync.when(
                           data: (enrollments) {
-                            // Check milestones whenever enrollments load
-                            WidgetsBinding.instance.addPostFrameCallback(
-                                (_) => _checkProgressMilestone(enrollments));
-                            return _buildContinueLearningCard(
-                                context, enrollments);
-                          },
-                          loading: () =>
-                              _buildLoadingCard(context, l10n?.continueLearning ?? 'Continue Learning'),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildQuickActions(context),
-                        const SizedBox(height: 24),
-                        userEnrollmentsAsync.when(
-                          data: (enrollments) =>
-                              _buildProgressStats(context, enrollments),
-                          loading: () => _buildProgressStats(context, []),
-                          error: (_, __) => _buildProgressStats(context, []),
-                        ),
-                        const SizedBox(height: 24),
-                        userEnrollmentsAsync.when(
-                          data: (enrollments) {
+                            final isNewUser = enrollments.isEmpty;
                             final enrolledCourses = enrollments
                                 .map((e) => e.course)
                                 .where((course) => course != null)
@@ -643,25 +704,88 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             final coursesToShow = recommendedCourses.isNotEmpty
                                 ? recommendedCourses
                                 : popularCourses;
-                            return _buildRecommendedCourses(
-                              context,
-                              coursesToShow,
-                              enrolledCourses,
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // For new users: Prominent welcome + recommended courses
+                                if (isNewUser) ...[
+                                  _buildNewUserWelcome(context),
+                                  const SizedBox(height: 24),
+                                  _buildRecommendedCourses(
+                                    context,
+                                    coursesToShow,
+                                    enrolledCourses,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildResponsivePopularCourses(
+                                    context,
+                                    popularCourses,
+                                    enrolledCourses,
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
+                                // Continue learning / Explore card
+                                _buildContinueLearningCard(context, enrollments),
+                                // For returning users: Quick actions, Stats, Recommended, Popular
+                                if (!isNewUser) ...[
+                                  const SizedBox(height: 20),
+                                  _buildQuickActions(context),
+                                  const SizedBox(height: 24),
+                                  _buildProgressStats(context, enrollments),
+                                  const SizedBox(height: 24),
+                                  _buildRecommendedCourses(
+                                    context,
+                                    coursesToShow,
+                                    enrolledCourses,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildResponsivePopularCourses(
+                                    context,
+                                    popularCourses,
+                                    enrolledCourses,
+                                  ),
+                                ],
+                              ],
                             );
                           },
                           loading: () {
                             final coursesToShow = recommendedCourses.isNotEmpty
                                 ? recommendedCourses
                                 : popularCourses;
-                            return _buildRecommendedCourses(
-                                context, coursesToShow, []);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildNewUserWelcome(context),
+                                const SizedBox(height: 24),
+                                _buildRecommendedCourses(
+                                    context, coursesToShow, []),
+                                const SizedBox(height: 24),
+                                _buildResponsivePopularCourses(
+                                    context, popularCourses, []),
+                                const SizedBox(height: 24),
+                                _buildLoadingCard(context, l10n?.continueLearning ?? 'Continue Learning'),
+                              ],
+                            );
                           },
                           error: (_, __) {
                             final coursesToShow = recommendedCourses.isNotEmpty
                                 ? recommendedCourses
                                 : popularCourses;
-                            return _buildRecommendedCourses(
-                                context, coursesToShow, []);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildNewUserWelcome(context),
+                                const SizedBox(height: 24),
+                                _buildRecommendedCourses(
+                                    context, coursesToShow, []),
+                                const SizedBox(height: 24),
+                                _buildResponsivePopularCourses(
+                                    context, popularCourses, []),
+                                const SizedBox(height: 24),
+                                _buildContinueLearningCard(context, []),
+                              ],
+                            );
                           },
                         ),
                         const SizedBox(height: 18),
@@ -746,398 +870,301 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  // Modern Header with Gradient, Logo, Notification and Refresh
+  // Compact Modern Header - Minimal style like modern apps
   Widget _buildModernHeader(BuildContext context, user) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? (l10n?.goodMorning ?? 'Good morning')
+        : hour < 17
+            ? (l10n?.goodAfternoon ?? 'Good afternoon')
+            : (l10n?.goodEvening ?? 'Good evening');
 
     return Container(
+      color: isDark ? const Color(0xFF07111D) : const Color(0xFFF6F8FB),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 16 : 28,
+            isMobile ? 12 : 16,
+            isMobile ? 16 : 28,
+            isMobile ? 16 : 20,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Row(
+                children: [
+                  // Profile Avatar
+                  _buildProfileAvatar(context, user, isMobile),
+                  const SizedBox(width: 12),
+                  // Greeting
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$greeting, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.getTextColor(context),
+                            height: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n?.studentDashboard ?? 'Student dashboard',
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.getSecondaryTextColor(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Action Buttons
+                  Row(
+                    children: [
+                      _buildLanguageSwitcher(),
+                      const SizedBox(width: 8),
+                      _isRefreshing
+                          ? SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: Center(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isDark ? Colors.white : AppTheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : _buildCompactHeaderButton(
+                              icon: Icons.refresh_rounded,
+                              tooltip: l10n?.refresh ?? 'Refresh',
+                              onTap: _refreshDashboard,
+                              isDark: isDark,
+                            ),
+                      const SizedBox(width: 8),
+                      _buildCompactHeaderButton(
+                        icon: Icons.contact_support_rounded,
+                        tooltip: l10n?.contactUs ?? 'Contact Us',
+                        onTap: () => _showContactInfoDialog(context),
+                        isDark: isDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final notifications = ref
+                              .watch(notificationProvider)
+                              .notifications;
+                          final unreadCount = notifications
+                              .where((n) => !n.isRead)
+                              .length;
+
+                          return Stack(
+                            children: [
+                              _buildCompactHeaderButton(
+                                icon: unreadCount > 0
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_outlined,
+                                tooltip: l10n?.notifications ?? 'Notifications',
+                                onTap: () {
+                                  PushNotificationService.clearNotifications();
+                                  context.push('/notifications');
+                                },
+                                isDark: isDark,
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  right: 2,
+                                  top: 2,
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? const Color(0xFF07111D)
+                                            : const Color(0xFFF6F8FB),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      unreadCount > 9
+                                          ? '9+'
+                                          : unreadCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactHeaderButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withOpacity(0.06)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : AppTheme.primary.withOpacity(0.1),
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: isDark ? Colors.white70 : AppTheme.primaryDark,
+              size: 20,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Prominent welcome section for new users
+  Widget _buildNewUserWelcome(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = ref.watch(authProvider).user;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? (l10n?.goodMorning ?? 'Good morning')
+        : hour < 17
+            ? (l10n?.goodAfternoon ?? 'Good afternoon')
+            : (l10n?.goodEvening ?? 'Good evening');
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 20 : 28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? const [
-                  AppTheme.darkBg,
-                  AppTheme.primaryDark,
-                  Color(0xFF0B2530),
+              ? [
+                  AppTheme.primaryDark.withOpacity(0.8),
+                  const Color(0xFF0B2530),
                 ]
-              : const [
+              : [
                   AppTheme.primary,
                   AppTheme.primaryDark,
-                  AppTheme.accent,
                 ],
-          stops: const [0.0, 0.62, 1.0],
         ),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            top: 18,
-            right: isMobile ? -54 : 30,
-            child: Transform.rotate(
-              angle: -0.45,
-              child: Row(
-                children: List.generate(
-                  7,
-                  (index) => Container(
-                    width: isMobile ? 22 : 34,
-                    height: isMobile ? 68 : 104,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: [
-                        Colors.white.withOpacity(0.10),
-                        AppTheme.primaryLight.withOpacity(0.22),
-                        AppTheme.accent.withOpacity(0.18),
-                        AppTheme.primary.withOpacity(0.26),
-                      ][index % 4],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.waving_hand_rounded,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: Container(
-              height: 8,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: const [
-                    AppTheme.primaryLight,
-                    AppTheme.primary,
-                    AppTheme.primaryDark,
-                    AppTheme.accent,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isMobile ? 20 : 24,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n?.welcomeToExcellenceHub ?? 'Welcome to Excellence Hub!',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: CustomPaint(
-              size: Size(double.infinity, isMobile ? 30 : 40),
-              painter: _CurvedEdgePainter(isDark: isDark),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                isMobile ? 20 : 32,
-                isMobile ? 16 : 22,
-                isMobile ? 20 : 32,
-                isMobile ? 28 : 36,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
               ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1180),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(isMobile ? 6 : 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.4),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                                BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(isMobile ? 4 : 6),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primarySoft.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Image.asset(
-                                    'assets/logo.png',
-                                    width: isMobile ? 28 : 38,
-                                    height: isMobile ? 28 : 38,
-                                  ),
-                                ),
-                                if (!isMobile) ...[
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    l10n?.excellenceHub ?? 'Excellence Hub',
-                                    style: TextStyle(
-                                      color: AppTheme.primaryDark,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              _buildLanguageSwitcher(),
-                              const SizedBox(width: 12),
-                              _isRefreshing
-                                ? Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.35),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : _buildHeaderIconButton(
-                                    icon: Icons.refresh_rounded,
-                                    tooltip: l10n?.refresh ?? 'Refresh',
-                                    onTap: _refreshDashboard,
-                                  ),
-                              const SizedBox(width: 12),
-                              _buildHeaderIconButton(
-                                icon: Icons.contact_support_rounded,
-                                tooltip: l10n?.contactUs ?? 'Contact Us',
-                                onTap: () => _showContactInfoDialog(context),
-                              ),
-                              const SizedBox(width: 12),
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  final notifications = ref
-                                      .watch(notificationProvider)
-                                      .notifications;
-                                  final unreadCount = notifications
-                                      .where((n) => !n.isRead)
-                                      .length;
-
-                                  return Stack(
-                                    children: [
-                                      _buildHeaderIconButton(
-                                        icon: unreadCount > 0
-                                            ? Icons.notifications_active_rounded
-                                            : Icons.notifications_outlined,
-                                        tooltip: l10n?.notifications ?? 'Notifications',
-                                        onTap: () {
-                                          PushNotificationService
-                                              .clearNotifications();
-                                          context.push('/notifications');
-                                        },
-                                      ),
-                                      if (unreadCount > 0)
-                                        Positioned(
-                                          right: 4,
-                                          top: 4,
-                                          child: Container(
-                                            constraints: const BoxConstraints(
-                                              minWidth: 20,
-                                              minHeight: 20,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 5),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEF4444),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 2),
-                                            ),
-                                            child: Text(
-                                              unreadCount > 9
-                                                  ? '9+'
-                                                  : unreadCount.toString(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: isMobile ? 18 : 26),
-                      Container(
-                        padding: EdgeInsets.all(isMobile ? 18 : 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.24),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.14),
-                              blurRadius: 34,
-                              offset: const Offset(0, 18),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            _buildProfileAvatar(context, user, isMobile),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFBBF24)
-                                          .withOpacity(0.18),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                        color: const Color(0xFFFDE68A)
-                                            .withOpacity(0.28),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      l10n?.studentDashboard ?? 'Student dashboard',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    '${() { final h = DateTime.now().hour; return h < 12 ? (l10n?.goodMorning ?? 'Good morning') : h < 17 ? (l10n?.goodAfternoon ?? 'Good afternoon') : (l10n?.goodEvening ?? 'Good evening'); }()}, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 24 : 34,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      height: 1.05,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 500),
-                                    transitionBuilder: (child, anim) =>
-                                        FadeTransition(
-                                      opacity: anim,
-                                      child: SlideTransition(
-                                        position: Tween<Offset>(
-                                          begin: const Offset(0, 0.15),
-                                          end: Offset.zero,
-                                        ).animate(anim),
-                                        child: child,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _motivationalPhrases[_phraseIndex],
-                                      key: ValueKey(_phraseIndex),
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 13 : 15,
-                                        color: Colors.white.withOpacity(0.90),
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.35,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (!isMobile) ...[
-                              const SizedBox(width: 18),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.35),
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 6),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.25),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.bolt_rounded,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Stay ready',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            ),
+            child: Text(
+              l10n?.startFirstLesson ?? 'Start your first lesson today and begin your learning journey.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.95),
+                fontSize: isMobile ? 13 : 14,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
               ),
             ),
           ),
@@ -1464,7 +1491,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Modern Search Bar
+  // Modern Search Bar with visible search button
   Widget _buildModernSearchBar(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
@@ -1477,20 +1504,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             context,
             accent: const Color(0xFF2563EB),
           ),
-          child: TextField(
-            controller: _searchController,
-            onSubmitted: _performSearch,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: _selectedCategoryName == null
-                  ? l10n?.searchHint ?? 'Search courses, skills, lessons...'
-                  : 'Search in $_selectedCategoryName...',
-              hintStyle: TextStyle(
-                color: isDark ? Colors.white60 : const Color(0xFF7C8797),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-              prefixIcon: Container(
+          child: Row(
+            children: [
+              // Search Icon
+              Container(
                 margin: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withOpacity(0.12),
@@ -1501,41 +1518,121 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   color: Color(0xFF0F766E),
                 ),
               ),
-              suffixIcon: Row(
+              // Text Field
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onSubmitted: _performSearch,
+                  onChanged: (_) => setState(() {}),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: _selectedCategoryName == null
+                        ? l10n?.searchHint ?? 'Search courses, skills, lessons...'
+                        : 'Search in $_selectedCategoryName...',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white60 : const Color(0xFF7C8797),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  ),
+                ),
+              ),
+              // Action Buttons
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Clear button
                   if (_searchController.text.isNotEmpty)
                     IconButton(
                       icon: Icon(
                         Icons.clear_rounded,
                         color:
                             isDark ? Colors.white54 : const Color(0xFF9A8A76),
+                        size: 20,
                       ),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {});
                       },
                     ),
-                  IconButton(
-                    icon: Icon(
-                      _showCategoryDropdown
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.tune_rounded,
-                      color: _selectedCategoryId == null
-                          ? (isDark ? Colors.white70 : const Color(0xFF9A8A76))
-                          : const Color(0xFF0F766E),
+                  // Category Filter Button
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _showCategoryDropdown = !_showCategoryDropdown);
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _selectedCategoryId != null
+                              ? const Color(0xFF10B981).withOpacity(0.15)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _selectedCategoryId != null
+                                ? const Color(0xFF10B981)
+                                : (isDark ? Colors.white24 : const Color(0xFFE5E7EB)),
+                            width: _selectedCategoryId != null ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _showCategoryDropdown
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.tune_rounded,
+                              color: _selectedCategoryId != null
+                                  ? const Color(0xFF0F766E)
+                                  : (isDark ? Colors.white70 : const Color(0xFF6B7280)),
+                              size: 18,
+                            ),
+                            if (_selectedCategoryName != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                _selectedCategoryName!,
+                                style: TextStyle(
+                                  color: const Color(0xFF0F766E),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                    onPressed: () {
-                      setState(
-                          () => _showCategoryDropdown = !_showCategoryDropdown);
-                    },
                   ),
+                  const SizedBox(width: 8),
+                  // Search Button
+                  Material(
+                    color: const Color(0xFF0F766E),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: _onSearchButtonTap,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 44,
+                        width: 44,
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                 ],
               ),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            ),
+            ],
           ),
         ),
         if (_showCategoryDropdown)
@@ -1730,110 +1827,88 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Explore Courses Card for users with no enrollments
+  // Minimal Explore Courses Card for new users
   Widget _buildExploreCoursesCard(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryDark,
-            AppTheme.primary,
-            AppTheme.accent,
-          ],
+        color: isDark ? const Color(0xFF111C2F) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : AppTheme.primary.withOpacity(0.12),
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.18)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.24),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.explore_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Start Your Journey',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: isMobile ? 12 : 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Find a course for your goals',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isMobile ? 16 : 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n?.authLearnGrowSucceed ?? 'Discover practical lessons, exam support, and career-ready skills built for ambitious African students.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
-              fontSize: isMobile ? 13 : 14,
-              fontWeight: FontWeight.w500,
-              height: 1.4,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(isDark ? 0.15 : 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.school_outlined,
+              color: AppTheme.primary,
+              size: 22,
             ),
           ),
-          const SizedBox(height: 16),
-          // Explore Button
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () => context.push('/courses'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppTheme.primaryDark,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n?.startYourJourney ?? 'Start Your Journey',
+                  style: TextStyle(
+                    color: AppTheme.getTextColor(context),
+                    fontSize: isMobile ? 14 : 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              child: Text(
-                l10n?.exploreCourses ?? 'Explore courses',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
+                const SizedBox(height: 2),
+                Text(
+                  l10n?.findCourseForGoals ?? 'Find a course for your goals',
+                  style: TextStyle(
+                    color: AppTheme.getSecondaryTextColor(context),
+                    fontSize: isMobile ? 12 : 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Compact Explore Button
+          Material(
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              onTap: () => context.push('/courses'),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n?.explore ?? 'Explore',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -5445,30 +5520,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ],
                 ],
               ),
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              // Content section with fixed height to prevent overflow
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                child: SizedBox(
+                  height: 110,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        course.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : const Color(0xFF1F2937),
-                          height: 1.2,
+                      // Title - takes available space
+                      Expanded(
+                        child: Text(
+                          course.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color:
+                                isDark ? Colors.white : const Color(0xFF1F2937),
+                            height: 1.25,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
+                      // Rating row
                       Row(
                         children: [
                           const Icon(Icons.star_rounded,
-                              color: Colors.amber, size: 14),
-                          const SizedBox(width: 4),
+                              color: Colors.amber, size: 13),
+                          const SizedBox(width: 3),
                           Text(
                             (course.averageRating ?? 0.0).toStringAsFixed(1),
                             style: TextStyle(
@@ -5479,122 +5560,126 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   : const Color(0xFF1F2937),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '(${course.enrollmentCount ?? 0})',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? const Color(0xFF94A3B8)
-                                    : const Color(0xFF6B7280),
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${course.enrollmentCount ?? 0})',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF6B7280),
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 10),
+                      // Bottom row - Continue button or Price
                       if (isEnrolled)
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          height: 34,
                           decoration: BoxDecoration(
                             color: AppTheme.primaryGreen,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              Icon(Icons.play_arrow_rounded,
+                                  color: Colors.white, size: 16),
+                              SizedBox(width: 4),
                               Text(
                                 'Continue',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(width: 6),
-                              Icon(Icons.play_circle_fill,
-                                  color: Colors.white, size: 14),
                             ],
                           ),
                         )
                       else
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if ((course.price ?? 0) > 0)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      color: isDark
-                                          ? Colors.white38
-                                          : const Color(0xFF9CA3AF),
-                                      decoration: TextDecoration.lineThrough,
+                        SizedBox(
+                          height: 34,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if ((course.price ?? 0) > 0)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'RWF ${((course.price ?? 0) / 0.8).toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: isDark
+                                            ? Colors.white38
+                                            : const Color(0xFF9CA3AF),
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark
-                                          ? const Color(0xFF2DD4BF)
-                                          : const Color(0xFF0F766E),
+                                    Text(
+                                      'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDark
+                                            ? const Color(0xFF2DD4BF)
+                                            : const Color(0xFF0F766E),
+                                      ),
                                     ),
+                                  ],
+                                )
+                              else
+                                const Text(
+                                  'FREE',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF10B981),
                                   ),
-                                ],
-                              )
-                            else
-                              const Text(
-                                'FREE',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF10B981),
                                 ),
-                              ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: ((course.price ?? 0) == 0
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFF59E0B))
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    (course.price ?? 0) == 0
-                                        ? Icons.check_circle_rounded
-                                        : Icons.monetization_on_rounded,
-                                    size: 9,
-                                    color: (course.price ?? 0) == 0
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFF59E0B),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: ((course.price ?? 0) == 0
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFF59E0B))
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      (course.price ?? 0) == 0
+                                          ? Icons.check_circle_rounded
+                                          : Icons.monetization_on_rounded,
+                                      size: 10,
                                       color: (course.price ?? 0) == 0
                                           ? const Color(0xFF10B981)
                                           : const Color(0xFFF59E0B),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      (course.price ?? 0) == 0 ? 'FREE' : 'PAID',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: (course.price ?? 0) == 0
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFFF59E0B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                     ],
                   ),
@@ -5635,31 +5720,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
         const SizedBox(height: 12),
         if (isDesktop || isTablet)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: isDesktop ? 0.9 : (isTablet ? 0.85 : 0.75),
-            ),
-            itemCount: popularCourses.take(crossAxisCount * 2).length,
-            itemBuilder: (context, index) {
-              return _buildCourseCardV2(
-                  context, popularCourses[index], enrolledCourses);
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate card width based on available space
+              final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 20) / crossAxisCount;
+              // Card height = image (16:9 ratio of width) + content (120 fixed)
+              final imageHeight = cardWidth * 9 / 16;
+              final cardHeight = imageHeight + 120;
+              final aspectRatio = cardWidth / cardHeight;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: aspectRatio,
+                ),
+                itemCount: popularCourses.take(crossAxisCount * 2).length,
+                itemBuilder: (context, index) {
+                  return _buildCourseCardV2(
+                      context, popularCourses[index], enrolledCourses);
+                },
+              );
             },
           )
         else
           SizedBox(
-            height: 280,
+            height: 300,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: popularCourses.length,
               itemBuilder: (context, index) {
                 return Container(
-                  width: 280,
-                  margin: const EdgeInsets.only(right: 16),
+                  width: 260,
+                  margin: const EdgeInsets.only(right: 12),
                   child: _buildCourseCardV2(
                       context, popularCourses[index], enrolledCourses),
                 );

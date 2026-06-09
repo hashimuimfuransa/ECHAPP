@@ -568,6 +568,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studentDashboard => 'Student Dashboard';
 
   @override
+  String get startYourJourney => 'Start Your Journey';
+
+  @override
+  String get findCourseForGoals => 'Find a course for your goals';
+
+  @override
+  String get explore => 'Explore';
+
+  @override
   String get adminDashboard => 'Admin Dashboard';
 
   @override

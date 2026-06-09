@@ -618,9 +618,14 @@ class AppRouter {
                 path: '/courses',
                 pageBuilder: (context, state) {
                   final extra = state.extra as Map<String, dynamic>?;
+                  // Create unique key based on parameters to force widget recreation
+                  final uniqueKey = ValueKey(
+                    '${extra?['categoryId'] ?? 'all'}_${extra?['searchQuery'] ?? ''}_${DateTime.now().millisecondsSinceEpoch}',
+                  );
                   return _SlideUpTransitionPage(
                     name: state.matchedLocation,
                     child: CoursesScreen(
+                      key: uniqueKey,
                       categoryId: extra?['categoryId'] as String?,
                       categoryName: extra?['categoryName'] as String?,
                       searchQuery: extra?['searchQuery'] as String?,
