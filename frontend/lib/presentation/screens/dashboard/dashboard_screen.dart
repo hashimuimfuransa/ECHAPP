@@ -1875,14 +1875,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final sessions = snapshot.data ?? [];
         if (sessions.isEmpty) return const SizedBox.shrink();
 
+        final hasLive = sessions.any((s) => s.isLive);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Upcoming Sessions',
+                  hasLive ? 'Live Now' : 'Upcoming Sessions',
                   style: TextStyle(
                     fontSize: isMobile ? 18 : 20,
                     fontWeight: FontWeight.w800,
@@ -1890,6 +1890,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     letterSpacing: -0.5,
                   ),
                 ),
+                if (hasLive) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -1925,7 +1944,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         all.addAll(result.sessions);
       } catch (_) {}
     }
-    all.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    // Live sessions first, then by scheduledAt ascending
+    all.sort((a, b) {
+      if (a.isLive && !b.isLive) return -1;
+      if (!a.isLive && b.isLive) return 1;
+      return a.scheduledAt.compareTo(b.scheduledAt);
+    });
     return all;
   }
 
@@ -1933,10 +1957,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       BuildContext context, LiveSession session, bool isDark, bool isMobile) {
     final isLive = session.isLive;
     final now = DateTime.now();
+    // Live: always joinable. Scheduled: joinable within 15 min before start.
     final canJoin = isLive ||
         (session.isScheduled &&
-            session.scheduledAt.difference(now).inHours < 1 &&
-            session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 15))));
+            session.scheduledAt.difference(now).inMinutes <= 15 &&
+            session.scheduledAt.isAfter(now.subtract(const Duration(hours: 2))));
     final courseTitle = session.course?['title'] as String? ?? '';
 
     return Container(

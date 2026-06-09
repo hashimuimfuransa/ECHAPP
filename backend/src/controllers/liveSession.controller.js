@@ -186,11 +186,14 @@ const getCourseSessions = async (req, res) => {
       return sendError(res, 'You are not enrolled in this course', 403);
     }
 
-    const query = { courseId, status };
+    const query = { courseId };
     
-    // For upcoming sessions, show those scheduled in the future or currently live
+    // For upcoming sessions, include both 'scheduled' and 'live' so active sessions surface
     if (status === 'scheduled') {
+      query.status = { $in: ['scheduled', 'live'] };
       query.scheduledAt = { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }; // Include sessions from last 24h
+    } else {
+      query.status = status;
     }
 
     const sessions = await LiveSession.find(query)
