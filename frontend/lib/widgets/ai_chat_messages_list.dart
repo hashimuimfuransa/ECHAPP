@@ -6,11 +6,13 @@ import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 class AIChatMessagesList extends StatefulWidget {
   final List<AIChatMessage> messages;
   final String currentUserId;
+  final Function(bool showScrollToBottom)? onScrollPositionChanged;
 
   const AIChatMessagesList({
     super.key,
     required this.messages,
     required this.currentUserId,
+    this.onScrollPositionChanged,
   });
 
   @override
@@ -20,11 +22,13 @@ class AIChatMessagesList extends StatefulWidget {
 class _AIChatMessagesListState extends State<AIChatMessagesList> {
   final ScrollController _scrollController = ScrollController();
   int _previousMessageCount = 0;
+  bool _showScrollToBottom = false;
 
   @override
   void initState() {
     super.initState();
     _previousMessageCount = widget.messages.length;
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _jumpToBottom();
     });
@@ -43,8 +47,21 @@ class _AIChatMessagesListState extends State<AIChatMessagesList> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final isAtBottom = _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50;
+    final shouldShow = !isAtBottom;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = shouldShow;
+      });
+      widget.onScrollPositionChanged?.call(shouldShow);
+    }
   }
 
   void _jumpToBottom() {

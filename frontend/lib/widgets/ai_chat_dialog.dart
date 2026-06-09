@@ -52,6 +52,9 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   bool _showVoiceChat = false;
   bool _isTyping = false;
   bool _isSpeaking = false;
+  bool _isMuted = false;
+  bool _showScrollToBottom = false;
+  final ScrollController _chatScrollController = ScrollController();
   late FlutterTts _flutterTts;
   
   @override
@@ -134,13 +137,34 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
   void dispose() {
     _animationController.dispose();
     _headerAnimationController.dispose();
+    _chatScrollController.dispose();
     _flutterTts.stop();
     super.dispose();
   }
 
   void _speakMessage(String message) {
+    if (_isMuted) return;
     _flutterTts.stop();
     _flutterTts.speak(message);
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+    if (_isMuted) {
+      _flutterTts.stop();
+    }
+  }
+
+  void _scrollToBottom() {
+    if (_chatScrollController.hasClients) {
+      _chatScrollController.animateTo(
+        _chatScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   void _updateGuideState(String message) {
@@ -512,6 +536,17 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                             ),
                           ),
                           IconButton(
+                            onPressed: _toggleMute,
+                            icon: Icon(
+                              _isMuted ? Icons.volume_off : Icons.volume_up,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                            tooltip: _isMuted ? 'Unmute' : 'Mute',
+                          ),
+                          IconButton(
                             onPressed: _toggleVoiceChat,
                             icon: Icon(
                               _showVoiceChat ? Icons.chat : Icons.mic,
@@ -545,6 +580,8 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                           child: VoiceChatWidget(
                             conversationId: widget.conversationId,
                             isSpeaking: _isSpeaking,
+                            isMuted: _isMuted,
+                            onToggleMute: _toggleMute,
                             context: {
                               'courseTitle': widget.currentCourse?.title ?? '',
                               'lessonTitle': widget.currentLesson?.title ?? '',
@@ -600,6 +637,11 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                           AIChatMessagesList(
                             messages: _messages,
                             currentUserId: 'user',
+                            onScrollPositionChanged: (show) {
+                              setState(() {
+                                _showScrollToBottom = show;
+                              });
+                            },
                           ),
                           if (_isTyping)
                             Positioned(
@@ -630,6 +672,16 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                                     ),
                                   ],
                                 ),
+                              ),
+                            ),
+                          if (_showScrollToBottom)
+                            Positioned(
+                              bottom: 16,
+                              right: 16,
+                              child: FloatingActionButton(
+                                mini: true,
+                                onPressed: _scrollToBottom,
+                                child: const Icon(Icons.arrow_downward, size: 20),
                               ),
                             ),
                         ],

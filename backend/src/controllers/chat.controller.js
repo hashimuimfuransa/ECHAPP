@@ -10,6 +10,8 @@ const multer = require('multer');
 const TTSService = require('../services/tts.service');
 const GrokService = require('../services/grok_service');
 const s3Service = require('../services/s3.service');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
 // Multer storage for file uploads (memory, max 20 MB)
 const _uploadStorage = multer.memoryStorage();
@@ -405,17 +407,29 @@ class ChatController {
             'chat-attachments'
           ).catch(err => { console.error('S3 chat upload error:', err.message); return null; }),
 
-          // Extract text (with cache for repeated docs)
+          // Extract text (with cache for repeated docs/images)
           (async () => {
-            if (detectedType !== 'document') return '';
+            if (detectedType !== 'document' && detectedType !== 'image') return '';
             const cached = _cacheGet(_docCache, bufferHash);
             if (cached !== null) { console.log('[doc cache] HIT'); return cached; }
             try {
-              const pdfParse = require('pdf-parse');
-              const mammoth = require('mammoth');
               const mime = req.file.mimetype;
               let text = '';
-              if (mime === 'application/pdf' || req.file.originalname?.endsWith('.pdf')) {
+              
+              if (detectedType === 'image') {
+                // Convert image to base64 for vision analysis
+                const base64Image = req.file.buffer.toString('base64');
+                const dataUrl = `data:${mime};base64,${base64Image}`;
+                
+                // Use Groq vision to extract/describe image content
+                try {
+                  const visionResponse = await GrokService.analyzeImage(dataUrl);
+                  text = visionResponse?.substring(0, 8000) || '[Image uploaded, but no text could be extracted]';
+                } catch (visionErr) {
+                  console.error('Vision analysis error:', visionErr.message);
+                  text = '[Image uploaded - AI vision analysis unavailable]';
+                }
+              } else if (mime === 'application/pdf' || req.file.originalname?.endsWith('.pdf')) {
                 const pdfData = await pdfParse(req.file.buffer);
                 text = pdfData.text?.substring(0, 8000) || '';
               } else if (mime.includes('word') || req.file.originalname?.match(/\.docx?$/)) {

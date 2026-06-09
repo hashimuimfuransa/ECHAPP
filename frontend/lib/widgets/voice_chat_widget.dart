@@ -18,6 +18,8 @@ class VoiceChatWidget extends StatefulWidget {
   final Function(String text)? onTextMessageReceived;
   final Function(String text)? onAIResponse;
   final bool isSpeaking;
+  final bool isMuted;
+  final VoidCallback? onToggleMute;
 
   const VoiceChatWidget({
     super.key,
@@ -27,6 +29,8 @@ class VoiceChatWidget extends StatefulWidget {
     this.onTextMessageReceived,
     this.onAIResponse,
     this.isSpeaking = false,
+    this.isMuted = false,
+    this.onToggleMute,
   });
 
   @override
@@ -253,12 +257,18 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderGrey),
+        border: Border.all(
+          color: isDarkMode 
+            ? AppTheme.darkTextSecondary.withOpacity(0.3)
+            : AppTheme.borderGrey,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -270,15 +280,21 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: isDarkMode 
+                      ? AppTheme.darkTextSecondary.withOpacity(0.1)
+                      : Colors.grey[100],
                     borderRadius: BorderRadius.circular(25),
                   ),
                   child: Text(
                     widget.isSpeaking
                         ? 'AI is speaking... wait to record'
-                        : _recordingText ?? 'Press and hold to speak...',
-                    style: const TextStyle(
-                      color: Color(0xFF8E8E93),
+                        : _isRecording
+                            ? 'Recording... tap to stop'
+                            : _recordingText ?? 'Tap to start recording...',
+                    style: TextStyle(
+                      color: isDarkMode 
+                        ? AppTheme.darkTextSecondary
+                        : const Color(0xFF8E8E93),
                       fontSize: 14,
                     ),
                     maxLines: 2,
@@ -287,37 +303,72 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTapDown: widget.isSpeaking ? null : (_) => _startRecording(),
-                onTapUp: widget.isSpeaking ? null : (_) => _stopRecording(),
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: widget.isSpeaking
-                        ? Colors.grey
-                        : _isRecording
-                            ? Colors.red
-                            : AppTheme.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+              Row(
+                children: [
+                  // Mute/Unmute button (always visible if callback provided)
+                  if (widget.onToggleMute != null)
+                    GestureDetector(
+                      onTap: widget.onToggleMute,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[600],
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          widget.isMuted ? Icons.volume_off : Icons.volume_up,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                    ],
+                    ),
+                  if (widget.onToggleMute != null)
+                    const SizedBox(width: 8),
+                  // Recording button
+                  GestureDetector(
+                    onTap: widget.isSpeaking 
+                        ? null 
+                        : _isRecording 
+                            ? _stopRecording 
+                            : _startRecording,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: widget.isSpeaking
+                            ? Colors.grey
+                            : _isRecording
+                                ? Colors.red
+                                : AppTheme.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        widget.isSpeaking
+                            ? Icons.volume_up
+                            : _isRecording
+                                ? Icons.stop
+                                : Icons.mic,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    widget.isSpeaking
-                        ? Icons.volume_up
-                        : _isRecording
-                            ? Icons.mic_off
-                            : Icons.mic,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
+                ],
               ),
             ],
           ),
@@ -333,13 +384,15 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: isDarkMode
+                    ? AppTheme.primary.withOpacity(0.15)
+                    : AppTheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'AI Response:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -351,7 +404,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                     _responseText!,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).brightness == Brightness.dark
+                      color: isDarkMode
                           ? AppTheme.darkTextPrimary
                           : AppTheme.blackColor,
                     ),
@@ -385,14 +438,26 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: isDarkMode
+                        ? AppTheme.darkTextSecondary.withOpacity(0.1)
+                        : Colors.grey[100],
                     borderRadius: BorderRadius.circular(25),
                   ),
                   child: TextField(
                     controller: _textController,
                     onSubmitted: (_) => _sendTextMessage(),
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                      color: isDarkMode 
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.blackColor,
+                    ),
+                    decoration: InputDecoration(
                       hintText: 'Type your message...',
+                      hintStyle: TextStyle(
+                        color: isDarkMode
+                            ? AppTheme.darkTextSecondary
+                            : const Color(0xFF8E8E93),
+                      ),
                       border: InputBorder.none,
                       isDense: true,
                     ),

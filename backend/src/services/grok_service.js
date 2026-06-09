@@ -1,4 +1,5 @@
 const Groq = require("groq-sdk");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 class GrokService {
   constructor() {
@@ -874,6 +875,23 @@ RULES:
 
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async analyzeImage(imageDataUrl) {
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const result = await model.generateContent([
+        "Extract all text from this image and provide a brief description of what the image shows. Focus on any readable text, labels, diagrams, or charts.",
+        imageDataUrl
+      ]);
+      
+      return result.response.text();
+    } catch (error) {
+      console.error("Image analysis error:", error.message);
+      throw error;
+    }
   }
 }
 
