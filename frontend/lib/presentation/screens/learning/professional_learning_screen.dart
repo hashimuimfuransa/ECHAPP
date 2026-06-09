@@ -132,6 +132,10 @@ class _ProfessionalLearningScreenState
   String? _booksError;
   final BookService _bookService = BookService();
 
+  // Saved/Bookmarks tab state
+  List<Lesson> _bookmarkedLessons = [];
+  bool _bookmarksLoaded = false;
+
   // Course-wide download state
   bool _isCourseDownloading = false;
   int _courseDownloadTotal = 0;
@@ -176,24 +180,11 @@ class _ProfessionalLearningScreenState
     _checkAndSwitchToLiveSessions();
   }
   
-  /// Check for upcoming live sessions and switch to Live tab if any exist
+  /// Load live sessions and switch to the Live tab if any exist
   Future<void> _checkAndSwitchToLiveSessions() async {
-    try {
-      final service = LiveSessionService();
-      final response = await service.getCourseSessions(
-        widget.courseId,
-        status: 'scheduled',
-        limit: 1,
-      );
-      
-      if (response.sessions.isNotEmpty && mounted) {
-        // There are upcoming sessions, switch to Live tab (index 1)
-        setState(() {
-          _tabController.animateTo(1);
-        });
-      }
-    } catch (e) {
-      debugPrint('Error checking live sessions: $e');
+    await _loadLiveSessions();
+    if (mounted && _courseSessions.isNotEmpty) {
+      _tabController.animateTo(1);
     }
   }
 
@@ -770,20 +761,55 @@ class _ProfessionalLearningScreenState
       position: _heroSlide,
       child: FadeTransition(
         opacity: _heroFade,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF00C853), Color(0xFF00897B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Background: thumbnail or fallback gradient ──
+            if (_course?.thumbnail != null && _course!.thumbnail!.isNotEmpty)
+              Image.network(
+                _course!.thumbnail!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF00C853), Color(0xFF00897B)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF00C853), Color(0xFF00897B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            // ── Dark gradient overlay so text is always readable ──
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.55),
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.70),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
             ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                  isMobile ? 16 : 24, 72, isMobile ? 16 : 24, 20),
-              child: Column(
+            // ── Content ──
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                    isMobile ? 16 : 24, 72, isMobile ? 16 : 24, 20),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -892,6 +918,7 @@ class _ProfessionalLearningScreenState
               ),
             ),
           ),
+        ],
         ),
       ),
     );
@@ -1082,8 +1109,10 @@ class _ProfessionalLearningScreenState
   // ─────────────────────────────────────────────
   List<LiveSession> _courseSessions = [];
   bool _isLoadingSessions = false;
+  bool _sessionsLoaded = false;
 
   Future<void> _loadLiveSessions() async {
+    if (_isLoadingSessions) return;
     setState(() => _isLoadingSessions = true);
     try {
       final service = LiveSessionService();
@@ -1091,13 +1120,16 @@ class _ProfessionalLearningScreenState
         widget.courseId,
         status: 'scheduled',
       );
-      setState(() {
-        _courseSessions = response.sessions;
-        _isLoadingSessions = false;
-      });
+      if (mounted) {
+        setState(() {
+          _courseSessions = response.sessions;
+          _isLoadingSessions = false;
+          _sessionsLoaded = true;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading live sessions: $e');
-      setState(() => _isLoadingSessions = false);
+      if (mounted) setState(() => _isLoadingSessions = false);
     }
   }
 
@@ -1158,9 +1190,11 @@ class _ProfessionalLearningScreenState
   }
 
   Widget _buildLiveSessionsTab() {
-    // Load sessions on first build
-    if (!_isLoadingSessions && _courseSessions.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadLiveSessions());
+    // Load sessions exactly once
+    if (!_sessionsLoaded && !_isLoadingSessions) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_sessionsLoaded && !_isLoadingSessions) _loadLiveSessions();
+      });
     }
 
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -1831,90 +1865,77 @@ class _ProfessionalLearningScreenState
   //  BOOKMARKS TAB
   // ─────────────────────────────────────────────
   Widget _buildBookmarksTab() {
-    return FutureBuilder<List<Lesson>>(
-      future: _getBookmarkedLessons(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // Load bookmarks exactly once
+    if (!_bookmarksLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_bookmarksLoaded) _loadBookmarks();
+      });
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (snapshot.hasError) {
-          return _buildEmptyState(
-            icon: Icons.error_outline,
-            title: 'Error loading bookmarks',
-            subtitle: 'Please try again later',
-          );
-        }
+    if (_bookmarkedLessons.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.bookmark_border_rounded,
+        title: 'No bookmarked lessons',
+        subtitle: 'Bookmark lessons to find them here quickly',
+      );
+    }
 
-        final bookmarkedLessons = snapshot.data ?? [];
-
-        if (bookmarkedLessons.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.bookmark_border_rounded,
-            title: 'No bookmarked lessons',
-            subtitle: 'Bookmark lessons to find them here quickly',
-          );
-        }
-
-        return ListView.builder(
-          padding: EdgeInsets.fromLTRB(
-            ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
-            20,
-            ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
-            100,
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(
+        ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+        20,
+        ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+        100,
+      ),
+      itemCount: _bookmarkedLessons.length,
+      itemBuilder: (context, index) {
+        final lesson = _bookmarkedLessons[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _BookmarkedLessonCard(
+            lesson: lesson,
+            isDark: _isDark,
+            onTap: () => _openLesson(lesson),
+            onRemoveBookmark: () => _removeBookmark(lesson.id),
           ),
-          itemCount: bookmarkedLessons.length,
-          itemBuilder: (context, index) {
-            final lesson = bookmarkedLessons[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _BookmarkedLessonCard(
-                lesson: lesson,
-                isDark: _isDark,
-                onTap: () => _openLesson(lesson),
-                onRemoveBookmark: () => _removeBookmark(lesson.id),
-              ),
-            );
-          },
         );
       },
     );
   }
 
-  Future<List<Lesson>> _getBookmarkedLessons() async {
+  Future<void> _loadBookmarks() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final bookmarkedLessons = <Lesson>[];
-
-      // Iterate through all lessons in the course and check if they're bookmarked
+      final result = <Lesson>[];
       if (_chapterLessons.isNotEmpty) {
         for (final sectionId in _chapterLessons.keys) {
-          final lessons = _chapterLessons[sectionId] ?? [];
-          for (final lesson in lessons) {
-            final bookmarkKey = 'bookmarked_lesson_${lesson.id}';
-            final isBookmarked = prefs.getBool(bookmarkKey) ?? false;
-            if (isBookmarked) {
-              bookmarkedLessons.add(lesson);
+          for (final lesson in _chapterLessons[sectionId] ?? []) {
+            if (prefs.getBool('bookmarked_lesson_${lesson.id}') == true) {
+              result.add(lesson);
             }
           }
         }
       }
-
-      return bookmarkedLessons;
+      if (mounted) {
+        setState(() {
+          _bookmarkedLessons = result;
+          _bookmarksLoaded = true;
+        });
+      }
     } catch (e) {
-      print('Error loading bookmarked lessons: $e');
-      return [];
+      debugPrint('Error loading bookmarks: $e');
+      if (mounted) setState(() => _bookmarksLoaded = true);
     }
   }
 
   Future<void> _removeBookmark(String lessonId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final bookmarkKey = 'bookmarked_lesson_$lessonId';
-      await prefs.setBool(bookmarkKey, false);
-      
-      // Refresh the bookmarks tab
-      setState(() {});
+      await prefs.setBool('bookmarked_lesson_$lessonId', false);
+      setState(() {
+        _bookmarkedLessons.removeWhere((l) => l.id == lessonId);
+      });
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
