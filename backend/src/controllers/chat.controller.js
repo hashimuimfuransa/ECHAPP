@@ -681,9 +681,11 @@ class ChatController {
       const cacheKey = _sha256(systemContent.substring(0, 500) + '||' + lastUser);
 
       const cached = _cacheGet(_aiCache, cacheKey);
-      if (cached) {
+      if (cached && cached.trim().length > 0) {
         console.log('[AI cache] HIT');
         return cached;
+      } else if (cached) {
+        console.log('[AI cache] SKIP (empty response cached, forcing fresh call)');
       }
 
       const response = await GrokService.generateChatResponse(messages, context);
