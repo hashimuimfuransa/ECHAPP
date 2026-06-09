@@ -14,20 +14,80 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isInitializing = true;
   String _loadingMessage = 'Initializing app...';
   bool _didNavigate = false;
+
+  // Looping ambient animation (particles + glow)
   late AnimationController _animController;
+
+  // Entrance animation — drives fade+slide for all content
+  late AnimationController _entranceCtrl;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _pillFade;
+  late Animation<Offset> _pillSlide;
+  late Animation<double> _headlineFade;
+  late Animation<Offset> _headlineSlide;
+  late Animation<double> _illustrationFade;
+  late Animation<double> _loadingFade;
+
+  // Pulsing glow on the logo
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulse;
+
+  // Shimmer sweep on the loading bar
+  late AnimationController _shimmerCtrl;
+  late Animation<double> _shimmer;
 
   @override
   void initState() {
     super.initState();
 
+    // ── Ambient looping (particles) ───────────────────────────────────────
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
     )..repeat();
+
+    // ── Entrance sequence ─────────────────────────────────────────────────
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _logoFade     = CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.00, 0.35, curve: Curves.easeOut));
+    _logoSlide    = Tween(begin: const Offset(0, -0.4), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.00, 0.40, curve: Curves.easeOutCubic)));
+    _pillFade     = CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.20, 0.50, curve: Curves.easeOut));
+    _pillSlide    = Tween(begin: const Offset(-0.3, 0), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.20, 0.55, curve: Curves.easeOutCubic)));
+    _headlineFade = CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.35, 0.65, curve: Curves.easeOut));
+    _headlineSlide= Tween(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.35, 0.70, curve: Curves.easeOutCubic)));
+    _illustrationFade = CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.55, 0.90, curve: Curves.easeOut));
+    _loadingFade  = CurvedAnimation(parent: _entranceCtrl, curve: const Interval(0.75, 1.00, curve: Curves.easeOut));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _entranceCtrl.forward();
+    });
+
+    // ── Logo pulse ────────────────────────────────────────────────────────
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 1.0, end: 1.08)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
+    // ── Shimmer on loading bar ────────────────────────────────────────────
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmer = Tween<double>(begin: -1.5, end: 2.5)
+        .animate(CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut));
 
     // Start initialization check
     _checkInitializationStatus();
@@ -45,6 +105,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _animController.dispose();
+    _entranceCtrl.dispose();
+    _pulseCtrl.dispose();
+    _shimmerCtrl.dispose();
     super.dispose();
   }
 
@@ -149,12 +212,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Widget _buildBackgroundImage() {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    if (!isDesktop) {
+      // Mobile: solid dark-green gradient — no image needed
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF071A0F),
+              Color(0xFF0A2415),
+              Color(0xFF071810),
+            ],
+          ),
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage(
-            isDesktop ? 'assets/onboading desktop.png' : 'assets/onboardign mobile.png',
-          ),
+          image: const AssetImage('assets/onboading desktop.png'),
           fit: BoxFit.cover,
           alignment: Alignment.center,
         ),
@@ -163,6 +240,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Widget _buildGradientOverlay() {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    if (!isDesktop) return const SizedBox.shrink(); // gradient already in background
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -588,115 +667,260 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Widget _buildMobileLayout() {
+    final size = MediaQuery.of(context).size;
+    final isSmall = size.height < 680;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top section with logo and brand
-        Expanded(
-          flex: 2,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
+        // ── Top bar: logo + name  (slide down + fade) ─────────────────────
+        FadeTransition(
+          opacity: _logoFade,
+          child: SlideTransition(
+            position: _logoSlide,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, isSmall ? 12 : 20, 20, 0),
+              child: Row(
+                children: [
+                  // Pulsing logo
+                  ScaleTransition(
+                    scale: _pulse,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withOpacity(0.6),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withOpacity(0.45),
+                            blurRadius: 22,
+                            spreadRadius: 4,
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.30),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Padding(
+                          padding: const EdgeInsets.all(7),
+                          child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                        ),
+                      ),
                     ),
                   ),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 80,
-                    height: 80,
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // App name
-                const Text(
-                  'Excellence Coaching Hub',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 2),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Excellence',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        'Coaching Hub',
+                        style: TextStyle(
+                          color: const Color(0xFF10B981),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ],
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                
-                const SizedBox(height: 8),
-                
-                const Text(
-                  'Transforming Education Through Technology',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-        
-        // Bottom section with loading
-        Expanded(
-          flex: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+
+        SizedBox(height: isSmall ? 10 : 16),
+
+        // ── Journey pill (slide in from left + fade) ──────────────────────
+        FadeTransition(
+          opacity: _pillFade,
+          child: SlideTransition(
+            position: _pillSlide,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
                 children: [
-                  if (_isInitializing) ...[
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C896)),
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      _loadingMessage,
-                      style: const TextStyle(
-                        color: Color(0xFF4A5568),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.35),
+                        width: 1,
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ] else ...[
-                    const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF00C896),
-                      size: 48,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.auto_awesome_rounded, color: Color(0xFF34D399), size: 12),
+                        SizedBox(width: 5),
+                        Text(
+                          'Your Journey to Excellence Starts Here',
+                          style: TextStyle(
+                            color: Color(0xFF34D399),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Ready to go!',
-                      style: TextStyle(
-                        color: Color(0xFF1A2433),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
                 ],
               ),
+            ),
+          ),
+        ),
+
+        SizedBox(height: isSmall ? 8 : 12),
+
+        // ── Headline (slide up + fade) ─────────────────────────────────────
+        FadeTransition(
+          opacity: _headlineFade,
+          child: SlideTransition(
+            position: _headlineSlide,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Learn. Grow.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      height: 1.1,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const Text(
+                    'Succeed.',
+                    style: TextStyle(
+                      color: Color(0xFF10B981),
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      height: 1.15,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: isSmall ? 5 : 8),
+                  Text(
+                    'Empowering learners with world-class\ncourses and expert guidance.',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.60),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        SizedBox(height: isSmall ? 10 : 16),
+
+        // ── Illustration — fade in, fills remaining space ──────────────────
+        Expanded(
+          child: FadeTransition(
+            opacity: _illustrationFade,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Image.asset(
+                'assets/Course app-bro.png',
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                errorBuilder: (c, e, s) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
+
+        // ── Bottom loading bar with shimmer ───────────────────────────────
+        FadeTransition(
+          opacity: _loadingFade,
+          child: AnimatedBuilder(
+            animation: _shimmer,
+            builder: (context, child) {
+              return Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withOpacity(0.25),
+                    width: 1,
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment(_shimmer.value - 1, 0),
+                    end: Alignment(_shimmer.value, 0),
+                    colors: [
+                      Colors.white.withOpacity(0.06),
+                      Colors.white.withOpacity(0.13),
+                      Colors.white.withOpacity(0.06),
+                    ],
+                  ),
+                ),
+                child: child,
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_isInitializing) ...[
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                      strokeWidth: 2,
+                      backgroundColor: Colors.white.withOpacity(0.1),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      _loadingMessage,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.80),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ] else ...[
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Ready to go!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),

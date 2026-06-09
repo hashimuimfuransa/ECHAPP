@@ -146,16 +146,31 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
         );
 
         if (response.statusCode == 201) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Teacher created successfully')),
+            const SnackBar(
+              content: Text('Teacher created successfully'),
+              backgroundColor: Colors.green,
+            ),
           );
           _loadTeachers();
         } else {
-          throw Exception('Failed to create teacher: ${response.statusCode}');
+          String errorMsg = 'Failed to create teacher';
+          try {
+            final body = jsonDecode(response.body);
+            errorMsg = body['message'] ?? body['error'] ?? errorMsg;
+          } catch (_) {}
+          throw Exception(errorMsg);
         }
       } catch (e) {
+        if (!mounted) return;
+        final errorText = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating teacher: $e')),
+          SnackBar(
+            content: Text(errorText),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -194,16 +209,36 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Teacher'),
-        content: Text('Are you sure you want to delete ${teacher.fullName}?'),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('Delete Teacher'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete ${teacher.fullName}?'),
+            const SizedBox(height: 8),
+            Text(
+              'This action cannot be undone. The teacher will be removed from the system permanently.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -215,16 +250,31 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
         final response = await _apiClient.delete('${ApiConfig.baseUrl}/admin/teachers/${teacher.id}');
 
         if (response.statusCode == 200) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Teacher deleted successfully')),
+            SnackBar(
+              content: Text('${teacher.fullName} deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
           );
           _loadTeachers();
         } else {
-          throw Exception('Failed to delete teacher: ${response.statusCode}');
+          String errorMsg = 'Failed to delete teacher';
+          try {
+            final body = jsonDecode(response.body);
+            errorMsg = body['message'] ?? body['error'] ?? errorMsg;
+          } catch (_) {}
+          throw Exception(errorMsg);
         }
       } catch (e) {
+        if (!mounted) return;
+        final errorText = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting teacher: $e')),
+          SnackBar(
+            content: Text(errorText),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -793,10 +843,24 @@ class _CreateTeacherDialogState extends State<CreateTeacherDialog> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'Email *',
                   prefixIcon: Icon(Icons.email),
+                  hintText: 'teacher@example.com',
                 ),
                 keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if ((value == null || value.trim().isEmpty) &&
+                      (_phoneController.text.trim().isEmpty)) {
+                    return 'Email or phone number is required';
+                  }
+                  if (value != null && value.trim().isNotEmpty) {
+                    final emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.]+$');
+                    if (!emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email address';
+                    }
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -804,6 +868,8 @@ class _CreateTeacherDialogState extends State<CreateTeacherDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   prefixIcon: Icon(Icons.phone),
+                  hintText: '+250788123456',
+                  helperText: 'Use international format starting with +',
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -857,14 +923,17 @@ class _CreateTeacherDialogState extends State<CreateTeacherDialog> {
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
+              // Ensure phone is in E.164 format if provided
+              String? phone = _phoneController.text.trim();
+              if (phone.isNotEmpty && !phone.startsWith('+')) {
+                phone = '+$phone';
+              }
               Navigator.pop(context, {
                 'fullName': _nameController.text.trim(),
                 'email': _emailController.text.trim().isNotEmpty
                     ? _emailController.text.trim()
                     : null,
-                'phone': _phoneController.text.trim().isNotEmpty
-                    ? _phoneController.text.trim()
-                    : null,
+                'phone': phone.isNotEmpty ? phone : null,
                 'password': _generatePassword
                     ? 'AutoGenerated123!'
                     : _passwordController.text,

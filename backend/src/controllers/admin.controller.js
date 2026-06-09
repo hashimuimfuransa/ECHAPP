@@ -1704,11 +1704,13 @@ const createTeacher = async (req, res) => {
     // Create Firebase user if credentials provided
     if (email && password) {
       try {
+        // Only pass phone to Firebase if it's in E.164 format (starts with +)
+        const e164Phone = phone && phone.startsWith('+') ? phone : undefined;
         const firebaseUser = await admin.auth().createUser({
           email,
           password,
           displayName: fullName,
-          phoneNumber: phone || undefined
+          phoneNumber: e164Phone
         });
         
         // Set custom claims for role
@@ -1721,16 +1723,19 @@ const createTeacher = async (req, res) => {
     }
     
     // Create user in MongoDB
-    const user = await User.create({
+    const userData = {
       fullName,
       email: email || undefined,
       phone: phone || undefined,
       password: password || undefined,
       role: 'instructor',
-      firebaseUid,
       isVerified: true,
       isActive: true
-    });
+    };
+    if (firebaseUid) {
+      userData.firebaseUid = firebaseUid;
+    }
+    const user = await User.create(userData);
     
     // TODO: Send credentials email if sendCredentials is true
     
@@ -1748,9 +1753,11 @@ const createTeacher = async (req, res) => {
     console.error('Error in createTeacher:', error);
     if (error.code === 11000) {
       const field = error.keyValue ? Object.keys(error.keyValue)[0] : 'field';
-      return sendError(res, `This ${field} is already in use`, 409);
+      const fieldLabels = { email: 'email', phone: 'phone number', firebaseUid: 'account' };
+      const label = fieldLabels[field] || field;
+      return sendError(res, `A teacher with this ${label} already exists`, 409);
     }
-    sendError(res, 'Failed to create teacher', 500, error.message);
+    sendError(res, 'Failed to create teacher. Please check the details and try again.', 500, error.message);
   }
 };
 
@@ -1850,7 +1857,10 @@ const deleteTeacher = async (req, res) => {
     }, 'Teacher deleted successfully');
   } catch (error) {
     console.error('Error in deleteTeacher:', error);
-    sendError(res, 'Failed to delete teacher', 500, error.message);
+    if (error.name === 'CastError') {
+      return sendError(res, 'Invalid teacher ID', 400);
+    }
+    sendError(res, 'Failed to delete teacher. Please try again.', 500, error.message);
   }
 };
 
