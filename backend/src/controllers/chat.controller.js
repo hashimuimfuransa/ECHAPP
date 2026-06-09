@@ -687,8 +687,9 @@ class ChatController {
       }
 
       const response = await GrokService.generateChatResponse(messages, context);
-      _cacheSet(_aiCache, cacheKey, response, AI_CACHE_TTL, AI_CACHE_MAX);
-      return response;
+      const safeResponse = response || "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";
+      _cacheSet(_aiCache, cacheKey, safeResponse, AI_CACHE_TTL, AI_CACHE_MAX);
+      return safeResponse;
     } catch (error) {
       console.error("Error in generateAIResponse:", error);
       return "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";

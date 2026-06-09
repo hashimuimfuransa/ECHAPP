@@ -515,7 +515,7 @@ ${contentPreview}
         temperature: 0.7,
         max_tokens: 800,
       });
-      return completion.choices[0]?.message?.content ?? "I'm not sure how to respond to that.";
+      return completion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
     } catch (fastModelErr) {
       console.warn(`Fast chat model (${CHAT_MODEL}) failed: ${fastModelErr.message} — falling back to ${this.currentModel}`);
       try {
@@ -525,7 +525,7 @@ ${contentPreview}
           temperature: 0.7,
           max_tokens: 800,
         });
-        return completion.choices[0]?.message?.content ?? "I'm not sure how to respond to that.";
+        return completion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
       } catch (error) {
         console.error("generateChatResponse fallback error:", error.message);
         return "I encountered an error. Please try again.";
