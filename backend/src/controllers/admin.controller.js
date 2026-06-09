@@ -10,6 +10,11 @@ const ChatMessage = require('../models/ChatMessage');
 const { sendSuccess, sendError } = require('../utils/response.utils');
 const admin = require('../config/firebase');
 
+// Helper function to escape special regex characters
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 // Sync Firebase user to MongoDB
 const syncFirebaseUser = async (req, res) => {
   try {
@@ -159,10 +164,11 @@ const getStudents = async (req, res) => {
         const filter = { role: 'student' };
         
         if (search) {
+          const escapedSearch = escapeRegex(search);
           filter.$or = [
-            { fullName: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } }
+            { fullName: { $regex: escapedSearch, $options: 'i' } },
+            { email: { $regex: escapedSearch, $options: 'i' } },
+            { phone: { $regex: escapedSearch, $options: 'i' } }
           ];
         }
 
@@ -197,13 +203,14 @@ const getStudents = async (req, res) => {
       const filter = { role: 'student' };
 
       if (search) {
+        const escapedSearch = escapeRegex(search);
         filter.$or = [
-          { fullName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } }
+          { fullName: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } },
+          { phone: { $regex: escapedSearch, $options: 'i' } }
         ];
       }
-      
+
       const students = await User.find(filter)
         .select('-password')
         .limit(limit * 1)
