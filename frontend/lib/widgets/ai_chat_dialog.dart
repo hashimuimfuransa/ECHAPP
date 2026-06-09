@@ -692,7 +692,6 @@ class _ModernAIChatDialogState extends State<ModernAIChatDialog> with TickerProv
                   if (!_showVoiceChat)
                     AIChatInputWidget(
                       onSendMessage: _handleSendMessage,
-                      onSendWithFile: _handleSendWithFile,
                       isLoading: _isLoading,
                     ),
                 ],

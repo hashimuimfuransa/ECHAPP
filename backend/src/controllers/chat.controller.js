@@ -672,29 +672,16 @@ class ChatController {
     return prompt;
   }
 
-  // Helper method to generate AI response using Grok AI (with in-process cache)
+  // Helper method to generate AI response using Grok AI (caching disabled)
   static async generateAIResponse(messages, context) {
     try {
-      // Build cache key from system prompt + last user message only
-      const systemContent = messages.find(m => m.role === 'system')?.content ?? '';
-      const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
-      const cacheKey = _sha256(systemContent.substring(0, 500) + '||' + lastUser);
-
-      const cached = _cacheGet(_aiCache, cacheKey);
-      if (cached && cached.trim().length > 0) {
-        console.log('[AI cache] HIT');
-        return cached;
-      } else if (cached) {
-        console.log('[AI cache] SKIP (empty response cached, forcing fresh call)');
-      }
-
+      // Caching disabled to ensure fresh, context-aware responses
       const response = await GrokService.generateChatResponse(messages, context);
-      const safeResponse = response || "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";
-      _cacheSet(_aiCache, cacheKey, safeResponse, AI_CACHE_TTL, AI_CACHE_MAX);
+      const safeResponse = response || "I'd be happy to help you! Could you please provide more details about what you'd like to know or what you're working on?";
       return safeResponse;
     } catch (error) {
       console.error("Error in generateAIResponse:", error);
-      return "I'm currently reviewing your progress and thinking about the best way to help you. Could you please rephrase your question or tell me more about what you're working on?";
+      return "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your question or contact support if the issue persists.";
     }
   }
 }

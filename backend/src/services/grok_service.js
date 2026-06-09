@@ -502,7 +502,7 @@ ${contentPreview}
 
   async generateChatResponse(messages, _context) {
     if (!this.isConfigured()) {
-      return "AI is not currently available. Please contact support.";
+      return "I apologize, but I'm currently unable to assist. Please try again later or contact our support team for help.";
     }
 
     // Use the fastest Groq model for real-time chat; fall back to the main model if unavailable
@@ -515,7 +515,11 @@ ${contentPreview}
         temperature: 0.7,
         max_tokens: 800,
       });
-      return completion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
+      const response = completion.choices[0]?.message?.content;
+      if (!response || response.trim().length === 0) {
+        return "I'd be happy to help you! Could you please provide more details about what you'd like to know or what you're working on?";
+      }
+      return response;
     } catch (fastModelErr) {
       console.warn(`Fast chat model (${CHAT_MODEL}) failed: ${fastModelErr.message} — falling back to ${this.currentModel}`);
       try {
@@ -525,10 +529,14 @@ ${contentPreview}
           temperature: 0.7,
           max_tokens: 800,
         });
-        return completion.choices[0]?.message?.content || "I'm not sure how to respond to that.";
+        const response = completion.choices[0]?.message?.content;
+        if (!response || response.trim().length === 0) {
+          return "I'd be happy to help you! Could you please provide more details about what you'd like to know or what you're working on?";
+        }
+        return response;
       } catch (error) {
         console.error("generateChatResponse fallback error:", error.message);
-        return "I encountered an error. Please try again.";
+        return "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your question or contact support if the issue persists.";
       }
     }
   }
