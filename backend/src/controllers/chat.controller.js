@@ -392,8 +392,8 @@ class ChatController {
         if (!conversation || (conversationId && conversation.userId !== userId)) {
           return res.status(404).json({ error: 'Conversation not found' });
         }
-        // Detect file type
-        const detectedType = fileType || (req.file.mimetype.startsWith('image/') ? 'image' : 'document');
+        // Detect file type - only documents allowed
+        const detectedType = 'document';
 
         // ── S3 upload + text extraction run in parallel ──────────────────────
         const bufferHash = _sha256(req.file.buffer);
@@ -407,29 +407,15 @@ class ChatController {
             'chat-attachments'
           ).catch(err => { console.error('S3 chat upload error:', err.message); return null; }),
 
-          // Extract text (with cache for repeated docs/images)
+          // Extract text from documents (PDF, DOCX) with cache
           (async () => {
-            if (detectedType !== 'document' && detectedType !== 'image') return '';
             const cached = _cacheGet(_docCache, bufferHash);
             if (cached !== null) { console.log('[doc cache] HIT'); return cached; }
             try {
               const mime = req.file.mimetype;
               let text = '';
               
-              if (detectedType === 'image') {
-                // Convert image to base64 for vision analysis
-                const base64Image = req.file.buffer.toString('base64');
-                const dataUrl = `data:${mime};base64,${base64Image}`;
-                
-                // Use Groq vision to extract/describe image content
-                try {
-                  const visionResponse = await GrokService.analyzeImage(dataUrl);
-                  text = visionResponse?.substring(0, 8000) || '[Image uploaded, but no text could be extracted]';
-                } catch (visionErr) {
-                  console.error('Vision analysis error:', visionErr.message);
-                  text = '[Image uploaded - AI vision analysis unavailable]';
-                }
-              } else if (mime === 'application/pdf' || req.file.originalname?.endsWith('.pdf')) {
+              if (mime === 'application/pdf' || req.file.originalname?.endsWith('.pdf')) {
                 const pdfData = await pdfParse(req.file.buffer);
                 text = pdfData.text?.substring(0, 8000) || '';
               } else if (mime.includes('word') || req.file.originalname?.match(/\.docx?$/)) {
