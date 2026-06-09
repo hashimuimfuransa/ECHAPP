@@ -69,7 +69,7 @@ class DesktopBrandPanel extends StatelessWidget {
           ),
         ),
         // Foreground content
-        Padding(
+        SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 52, vertical: 60),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

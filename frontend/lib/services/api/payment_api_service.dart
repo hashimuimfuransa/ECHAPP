@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show Platform, File, Directory;
+import 'dart:io';
 import '../infrastructure/api_client.dart';
 import '../../config/api_config.dart';
 import '../../models/payment.dart';
@@ -8,6 +8,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:open_file/open_file.dart';
 
 /// Helper to safely parse payment status from various types
 PaymentStatus _parsePaymentStatus(dynamic statusValue) {
@@ -353,96 +356,113 @@ class PaymentApiService {
     }
   }
 
-  /// Download payment invoice (admin only)
-  Future<void> downloadInvoice(String paymentId) async {
+  /// Download payment invoice
+  Future<String> downloadInvoice(String paymentId) async {
     try {
       print('PaymentApiService: Downloading invoice for payment: $paymentId');
-      
+
       final response = await _apiClient.get('${ApiConfig.payments}/$paymentId/invoice');
-      
+
       print('PaymentApiService: Invoice response status: ${response.statusCode}');
-      print('PaymentApiService: Invoice response content type: ${response.headers['content-type']}');
-      
+      print('PaymentApiService: Invoice content-type: ${response.headers['content-type']}');
+
       if (response.statusCode != 200) {
         throw ApiException('Failed to download invoice: Server returned ${response.statusCode}');
       }
-      
-      // Check if response is PDF
+
       final contentType = response.headers['content-type'] ?? '';
       if (!contentType.contains('application/pdf')) {
-        throw ApiException('Invalid response format: Expected PDF, got $contentType');
+        throw ApiException('Invalid response: expected PDF, got $contentType');
       }
-      
-      // Get filename from content-disposition header or generate one
-      String filename = 'invoice.pdf';
-      final contentDisposition = response.headers['content-disposition'];
-      if (contentDisposition != null && contentDisposition.contains('filename=')) {
-        final filenameMatch = RegExp(r'filename="?([^"]+)"?').firstMatch(contentDisposition);
-        if (filenameMatch != null) {
-          filename = filenameMatch.group(1) ?? 'invoice.pdf';
-        }
+
+      // Extract filename from Content-Disposition header
+      String filename = 'invoice_$paymentId.pdf';
+      final cd = response.headers['content-disposition'];
+      if (cd != null && cd.contains('filename=')) {
+        final m = RegExp(r'filename="?([^"]+)"?').firstMatch(cd);
+        if (m != null) filename = m.group(1) ?? filename;
       }
-      
-      // For web, we'll create a download link
+
+      final bytes = response.bodyBytes;
+
+      // ── Web ──────────────────────────────────────────────────────────────────
       if (kIsWeb) {
-        print('PaymentApiService: Creating blob for web download');
-        print('Response body type: ${response.bodyBytes.runtimeType}');
-        print('Response body length: ${response.bodyBytes.length}');
-        
-        // Convert response body bytes to Uint8List for blob
-        final bytes = response.bodyBytes;
         final blob = html.Blob([bytes], 'application/pdf');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        
-        print('PaymentApiService: Blob created, URL: $url');
-        
-        // Create anchor element and trigger download
-        final anchor = html.AnchorElement(href: url)
+        final url  = html.Url.createObjectUrlFromBlob(blob);
+        html.AnchorElement(href: url)
           ..setAttribute('download', filename)
           ..click();
-        
-        // Clean up the object URL after a small delay
-        Future.delayed(const Duration(milliseconds: 100), () {
-          html.Url.revokeObjectUrl(url);
-          print('PaymentApiService: Object URL revoked');
-        });
-        
-        print('PaymentApiService: Invoice downloaded successfully for web');
-      } else {
-        // For mobile/desktop platforms
-        print('PaymentApiService: Saving invoice for mobile/desktop platform');
-        
-        // Get the appropriate directory for saving files
-        Directory directory;
-        if (Platform.isAndroid || Platform.isIOS) {
-          directory = await getApplicationDocumentsDirectory();
-        } else {
-          directory = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
-        }
-        
-        // Create the file path
-        final filePath = '${directory.path}/$filename';
-        final file = File(filePath);
-        
-        // Write the PDF bytes to the file
-        await file.writeAsBytes(response.bodyBytes);
-        print('PaymentApiService: Invoice saved to: $filePath');
-        
-        // Try to open the file with the default application
-        final uri = Uri.file(filePath);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
-          print('PaymentApiService: Invoice opened with default application');
-        } else {
-          print('PaymentApiService: Could not open invoice, but file was saved successfully');
-          throw ApiException('Invoice saved to $filePath but could not open automatically. Please open the file manually.');
-        }
+        Future.delayed(const Duration(milliseconds: 200), () => html.Url.revokeObjectUrl(url));
+        print('PaymentApiService: Web download triggered for $filename');
+        return filename;
       }
-      
+
+      // ── Android / iOS ────────────────────────────────────────────────────────
+      if (Platform.isAndroid) {
+        // Request storage permission on Android < 13
+        final sdkInt = await _androidSdkInt();
+        if (sdkInt < 33) {
+          final status = await Permission.storage.request();
+          if (status.isDenied || status.isPermanentlyDenied) {
+            throw ApiException('Storage permission denied. Please grant storage access in app settings.');
+          }
+        }
+        // Save to external Downloads so it's visible in Files app
+        final extDir = await getExternalStorageDirectory();
+        final saveDir = extDir != null
+            ? extDir.path.replaceFirst(RegExp(r'Android.*'), 'Download')
+            : (await getApplicationDocumentsDirectory()).path;
+        final filePath = '$saveDir/$filename';
+        await File(filePath).writeAsBytes(bytes);
+        print('PaymentApiService: Saved to $filePath');
+        await _openFile(filePath);
+        return filePath;
+      }
+
+      if (Platform.isIOS) {
+        final dir  = await getApplicationDocumentsDirectory();
+        final filePath = '${dir.path}/$filename';
+        await File(filePath).writeAsBytes(bytes);
+        print('PaymentApiService: Saved to $filePath');
+        await _openFile(filePath);
+        return filePath;
+      }
+
+      // ── Desktop ──────────────────────────────────────────────────────────────
+      final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/$filename';
+      await File(filePath).writeAsBytes(bytes);
+      print('PaymentApiService: Saved to $filePath');
+      await _openFile(filePath);
+      return filePath;
+
     } catch (e) {
       print('PaymentApiService: Error downloading invoice: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to download invoice: $e');
+    }
+  }
+
+  /// Open a local file with the system default app.
+  /// Uses open_file package which handles FileProvider content URIs on Android.
+  Future<bool> _openFile(String filePath) async {
+    try {
+      final result = await OpenFile.open(filePath);
+      return result.type == ResultType.done;
+    } catch (_) {
+      return false;
+    }
+  }
+
+
+  /// Returns Android SDK version, or 999 on non-Android
+  Future<int> _androidSdkInt() async {
+    if (kIsWeb || !Platform.isAndroid) return 999;
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      return info.version.sdkInt;
+    } catch (_) {
+      return 999;
     }
   }
 

@@ -30,6 +30,18 @@ const protect = async (req, res, next) => {
       // Find user by Firebase UID
       req.user = await User.findOne({ firebaseUid: decodedToken.uid }).select('-password');
       
+      // Fallback: teacher/admin accounts created directly in MongoDB (no firebaseUid set yet)
+      // Try to find by email and auto-link the firebaseUid so future logins resolve by UID
+      if (!req.user && decodedToken.email) {
+        const userByEmail = await User.findOne({ email: decodedToken.email.toLowerCase() });
+        if (userByEmail) {
+          console.log('User not found by firebaseUid, found by email — linking firebaseUid:', decodedToken.uid);
+          userByEmail.firebaseUid = decodedToken.uid;
+          await userByEmail.save();
+          req.user = await User.findById(userByEmail._id).select('-password');
+        }
+      }
+
       if (!req.user) {
         console.log('User not found in database');
         return sendUnauthorized(res, 'User not found in database');

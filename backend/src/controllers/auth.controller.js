@@ -337,6 +337,18 @@ const firebaseLogin = async (req, res) => {
     
     // Check if user already exists in our database
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+    // Fallback: account may have been created directly in MongoDB (e.g. via admin createTeacher)
+    // without a Firebase account. Link the firebaseUid now so their role is preserved.
+    if (!user && decodedToken.email) {
+      const existingByEmail = await User.findOne({ email: decodedToken.email.toLowerCase() });
+      if (existingByEmail && !existingByEmail.firebaseUid) {
+        console.log('Teacher/admin account found by email, linking firebaseUid:', decodedToken.uid);
+        existingByEmail.firebaseUid = decodedToken.uid;
+        await existingByEmail.save();
+        user = existingByEmail;
+      }
+    }
     
     if (!user) {
       // Case 1: New user (signup) - create user in MongoDB
