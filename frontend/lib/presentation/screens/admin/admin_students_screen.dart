@@ -479,7 +479,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                                 height: 80,
                                 fit: BoxFit.cover,
                                 errorWidget: Text(
-                                  student.fullName.substring(0, 1).toUpperCase(),
+                                  (student.fullName.isNotEmpty ? student.fullName.substring(0, 1) : '?').toUpperCase(),
                                   style: const TextStyle(
                                     color: AppTheme.primaryGreen,
                                     fontWeight: FontWeight.bold,
@@ -489,7 +489,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                               ),
                             )
                           : Text(
-                              student.fullName.substring(0, 1).toUpperCase(),
+                              (student.fullName.isNotEmpty ? student.fullName.substring(0, 1) : '?').toUpperCase(),
                               style: const TextStyle(
                                 color: AppTheme.primaryGreen,
                                 fontWeight: FontWeight.bold,
@@ -790,7 +790,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search students...',
+                      hintText: 'Search by name, email, or phone...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -923,7 +923,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                         height: 50,
                         fit: BoxFit.cover,
                         errorWidget: Text(
-                          student.fullName.substring(0, 1).toUpperCase(),
+                          (student.fullName.isNotEmpty ? student.fullName.substring(0, 1) : '?').toUpperCase(),
                           style: const TextStyle(
                             color: AppTheme.primaryGreen,
                             fontWeight: FontWeight.bold,
@@ -933,7 +933,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       ),
                     )
                   : Text(
-                      student.fullName.substring(0, 1).toUpperCase(),
+                      (student.fullName.isNotEmpty ? student.fullName.substring(0, 1) : '?').toUpperCase(),
                       style: const TextStyle(
                         color: AppTheme.primaryGreen,
                         fontWeight: FontWeight.bold,
@@ -1263,7 +1263,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                               height: 60,
                               fit: BoxFit.cover,
                               errorWidget: Text(
-                                studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                                (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -1273,7 +1273,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                             ),
                           )
                         : Text(
-                            studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                            (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -1633,7 +1633,7 @@ class StudentDetailModal extends StatelessWidget {
                               height: 60,
                               fit: BoxFit.cover,
                               errorWidget: Text(
-                                studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                                (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -1643,7 +1643,7 @@ class StudentDetailModal extends StatelessWidget {
                             ),
                           )
                         : Text(
-                            studentDetail.user.fullName.substring(0, 1).toUpperCase(),
+                            (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,

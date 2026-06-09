@@ -272,7 +272,19 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     if (confirm == true) {
       try {
         await _liveSessionService.deleteSession(session.id);
-        _loadSessions();
+        // Reload based on current tab
+        String status;
+        switch (_tabController.index) {
+          case 0:
+            status = 'scheduled';
+            break;
+          case 1:
+            status = 'ended';
+            break;
+          default:
+            status = '';
+        }
+        await _loadSessions(status: status.isEmpty ? null : status);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Session deleted successfully')),

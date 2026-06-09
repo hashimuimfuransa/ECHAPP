@@ -111,11 +111,13 @@ const getStudents = async (req, res) => {
           user.customClaims?.role !== 'admin'
         );
         
-        // Apply search filter
+        // Apply search filter (name, email, or phone)
         if (search) {
+          const searchLower = search.toLowerCase();
           filteredUsers = filteredUsers.filter(user => 
-            (user.displayName?.toLowerCase().includes(search.toLowerCase()) ||
-             user.email?.toLowerCase().includes(search.toLowerCase()))
+            (user.displayName?.toLowerCase().includes(searchLower) ||
+             user.email?.toLowerCase().includes(searchLower) ||
+             user.phoneNumber?.toLowerCase().includes(searchLower))
           );
         }
         
@@ -159,16 +161,17 @@ const getStudents = async (req, res) => {
         if (search) {
           filter.$or = [
             { fullName: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } }
+            { email: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } }
           ];
         }
-        
+
         const students = await User.find(filter)
           .select('-password')
           .limit(limit * 1)
           .skip((page - 1) * limit)
           .sort({ createdAt: -1 });
-        
+
         // Map isActive (MongoDB) to disabled (Firebase)
         const mappedStudents = students.map(user => {
           const userObj = user.toObject();
@@ -178,9 +181,9 @@ const getStudents = async (req, res) => {
             disabled: userObj.isActive === false
           };
         });
-        
+
         const total = await User.countDocuments(filter);
-        
+
         sendSuccess(res, {
           students: mappedStudents,
           totalPages: Math.ceil(total / limit),
@@ -192,11 +195,12 @@ const getStudents = async (req, res) => {
     } else {
       // Original MongoDB approach
       const filter = { role: 'student' };
-      
+
       if (search) {
         filter.$or = [
           { fullName: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
         ];
       }
       

@@ -141,14 +141,26 @@ class _MinimalBrandingSection extends StatelessWidget {
     final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
     final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
 
+    // Responsive sizing based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth <= 360;
+    final isMobile = screenWidth <= 768;
+
+    final logoSize = isSmallMobile ? 60.0 : (isMobile ? 72.0 : 80.0);
+    final titleFontSize = isSmallMobile ? 22.0 : (isMobile ? 24.0 : 26.0);
+    final subtitleFontSize = isSmallMobile ? 13.0 : (isMobile ? 14.0 : 15.0);
+    final taglineFontSize = isSmallMobile ? 11.0 : (isMobile ? 12.0 : 13.0);
+    final verticalSpacing = isSmallMobile ? 12.0 : (isMobile ? 14.0 : 16.0);
+    final smallSpacing = isSmallMobile ? 6.0 : 8.0;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Logo - smaller, cleaner
+        // Logo - responsive sizing
         Container(
-          width: 80,
-          height: 80,
+          width: logoSize,
+          height: logoSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -159,34 +171,34 @@ class _MinimalBrandingSection extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF10B981).withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 2,
+                blurRadius: isSmallMobile ? 15 : 20,
+                spreadRadius: isSmallMobile ? 1 : 2,
               ),
             ],
           ),
           child: ClipOval(
             child: Image.asset(
               'assets/logo.png',
-              width: 72,
-              height: 72,
+              width: logoSize * 0.9,
+              height: logoSize * 0.9,
               fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => const Icon(
+              errorBuilder: (c, e, s) => Icon(
                 Icons.school_rounded,
-                color: Color(0xFF10B981),
-                size: 36,
+                color: const Color(0xFF10B981),
+                size: logoSize * 0.45,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: verticalSpacing),
 
-        // Title - cleaner typography
+        // Title - responsive typography
         Text(
           'Excellence',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: textColor,
-            fontSize: 26,
+            fontSize: titleFontSize,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
             height: 1.1,
@@ -194,19 +206,20 @@ class _MinimalBrandingSection extends StatelessWidget {
         ),
         Text(
           'Coaching Hub',
-          style: const TextStyle(
-            color: Color(0xFF10B981),
-            fontSize: 15,
+          style: TextStyle(
+            color: const Color(0xFF10B981),
+            fontSize: subtitleFontSize,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: smallSpacing),
         Text(
           l10n?.authLearnGrowSucceed ?? 'Kwiga • Kukura • Kunesha',
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: secondaryTextColor,
-            fontSize: 13,
+            fontSize: taglineFontSize,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -248,6 +261,16 @@ class _MinimalAuthCard extends StatelessWidget {
     final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
     final orTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9CA3AF);
 
+    // Responsive sizing based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth <= 360;
+    final isMobile = screenWidth <= 768;
+
+    final headerFontSize = isSmallMobile ? 20.0 : (isMobile ? 21.0 : 22.0);
+    final subtitleFontSize = isSmallMobile ? 12.0 : (isMobile ? 13.0 : 14.0);
+    final sectionSpacing = isSmallMobile ? 20.0 : (isMobile ? 22.0 : 24.0);
+    final smallSpacing = isSmallMobile ? 4.0 : 6.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -257,22 +280,60 @@ class _MinimalAuthCard extends StatelessWidget {
           l10n?.signIn ?? 'Injira',
           style: TextStyle(
             color: textColor,
-            fontSize: 22,
+            fontSize: headerFontSize,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: smallSpacing),
         Text(
           l10n?.authSelectionSubtitle ?? 'Hitamo uburyo ushaka gukoresha ukomeze',
           style: TextStyle(
             color: secondaryTextColor,
-            fontSize: 14,
+            fontSize: subtitleFontSize,
             height: 1.4,
             fontWeight: FontWeight.w400,
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: sectionSpacing),
+
+        // Error message display - responsive and overflow-safe
+        if (error != null && error!.isNotEmpty)
+          Container(
+            width: double.infinity,
+            margin: EdgeInsets.only(bottom: isSmallMobile ? 12 : 16),
+            padding: EdgeInsets.all(isSmallMobile ? 10 : 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(isSmallMobile ? 8 : 10),
+              border: Border.all(
+                color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  color: const Color(0xFFDC2626),
+                  size: isSmallMobile ? 16 : 18,
+                ),
+                SizedBox(width: isSmallMobile ? 6 : 8),
+                Expanded(
+                  child: Text(
+                    error!,
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                      fontSize: isSmallMobile ? 11 : 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // Phone Auth - Primary (Green theme)
         _ModernAuthButton(
@@ -285,7 +346,7 @@ class _MinimalAuthCard extends StatelessWidget {
           iconBgColor: isDark ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFFD1FAE5),
         ),
 
-        const SizedBox(height: 10),
+        SizedBox(height: isSmallMobile ? 8 : 10),
 
         // Google Auth with proper G icon
         if (onGoogle != null && !kIsWeb) ...[
@@ -299,12 +360,12 @@ class _MinimalAuthCard extends StatelessWidget {
             iconBgColor: isDark ? const Color(0xFF4285F4).withOpacity(0.2) : const Color(0xFFDBEAFE),
             customIcon: const _GoogleGIcon(size: 20),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: isSmallMobile ? 8 : 10),
         ],
 
         // OR Divider - modern style
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: EdgeInsets.symmetric(vertical: isSmallMobile ? 2 : 4),
           child: Row(
             children: [
               Expanded(child: Divider(color: dividerColor, thickness: 1, height: 1)),
@@ -324,7 +385,7 @@ class _MinimalAuthCard extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: isSmallMobile ? 8 : 10),
 
         // Email Auth (Blue theme)
         _ModernAuthButton(
@@ -337,27 +398,41 @@ class _MinimalAuthCard extends StatelessWidget {
           iconBgColor: isDark ? const Color(0xFF3B82F6).withOpacity(0.2) : const Color(0xFFDBEAFE),
         ),
 
-        const SizedBox(height: 24),
+        SizedBox(height: sectionSpacing),
 
-        // Simple privacy note
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lock_outline_rounded,
-              size: 14,
-              color: isDark ? const Color(0xFF10B981) : const Color(0xFF059669),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              l10n?.deviceWarningMessage.split('.').first ?? 'Konti yawe ihuza na telefone yawe ya mbere',
-              style: TextStyle(
-                color: secondaryTextColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        // Simple privacy note - compact and overflow-safe
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVeryNarrow = constraints.maxWidth < 320;
+            final fontSize = isVeryNarrow ? 9.0 : (isSmallMobile ? 10.0 : 12.0);
+            final iconSize = isVeryNarrow ? 10.0 : (isSmallMobile ? 12.0 : 14.0);
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: iconSize,
+                  color: isDark ? const Color(0xFF10B981) : const Color(0xFF059669),
+                ),
+                SizedBox(width: isVeryNarrow ? 3 : (isSmallMobile ? 4 : 6)),
+                Flexible(
+                  child: Text(
+                    l10n?.accountBoundToDevice ?? 'Account bound to this device',
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                ),
+              ],
+            );
+          }
         ),
       ],
     );
@@ -494,6 +569,20 @@ class _ModernAuthButtonState extends State<_ModernAuthButton>
         : const Color(0xFFE5E7EB);
     final textColor = widget.isDark ? Colors.white : const Color(0xFF1F2937);
 
+    // Responsive sizing based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth <= 360;
+    final isMobile = screenWidth <= 768;
+
+    final buttonHeight = isSmallMobile ? 44.0 : (isMobile ? 48.0 : 50.0);
+    final iconSize = isSmallMobile ? 28.0 : (isMobile ? 32.0 : 34.0);
+    final iconInnerSize = isSmallMobile ? 14.0 : (isMobile ? 16.0 : 18.0);
+    final fontSize = isSmallMobile ? 12.0 : (isMobile ? 12.5 : 13.5);
+    final horizontalPadding = isSmallMobile ? 10.0 : 14.0;
+    final iconSpacing = isSmallMobile ? 8.0 : 12.0;
+    final arrowSize = isSmallMobile ? 12.0 : 14.0;
+    final loaderSize = isSmallMobile ? 16.0 : 18.0;
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -504,48 +593,49 @@ class _ModernAuthButtonState extends State<_ModernAuthButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          height: 50,
+          height: buttonHeight,
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(isSmallMobile ? 10 : 12),
             border: Border.all(color: borderColor, width: 1),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
             child: Row(
               children: [
                 if (widget.isLoading)
                   SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: loaderSize,
+                    height: loaderSize,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                      strokeWidth: isSmallMobile ? 1.5 : 2,
                       valueColor: AlwaysStoppedAnimation(widget.accentColor),
                     ),
                   )
                 else
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: iconSize,
+                    height: iconSize,
                     decoration: BoxDecoration(
                       color: widget.iconBgColor,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(isSmallMobile ? 8 : 10),
                     ),
                     child: widget.customIcon ??
                         Icon(widget.icon,
-                            color: widget.accentColor, size: 18),
+                            color: widget.accentColor, size: iconInnerSize),
                   ),
-                const SizedBox(width: 12),
+                SizedBox(width: iconSpacing),
                 Expanded(
                   child: Text(
                     widget.label,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 13.5,
+                      fontSize: fontSize,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.2,
                     ),
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 Icon(
@@ -553,7 +643,7 @@ class _ModernAuthButtonState extends State<_ModernAuthButton>
                   color: widget.isDark
                       ? const Color(0xFF6B7280)
                       : const Color(0xFF9CA3AF),
-                  size: 14,
+                  size: arrowSize,
                 ),
               ],
             ),
@@ -746,11 +836,24 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
     );
   }
 
-  // ── Mobile layout (attractive with dynamic background, wider card) ─────────────────────────────────────────────────────────
+  // ── Mobile layout (attractive with dynamic background, responsive card) ─────────────────────────────────────────────────────────
 
   Widget _mobileLayout(dynamic authState) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+    final isSmallMobile = screenWidth <= 360;
     final isShort = screenHeight < 700;
+    final isVeryShort = screenHeight < 600;
+
+    // Responsive padding values
+    final horizontalPadding = isSmallMobile ? 12.0 : 16.0;
+    final topSpacing = isVeryShort ? 8.0 : (isShort ? 12.0 : 24.0);
+    final brandingSpacing = isVeryShort ? 12.0 : (isShort ? 16.0 : 32.0);
+    final cardPadding = isSmallMobile ? 16.0 : 20.0;
+    final cardBorderRadius = isSmallMobile ? 16.0 : 20.0;
+    final bottomSpacing = isVeryShort ? 8.0 : (isShort ? 12.0 : 16.0);
+    final footerSpacing = isVeryShort ? 6.0 : (isShort ? 8.0 : 12.0);
 
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -775,24 +878,24 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
             child: Column(
               children: [
                 // Top spacing
-                SizedBox(height: isShort ? 12 : 24),
+                SizedBox(height: topSpacing),
 
                 // Minimal branding
                 _MinimalBrandingSection(isDark: _isDark),
 
-                SizedBox(height: isShort ? 20 : 32),
+                SizedBox(height: brandingSpacing),
 
-                // Auth card - wider with modern styling
+                // Auth card - responsive with modern styling
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: _cardColor,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(cardBorderRadius),
                       border: _isDark
                           ? Border.all(color: const Color(0xFF334155).withOpacity(0.5), width: 1)
                           : Border.all(color: Colors.white, width: 1),
@@ -819,7 +922,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                             ],
                     ),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(cardPadding),
                       child: _MinimalAuthCard(
                         isLoading: authState.isLoading,
                         isEmailLoading: authState.isEmailLoading,
@@ -836,9 +939,9 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
                 ),
 
                 // Bottom terms text
-                const SizedBox(height: 16),
+                SizedBox(height: bottomSpacing),
                 _MinimalTermsFooter(),
-                const SizedBox(height: 12),
+                SizedBox(height: footerSpacing),
               ],
             ),
           ),
@@ -848,11 +951,16 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen>
   }
 
   Widget _MinimalTermsFooter() {
+    // Responsive font sizing
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth <= 360;
+    final fontSize = isSmallMobile ? 9.0 : 11.0;
+
     return Text.rich(
       TextSpan(
         style: TextStyle(
           color: _secondaryTextColor,
-          fontSize: 11,
+          fontSize: fontSize,
           height: 1.4,
         ),
         children: [

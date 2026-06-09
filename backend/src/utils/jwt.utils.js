@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: '15m' // Short-lived access token
+    expiresIn: '24h' // Access token valid for 24 hours
   });
 };
 

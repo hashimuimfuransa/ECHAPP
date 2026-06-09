@@ -198,6 +198,13 @@ class _AdminManagementScreenState extends ConsumerState<AdminManagementScreen> {
         title: const Text('Admin Management'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _loadAdmins(),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
