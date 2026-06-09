@@ -12,7 +12,6 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
-import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/models/category.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
@@ -23,6 +22,8 @@ import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/downloads_section.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
+import 'package:excellencecoachinghub/services/live_session_service.dart';
+import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/widgets/support_floating_button.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
@@ -198,6 +199,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _hasCheckedRole = false;
   bool _isRefreshing = false;
+  Future<List<LiveSession>>? _upcomingSessionsFuture;
+  List<String> _lastEnrolledCourseIds = [];
   Timer? _autoRefreshTimer;
   Timer? _phraseTimer;
   AnimationController? _animationController;
@@ -479,8 +482,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // Allow search if either query is not empty OR a category is selected
     if (trimmedQuery.isEmpty && _selectedCategoryId == null) {
-      // Show a hint to user that they need to enter something or select a category
-      debugPrint('Dashboard: Cannot search - empty query and no category selected');
       return;
     }
 
@@ -497,8 +498,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       'categoryId': _selectedCategoryId,
       'categoryName': _selectedCategoryName,
     };
-    
-    debugPrint('Dashboard: Navigating to courses with extra: $extra');
 
     // Navigate and then clear after navigation completes
     context.push('/courses', extra: extra).then((_) {
@@ -509,7 +508,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           _selectedCategoryId = null;
           _selectedCategoryName = null;
         });
-        debugPrint('Dashboard: Search state cleared after navigation');
       }
     });
   }
@@ -641,55 +639,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       children: [
                         const SizedBox(height: 12),
                         _buildModernSearchBar(context),
-                        // DEBUG: Temporary test button
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: () async {
-                                final repo = CourseRepository();
-                                debugPrint('=== NORMAL FILTER (isPublished=true) ===');
-                                debugPrint('Testing category: 69c5017a27858856e87d001f');
-                                final result = await repo.getCoursesPaged(
-                                  page: 1,
-                                  limit: 10,
-                                  categoryId: '69c5017a27858856e87d001f',
-                                );
-                                debugPrint('Found ${result.courses.length} published courses');
-                                
-                                debugPrint('=== UNPUBLISHED FILTER (isPublished=any) ===');
-                                final result2 = await repo.getCoursesPaged(
-                                  page: 1,
-                                  limit: 10,
-                                  categoryId: '69c5017a27858856e87d001f',
-                                  showUnpublished: true,
-                                );
-                                debugPrint('Found ${result2.courses.length} total courses (including unpublished)');
-                                for (var c in result2.courses) {
-                                  debugPrint('  - ${c.title} (published: ${c.isPublished})');
-                                }
-                                debugPrint('=======================');
-                              },
-                              child: const Text('TEST API'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () async {
-                                final repo = CourseRepository();
-                                debugPrint('=== ALL COURSES TEST ===');
-                                final result = await repo.getCoursesPaged(
-                                  page: 1,
-                                  limit: 10,
-                                );
-                                debugPrint('Found ${result.courses.length} total courses');
-                                for (var c in result.courses) {
-                                  debugPrint('  - ${c.title} (cat: ${c.categoryId})');
-                                }
-                                debugPrint('========================');
-                              },
-                              child: const Text('TEST ALL'),
-                            ),
-                          ],
-                        ),
                         const SizedBox(height: 20),
                         // For new users: Show recommended first, then popular
                         // For returning users: Show continue learning first
@@ -727,8 +676,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 ],
                                 // Continue learning / Explore card
                                 _buildContinueLearningCard(context, enrollments),
-                                // For returning users: Quick actions, Stats, Recommended, Popular
+                                // For returning users: Live sessions, Quick actions, Stats, Recommended, Popular
                                 if (!isNewUser) ...[
+                                  const SizedBox(height: 24),
+                                  _buildUpcomingLiveSessions(context, enrolledCourses),
                                   const SizedBox(height: 20),
                                   _buildQuickActions(context),
                                   const SizedBox(height: 24),
@@ -1491,7 +1442,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Modern Search Bar with visible search button
+  // Clean Modern Search Bar
   Widget _buildModernSearchBar(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
@@ -1499,23 +1450,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Column(
       children: [
         Container(
-          height: isMobile ? 58 : 64,
-          decoration: _modernPanelDecoration(
-            context,
-            accent: const Color(0xFF2563EB),
+          height: isMobile ? 52 : 56,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _selectedCategoryId != null
+                  ? const Color(0xFF0F766E)
+                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
+              width: _selectedCategoryId != null ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.2)
+                    : Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              // Search Icon
-              Container(
-                margin: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
+              // Search Icon - simple and subtle
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(
                   Icons.search_rounded,
-                  color: Color(0xFF0F766E),
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  size: 22,
                 ),
               ),
               // Text Field
@@ -1527,109 +1490,96 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: _selectedCategoryName == null
-                        ? l10n?.searchHint ?? 'Search courses, skills, lessons...'
+                        ? l10n?.searchHint ?? 'Search courses...'
                         : 'Search in $_selectedCategoryName...',
                     hintStyle: TextStyle(
-                      color: isDark ? Colors.white60 : const Color(0xFF7C8797),
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8),
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w400,
                     ),
                     border: InputBorder.none,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
-              // Action Buttons
+              // Action Buttons - minimal
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Clear button
                   if (_searchController.text.isNotEmpty)
-                    IconButton(
-                      icon: Icon(
-                        Icons.clear_rounded,
-                        color:
-                            isDark ? Colors.white54 : const Color(0xFF9A8A76),
-                        size: 20,
-                      ),
-                      onPressed: () {
+                    InkWell(
+                      onTap: () {
                         _searchController.clear();
                         setState(() {});
                       },
-                    ),
-                  // Category Filter Button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        setState(() => _showCategoryDropdown = !_showCategoryDropdown);
-                      },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _selectedCategoryId != null
-                              ? const Color(0xFF10B981).withOpacity(0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _selectedCategoryId != null
-                                ? const Color(0xFF10B981)
-                                : (isDark ? Colors.white24 : const Color(0xFFE5E7EB)),
-                            width: _selectedCategoryId != null ? 2 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _showCategoryDropdown
-                                  ? Icons.keyboard_arrow_up_rounded
-                                  : Icons.tune_rounded,
-                              color: _selectedCategoryId != null
-                                  ? const Color(0xFF0F766E)
-                                  : (isDark ? Colors.white70 : const Color(0xFF6B7280)),
-                              size: 18,
-                            ),
-                            if (_selectedCategoryName != null) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                _selectedCategoryName!,
-                                style: TextStyle(
-                                  color: const Color(0xFF0F766E),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ],
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          size: 18,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Search Button
-                  Material(
-                    color: const Color(0xFF0F766E),
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      onTap: _onSearchButtonTap,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 44,
-                        width: 44,
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 22,
+                  // Category Filter - simple chip style
+                  if (_selectedCategoryId != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _selectedCategoryName ?? '',
+                        style: const TextStyle(
+                          color: Color(0xFF0F766E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
+                  // Category Button
+                  InkWell(
+                    onTap: () => setState(() => _showCategoryDropdown = !_showCategoryDropdown),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Icon(
+                        _showCategoryDropdown
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.tune_rounded,
+                        color: _selectedCategoryId != null
+                            ? const Color(0xFF0F766E)
+                            : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        size: 20,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  // Search Button - compact
+                  InkWell(
+                    onTap: _onSearchButtonTap,
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(16),
+                    ),
+                    child: Container(
+                      height: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0F766E),
+                        borderRadius: BorderRadius.horizontal(
+                          right: Radius.circular(16),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -1637,20 +1587,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
         if (_showCategoryDropdown)
           Padding(
-            padding: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.only(top: 8),
             child: _buildCategoryDropdown(context),
           ),
       ],
     );
   }
 
-  // Continue Learning Card
+  // Continue Learning Card with dynamic button based on progress
   Widget _buildContinueLearningCard(
       BuildContext context, List<Enrollment> enrollments) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     if (enrollments.isEmpty) {
-      // Show Explore Courses card for users with no enrollments
       return _buildExploreCoursesCard(context);
     }
 
@@ -1662,24 +1611,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
 
     final progress = (lastEnrollment.progress / 100).clamp(0.0, 1.0);
+    final progressPercent = lastEnrollment.progress.toInt();
+    final isCompleted = progressPercent >= 100;
+    final isNotStarted = progressPercent == 0;
+
+    // Determine button text and icon based on progress
+    final String buttonText;
+    final IconData buttonIcon;
+    if (isCompleted) {
+      buttonText = l10n?.reviewCourse ?? 'Review Course';
+      buttonIcon = Icons.check_circle_rounded;
+    } else if (isNotStarted) {
+      buttonText = l10n?.startLearning ?? 'Start Learning';
+      buttonIcon = Icons.play_arrow_rounded;
+    } else {
+      buttonText = l10n?.continueLearning ?? 'Continue Learning';
+      buttonIcon = Icons.play_arrow_rounded;
+    }
 
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryDark,
-            AppTheme.primary,
-            AppTheme.accent,
-          ],
+          colors: isCompleted
+              ? [
+                  const Color(0xFF059669), // Success green
+                  const Color(0xFF10B981),
+                  const Color(0xFF34D399),
+                ]
+              : [
+                  AppTheme.primaryDark,
+                  AppTheme.primary,
+                  AppTheme.accent,
+                ],
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryDark.withOpacity(0.28),
+            color: isCompleted
+                ? const Color(0xFF059669).withOpacity(0.3)
+                : AppTheme.primaryDark.withOpacity(0.28),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -1688,14 +1662,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with status badge
           Row(
             children: [
+              // Course thumbnail
               Container(
-                width: isMobile ? 54 : 64,
-                height: isMobile ? 54 : 64,
+                width: isMobile ? 56 : 68,
+                height: isMobile ? 56 : 68,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: lastCourse.thumbnail != null &&
                         lastCourse.thumbnail!.isNotEmpty
@@ -1706,32 +1686,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           fit: BoxFit.cover,
                         ),
                       )
-                    : const Icon(
-                        Icons.play_arrow_rounded,
+                    : Icon(
+                        isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 28,
                       ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n?.continueLearning ?? 'Continue Learning',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: isMobile ? 12 : 13,
-                        fontWeight: FontWeight.w600,
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isCompleted
+                            ? (l10n?.completed ?? 'Completed')
+                            : isNotStarted
+                                ? (l10n?.notStarted ?? 'Not Started')
+                                : '${progressPercent}% ${l10n?.complete ?? 'Complete'}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       lastCourse.title,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: isMobile ? 16 : 18,
                         fontWeight: FontWeight.w800,
+                        height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1741,8 +1734,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Progress Bar
+          const SizedBox(height: 18),
+          // Enhanced Progress Bar
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1750,69 +1743,101 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Progress',
+                    isCompleted
+                        ? (l10n?.courseCompleted ?? 'Course Completed!')
+                        : (l10n?.yourProgress ?? 'Your Progress'),
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Text(
-                    '${lastEnrollment.progress.toInt()}%',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                  if (!isCompleted)
+                    Text(
+                      '${100 - progressPercent}% ${l10n?.remaining ?? 'remaining'}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Progress bar with better styling
+              Stack(
+                children: [
+                  Container(
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                  FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      height: 10,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isCompleted
+                              ? [Colors.white, const Color(0xFFA7F3D0)]
+                              : [AppTheme.primaryLight, Colors.white],
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: FractionallySizedBox(
-                  widthFactor: progress,
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primaryLight, Colors.white],
-                      ),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
+              const SizedBox(height: 6),
+              // Progress percentage below bar
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '$progressPercent%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          // Continue Button
+          // Dynamic Action Button
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 52,
             child: ElevatedButton(
               onPressed: () =>
                   CourseNavigationUtils.navigateToCourseWithContext(
                       context, ref, lastCourse),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: AppTheme.primaryDark,
+                foregroundColor: isCompleted
+                    ? const Color(0xFF059669)
+                    : AppTheme.primaryDark,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.play_arrow_rounded, size: 20),
-                  const SizedBox(width: 6),
+                  Icon(buttonIcon, size: 22),
+                  const SizedBox(width: 8),
                   Text(
-                    l10n?.continueLearning ?? 'Continue Learning',
+                    buttonText,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
@@ -1825,6 +1850,239 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ],
       ),
     );
+  }
+
+  // Upcoming Live Sessions section (student dashboard)
+  Widget _buildUpcomingLiveSessions(BuildContext context, List<Course> enrolledCourses) {
+    if (enrolledCourses.isEmpty) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    // Cache future — only re-fetch if enrolled courses changed
+    final courseIds = enrolledCourses.map((c) => c.id).toList();
+    if (_upcomingSessionsFuture == null ||
+        !_listEquals(courseIds, _lastEnrolledCourseIds)) {
+      _lastEnrolledCourseIds = List<String>.from(courseIds);
+      _upcomingSessionsFuture = _fetchUpcomingSessionsForCourses(enrolledCourses);
+    }
+
+    return FutureBuilder<List<LiveSession>>(
+      future: _upcomingSessionsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingCard(context, 'Upcoming Sessions');
+        }
+        final sessions = snapshot.data ?? [];
+        if (sessions.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Upcoming Sessions',
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.getTextColor(context),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...sessions.take(3).map((session) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildSessionCard(context, session, isDark, isMobile),
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  Future<List<LiveSession>> _fetchUpcomingSessionsForCourses(List<Course> courses) async {
+    final service = LiveSessionService();
+    final all = <LiveSession>[];
+    for (final course in courses) {
+      if (course.id.isEmpty) continue;
+      try {
+        final result = await service.getCourseSessions(
+          course.id,
+          status: 'scheduled',
+          limit: 5,
+        );
+        all.addAll(result.sessions);
+      } catch (_) {}
+    }
+    all.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    return all;
+  }
+
+  Widget _buildSessionCard(
+      BuildContext context, LiveSession session, bool isDark, bool isMobile) {
+    final isLive = session.isLive;
+    final now = DateTime.now();
+    final canJoin = isLive ||
+        (session.isScheduled &&
+            session.scheduledAt.difference(now).inHours < 1 &&
+            session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 15))));
+    final courseTitle = session.course?['title'] as String? ?? '';
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111C2F) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isLive
+              ? AppTheme.primary.withOpacity(0.6)
+              : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E7EB)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isLive
+                ? AppTheme.primary.withOpacity(0.12)
+                : Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isLive
+                    ? [AppTheme.primary, AppTheme.accent]
+                    : [AppTheme.primaryDark, AppTheme.primary],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isLive ? Icons.videocam_rounded : Icons.event_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isLive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                Text(
+                  session.title,
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.getTextColor(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  courseTitle.isNotEmpty
+                      ? '$courseTitle · ${session.formattedScheduledTime}'
+                      : session.formattedScheduledTime,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.getSecondaryTextColor(context),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (canJoin)
+            ElevatedButton(
+              onPressed: () => _joinStudentSession(context, session),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLive ? Colors.red : AppTheme.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Join',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            )
+          else
+            Text(
+              session.formattedDuration,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.getSecondaryTextColor(context),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _joinStudentSession(BuildContext context, LiveSession session) async {
+    try {
+      final service = LiveSessionService();
+      final response = await service.joinSession(session.id);
+      if (!mounted) return;
+      if (response.joinUrl.isNotEmpty) {
+        final uri = Uri.parse(response.joinUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Cannot open: ${response.joinUrl}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error joining session: $e')),
+        );
+      }
+    }
   }
 
   // Minimal Explore Courses Card for new users

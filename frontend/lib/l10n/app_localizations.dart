@@ -1370,6 +1370,48 @@ abstract class AppLocalizations {
   /// **'Pick up where you left off'**
   String get continueLearningSubtitle;
 
+  /// No description provided for @startLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Learning'**
+  String get startLearning;
+
+  /// No description provided for @reviewCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Course'**
+  String get reviewCourse;
+
+  /// No description provided for @courseCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Course completed!'**
+  String get courseCompleted;
+
+  /// No description provided for @completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completed;
+
+  /// No description provided for @notStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Started'**
+  String get notStarted;
+
+  /// No description provided for @complete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get complete;
+
+  /// No description provided for @remaining.
+  ///
+  /// In en, this message translates to:
+  /// **'remaining'**
+  String get remaining;
+
   /// No description provided for @yourProgress.
   ///
   /// In en, this message translates to:
@@ -1405,12 +1447,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Browse Courses'**
   String get browseCourses;
-
-  /// No description provided for @completed.
-  ///
-  /// In en, this message translates to:
-  /// **'Completed'**
-  String get completed;
 
   /// No description provided for @quizzes.
   ///
@@ -3308,12 +3344,6 @@ abstract class AppLocalizations {
   /// **'75% done — you are nearly unstoppable.'**
   String get nearlyUnstoppable;
 
-  /// No description provided for @courseCompleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Course completed!'**
-  String get courseCompleted;
-
   /// No description provided for @incredibleEffort.
   ///
   /// In en, this message translates to:
@@ -4105,12 +4135,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try: \"Simplify the main concept for me\"'**
   String get simplifyMainConcept;
-
-  /// No description provided for @complete.
-  ///
-  /// In en, this message translates to:
-  /// **'Complete'**
-  String get complete;
 
   /// No description provided for @lessonsDone.
   ///

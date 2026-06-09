@@ -661,6 +661,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueLearningSubtitle => 'Pick up where you left off';
 
   @override
+  String get startLearning => 'Start Learning';
+
+  @override
+  String get reviewCourse => 'Review Course';
+
+  @override
+  String get courseCompleted => 'Course completed!';
+
+  @override
+  String get completed => 'Completed';
+
+  @override
+  String get notStarted => 'Not Started';
+
+  @override
+  String get complete => 'Complete';
+
+  @override
+  String get remaining => 'remaining';
+
+  @override
   String get yourProgress => 'Your progress';
 
   @override
@@ -678,9 +699,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseCourses => 'Browse Courses';
-
-  @override
-  String get completed => 'Completed';
 
   @override
   String get quizzes => 'Quizzes';
@@ -1648,9 +1666,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearlyUnstoppable => '75% done — you are nearly unstoppable.';
 
   @override
-  String get courseCompleted => 'Course completed!';
-
-  @override
   String get incredibleEffort => 'You finished a course. Incredible effort!';
 
   @override
@@ -2051,9 +2066,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get simplifyMainConcept => 'Try: \"Simplify the main concept for me\"';
-
-  @override
-  String get complete => 'Complete';
 
   @override
   String get lessonsDone => 'Lessons done';

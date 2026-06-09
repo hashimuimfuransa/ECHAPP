@@ -88,7 +88,7 @@ class _AdminTeachersScreenState extends ConsumerState<AdminTeachersScreen> {
     });
 
     try {
-      final response = await _apiClient.get('${ApiConfig.baseUrl}/admin/courses?limit=100&includeUnpublished=true');
+      final response = await _apiClient.get('${ApiConfig.baseUrl}/courses?limit=100&showUnpublished=true');
       debugPrint('LoadCourses: Status ${response.statusCode}');
       debugPrint('LoadCourses: Body ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
 

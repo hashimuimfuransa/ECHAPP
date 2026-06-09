@@ -49,8 +49,6 @@ const getCourses = async (req, res) => {
     const { page = 1, limit = 20, search, level, minPrice, maxPrice, category, showUnpublished } = req.query;
     const finalLimit = Math.min(parseInt(limit) || 20, 1000);
     
-    console.log('getCourses called with query params:', req.query);
-    console.log('User role:', req.user?.role);
     
     // Build filter object
     const filter = {};
@@ -61,7 +59,6 @@ const getCourses = async (req, res) => {
       filter.isPublished = true;
     }
     
-    console.log('Applied filter:', filter);
     
     if (search) {
       filter.$or = [
@@ -77,26 +74,21 @@ const getCourses = async (req, res) => {
     if (category) {
       // Check if category is a valid ObjectId, if not try to find by name
       const ObjectId = require('mongoose').Types.ObjectId;
-      console.log('Checking category:', category, 'isValid:', ObjectId.isValid(category));
       if (ObjectId.isValid(category)) {
-        // FIX: Convert string to ObjectId for proper MongoDB matching
+        // Convert string to ObjectId for proper MongoDB matching
         filter.category = new ObjectId(category);
-        console.log('Category is valid ObjectId, added to filter:', filter.category);
       } else {
         // If it's not a valid ObjectId, try to find category by name and get its ID
         const Category = require('../models/Category');
         const categoryDoc = await Category.findOne({ 
           $or: [
             { name: { $regex: category, $options: 'i' } },
-            { name: category.replace(/_/g, ' ') } // Handle underscore-to-space conversion
+            { name: category.replace(/_/g, ' ') }
           ]
         });
         
         if (categoryDoc) {
           filter.category = categoryDoc._id;
-          console.log('Found category by name:', categoryDoc.name, 'ID:', categoryDoc._id);
-        } else {
-          console.log('Category not found by name:', category);
         }
       }
     }
@@ -107,20 +99,6 @@ const getCourses = async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
     
-    console.log('Final filter before query:', filter);
-    
-    // DEBUG: Check total courses in this category regardless of isPublished
-    const debugFilter = { ...filter };
-    delete debugFilter.isPublished;
-    if (filter.category) {
-      const totalInCategory = await Course.countDocuments({ category: filter.category });
-      const publishedInCategory = await Course.countDocuments({ category: filter.category, isPublished: true });
-      console.log(`DEBUG: Category ${filter.category} - Total: ${totalInCategory}, Published: ${publishedInCategory}`);
-      
-      // List sample courses in this category
-      const sample = await Course.find({ category: filter.category }).limit(3).select('title isPublished category');
-      console.log('DEBUG: Sample courses in category:', sample.map(c => ({ title: c.title, isPublished: c.isPublished, cat: c.category })));
-    }
     
     // Use aggregation to calculate enrollmentCount and averageRating on the fly
     const aggregationPipeline = [
@@ -159,8 +137,6 @@ const getCourses = async (req, res) => {
     
         
     const total = await Course.countDocuments(filter);
-    
-    console.log(`Found ${courses.length} courses out of ${total} total for filter:`, filter);
     
     sendSuccess(res, {
       courses: transformUrls(courses),

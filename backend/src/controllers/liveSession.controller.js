@@ -267,6 +267,31 @@ const joinSession = async (req, res) => {
     const teacherId = session.teacherId._id ? session.teacherId._id.toString() : session.teacherId.toString();
     if (userRole === 'instructor' && teacherId === userId) {
       isModerator = true;
+
+      // Check if BBB meeting is still alive; re-create if it has expired on the BBB server
+      const meetingInfo = await BBBService.getMeetingInfo(session.bbbMeetingId, session.bbbModeratorPw || '');
+      if (!meetingInfo.success || !meetingInfo.isRunning) {
+        console.log(`BBB meeting ${session.bbbMeetingId} is not running — re-creating for session ${sessionId}`);
+        const newMeeting = await BBBService.createMeeting({
+          name: session.title,
+          meetingId: session.bbbMeetingId, // reuse same ID so existing join links stay consistent
+          duration: session.duration,
+          maxParticipants: session.maxParticipants || 100,
+          record: session.settings?.allowRecording !== false,
+          muteOnStart: session.settings?.muteOnEntry !== false,
+          welcomeMsg: session.description || `Welcome to ${session.title}`,
+          meta: {
+            courseId: session.courseId._id ? session.courseId._id.toString() : session.courseId.toString(),
+            teacherId: teacherId,
+            sectionId: session.sectionId ? session.sectionId.toString() : ''
+          }
+        });
+        // Persist any updated passwords returned by BBB
+        session.bbbModeratorPw = newMeeting.moderatorPw || session.bbbModeratorPw;
+        session.bbbAttendeePw = newMeeting.attendeePw || session.bbbAttendeePw;
+        session.bbbInternalMeetingId = newMeeting.internalMeetingId || session.bbbInternalMeetingId;
+      }
+
       joinUrl = await BBBService.getJoinUrl({
         fullName: user.fullName || 'Teacher',
         meetingId: session.bbbMeetingId,
@@ -275,11 +300,9 @@ const joinSession = async (req, res) => {
         isModerator: true
       });
 
-      // Update session status to live if not already
-      if (session.status === 'scheduled') {
-        session.status = 'live';
-        await session.save();
-      }
+      // Update session status to live
+      session.status = 'live';
+      await session.save();
     } 
     // Student join
     else {

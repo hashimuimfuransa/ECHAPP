@@ -665,6 +665,27 @@ class AppLocalizationsRw extends AppLocalizations {
   String get continueLearningSubtitle => 'Komeza aho wari ugeze';
 
   @override
+  String get startLearning => 'Tangira Kwiga';
+
+  @override
+  String get reviewCourse => 'Sibushye Isomo';
+
+  @override
+  String get courseCompleted => 'Isomo Ryarangiye!';
+
+  @override
+  String get completed => 'Byarangiye';
+
+  @override
+  String get notStarted => 'Ntabwo Watangiye';
+
+  @override
+  String get complete => 'Byarangiye';
+
+  @override
+  String get remaining => 'Hasigaye';
+
+  @override
   String get yourProgress => 'Iterambere Ryawe';
 
   @override
@@ -681,9 +702,6 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get browseCourses => 'Shakisha Amesomo';
-
-  @override
-  String get completed => 'Byarangiye';
 
   @override
   String get quizzes => 'Ibizamini';
@@ -1649,9 +1667,6 @@ class AppLocalizationsRw extends AppLocalizations {
   String get nearlyUnstoppable => 'Ugeze kuri 75% — intsinzi iri hafi!';
 
   @override
-  String get courseCompleted => 'Isomo Ryarangiye!';
-
-  @override
   String get incredibleEffort => 'Warangije isomo neza. Akazi keza cyane!';
 
   @override
@@ -2055,9 +2070,6 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get simplifyMainConcept => 'Try: \"Simplify the main concept for me\"';
-
-  @override
-  String get complete => 'Complete';
 
   @override
   String get lessonsDone => 'Lessons done';

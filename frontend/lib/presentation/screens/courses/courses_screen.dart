@@ -77,12 +77,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   void _initializeFromWidgetParams() {
     if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
       _searchController.text = widget.searchQuery!;
-      debugPrint('CoursesScreen: Initialized with searchQuery: ${widget.searchQuery}');
     }
     if (widget.categoryId != null) {
       _selectedCategory = widget.categoryId!;
       _selectedCategoryName = widget.categoryName;
-      debugPrint('CoursesScreen: Initialized with categoryId: ${widget.categoryId}, name: ${widget.categoryName}');
     }
   }
 
@@ -94,8 +92,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     // Only handle case where widget is updated in-place (same screen, new params)
     if (widget.searchQuery != oldWidget.searchQuery || 
         widget.categoryId != oldWidget.categoryId) {
-      debugPrint('CoursesScreen: Widget updated with new params - category: ${widget.categoryId}, search: ${widget.searchQuery}');
-      
       if (widget.searchQuery != null) {
         _searchController.text = widget.searchQuery!;
       }
@@ -104,7 +100,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         _selectedCategoryName = widget.categoryName;
       }
       
-      // Reload with new parameters
       if (mounted) {
         _loadPage(1, reset: true);
       }
@@ -151,27 +146,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     }
 
     try {
-      // Log what parameters we're using
       final effectiveCategory = _selectedCategory == 'all' ? null : _selectedCategory;
       final effectiveSearch = _searchController.text.isNotEmpty ? _searchController.text : null;
-      debugPrint('CoursesScreen._loadPage: category=$_selectedCategory (effective=$effectiveCategory), search=$effectiveSearch');
       
-      // DEBUG: First test with showUnpublished=true to see all courses
-      if (effectiveCategory != null && effectiveSearch == null) {
-        debugPrint('CoursesScreen: DEBUG - Testing category filter with showUnpublished=true');
-        final debugResult = await _repository.getCoursesPaged(
-          page: 1,
-          limit: 5,
-          categoryId: effectiveCategory,
-          showUnpublished: true,
-        );
-        debugPrint('CoursesScreen: DEBUG - Found ${debugResult.courses.length} courses (including unpublished)');
-        for (var c in debugResult.courses) {
-          debugPrint('  - ${c.title} (published: ${c.isPublished})');
-        }
-      }
-      
-      // Always use pagination to allow students to see all courses
       final result = await _repository.getCoursesPaged(
         page: page,
         limit: _pageSize,
@@ -193,7 +170,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         // Apply filters and sort by interests
         var courses = _applyFilters(_allCourses);
         _filteredCourses = _sortCoursesByInterests(courses);
-        debugPrint('CoursesScreen: Loaded ${_allCourses.length} courses, ${_filteredCourses.length} after filtering');
       });
     } catch (error) {
       if (!mounted) return;
