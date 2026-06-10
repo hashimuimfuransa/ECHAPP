@@ -44,28 +44,82 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     });
 
     try {
-      final futures = await Future.wait([
+      // Load stats and courses together
+      final statsAndCourses = await Future.wait([
         _teacherService.getDashboardStats(),
         _teacherService.getAssignedCourses(page: _currentPage),
-        _liveSessionService.getTeacherSessions(limit: 5),
       ]);
 
-      final stats = futures[0] as TeacherDashboardStats;
-      final coursesResponse = futures[1] as TeacherCoursesResponse;
-      final sessionsResponse = futures[2] as LiveSessionsResponse;
+      final stats = statsAndCourses[0] as TeacherDashboardStats;
+      final coursesResponse = statsAndCourses[1] as TeacherCoursesResponse;
+
+      // Load sessions separately with error handling
+      List<LiveSession> sessions = [];
+      try {
+        final sessionsResponse = await _liveSessionService.getTeacherSessions(
+          status: 'scheduled',
+          limit: 5,
+        );
+        // Filter to show only upcoming sessions (scheduled for future or currently live)
+        final now = DateTime.now();
+        sessions = sessionsResponse.sessions.where((session) {
+          return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
+                 session.status == 'live';
+        }).toList();
+        // Sort by scheduled date (soonest first)
+        sessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+      } catch (sessionError) {
+        debugPrint('Failed to load sessions: $sessionError');
+        // Continue without sessions - don't fail the whole dashboard
+      }
 
       setState(() {
         _stats = stats;
         _courses = coursesResponse.courses;
         _totalPages = coursesResponse.totalPages;
-        _recentSessions = sessionsResponse.sessions;
+        _recentSessions = sessions;
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint('Dashboard loading error: $e');
       setState(() {
         _errorMessage = 'Error loading dashboard: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _refreshSessions() async {
+    try {
+      final sessionsResponse = await _liveSessionService.getTeacherSessions(
+        status: 'scheduled',
+        limit: 5,
+      );
+      // Filter to show only upcoming sessions
+      final now = DateTime.now();
+      final sessions = sessionsResponse.sessions.where((session) {
+        return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
+               session.status == 'live';
+      }).toList();
+      // Sort by scheduled date
+      sessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+      setState(() {
+        _recentSessions = sessions;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sessions refreshed')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh sessions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to refresh sessions: $e')),
+        );
+      }
     }
   }
 
@@ -79,6 +133,34 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
   void _navigateToSessions() {
     context.push('/teacher/sessions');
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) {
+        context.go('/auth-selection');
+      }
+    }
   }
 
   @override
@@ -146,7 +228,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                         ),
                         IconButton(
                           icon: const Icon(Icons.logout, color: Colors.white),
-                          onPressed: () => ref.read(authProvider.notifier).logout(),
+                          onPressed: _handleLogout,
                         ),
                       ],
                     ),
@@ -170,8 +252,38 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             
                             // Recent Sessions
                             if (_recentSessions.isNotEmpty) ...[
-                              _buildSectionHeader('Upcoming Sessions', onSeeAll: _navigateToSessions, textColor: textPrimary),
+                              _buildSectionHeader('Upcoming Sessions', onSeeAll: _navigateToSessions, onRefresh: _refreshSessions, textColor: textPrimary),
                               _buildRecentSessionsList(isDark: isDark, cardColor: cardColor, textPrimary: textPrimary, textSecondary: textSecondary),
+                              const SizedBox(height: 24),
+                            ] else ...[
+                              _buildSectionHeader('Upcoming Sessions', onSeeAll: _navigateToSessions, onRefresh: _refreshSessions, textColor: textPrimary),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                                child: Card(
+                                  color: cardColor,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24.0),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(Icons.schedule_outlined, size: 48, color: textSecondary),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'No upcoming sessions',
+                                            style: TextStyle(color: textSecondary),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TextButton.icon(
+                                            onPressed: _refreshSessions,
+                                            icon: const Icon(Icons.refresh),
+                                            label: const Text('Refresh'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 24),
                             ],
 
@@ -288,7 +400,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll, Color? textColor}) {
+  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll, VoidCallback? onRefresh, Color? textColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -300,9 +412,19 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             color: textColor,
           ),
         ),
-        TextButton(
-          onPressed: onSeeAll,
-          child: const Text('See All'),
+        Row(
+          children: [
+            if (onRefresh != null)
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: onRefresh,
+                tooltip: 'Refresh',
+              ),
+            TextButton(
+              onPressed: onSeeAll,
+              child: const Text('See All'),
+            ),
+          ],
         ),
       ],
     );

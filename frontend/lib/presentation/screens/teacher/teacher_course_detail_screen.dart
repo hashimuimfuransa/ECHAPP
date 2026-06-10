@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/models/teacher_course.dart';
 import 'package:excellencecoachinghub/models/student_performance.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 /// Teacher Course Detail Screen - Shows course content and students
 class TeacherCourseDetailScreen extends ConsumerStatefulWidget {
@@ -85,6 +86,34 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
         _errorMessage = 'Error loading course data: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) {
+        context.go('/auth-selection');
+      }
     }
   }
 
@@ -211,6 +240,10 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: _loadCourseData,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  onPressed: _handleLogout,
                 ),
               ],
             ),

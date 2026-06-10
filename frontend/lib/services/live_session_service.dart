@@ -232,14 +232,27 @@ class LiveSessionService {
       );
       response.validateStatus();
 
-      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = jsonBody['data'] as Map<String, dynamic>;
-
+      final data = response.data;
       return RecordingResponse.fromJson(data);
     } catch (e) {
-      debugPrint('Get Session Recording Error: $e');
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch recording: $e');
+      debugPrint('Failed to fetch session recording: $e');
+      throw ApiException('Failed to fetch session recording: $e');
+    }
+  }
+
+  /// Get session attendance details
+  Future<SessionAttendanceResponse> getSessionAttendance(String sessionId) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.baseUrl}/live/sessions/$sessionId/attendance',
+      );
+      response.validateStatus();
+
+      final data = response.data;
+      return SessionAttendanceResponse.fromJson(data);
+    } catch (e) {
+      debugPrint('Failed to fetch session attendance: $e');
+      throw ApiException('Failed to fetch session attendance: $e');
     }
   }
 }
@@ -297,11 +310,45 @@ class RecordingResponse {
   factory RecordingResponse.fromJson(Map<String, dynamic> json) {
     return RecordingResponse(
       recordingUrl: json['recordingUrl'],
-      duration: json['duration'] ?? 0,
+      duration: _toInt(json['duration']),
       format: json['format'],
       sessionTitle: json['sessionTitle'],
     );
   }
+}
 
-  bool get hasRecording => recordingUrl != null && recordingUrl!.isNotEmpty;
+/// Session Attendance Response
+class SessionAttendanceResponse {
+  final Map<String, dynamic> session;
+  final int totalEnrolled;
+  final int totalAttended;
+  final List<Map<String, dynamic>> attendedStudents;
+  final List<Map<String, dynamic>> notAttendedStudents;
+  final int attendanceRate;
+
+  SessionAttendanceResponse({
+    required this.session,
+    required this.totalEnrolled,
+    required this.totalAttended,
+    required this.attendedStudents,
+    required this.notAttendedStudents,
+    required this.attendanceRate,
+  });
+
+  factory SessionAttendanceResponse.fromJson(Map<String, dynamic> json) {
+    return SessionAttendanceResponse(
+      session: json['session'] ?? {},
+      totalEnrolled: _toInt(json['totalEnrolled']),
+      totalAttended: _toInt(json['totalAttended']),
+      attendedStudents: (json['attendedStudents'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          [],
+      notAttendedStudents: (json['notAttendedStudents'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          [],
+      attendanceRate: _toInt(json['attendanceRate']),
+    );
+  }
 }

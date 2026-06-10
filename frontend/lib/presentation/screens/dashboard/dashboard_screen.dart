@@ -1953,7 +1953,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     all.removeWhere((s) =>
         s.isEnded ||
         s.isCancelled ||
-        (s.isLive && s.expectedEndTime.isBefore(now)));
+        (s.isLive && s.calculatedEndTime.isBefore(now)));
     // Live sessions first, then by scheduledAt ascending
     all.sort((a, b) {
       if (a.isLive && !b.isLive) return -1;
@@ -1970,7 +1970,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final now = DateTime.now();
     // Scheduled sessions are not considered ended just because expectedEndTime passed
     // Only live sessions past their expected end time are considered ended
-    final isActuallyEnded = session.isEnded || (session.isLive && session.expectedEndTime.isBefore(now));
+    final isActuallyEnded = session.isEnded || (session.isLive && session.calculatedEndTime.isBefore(now));
     final isLive = session.isLive && !isActuallyEnded;
     final hasStarted = !isActuallyEnded &&
         (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));

@@ -48,6 +48,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_content_m
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_management_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_books_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_teachers_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_live_sessions_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/teacher/teacher_course_detail_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/teacher/schedule_live_session_screen.dart';
@@ -454,6 +455,13 @@ class AppRouter {
             builder: (context, state) => const AdminLayoutWrapper(
               screenName: 'Admin Teachers',
               child: AdminTeachersScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/live-sessions',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Live Sessions',
+              child: AdminLiveSessionsScreen(),
             ),
           ),
 

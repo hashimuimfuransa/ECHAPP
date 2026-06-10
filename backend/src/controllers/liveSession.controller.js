@@ -82,6 +82,9 @@ const createSession = async (req, res) => {
     });
 
     // Create live session in database
+    const scheduledDate = new Date(scheduledAt);
+    const expectedEndTime = new Date(scheduledDate.getTime() + duration * 60000); // duration in minutes to milliseconds
+
     const liveSession = await LiveSession.create({
       teacherId,
       courseId,
@@ -89,8 +92,9 @@ const createSession = async (req, res) => {
       lessonId,
       title,
       description,
-      scheduledAt: new Date(scheduledAt),
+      scheduledAt: scheduledDate,
       duration,
+      expectedEndTime: expectedEndTime,
       maxParticipants: maxParticipants || 100,
       bbbMeetingId: bbbMeeting.meetingId,
       bbbInternalMeetingId: bbbMeeting.internalMeetingId,
@@ -560,6 +564,89 @@ const getSessionRecordings = async (req, res) => {
 };
 
 /**
+ * Get session attendance details
+ */
+const getSessionAttendance = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const session = await LiveSession.findById(sessionId)
+      .populate('teacherId', 'fullName email')
+      .populate('courseId', 'title')
+      .populate('sectionId', 'title')
+      .populate('attendees', 'fullName email avatar')
+      .populate('attendedAt.userId', 'fullName email avatar');
+
+    if (!session) {
+      return sendError(res, 'Session not found', 404);
+    }
+
+    // Check access - only teacher of this session or admin can view attendance
+    const sessionTeacherId = session.teacherId._id ? session.teacherId._id.toString() : session.teacherId.toString();
+    if (userRole !== 'admin' && sessionTeacherId !== userId) {
+      return sendError(res, 'You do not have permission to view this session attendance', 403);
+    }
+
+    // Get all enrolled students for this course
+    const Enrollment = require('../models/Enrollment');
+    const enrolledStudents = await Enrollment.find({ courseId: session.courseId._id })
+      .populate('userId', 'fullName email avatar')
+      .sort({ 'userId.fullName': 1 });
+
+    // Separate attended and not attended students
+    const attendedStudentIds = session.attendees.map(a => a._id ? a._id.toString() : a.toString());
+    const attendedStudents = enrolledStudents.filter(e => {
+      const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
+      return attendedStudentIds.includes(studentId);
+    });
+
+    const notAttendedStudents = enrolledStudents.filter(e => {
+      const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
+      return !attendedStudentIds.includes(studentId);
+    });
+
+    // Add attendance details to attended students
+    const attendedWithDetails = attendedStudents.map(e => {
+      const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
+      const attendanceRecord = session.attendedAt.find(a => {
+        const recordUserId = a.userId._id ? a.userId._id.toString() : a.userId.toString();
+        return recordUserId === studentId;
+      });
+      return {
+        student: e.userId,
+        joinedAt: attendanceRecord?.joinedAt,
+        duration: attendanceRecord?.duration || 0
+      };
+    });
+
+    sendSuccess(res, {
+      session: {
+        id: session._id,
+        title: session.title,
+        scheduledAt: session.scheduledAt,
+        expectedEndTime: session.expectedEndTime,
+        status: session.status,
+        course: session.courseId,
+        section: session.sectionId,
+        teacher: session.teacherId
+      },
+      totalEnrolled: enrolledStudents.length,
+      totalAttended: attendedStudents.length,
+      attendedStudents: attendedWithDetails,
+      notAttendedStudents: notAttendedStudents.map(e => e.userId),
+      attendanceRate: enrolledStudents.length > 0 
+        ? Math.round((attendedStudents.length / enrolledStudents.length) * 100) 
+        : 0
+    }, 'Session attendance retrieved successfully');
+  } catch (error) {
+    console.error('Get Session Attendance Error:', error);
+    sendError(res, 'Failed to retrieve session attendance', 500, error.message);
+  }
+};
+
+/**
  * Get live sessions for a specific lesson
  */
 const getLessonSessions = async (req, res) => {
@@ -686,6 +773,7 @@ module.exports = {
   createSession,
   getTeacherSessions,
   getCourseSessions,
+  getSessionAttendance,
   joinSession,
   endSession,
   cancelSession,

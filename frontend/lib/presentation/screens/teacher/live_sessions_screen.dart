@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 /// Live Sessions Screen - View and manage all live sessions
 class LiveSessionsScreen extends ConsumerStatefulWidget {
@@ -76,9 +77,22 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
         limit: 20,
       );
 
+      List<LiveSession> filteredSessions = response.sessions;
+
+      // Filter and sort upcoming sessions
+      if (status == 'scheduled') {
+        final now = DateTime.now();
+        filteredSessions = response.sessions.where((session) {
+          return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
+                 session.status == 'live';
+        }).toList();
+        // Sort by scheduled date (soonest first)
+        filteredSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+      }
+
       setState(() {
         if (status == 'scheduled') {
-          _upcomingSessions = response.sessions;
+          _upcomingSessions = filteredSessions;
         } else if (status == 'ended') {
           _pastSessions = response.sessions;
         } else {
@@ -89,6 +103,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint('Error loading sessions: $e');
       setState(() {
         _errorMessage = 'Error loading sessions: $e';
         _isLoading = false;
@@ -284,21 +299,213 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           default:
             status = '';
         }
-        await _loadSessions(status: status.isEmpty ? null : status);
+        _loadSessions(status: status.isEmpty ? null : status);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Session deleted successfully')),
+            const SnackBar(content: Text('Session deleted')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting session: $e')),
+            SnackBar(content: Text('Error: $e')),
           );
         }
       }
     }
   }
+
+  Future<void> _viewAttendance(LiveSession session) async {
+    setState(() => _isLoading = true);
+    try {
+      final attendance = await _liveSessionService.getSessionAttendance(session.id);
+      if (mounted) {
+        _showAttendanceDialog(session, attendance);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading attendance: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showAttendanceDialog(LiveSession session, dynamic attendance) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppTheme.getCardColor(context);
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        title: Text('Attendance: ${session.title}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Summary
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _AttendanceStat(
+                      label: 'Enrolled',
+                      value: attendance.totalEnrolled.toString(),
+                      color: Colors.blue,
+                    ),
+                    _AttendanceStat(
+                      label: 'Attended',
+                      value: attendance.totalAttended.toString(),
+                      color: Colors.green,
+                    ),
+                    _AttendanceStat(
+                      label: 'Rate',
+                      value: '${attendance.attendanceRate}%',
+                      color: Colors.orange,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Attended Students
+              Text(
+                'Attended (${attendance.attendedStudents.length})',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (attendance.attendedStudents.isEmpty)
+                Text('No students attended', style: TextStyle(color: textSecondary))
+              else
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: attendance.attendedStudents.length,
+                    itemBuilder: (context, index) {
+                      final student = attendance.attendedStudents[index];
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          child: Text(
+                            student['student']?['fullName']?.substring(0, 1).toUpperCase() ?? 'S',
+                          ),
+                        ),
+                        title: Text(
+                          student['student']?['fullName'] ?? 'Unknown',
+                          style: TextStyle(color: textPrimary, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          'Joined: ${student['joinedAt'] != null ? DateFormat('h:mm a').format(DateTime.parse(student['joinedAt'])) : 'N/A'}',
+                          style: TextStyle(color: textSecondary, fontSize: 10),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 16),
+              // Not Attended Students
+              Text(
+                'Did Not Attend (${attendance.notAttendedStudents.length})',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (attendance.notAttendedStudents.isEmpty)
+                Text('All students attended', style: TextStyle(color: textSecondary))
+              else
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: attendance.notAttendedStudents.length,
+                    itemBuilder: (context, index) {
+                      final student = attendance.notAttendedStudents[index];
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.grey[300],
+                          child: Text(
+                            student['fullName']?.substring(0, 1).toUpperCase() ?? 'S',
+                          ),
+                        ),
+                        title: Text(
+                          student['fullName'] ?? 'Unknown',
+                          style: TextStyle(color: textPrimary, fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _AttendanceStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
   Future<void> _viewRecording(LiveSession session) async {
     try {
@@ -368,6 +575,34 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     context.push('/teacher/sessions/create');
   }
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) {
+        context.go('/auth-selection');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -395,7 +630,30 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _loadSessions(),
+            onPressed: () {
+              // Get current tab status
+              String status;
+              switch (_tabController.index) {
+                case 0:
+                  status = 'scheduled';
+                  break;
+                case 1:
+                  status = 'ended';
+                  break;
+                default:
+                  status = '';
+              }
+              _loadSessions(status: status.isEmpty ? null : status);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sessions refreshed')),
+                );
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
           ),
         ],
       ),
@@ -461,6 +719,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           onCancel: () => _cancelSession(session),
           onDelete: () => _deleteSession(session),
           onViewRecording: () => _viewRecording(session),
+          onViewAttendance: () => _viewAttendance(session),
           isDark: isDark,
           cardColor: cardColor,
           textPrimary: textPrimary,
@@ -524,6 +783,7 @@ class _SessionCard extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onDelete;
   final VoidCallback onViewRecording;
+  final VoidCallback onViewAttendance;
   final bool isDark;
   final Color cardColor;
   final Color textPrimary;
@@ -537,6 +797,7 @@ class _SessionCard extends StatelessWidget {
     required this.onCancel,
     required this.onDelete,
     required this.onViewRecording,
+    required this.onViewAttendance,
     required this.isDark,
     required this.cardColor,
     required this.textPrimary,
@@ -666,6 +927,13 @@ class _SessionCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  if (session.status == 'ended')
+                    TextButton.icon(
+                      onPressed: onViewAttendance,
+                      icon: const Icon(Icons.people_outline, size: 18),
+                      label: const Text('Attendance'),
+                      style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+                    ),
                   if (hasRecording)
                     TextButton.icon(
                       onPressed: onViewRecording,

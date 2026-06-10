@@ -41,6 +41,10 @@ const liveSessionSchema = new mongoose.Schema({
     min: [15, 'Duration must be at least 15 minutes'],
     max: [180, 'Duration cannot exceed 180 minutes']
   },
+  expectedEndTime: {
+    type: Date,
+    default: null
+  },
   bbbMeetingId: {
     type: String,
     default: null
@@ -119,6 +123,24 @@ const liveSessionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  attendees: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  attendedAt: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    },
+    duration: {
+      type: Number,
+      default: 0 // in minutes
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now

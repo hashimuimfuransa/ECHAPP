@@ -10,6 +10,7 @@ class LiveSession {
   final String? description;
   final DateTime scheduledAt;
   final int duration;
+  final DateTime? expectedEndTime;
   final String? bbbMeetingId;
   final String? bbbInternalMeetingId;
   final String? bbbModeratorUrl;
@@ -24,6 +25,8 @@ class LiveSession {
   final int maxParticipants;
   final SessionSettings settings;
   final int participantCount;
+  final List<dynamic>? attendees;
+  final List<dynamic>? attendedAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -43,6 +46,7 @@ class LiveSession {
     this.description,
     required this.scheduledAt,
     required this.duration,
+    this.expectedEndTime,
     this.bbbMeetingId,
     this.bbbInternalMeetingId,
     this.bbbModeratorUrl,
@@ -57,6 +61,8 @@ class LiveSession {
     this.maxParticipants = 100,
     required this.settings,
     this.participantCount = 0,
+    this.attendees,
+    this.attendedAt,
     this.createdAt,
     this.updatedAt,
     this.course,
@@ -86,6 +92,9 @@ class LiveSession {
           ? DateTime.parse(json['scheduledAt']).toLocal()
           : DateTime.now(),
       duration: json['duration'] ?? 60,
+      expectedEndTime: json['expectedEndTime'] != null
+          ? DateTime.parse(json['expectedEndTime']).toLocal()
+          : null,
       bbbMeetingId: json['bbbMeetingId'] is String ? json['bbbMeetingId'] : null,
       bbbInternalMeetingId: json['bbbInternalMeetingId'] is String ? json['bbbInternalMeetingId'] : null,
       bbbModeratorUrl: json['bbbModeratorUrl'] is String ? json['bbbModeratorUrl'] : null,
@@ -104,6 +113,8 @@ class LiveSession {
           ? SessionSettings.fromJson(json['settings'])
           : SessionSettings(),
       participantCount: json['participantCount'] ?? 0,
+      attendees: json['attendees'] != null ? List<dynamic>.from(json['attendees']) : null,
+      attendedAt: json['attendedAt'] != null ? List<dynamic>.from(json['attendedAt']) : null,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt']).toLocal()
           : null,
@@ -153,13 +164,14 @@ class LiveSession {
   bool get isCancelled => status == 'cancelled';
   bool get hasRecording => recordingUrl != null && recordingUrl!.isNotEmpty;
 
-  DateTime get expectedEndTime => scheduledAt.add(Duration(minutes: duration));
+  // Use backend-provided expectedEndTime if available, otherwise calculate it
+  DateTime get calculatedEndTime => expectedEndTime ?? scheduledAt.add(Duration(minutes: duration));
 
   /// e.g. "Started 12 min ago · Ends at 15:30"
   /// or "Starts at 14:00 · Ends at 15:00"
   String get timeProgressInfo {
     final now = DateTime.now();
-    final endTime = expectedEndTime;
+    final endTime = calculatedEndTime;
     final endStr = _hhmm(endTime);
     if (isLive || scheduledAt.isBefore(now)) {
       final elapsed = now.difference(scheduledAt);

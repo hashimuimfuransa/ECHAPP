@@ -8,6 +8,7 @@ import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/models/teacher_course.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 
 /// Schedule Live Session Screen - Create BBB sessions
 class ScheduleLiveSessionScreen extends ConsumerStatefulWidget {
@@ -94,6 +95,34 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     }
   }
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) {
+        context.go('/auth-selection');
+      }
+    }
+  }
+
   Future<void> _loadCourseContent(String courseId) async {
     try {
       final content = await _teacherService.getCourseContent(courseId);
@@ -123,10 +152,30 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     final picked = await showTimePicker(
       context: context,
       initialTime: _scheduledTime,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _scheduledTime = picked);
     }
+  }
+
+  DateTime get _scheduledDateTime {
+    return DateTime(
+      _scheduledDate.year,
+      _scheduledDate.month,
+      _scheduledDate.day,
+      _scheduledTime.hour,
+      _scheduledTime.minute,
+    );
+  }
+
+  DateTime get _endDateTime {
+    return _scheduledDateTime.add(Duration(minutes: _duration));
   }
 
   Future<void> _createSession() async {
@@ -144,17 +193,23 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
       return;
     }
 
+    // Validate that scheduled time is in the future
+    final scheduledAt = _scheduledDateTime;
+    final now = DateTime.now();
+    if (scheduledAt.isBefore(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot schedule sessions in the past. Please select a future date and time.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isCreating = true);
 
     try {
-      // Combine date and time
-      final scheduledAt = DateTime(
-        _scheduledDate.year,
-        _scheduledDate.month,
-        _scheduledDate.day,
-        _scheduledTime.hour,
-        _scheduledTime.minute,
-      );
+      // Use the calculated scheduled datetime
 
       await _liveSessionService.createSession(
         courseId: _selectedCourseId!,
@@ -320,6 +375,12 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
         title: const Text('Schedule Live Session'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -660,6 +721,33 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    // End Time Display
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event_available, color: AppTheme.primaryGreen, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Ends at: ',
+                            style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            DateFormat('MMM d, yyyy • h:mm a').format(_endDateTime),
+                            style: TextStyle(
+                              color: AppTheme.primaryGreen,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     // Max Participants Slider

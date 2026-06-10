@@ -6,6 +6,7 @@ const {
   createSession,
   getTeacherSessions,
   getCourseSessions,
+  getSessionAttendance,
   joinSession,
   endSession,
   cancelSession,
@@ -31,5 +32,6 @@ router.get('/lessons/:lessonId/sessions', getLessonSessions);
 // Shared routes (permission checked in controller)
 router.get('/sessions/:sessionId/join', joinSession);
 router.get('/sessions/:sessionId/recordings', getSessionRecordings);
+router.get('/sessions/:sessionId/attendance', getSessionAttendance);
 
 module.exports = router;

@@ -1146,7 +1146,7 @@ class _ProfessionalLearningScreenState
         final active = response.sessions.where((s) =>
             !s.isEnded &&
             !s.isCancelled &&
-            !(s.isLive && s.expectedEndTime.isBefore(now))).toList();
+            !(s.isLive && s.calculatedEndTime.isBefore(now))).toList();
         // Sort: live first, then by scheduledAt
         final sorted = active
           ..sort((a, b) {
@@ -1308,7 +1308,7 @@ class _ProfessionalLearningScreenState
 
   Widget _buildSessionCard(LiveSession session) {
     final now = DateTime.now();
-    final isActuallyEnded = session.isEnded || session.expectedEndTime.isBefore(now);
+    final isActuallyEnded = session.isEnded || session.calculatedEndTime.isBefore(now);
     final isLive = session.status == 'live' && !isActuallyEnded;
     final hasStarted = !isActuallyEnded &&
         (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
