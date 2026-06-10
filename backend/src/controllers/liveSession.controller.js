@@ -321,6 +321,21 @@ const joinSession = async (req, res) => {
         return sendError(res, 'You must be enrolled in this course to join', 403);
       }
 
+      // Record attendance if not already recorded
+      const alreadyAttended = session.attendedAt?.some(a => {
+        const recordUserId = a.userId._id ? a.userId._id.toString() : a.userId.toString();
+        return recordUserId === userId;
+      });
+
+      if (!alreadyAttended) {
+        session.attendedAt.push({
+          userId: userId,
+          joinedAt: new Date(),
+          duration: 0 // Will be updated when session ends
+        });
+        await session.save();
+      }
+
       joinUrl = await BBBService.getJoinUrl({
         fullName: user.fullName || 'Student',
         meetingId: session.bbbMeetingId,
