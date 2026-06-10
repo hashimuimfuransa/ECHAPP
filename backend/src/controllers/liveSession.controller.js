@@ -644,9 +644,11 @@ const getSessionAttendance = async (req, res) => {
       totalEnrolled: enrolledStudents.length,
       totalAttended: attendedStudents.length,
       attendedStudents: attendedWithDetails,
-      notAttendedStudents: notAttendedStudents.map(e => e.userId),
-      attendanceRate: enrolledStudents.length > 0 
-        ? Math.round((attendedStudents.length / enrolledStudents.length) * 100) 
+      notAttendedStudents: notAttendedStudents
+        .filter(e => e.userId != null) // Filter out null userIds
+        .map(e => e.userId),
+      attendanceRate: enrolledStudents.length > 0
+        ? Math.round((attendedStudents.length / enrolledStudents.length) * 100)
         : 0
     }, 'Session attendance retrieved successfully');
   } catch (error) {
