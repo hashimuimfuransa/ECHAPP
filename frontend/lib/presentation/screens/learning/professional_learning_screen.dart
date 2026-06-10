@@ -1140,11 +1140,13 @@ class _ProfessionalLearningScreenState
       );
       if (mounted) {
         final now = DateTime.now();
-        // Filter out ended/cancelled and sessions past their expected end time
+        // Filter out ended/cancelled sessions
+        // Scheduled sessions should be shown even if past their expected end time (teacher may not have started yet)
+        // Only filter out live sessions that have actually ended
         final active = response.sessions.where((s) =>
             !s.isEnded &&
             !s.isCancelled &&
-            !s.expectedEndTime.isBefore(now)).toList();
+            !(s.isLive && s.expectedEndTime.isBefore(now))).toList();
         // Sort: live first, then by scheduledAt
         final sorted = active
           ..sort((a, b) {

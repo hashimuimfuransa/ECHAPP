@@ -1,3 +1,4 @@
+import 'dart:math' show pi, sin, cos, Random;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,35 +27,18 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late AnimationController _animController;
   String? _selectedLanguage;
   int _hoveredIndex = -1;
 
-  // Theme-aware getters
-  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
-  
-  Color get _backgroundColor => _isDark 
-      ? const Color(0xFF0F172A) 
-      : const Color(0xFFF8FAFC);
-  
-  Color get _cardColor => _isDark 
-      ? const Color(0xFF1E293B) 
-      : Colors.white;
-  
-  Color get _textColor => _isDark 
-      ? Colors.white 
-      : const Color(0xFF0F172A);
-  
-  Color get _subtitleColor => _isDark 
-      ? const Color(0xFF94A3B8) 
-      : const Color(0xFF64748B);
-  
-  Color get _unselectedCardBg => _isDark 
-      ? const Color(0xFF334155) 
-      : const Color(0xFFF1F5F9);
-  
-  Color get _borderColor => _isDark 
-      ? const Color(0xFF475569) 
-      : const Color(0xFFE2E8F0);
+  // Fixed dark theme to match splash screen
+  Color get _backgroundColor => const Color(0xFF071810);
+  Color get _cardColor => const Color(0xFF1E293B);
+  Color get _textColor => Colors.white;
+  Color get _subtitleColor => const Color(0xFF94A3B8);
+  Color get _unselectedCardBg => Colors.white.withOpacity(0.06);
+  Color get _borderColor => Colors.white.withOpacity(0.1);
+  Color get _accentColor => const Color(0xFF10B981);
 
   final List<Map<String, dynamic>> _languages = [
     {
@@ -103,6 +87,11 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
     _fadeController.forward();
     _slideController.forward();
 
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentLocale = ref.read(localeProvider);
       setState(() {
@@ -115,6 +104,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -166,12 +156,98 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     return Scaffold(
-      backgroundColor: isDesktop 
-          ? (_isDark ? const Color(0xFF0F172A) : Colors.white)
-          : _backgroundColor,
-      body: isDesktop 
-          ? _buildDesktopLayout()
-          : _buildMobileLayout(),
+      backgroundColor: const Color(0xFF071810),
+      body: Stack(
+        children: [
+          _buildBackgroundGradient(),
+          _buildFloatingAnimation(),
+          SafeArea(
+            child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundGradient() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF071A0F),
+            Color(0xFF0A2415),
+            Color(0xFF071810),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingAnimation() {
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, child) {
+        final t = _animController.value;
+        return Stack(
+          children: [
+            Positioned(
+              top: -100 + 30 * sin(t * 2 * pi),
+              right: -100 + 20 * cos(t * 2 * pi),
+              child: _glowCircle(400, const Color(0xFF00C896).withOpacity(0.15), 70),
+            ),
+            Positioned(
+              bottom: 80 + 40 * cos(t * 2 * pi + 1),
+              left: -120 + 30 * sin(t * 2 * pi + 1),
+              child: _glowCircle(300, const Color(0xFF34D399).withOpacity(0.1), 55),
+            ),
+            ...List.generate(12, (i) {
+              final random = Random(i);
+              final p = Offset(random.nextDouble(), random.nextDouble());
+              final size = random.nextDouble() * 36 + 8;
+              final y = (p.dy + t * 0.08 * (i % 3 + 1)) % 1.0;
+              return Positioned(
+                left: MediaQuery.of(context).size.width * p.dx,
+                top: MediaQuery.of(context).size.height * y,
+                child: Opacity(
+                  opacity: 0.15 + 0.08 * sin(t * 2 * pi + i),
+                  child: Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.4),
+                          Colors.white.withOpacity(0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _glowCircle(double size, Color color, double blur) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: blur,
+            spreadRadius: blur / 2,
+          ),
+        ],
+      ),
     );
   }
 
@@ -189,7 +265,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
         Expanded(
           flex: 55,
           child: Container(
-            color: _isDark ? const Color(0xFF0F172A) : Colors.white,
+            color: const Color(0xFF0A2415),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
@@ -206,76 +282,163 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
   }
 
   Widget _buildMobileLayout() {
-    return SafeArea(
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildMobileHeader(),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: _buildContent(isDesktop: false),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+    final size = MediaQuery.of(context).size;
+    final isSmall = size.height < 680;
 
-  Widget _buildMobileHeader() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF00C896).withOpacity(_isDark ? 0.15 : 0.1),
-          ),
-          child: ClipOval(
+        FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
             child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Image.asset(
-                'assets/logo.png',
-                fit: BoxFit.contain,
+              padding: EdgeInsets.fromLTRB(20, isSmall ? 12 : 20, 20, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.6),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.45),
+                          blurRadius: 22,
+                          spreadRadius: 4,
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.30),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(7),
+                        child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Excellence',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        'Coaching Hub',
+                        style: TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Excellence Coaching Hub',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: _textColor,
-            letterSpacing: -0.3,
+        SizedBox(height: isSmall ? 10 : 16),
+        Expanded(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildContent(isDesktop: false, isSmall: isSmall),
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildContent({required bool isDesktop}) {
+  Widget _buildContent({required bool isDesktop, bool isSmall = false}) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (isDesktop) ...[
+        if (!isDesktop) ...[
+          Text(
+            l10n?.languageSelectionTitle ?? 'Select Your Language',
+            style: TextStyle(
+              fontSize: isSmall ? 22 : 26,
+              fontWeight: FontWeight.w700,
+              color: _textColor,
+              letterSpacing: -0.5,
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n?.languageSelectionSubtitle ?? 'Choose your preferred language for the best experience',
+            style: TextStyle(
+              fontSize: 13,
+              color: _subtitleColor,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: isSmall ? 12 : 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Image.asset(
+                'assets/Course app-bro.png',
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                errorBuilder: (c, e, s) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          SizedBox(height: isSmall ? 12 : 16),
+        ] else ...[
           Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF00C896).withOpacity(_isDark ? 0.15 : 0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF00C896).withOpacity(0.3),
+                  const Color(0xFF00C896).withOpacity(0.1),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00C896).withOpacity(0.4),
+                  blurRadius: 40,
+                  spreadRadius: 8,
+                ),
+              ],
             ),
             child: ClipOval(
               child: Padding(
@@ -288,87 +451,37 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
             ),
           ),
           const SizedBox(height: 32),
-        ],
-        
-        // Title section
-        Text(
-          l10n?.languageSelectionTitle ?? 'Select Your Language',
-          style: TextStyle(
-            fontSize: isDesktop ? 32 : 26,
-            fontWeight: FontWeight.w700,
-            color: _textColor,
-            letterSpacing: -0.5,
-            height: 1.2,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n?.languageSelectionSubtitle ?? 'Choose your preferred language for the best experience',
-          style: TextStyle(
-            fontSize: isDesktop ? 15 : 14,
-            color: _subtitleColor,
-            height: 1.5,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-        
-        // App value proposition
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _isDark ? const Color(0xFF334155) : const Color(0xFFBBF7D0),
-              width: 1,
+          Text(
+            l10n?.languageSelectionTitle ?? 'Select Your Language',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.5,
+              height: 1.2,
             ),
+            textAlign: TextAlign.center,
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.school_outlined,
-                    size: 16,
-                    color: const Color(0xFF059669),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Expert-led Courses',
-                    style: TextStyle(
-                      fontSize: isDesktop ? 14 : 13,
-                      fontWeight: FontWeight.w600,
-                      color: _isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Learn from industry experts with interactive lessons, quizzes, and certifications to advance your career.',
-                style: TextStyle(
-                  fontSize: isDesktop ? 13 : 12,
-                  color: _subtitleColor,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          const SizedBox(height: 8),
+          Text(
+            l10n?.languageSelectionSubtitle ?? 'Choose your preferred language for the best experience',
+            style: TextStyle(
+              fontSize: 15,
+              color: _subtitleColor,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
           ),
-        ),
-        
-        SizedBox(height: isDesktop ? 32 : 24),
-        
+          const SizedBox(height: 24),
+        ],
+
         // Language cards
         ..._languages.asMap().entries.map((entry) {
           final index = entry.key;
           final language = entry.value;
           final isSelected = _selectedLanguage == (language['code'] ?? '');
           final isHovered = _hoveredIndex == index;
-          
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _buildModernLanguageCard(
@@ -380,12 +493,12 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
             ),
           );
         }),
-        
-        SizedBox(height: isDesktop ? 40 : 32),
-        
+
+        SizedBox(height: isDesktop ? 40 : (isSmall ? 16 : 24)),
+
         // Continue button
         _buildModernContinueButton(isDesktop: isDesktop),
-        
+
         // Skip button
         if (widget.isFirstTime) ...[
           const SizedBox(height: 16),
@@ -412,32 +525,32 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
           curve: Curves.easeOutCubic,
           padding: EdgeInsets.all(isDesktop ? 20 : 18),
           decoration: BoxDecoration(
-            color: isSelected 
-                ? const Color(0xFF00C896).withOpacity(_isDark ? 0.15 : 0.08)
+            color: isSelected
+                ? const Color(0xFF00C896).withOpacity(0.15)
                 : isHovered
-                    ? (_isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0))
+                    ? Colors.white.withOpacity(0.1)
                     : _unselectedCardBg,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected 
+              color: isSelected
                   ? const Color(0xFF00C896)
                   : isHovered
-                      ? (_isDark ? const Color(0xFF64748B) : const Color(0xFFCBD5E1))
+                      ? Colors.white.withOpacity(0.2)
                       : _borderColor,
               width: isSelected ? 2 : 1,
             ),
-            boxShadow: isSelected && !_isDark
+            boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF00C896).withOpacity(0.15),
+                      color: const Color(0xFF00C896).withOpacity(0.25),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
                   ]
-                : isHovered && !_isDark
+                : isHovered
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -453,7 +566,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF00C896).withOpacity(0.12)
-                      : (_isDark ? const Color(0xFF1E293B) : Colors.white),
+                      : const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected
@@ -472,7 +585,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Language info
               Expanded(
                 child: Column(
@@ -498,7 +611,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                   ],
                 ),
               ),
-              
+
               // Modern check indicator
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -506,13 +619,13 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                 height: 26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected 
-                      ? const Color(0xFF00C896) 
+                  color: isSelected
+                      ? const Color(0xFF00C896)
                       : Colors.transparent,
                   border: Border.all(
-                    color: isSelected 
+                    color: isSelected
                         ? const Color(0xFF00C896)
-                        : (_isDark ? const Color(0xFF64748B) : const Color(0xFFCBD5E1)),
+                        : const Color(0xFF64748B),
                     width: 2,
                   ),
                 ),
@@ -552,7 +665,7 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                     colors: [Color(0xFF00C896), Color(0xFF059669)],
                   )
                 : null,
-            color: canContinue ? null : (_isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            color: canContinue ? null : const Color(0xFF334155),
             borderRadius: BorderRadius.circular(14),
             boxShadow: canContinue
                 ? [
@@ -571,9 +684,9 @@ class _LanguageSelectionScreenState extends ConsumerState<LanguageSelectionScree
                 Text(
                   l10n?.continueText ?? 'Continue',
                   style: TextStyle(
-                    color: canContinue 
-                        ? Colors.white 
-                        : (_isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                    color: canContinue
+                        ? Colors.white
+                        : const Color(0xFF64748B),
                     fontSize: isDesktop ? 16 : 15,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,

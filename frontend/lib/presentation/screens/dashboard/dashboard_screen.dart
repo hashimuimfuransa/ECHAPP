@@ -203,7 +203,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Future<List<LiveSession>>? _upcomingSessionsFuture;
   List<String> _lastEnrolledCourseIds = [];
   Timer? _autoRefreshTimer;
-  Timer? _sessionRefreshTimer;
   Timer? _phraseTimer;
   AnimationController? _animationController;
   final TextEditingController _searchController = TextEditingController();
@@ -385,15 +384,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
       _refreshPaymentStatus();
     });
-    // Re-fetch live sessions every 60s so ended sessions drop off
-    _sessionRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (mounted) {
-        setState(() {
-          _upcomingSessionsFuture = null;
-          _lastEnrolledCourseIds = [];
-        });
-      }
-    });
+    // Session refresh timer removed to avoid continuous reloading
   }
 
   void _refreshPaymentStatus() {
@@ -407,7 +398,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _autoRefreshTimer?.cancel();
-    _sessionRefreshTimer?.cancel();
     _phraseTimer?.cancel();
     _animationController?.dispose();
     _searchController.dispose();
@@ -1956,12 +1946,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         all.addAll(result.sessions);
       } catch (_) {}
     }
-    // Remove truly ended sessions (status=ended, or past expectedEndTime)
+    // Remove ended/cancelled sessions
+    // Scheduled sessions should be shown even if past their expected end time (teacher may not have started yet)
+    // Only filter out live sessions that have actually ended
     final now = DateTime.now();
     all.removeWhere((s) =>
         s.isEnded ||
         s.isCancelled ||
-        s.expectedEndTime.isBefore(now));
+        (s.isLive && s.expectedEndTime.isBefore(now)));
     // Live sessions first, then by scheduledAt ascending
     all.sort((a, b) {
       if (a.isLive && !b.isLive) return -1;
@@ -1976,7 +1968,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildSessionCard(
       BuildContext context, LiveSession session, bool isDark, bool isMobile) {
     final now = DateTime.now();
-    final isActuallyEnded = session.isEnded || session.expectedEndTime.isBefore(now);
+    // Scheduled sessions are not considered ended just because expectedEndTime passed
+    // Only live sessions past their expected end time are considered ended
+    final isActuallyEnded = session.isEnded || (session.isLive && session.expectedEndTime.isBefore(now));
     final isLive = session.isLive && !isActuallyEnded;
     final hasStarted = !isActuallyEnded &&
         (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
@@ -2294,7 +2288,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Progress Stats
+  // Progress Stats (Compact)
   Widget _buildProgressStats(
       BuildContext context, List<Enrollment> enrollments) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
@@ -2307,21 +2301,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         : 0.0;
 
     final statCards = [
-      _buildStatCard(
+      _buildCompactStatCard(
         context,
         Icons.school_rounded,
         '$coursesEnrolled',
         'Enrolled',
         AppTheme.primary,
       ),
-      _buildStatCard(
+      _buildCompactStatCard(
         context,
         Icons.verified_rounded,
         '$coursesCompleted',
         'Completed',
         AppTheme.accent,
       ),
-      _buildStatCard(
+      _buildCompactStatCard(
         context,
         Icons.auto_graph_rounded,
         '${averageProgress.toInt()}%',
@@ -2331,36 +2325,78 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     ];
 
     return Container(
-      padding: EdgeInsets.all(isMobile ? 10 : 12),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 6 : 8),
       decoration: _modernPanelDecoration(
         context,
         accent: AppTheme.primary,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final spacing = isMobile ? 10.0 : 12.0;
-          final columns = isMobile ? 2 : 3;
-          final itemWidth =
-              (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: [
-              for (var index = 0; index < statCards.length; index++)
-                SizedBox(
-                  width:
-                      isMobile && index == 2 ? constraints.maxWidth : itemWidth,
-                  child: statCards[index],
-                ),
-            ],
-          );
-        },
+      child: Row(
+        children: statCards.map((card) => Expanded(child: card)).toList(),
       ),
     );
   }
 
-  // Stat Card
+  // Compact Stat Card
+  Widget _buildCompactStatCard(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 6 : 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.14)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: isMobile ? 28 : 32,
+            height: isMobile ? 28 : 32,
+            decoration: BoxDecoration(
+              color: color.withOpacity(isDark ? 0.18 : 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: isMobile ? 16 : 18),
+          ),
+          SizedBox(width: isMobile ? 6 : 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  height: 1.0,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isMobile ? 9 : 10,
+                  color: AppTheme.getSecondaryTextColor(context),
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Stat Card (kept for other uses)
   Widget _buildStatCard(
     BuildContext context,
     IconData icon,
