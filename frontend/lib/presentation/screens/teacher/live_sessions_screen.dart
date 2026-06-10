@@ -340,6 +340,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     final cardColor = AppTheme.getCardColor(context);
     final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
+    final sessionDuration = session.duration; // in minutes
 
     showDialog(
       context: context,
@@ -380,6 +381,11 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Session Duration: ${session.formattedDuration}',
+                style: TextStyle(color: textSecondary, fontSize: 11),
+              ),
               const SizedBox(height: 16),
               // Attended Students
               Text(
@@ -395,26 +401,81 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
                 Text('No students attended', style: TextStyle(color: textSecondary))
               else
                 SizedBox(
-                  height: 100,
+                  height: 150,
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: attendance.attendedStudents.length,
                     itemBuilder: (context, index) {
                       final student = attendance.attendedStudents[index];
+                      final joinedAt = student['joinedAt'] != null
+                          ? DateFormat('h:mm a').format(DateTime.parse(student['joinedAt']))
+                          : 'N/A';
+                      final duration = student['duration'] ?? 0;
+                      final durationText = duration > 0
+                          ? '${duration} min'
+                          : 'N/A';
+
+                      // Calculate attendance performance percentage
+                      final performancePercent = sessionDuration > 0
+                          ? ((duration / sessionDuration) * 100).round()
+                          : 0;
+                      final performanceColor = performancePercent >= 80
+                          ? Colors.green
+                          : performancePercent >= 50
+                              ? Colors.orange
+                              : Colors.red;
+
                       return ListTile(
                         dense: true,
                         leading: CircleAvatar(
+                          backgroundColor: Colors.green[100],
                           child: Text(
                             student['student']?['fullName']?.substring(0, 1).toUpperCase() ?? 'S',
+                            style: TextStyle(color: Colors.green[800]),
                           ),
                         ),
-                        title: Text(
-                          student['student']?['fullName'] ?? 'Unknown',
-                          style: TextStyle(color: textPrimary, fontSize: 12),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                student['student']?['fullName'] ?? 'Unknown',
+                                style: TextStyle(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: performanceColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: performanceColor.withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                '$performancePercent%',
+                                style: TextStyle(
+                                  color: performanceColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        subtitle: Text(
-                          'Joined: ${student['joinedAt'] != null ? DateFormat('h:mm a').format(DateTime.parse(student['joinedAt'])) : 'N/A'}',
-                          style: TextStyle(color: textSecondary, fontSize: 10),
+                        subtitle: Row(
+                          children: [
+                            Icon(Icons.access_time, size: 12, color: textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Joined: $joinedAt',
+                              style: TextStyle(color: textSecondary, fontSize: 10),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(Icons.timer, size: 12, color: textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Duration: $durationText',
+                              style: TextStyle(color: textSecondary, fontSize: 10),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -469,48 +530,11 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
       ),
     );
   }
-}
-
-class _AttendanceStat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _AttendanceStat({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
   Future<void> _viewRecording(LiveSession session) async {
     try {
       final recording = await _liveSessionService.getSessionRecording(session.id);
-      
+
       if (recording.hasRecording) {
         // Show recording dialog
         _showRecordingDialog(recording);
@@ -774,6 +798,42 @@ class _AttendanceStat extends StatelessWidget {
   }
 }
 
+class _AttendanceStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _AttendanceStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Session Card Widget
 class _SessionCard extends StatelessWidget {
   final LiveSession session;
@@ -919,21 +979,19 @@ class _SessionCard extends StatelessWidget {
                       )
                     : null,
           ),
-          if (isScheduled || isLive || hasRecording)
-            Divider(height: 1, color: isDark ? AppTheme.darkTextSecondary.withOpacity(0.2) : Colors.grey[300]),
-          if (isScheduled || isLive || hasRecording)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (session.status == 'ended')
-                    TextButton.icon(
-                      onPressed: onViewAttendance,
-                      icon: const Icon(Icons.people_outline, size: 18),
-                      label: const Text('Attendance'),
-                      style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
-                    ),
+          Divider(height: 1, color: isDark ? AppTheme.darkTextSecondary.withOpacity(0.2) : Colors.grey[300]),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Attendance button for all session types
+                TextButton.icon(
+                  onPressed: onViewAttendance,
+                  icon: const Icon(Icons.people_outline, size: 18),
+                  label: Text(isEnded ? 'Attendance' : 'Enrolled'),
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+                ),
                   if (hasRecording)
                     TextButton.icon(
                       onPressed: onViewRecording,

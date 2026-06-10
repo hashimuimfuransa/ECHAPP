@@ -576,7 +576,6 @@ const getSessionAttendance = async (req, res) => {
       .populate('teacherId', 'fullName email')
       .populate('courseId', 'title')
       .populate('sectionId', 'title')
-      .populate('attendees', 'fullName email avatar')
       .populate('attendedAt.userId', 'fullName email avatar');
 
     if (!session) {
@@ -595,8 +594,14 @@ const getSessionAttendance = async (req, res) => {
       .populate('userId', 'fullName email avatar')
       .sort({ 'userId.fullName': 1 });
 
+    // Get attended student IDs from attendedAt array
+    const attendedStudentIds = (session.attendedAt || [])
+      .filter(a => a.userId != null) // Filter out null userIds
+      .map(a => {
+        return a.userId._id ? a.userId._id.toString() : a.userId.toString();
+      });
+
     // Separate attended and not attended students
-    const attendedStudentIds = session.attendees.map(a => a._id ? a._id.toString() : a.toString());
     const attendedStudents = enrolledStudents.filter(e => {
       const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
       return attendedStudentIds.includes(studentId);
@@ -610,10 +615,12 @@ const getSessionAttendance = async (req, res) => {
     // Add attendance details to attended students
     const attendedWithDetails = attendedStudents.map(e => {
       const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
-      const attendanceRecord = session.attendedAt.find(a => {
-        const recordUserId = a.userId._id ? a.userId._id.toString() : a.userId.toString();
-        return recordUserId === studentId;
-      });
+      const attendanceRecord = (session.attendedAt || [])
+        .filter(a => a.userId != null) // Filter out null userIds
+        .find(a => {
+          const recordUserId = a.userId._id ? a.userId._id.toString() : a.userId.toString();
+          return recordUserId === studentId;
+        });
       return {
         student: e.userId,
         joinedAt: attendanceRecord?.joinedAt,

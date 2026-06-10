@@ -156,6 +156,10 @@ class _ProfessionalLearningScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
+    _liveSessionsTabController = TabController(length: 3, vsync: this);
+    _liveSessionsTabController.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     _heroAnimCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
@@ -176,7 +180,7 @@ class _ProfessionalLearningScreenState
     _loadCourseData();
     _loadCourseBooks();
     _tabController.addListener(() => setState(() {}));
-    
+
     // Check for live sessions early to determine default tab
     _checkAndSwitchToLiveSessions();
   }
@@ -192,6 +196,7 @@ class _ProfessionalLearningScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    _liveSessionsTabController.dispose();
     _heroAnimCtrl.dispose();
     _fabAnimCtrl.dispose();
     _fabPulseCtrl.dispose();
@@ -1123,8 +1128,12 @@ class _ProfessionalLearningScreenState
   //  LIVE SESSIONS TAB
   // ─────────────────────────────────────────────
   List<LiveSession> _courseSessions = [];
+  List<LiveSession> _upcomingSessions = [];
+  List<LiveSession> _pastSessions = [];
+  List<LiveSession> _missedSessions = [];
   bool _isLoadingSessions = false;
   bool _sessionsLoaded = false;
+  late TabController _liveSessionsTabController;
 
   Future<void> _loadLiveSessions() async {
     if (_isLoadingSessions) return;
@@ -1134,33 +1143,46 @@ class _ProfessionalLearningScreenState
     });
     try {
       final service = LiveSessionService();
+      // Load all sessions without status filter
       final response = await service.getCourseSessions(
         widget.courseId,
-        status: 'scheduled', // backend now returns scheduled + live
+        status: '', // Get all sessions
       );
       if (mounted) {
         final now = DateTime.now();
-        // Filter out ended/cancelled sessions
-        // Scheduled sessions should be shown even if past their expected end time (teacher may not have started yet)
-        // Only filter out live sessions that have actually ended
-        final active = response.sessions.where((s) =>
-            !s.isEnded &&
-            !s.isCancelled &&
-            !(s.isLive && s.calculatedEndTime.isBefore(now))).toList();
-        // Sort: live first, then by scheduledAt
-        final sorted = active
-          ..sort((a, b) {
-            if (a.isLive && !b.isLive) return -1;
-            if (!a.isLive && b.isLive) return 1;
-            return a.scheduledAt.compareTo(b.scheduledAt);
-          });
+        final allSessions = response.sessions;
+
+        // Filter into categories
+        _upcomingSessions = allSessions.where((s) {
+          return !s.isEnded &&
+              !s.isCancelled &&
+              s.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5)));
+        }).toList();
+
+        _pastSessions = allSessions.where((s) {
+          return s.isEnded || s.scheduledAt.isBefore(now.subtract(const Duration(minutes: 5)));
+        }).toList();
+
+        // Missed sessions: ended/cancelled that the user didn't attend
+        // For now, we'll show all past sessions as potentially missed
+        // In a real implementation, you'd check attendance records
+        _missedSessions = allSessions.where((s) {
+          return (s.isEnded || s.isCancelled) &&
+              s.scheduledAt.isBefore(now.subtract(const Duration(minutes: 5)));
+        }).toList();
+
+        // Sort each list
+        _upcomingSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        _pastSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+        _missedSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
+
         setState(() {
-          _courseSessions = sorted;
+          _courseSessions = allSessions;
           _isLoadingSessions = false;
           _sessionsLoaded = true;
         });
-        // Schedule push notifications
-        PushNotificationService.scheduleLiveSessionNotifications(sorted);
+        // Schedule push notifications for upcoming sessions
+        PushNotificationService.scheduleLiveSessionNotifications(_upcomingSessions);
       }
     } catch (e) {
       debugPrint('Error loading live sessions: $e');
@@ -1205,12 +1227,12 @@ class _ProfessionalLearningScreenState
     }
 
     final isMobile = MediaQuery.of(context).size.width < 600;
-    
-    return ListView(
-      padding: EdgeInsets.fromLTRB(isMobile ? 12 : 20, 16, isMobile ? 12 : 20, 100),
+
+    return Column(
       children: [
         // Header
         Container(
+          margin: EdgeInsets.fromLTRB(isMobile ? 12 : 20, 16, isMobile ? 12 : 20, 0),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -1261,48 +1283,120 @@ class _ProfessionalLearningScreenState
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        // Sessions List
-        if (_isLoadingSessions)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (_courseSessions.isEmpty)
-          Center(
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                Icon(
-                  Icons.video_call_outlined,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No upcoming live sessions',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Check back later for scheduled sessions',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 14,
-                  ),
+        // Tabs
+        Container(
+          margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: TabBar(
+            controller: _liveSessionsTabController,
+            indicator: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          )
-        else
-          ..._courseSessions.map((session) => _buildSessionCard(session)),
+            labelColor: const Color(0xFF00C853),
+            unselectedLabelColor: Colors.grey[600],
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            tabs: const [
+              Tab(text: 'Upcoming'),
+              Tab(text: 'Past'),
+              Tab(text: 'Missed'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Tab Content
+        Expanded(
+          child: TabBarView(
+            controller: _liveSessionsTabController,
+            children: [
+              _buildSessionsList(_upcomingSessions, 'upcoming', isMobile),
+              _buildSessionsList(_pastSessions, 'past', isMobile),
+              _buildSessionsList(_missedSessions, 'missed', isMobile),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildSessionsList(List<LiveSession> sessions, String type, bool isMobile) {
+    if (_isLoadingSessions) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (sessions.isEmpty) {
+      String message;
+      IconData icon;
+      switch (type) {
+        case 'upcoming':
+          message = 'No upcoming live sessions';
+          icon = Icons.schedule;
+          break;
+        case 'past':
+          message = 'No past sessions yet';
+          icon = Icons.history;
+          break;
+        case 'missed':
+          message = 'No missed sessions';
+          icon = Icons.event_busy;
+          break;
+        default:
+          message = 'No sessions found';
+          icon = Icons.video_call;
+      }
+
+      return Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Icon(
+              icon,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              type == 'upcoming' ? 'Check back later for scheduled sessions' : 'Sessions will appear here',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(isMobile ? 12 : 20, 0, isMobile ? 12 : 20, 100),
+      children: sessions.map((session) => _buildSessionCard(session)).toList(),
     );
   }
 

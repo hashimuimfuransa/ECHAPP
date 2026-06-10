@@ -232,7 +232,8 @@ class LiveSessionService {
       );
       response.validateStatus();
 
-      final data = response.data;
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
       return RecordingResponse.fromJson(data);
     } catch (e) {
       debugPrint('Failed to fetch session recording: $e');
@@ -248,7 +249,8 @@ class LiveSessionService {
       );
       response.validateStatus();
 
-      final data = response.data;
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
       return SessionAttendanceResponse.fromJson(data);
     } catch (e) {
       debugPrint('Failed to fetch session attendance: $e');
@@ -310,11 +312,13 @@ class RecordingResponse {
   factory RecordingResponse.fromJson(Map<String, dynamic> json) {
     return RecordingResponse(
       recordingUrl: json['recordingUrl'],
-      duration: _toInt(json['duration']),
+      duration: json['duration'] is int ? json['duration'] : (json['duration'] is num ? (json['duration'] as num).toInt() : 0),
       format: json['format'],
       sessionTitle: json['sessionTitle'],
     );
   }
+
+  bool get hasRecording => recordingUrl != null && recordingUrl!.isNotEmpty;
 }
 
 /// Session Attendance Response
@@ -336,10 +340,18 @@ class SessionAttendanceResponse {
   });
 
   factory SessionAttendanceResponse.fromJson(Map<String, dynamic> json) {
+    int toInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return SessionAttendanceResponse(
       session: json['session'] ?? {},
-      totalEnrolled: _toInt(json['totalEnrolled']),
-      totalAttended: _toInt(json['totalAttended']),
+      totalEnrolled: toInt(json['totalEnrolled']),
+      totalAttended: toInt(json['totalAttended']),
       attendedStudents: (json['attendedStudents'] as List<dynamic>?)
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
@@ -348,7 +360,7 @@ class SessionAttendanceResponse {
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           [],
-      attendanceRate: _toInt(json['attendanceRate']),
+      attendanceRate: toInt(json['attendanceRate']),
     );
   }
 }
