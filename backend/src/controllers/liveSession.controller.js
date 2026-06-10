@@ -603,11 +603,13 @@ const getSessionAttendance = async (req, res) => {
 
     // Separate attended and not attended students
     const attendedStudents = enrolledStudents.filter(e => {
+      if (!e.userId) return false; // Skip if userId is null
       const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
       return attendedStudentIds.includes(studentId);
     });
 
     const notAttendedStudents = enrolledStudents.filter(e => {
+      if (!e.userId) return true; // Count as not attended if userId is null
       const studentId = e.userId._id ? e.userId._id.toString() : e.userId.toString();
       return !attendedStudentIds.includes(studentId);
     });
