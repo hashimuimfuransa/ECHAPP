@@ -18,14 +18,18 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
     with SingleTickerProviderStateMixin {
   final LiveSessionService _liveSessionService = LiveSessionService();
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
 
   List<LiveSession> _upcomingSessions = [];
   List<LiveSession> _liveSessions = [];
   List<LiveSession> _pastSessions = [];
   List<LiveSession> _allSessions = [];
+  List<LiveSession> _filteredSessions = [];
   
   bool _isLoading = true;
   String? _errorMessage;
+  String _searchQuery = '';
+  String? _selectedCourseId;
   
   int _currentPage = 1;
   int _totalPages = 1;
@@ -42,56 +46,51 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onTabChanged() {
     if (!_tabController.indexIsChanging) {
-      String status;
-      switch (_tabController.index) {
-        case 0:
-          status = 'scheduled';
-          break;
-        case 1:
-          status = 'live';
-          break;
-        case 2:
-          status = 'ended';
-          break;
-        default:
-          status = '';
-      }
-      _loadSessions(status: status.isEmpty ? null : status);
+      _filterSessionsForCurrentTab();
     }
   }
 
-  Future<void> _loadSessions({String? status}) async {
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+    _filterSessionsForCurrentTab();
+  }
+
+  void _onCourseFilterChanged(String? courseId) {
+    setState(() {
+      _selectedCourseId = courseId;
+    });
+    _filterSessionsForCurrentTab();
+  }
+
+  Future<void> _loadSessions() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      // Fetch all sessions without status filter
       final response = await _liveSessionService.getAllSessions(
-        status: status,
-        page: _currentPage,
-        limit: 50,
+        limit: 100,
       );
 
       setState(() {
-        if (status == 'scheduled') {
-          _upcomingSessions = response.sessions;
-        } else if (status == 'live') {
-          _liveSessions = response.sessions;
-        } else if (status == 'ended') {
-          _pastSessions = response.sessions;
-        } else {
-          _allSessions = response.sessions;
-        }
+        _allSessions = response.sessions;
         _totalPages = response.totalPages;
         _currentPage = response.currentPage;
         _isLoading = false;
       });
+
+      // Filter for current tab
+      _filterSessionsForCurrentTab();
     } catch (e) {
       debugPrint('Error loading sessions: $e');
       setState(() {
@@ -99,6 +98,64 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
         _isLoading = false;
       });
     }
+  }
+
+  void _filterSessionsForCurrentTab() {
+    if (_allSessions.isEmpty) return;
+
+    final now = DateTime.now();
+    List<LiveSession> baseSessions;
+
+    switch (_tabController.index) {
+      case 0: // Upcoming
+        baseSessions = _allSessions.where((session) {
+          return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
+                 session.status == 'live';
+        }).toList();
+        baseSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        _upcomingSessions = baseSessions;
+        break;
+      case 1: // Live
+        baseSessions = _allSessions.where((session) {
+          return session.status == 'live';
+        }).toList();
+        baseSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        _liveSessions = baseSessions;
+        break;
+      case 2: // Past
+        baseSessions = _allSessions.where((session) {
+          return session.status == 'ended' || session.status == 'cancelled';
+        }).toList();
+        baseSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt)); // Most recent first
+        _pastSessions = baseSessions;
+        break;
+      case 3: // All
+        baseSessions = _allSessions;
+        break;
+      default:
+        baseSessions = [];
+    }
+
+    // Apply course filter
+    if (_selectedCourseId != null) {
+      baseSessions = baseSessions.where((session) {
+        return session.courseId == _selectedCourseId;
+      }).toList();
+    }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      _filteredSessions = baseSessions.where((session) {
+        return session.title.toLowerCase().contains(_searchQuery) ||
+               (session.course != null && session.course!['title']?.toLowerCase().contains(_searchQuery) == true) ||
+               (session.teacher != null && session.teacher!['fullName']?.toLowerCase().contains(_searchQuery) == true) ||
+               session.status.toLowerCase().contains(_searchQuery);
+      }).toList();
+    } else {
+      _filteredSessions = baseSessions;
+    }
+
+    setState(() {});
   }
 
   Future<void> _viewAttendance(LiveSession session) async {
@@ -285,21 +342,7 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              String status;
-              switch (_tabController.index) {
-                case 0:
-                  status = 'scheduled';
-                  break;
-                case 1:
-                  status = 'live';
-                  break;
-                case 2:
-                  status = 'ended';
-                  break;
-                default:
-                  status = '';
-              }
-              _loadSessions(status: status.isEmpty ? null : status);
+              _loadSessions();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Sessions refreshed')),
@@ -309,20 +352,115 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : TabBarView(
-                  controller: _tabController,
+      body: Column(
+        children: [
+          // Search and Filter Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Search Bar
+                TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search sessions by title, course, teacher, or status...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: cardColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Course Filter
+                Row(
                   children: [
-                    _buildSessionsList(_upcomingSessions, 'upcoming'),
-                    _buildSessionsList(_liveSessions, 'live'),
-                    _buildSessionsList(_pastSessions, 'past'),
-                    _buildSessionsList(_allSessions, 'all'),
+                    const Icon(Icons.filter_list, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                    value: _selectedCourseId,
+                    decoration: InputDecoration(
+                      hintText: 'Filter by Course',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: cardColor,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('All Courses'),
+                      ),
+                      ..._getUniqueCourses().map((course) {
+                        return DropdownMenuItem<String>(
+                          value: course['id'],
+                          child: Text(
+                            course['title'] ?? 'Unknown',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: _onCourseFilterChanged,
+                  ),
+                    ),
+                    if (_selectedCourseId != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => _onCourseFilterChanged(null),
+                        tooltip: 'Clear filter',
+                      ),
                   ],
                 ),
+              ],
+            ),
+          ),
+          // Tab Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? _buildErrorWidget()
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildSessionsList(_filteredSessions, 'upcoming'),
+                          _buildSessionsList(_filteredSessions, 'live'),
+                          _buildSessionsList(_filteredSessions, 'past'),
+                          _buildSessionsList(_filteredSessions, 'all'),
+                        ],
+                      ),
+          ),
+        ],
+      ),
     );
+  }
+
+  List<Map<String, dynamic>> _getUniqueCourses() {
+    final courses = <String, Map<String, dynamic>>{};
+    for (final session in _allSessions) {
+      if (session.course != null && session.courseId != null) {
+        courses[session.courseId!] = {
+          'id': session.courseId,
+          'title': session.course!['title'],
+        };
+      }
+    }
+    return courses.values.toList()..sort((a, b) => (a['title'] ?? '').compareTo(b['title'] ?? ''));
   }
 
   Widget _buildErrorWidget() {
@@ -335,7 +473,7 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
           Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _loadSessions(),
+            onPressed: () async => await _loadSessions(),
             child: const Text('Retry'),
           ),
         ],
