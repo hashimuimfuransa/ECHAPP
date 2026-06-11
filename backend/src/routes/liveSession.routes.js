@@ -9,6 +9,7 @@ const {
   getSessionAttendance,
   joinSession,
   endSession,
+  updateSession,
   cancelSession,
   deleteSession,
   getSessionRecordings,
@@ -21,6 +22,7 @@ router.use(protect);
 // Teacher-only routes
 router.post('/sessions', authorize('instructor'), createSession);
 router.get('/teacher/sessions', authorize('instructor'), getTeacherSessions);
+router.put('/sessions/:sessionId', authorize('instructor'), updateSession);
 router.put('/sessions/:sessionId/end', authorize('instructor'), endSession);
 router.put('/sessions/:sessionId/cancel', authorize('instructor'), cancelSession);
 router.delete('/sessions/:sessionId', authorize('instructor'), deleteSession);

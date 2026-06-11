@@ -432,6 +432,74 @@ const endSession = async (req, res) => {
 };
 
 /**
+ * Update a scheduled session (teacher only)
+ */
+const updateSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const teacherId = req.user.id;
+    const {
+      title,
+      description,
+      scheduledAt,
+      duration,
+      maxParticipants,
+      settings
+    } = req.body;
+
+    const session = await LiveSession.findOne({
+      _id: sessionId,
+      teacherId
+    });
+
+    if (!session) {
+      return sendError(res, 'Session not found or you are not the teacher', 404);
+    }
+
+    // Only allow updates for scheduled sessions
+    if (session.status !== 'scheduled') {
+      return sendError(res, 'Only scheduled sessions can be updated', 400);
+    }
+
+    // Update fields if provided
+    if (title) session.title = title;
+    if (description !== undefined) session.description = description;
+    if (scheduledAt) {
+      const scheduledDate = new Date(scheduledAt);
+      session.scheduledAt = scheduledDate;
+      // Recalculate expected end time
+      const newDuration = duration || session.duration;
+      session.expectedEndTime = new Date(scheduledDate.getTime() + newDuration * 60000);
+    }
+    if (duration) {
+      session.duration = duration;
+      // Recalculate expected end time
+      const baseDate = session.scheduledAt || new Date();
+      session.expectedEndTime = new Date(baseDate.getTime() + duration * 60000);
+    }
+    if (maxParticipants) session.maxParticipants = maxParticipants;
+    if (settings) {
+      session.settings = {
+        enableChat: settings.enableChat ?? session.settings?.enableChat ?? true,
+        enableWebcam: settings.enableWebcam ?? session.settings?.enableWebcam ?? true,
+        muteOnEntry: settings.muteOnEntry ?? session.settings?.muteOnEntry ?? true,
+        allowRecording: settings.allowRecording ?? session.settings?.allowRecording ?? true,
+        waitingRoom: settings.waitingRoom ?? session.settings?.waitingRoom ?? false
+      };
+    }
+
+    await session.save();
+
+    sendSuccess(res, {
+      session: session
+    }, 'Session updated successfully');
+  } catch (error) {
+    console.error('Update Session Error:', error);
+    sendError(res, 'Failed to update session', 500, error.message);
+  }
+};
+
+/**
  * Cancel a scheduled session (teacher only)
  */
 const cancelSession = async (req, res) => {
@@ -802,6 +870,7 @@ module.exports = {
   getSessionAttendance,
   joinSession,
   endSession,
+  updateSession,
   cancelSession,
   deleteSession,
   getSessionRecordings,

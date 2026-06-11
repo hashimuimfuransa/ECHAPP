@@ -53,7 +53,10 @@ class LiveSessionService {
       final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
       final data = jsonBody['data'] as Map<String, dynamic>;
 
-      return LiveSession.fromJson(data['session']);
+      final session = LiveSession.fromJson(data['session']);
+      debugPrint('Session created with scheduledAt: ${session.scheduledAt}');
+      debugPrint('Session created with scheduledAt (local): ${session.scheduledAt.toLocal()}');
+      return session;
     } catch (e) {
       debugPrint('Create Live Session Error: $e');
       if (e is ApiException) rethrow;
@@ -187,6 +190,42 @@ class LiveSessionService {
       debugPrint('End Session Error: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to end session: $e');
+    }
+  }
+
+  /// Update a scheduled session (teacher only)
+  Future<LiveSession> updateSession({
+    required String sessionId,
+    String? title,
+    String? description,
+    DateTime? scheduledAt,
+    int? duration,
+    int? maxParticipants,
+    SessionSettings? settings,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (title != null) body['title'] = title;
+      if (description != null) body['description'] = description;
+      if (scheduledAt != null) body['scheduledAt'] = scheduledAt.toIso8601String();
+      if (duration != null) body['duration'] = duration;
+      if (maxParticipants != null) body['maxParticipants'] = maxParticipants;
+      if (settings != null) body['settings'] = settings.toJson();
+
+      final response = await _apiClient.put(
+        '${ApiConfig.baseUrl}/live/sessions/$sessionId',
+        body: jsonEncode(body),
+      );
+      response.validateStatus();
+
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+
+      return LiveSession.fromJson(data['session']);
+    } catch (e) {
+      debugPrint('Update Session Error: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update session: $e');
     }
   }
 

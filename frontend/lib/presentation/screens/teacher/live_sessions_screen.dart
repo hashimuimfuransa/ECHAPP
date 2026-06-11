@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -219,6 +220,29 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
             SnackBar(content: Text('Error ending session: $e')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _editSession(LiveSession session) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScheduleLiveSessionScreen(
+          courseId: session.courseId,
+          sectionId: session.sectionId,
+          lessonId: session.lessonId,
+          editingSession: session,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      _loadSessions();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session updated successfully')),
+        );
       }
     }
   }
@@ -622,7 +646,10 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     if (confirmed == true && mounted) {
       await ref.read(authProvider.notifier).logout();
       if (mounted) {
-        context.go('/auth-selection');
+        final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || 
+                                    defaultTargetPlatform == TargetPlatform.linux || 
+                                    defaultTargetPlatform == TargetPlatform.macOS);
+        context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
       }
     }
   }
@@ -740,6 +767,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           type: type,
           onJoin: () => _joinSession(session),
           onEnd: () => _endSession(session),
+          onEdit: () => _editSession(session),
           onCancel: () => _cancelSession(session),
           onDelete: () => _deleteSession(session),
           onViewRecording: () => _viewRecording(session),
@@ -840,6 +868,7 @@ class _SessionCard extends StatelessWidget {
   final String type;
   final VoidCallback onJoin;
   final VoidCallback onEnd;
+  final VoidCallback onEdit;
   final VoidCallback onCancel;
   final VoidCallback onDelete;
   final VoidCallback onViewRecording;
@@ -854,6 +883,7 @@ class _SessionCard extends StatelessWidget {
     required this.type,
     required this.onJoin,
     required this.onEnd,
+    required this.onEdit,
     required this.onCancel,
     required this.onDelete,
     required this.onViewRecording,
@@ -999,6 +1029,13 @@ class _SessionCard extends StatelessWidget {
                       label: const Text('Recording'),
                     ),
                   if (isScheduled) ...[
+                    TextButton.icon(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit'),
+                      style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
+                    ),
+                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: onCancel,
                       style: TextButton.styleFrom(foregroundColor: Colors.red),

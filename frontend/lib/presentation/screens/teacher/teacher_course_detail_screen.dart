@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -112,7 +113,10 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
     if (confirmed == true && mounted) {
       await ref.read(authProvider.notifier).logout();
       if (mounted) {
-        context.go('/auth-selection');
+        final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || 
+                                    defaultTargetPlatform == TargetPlatform.linux || 
+                                    defaultTargetPlatform == TargetPlatform.macOS);
+        context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
       }
     }
   }

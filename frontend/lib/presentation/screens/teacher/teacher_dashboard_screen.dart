@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -158,7 +159,10 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     if (confirmed == true && mounted) {
       await ref.read(authProvider.notifier).logout();
       if (mounted) {
-        context.go('/auth-selection');
+        final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || 
+                                    defaultTargetPlatform == TargetPlatform.linux || 
+                                    defaultTargetPlatform == TargetPlatform.macOS);
+        context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
       }
     }
   }
@@ -235,11 +239,14 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
                     // Content
                     SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1400),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                             // Stats Cards
                             if (_stats != null) _buildStatsCards(),
                             
@@ -292,7 +299,9 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             _buildCoursesList(isDark: isDark, cardColor: cardColor, textPrimary: textPrimary, textSecondary: textSecondary),
                             
                             const SizedBox(height: 32),
-                          ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -321,14 +330,22 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
   Widget _buildStatsCards() {
     final stats = _stats!.overview;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    final isTablet = screenWidth > 600 && screenWidth <= 1200;
+    
+    // Responsive grid: 4 columns on desktop, 2 on tablet/mobile
+    final crossAxisCount = isDesktop ? 4 : 2;
+    // Smaller aspect ratio for more compact cards
+    final childAspectRatio = isDesktop ? 1.5 : 1.4;
     
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.3,
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: isDesktop ? 16 : 12,
+      mainAxisSpacing: isDesktop ? 16 : 12,
+      childAspectRatio: childAspectRatio,
       children: [
         _StatCard(
           icon: Icons.school,
@@ -513,33 +530,40 @@ class _StatCard extends StatelessWidget {
     final textSecondary = isDark ? AppTheme.darkTextSecondary : Colors.grey[600]!;
 
     return Card(
+      elevation: 2,
       color: AppTheme.getCardColor(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: color.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: 20),
             ),
             const Spacer(),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
+              style: TextStyle(
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
               title,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: textSecondary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

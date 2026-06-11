@@ -6,7 +6,6 @@ import 'package:excellencecoachinghub/presentation/providers/course_payment_prov
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_stats_provider.dart';
-import 'package:excellencecoachinghub/presentation/widgets/beautiful_widgets.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
 import 'package:flutter/material.dart';
@@ -25,17 +24,21 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
+  // State variables
   bool _hasRedirected = false;
   bool _isPaymentLoading = false;
   bool _isEnrollmentLoading = false;
 
+  // Localization
   AppLocalizations? get l10n => AppLocalizations.of(context);
 
-  // Provider for fetching course information
+  // Course provider
   static final _courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
     final repository = ref.watch(courseRepositoryProvider);
     return await repository.getCourseById(courseId);
   });
+
+  // ─── Helper Methods ─────────────────────────────────────────────────────
 
   String _formatDuration(Course course) {
     return course.formattedDuration;
@@ -57,43 +60,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return 'Lifetime';
   }
 
-  String _getCategoryName(WidgetRef ref, Course course) {
-    if (course.category != null && course.category!['name'] != null) {
-      return course.category!['name'].toString();
-    }
-    
-    final catId = course.categoryId ?? (course.category != null ? (course.category!['id'] ?? course.category!['_id'])?.toString() : null);
-    if (catId == null) return 'Uncategorized';
-    
-    final categoriesAsync = ref.watch(backendCategoriesProvider);
-    return categoriesAsync.when(
-      data: (categories) {
-        for (var c in categories) {
-          if (c.id == catId || c.id.toString() == catId) {
-            return c.name;
-          }
-        }
-        return 'Uncategorized';
-      },
-      loading: () => '...',
-      error: (_, __) => 'Uncategorized',
-    );
-  }
+  // ─── Action Handlers ─────────────────────────────────────────────────────
 
-  // Method to handle enrollment
   void _handleEnrollment(WidgetRef ref, String courseId) async {
-    // Set loading state immediately
-    setState(() {
-      _isEnrollmentLoading = true;
-    });
-
-    // PRE-FETCH: Start pre-fetching course content immediately
+    setState(() => _isEnrollmentLoading = true);
     ref.read(courseContentProvider(courseId).future);
     
     final enrollmentNotifier = ref.read(enrollmentNotifierProvider.notifier);
     
-    // Optimistic UI: We don't wait for the enrollment to complete before showing a message
-    // or even navigating if we're confident
     ScaffoldMessenger.of(ref.context).showSnackBar(
       const SnackBar(
         content: Text('Enrolling you in the course...'),
@@ -105,12 +79,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     try {
       await enrollmentNotifier.enrollInCourse(courseId);
       
-      // If successful, the auto-redirect in build() will take over
-      // or we can force it here for even faster experience
       if (ref.context.mounted && !_hasRedirected) {
-        setState(() {
-          _hasRedirected = true;
-        });
+        setState(() => _hasRedirected = true);
         ref.context.push('/learning/$courseId');
       }
     } catch (e) {
@@ -124,28 +94,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isEnrollmentLoading = false;
-        });
+        setState(() => _isEnrollmentLoading = false);
       }
     }
   }
 
-  // Method to handle payment
   void _handlePayment(WidgetRef ref, Course course) async {
-    // Set loading state immediately
-    setState(() {
-      _isPaymentLoading = true;
-    });
-
-    print('Initiating payment for course: \${course.title} (ID: \${course.id})');
-    print('Course price: ${course.price}');
-    
-    // PRE-FETCH: Start pre-fetching course content while payment is being processed
+    setState(() => _isPaymentLoading = true);
     ref.read(courseContentProvider(course.id).future);
     
     final paymentNotifier = ref.read(paymentProvider.notifier);
-    print('Payment notifier obtained');
     
     try {
       final paymentResponse = await paymentNotifier.initiatePayment(
@@ -153,28 +111,20 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         paymentMethod: 'mtn_momo',
         contactInfo: 'Student initiated payment for ${course.title}',
       );
-      print('Payment initiation completed');
           
-      // Show success message
       if (ref.context.mounted) {
         ScaffoldMessenger.of(ref.context).showSnackBar(
           SnackBar(
-            content: Text('Payment initiated successfully! Refreshing course status...'),
+            content: Text('Payment initiated successfully!'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
         );
         
-        // Refresh the pending payment status to show updated UI
         await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Refresh the payment data to trigger UI update
         ref.refresh(hasPendingPaymentProvider(course.id));
-        
-        // Allow UI to update to show 'Payment Pending' status
         await Future.delayed(const Duration(milliseconds: 1000));
         
-        // Now navigate to the payment pending screen
         if (ref.context.mounted) {
           ref.context.go('/payment/pending', extra: {
             'course': course,
@@ -184,42 +134,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         }
       }
     } catch (e) {
-      print('Payment initiation failed: $e');
-      // Show error to user
       if (ref.context.mounted) {
-        String errorMessage = 'Payment initiation failed: $e';
-        
-        // Handle specific error cases
-        if (e.toString().contains('already enrolled')) {
-          errorMessage = 'You are already enrolled in this course!';
-        } else if (e.toString().contains('pending')) {
-          errorMessage = 'You have a pending payment for this course. Redirecting to payment status...';
-          
-          // Show snackbar and navigate to payment pending screen
-          ScaffoldMessenger.of(ref.context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          
-          // Navigate to payment pending screen after a short delay
-          Future.delayed(const Duration(seconds: 2)).then((_) {
-            if (ref.context.mounted) {
-              ref.context.go('/payment/pending', extra: {
-                'course': course,
-                'transactionId': 'pending',
-                'amount': course.price ?? 0.0,
-              });
-            }
-          });
-          return; // Exit early since we're navigating
-        }
-        
         ScaffoldMessenger.of(ref.context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('Payment initiation failed: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
           ),
@@ -227,424 +145,165 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isPaymentLoading = false;
-        });
+        setState(() => _isPaymentLoading = false);
       }
     }
   }
 
-  // Method to handle sharing
   void _handleShare(Course course) async {
     final String shareText = 'Check out this amazing course: ${course.title}\n'
         'Instructor: ${course.displayInstructor}\n'
         'Price: ${(course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}'}\n'
         'Level: ${course.level}\n'
         'Duration: ${_formatDuration(course)}\n\n'
-        'Learn more at Excellence Coaching Hub!';
+        'Download the Excellence Coaching Hub app: https://play.google.com/store/apps/details?id=com.excellencecoachinghub.app&pcampaignid=web_share';
     
     await Share.share(shareText, subject: 'Course Recommendation: ${course.title}');
   }
 
+  // ─── Build Method ─────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final ref = context as WidgetRef;
-    // Fetch the course data using a provider that's scoped to the widget instance
     final courseAsync = ref.watch(_courseProvider(widget.courseId));
     final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(widget.courseId));
 
-    // Pre-fetch course content if user is already enrolled for instant loading
+    // Pre-fetch course content if enrolled
     isEnrolledAsync.whenData((isEnrolled) {
       if (isEnrolled) {
         ref.read(courseContentProvider(widget.courseId).future);
       }
     });
 
-    // Automatic redirect to learning screen if already enrolled
-    // Check enrollment status first before showing any UI
-    final shouldRedirect = isEnrolledAsync.when(
-      data: (isEnrolled) {
-        print('Course Detail Screen - Course ID: ${widget.courseId}, Is Enrolled: $isEnrolled');
-        if (isEnrolled && context.mounted && !_hasRedirected) {
-          print('User is already enrolled - redirecting to learning screen');
-          setState(() {
-            _hasRedirected = true;
-          });
-          // Show a brief message before redirecting
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('You are already enrolled! Redirecting to learning...'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              // Navigate to learning screen
-              context.push('/learning/${widget.courseId}');
-            }
-          });
-        }
-        return isEnrolled;
-      },
-      loading: () {
-        print('Course Detail Screen - Checking enrollment status...');
-        return null;
-      },
-      error: (error, stack) {
-        print('Course Detail Screen - Enrollment check error: $error');
-        return false;
-      },
-    );
+    // Auto-redirect if enrolled
+    isEnrolledAsync.whenData((isEnrolled) {
+      if (isEnrolled && context.mounted && !_hasRedirected) {
+        setState(() => _hasRedirected = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.push('/learning/${widget.courseId}');
+          }
+        });
+      }
+    });
 
-    // Manual pending payment check and refresh user payments
-    // NOTE: Avoid forcing refresh here because this build() runs often
-    // and triggers extra network calls / rebuilds.
-    // The purchase button already reacts to hasPendingPaymentProvider.
-    // If you need a one-time refresh, move it to initState.
-
-    // If user is enrolled and redirecting, show minimal loading instead of full screen
-    if (shouldRedirect == true && _hasRedirected) {
-      return const Scaffold(
-        body: GradientBackground(
-          colors: AppTheme.oceanGradient,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
-                  'Redirecting to learning...',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+    // Redirect loading state
+    if (_hasRedirected) {
+      return _buildRedirectLoading();
     }
 
     return courseAsync.when(
-      data: (course) {
-        return Scaffold(
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF047857), // Emerald 700
-                  Color(0xFF10B981), // Emerald 500 (primary)
-                ],
+      data: (course) => _buildCourseContent(course, isEnrolledAsync),
+      loading: () => _buildLoading(),
+      error: (error, stack) => _buildError(error),
+    );
+  }
+
+  // ─── Loading States ─────────────────────────────────────────────────────
+
+  Widget _buildRedirectLoading() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final accentColor = const Color(0xFF10B981);
+    
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: accentColor, strokeWidth: 3),
+            const SizedBox(height: 16),
+            Text(
+              'Redirecting to learning...',
+              style: TextStyle(
+                color: textColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            child: CustomScrollView(
-              slivers: [
-                // Enhanced Header with back button
-                SliverAppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  leading: Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
-                      onPressed: () => context.pop(),
-                    ),
-                  ),
-                  actions: [
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final isBookmarkedAsync = ref.watch(isCourseInWishlistProvider(widget.courseId));
-                        
-                        return Container(
-                          margin: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: IconButton(
-                            icon: isBookmarkedAsync.when(
-                              data: (isBookmarked) => Icon(
-                                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                                color: isBookmarked ? Colors.yellow : Colors.white,
-                                size: 20,
-                              ),
-                              loading: () => const Icon(
-                                Icons.bookmark_border,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              error: (error, stack) => const Icon(
-                                Icons.bookmark_border,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                            onPressed: () {
-                              final wishlistNotifier = ref.read(wishlistNotifierProvider.notifier);
-                              wishlistNotifier.toggleCourse(widget.courseId, course);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    // Refresh button
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-                        onPressed: () {
-                          // Refresh the course detail screen
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) => CourseDetailScreen(courseId: widget.courseId),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
-                        onPressed: () {
-                          _handleShare(course);
-                        },
-                      ),
-                    ),
-                  ],
-                  expandedHeight: 320,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // Enhanced Course Image with better loading
-                        Container(
-                          color: Colors.black.withOpacity(0.2), // Dark background for better contrast
-                          child: course.thumbnail != null && course.thumbnail!.trim().isNotEmpty
-                              ? NetworkImageWidget(
-                                  imageUrl: course.thumbnail!.trim(),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                )
-                              : Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.play_circle_outline,
-                                        color: Colors.white.withOpacity(0.7),
-                                        size: 80,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        l10n?.noThumbnailAvailable ?? 'No thumbnail available',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                        ),
-                        // Enhanced gradient overlay
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withOpacity(0.3),
-                                Colors.black.withOpacity(0.8),
-                              ],
-                              stops: const [0.3, 0.7, 1.0],
-                            ),
-                          ),
-                        ),
-                        // Enhanced Course Info Overlay
-                        Positioned(
-                          bottom: 25,
-                          left: 25,
-                          right: 25,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Course title
-                              Text(
-                                course.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
-                                  shadows: [
-                                    Shadow(
-                                      offset: Offset(0, 2),
-                                      blurRadius: 4,
-                                      color: Colors.black26,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              // Rating and students
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    course.averageRating != null && course.averageRating! > 0 
-                                      ? course.averageRating!.toStringAsFixed(1) 
-                                      : '4.8',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                // Enhanced Content Section
-                SliverToBoxAdapter(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.getCardColor(context),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, -10),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Enhanced Price and Actions
-                          _buildEnhancedPriceSection(course),
-                          
-                          const SizedBox(height: 24),
+  Widget _buildLoading() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final accentColor = const Color(0xFF10B981);
+    
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: accentColor, strokeWidth: 3),
+            const SizedBox(height: 16),
+            Text(
+              'Loading course...',
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                          // Horizontal Category Card
-                          if (course.category != null && course.category!['name'] != null)
-                            _buildHorizontalCategoryCard(course),
-                          
-                          const SizedBox(height: 30),
-                          
-                          // Enhanced Course Stats
-                          _buildEnhancedCourseStats(course),
-                          
-                          const SizedBox(height: 30),
-                          
-                          // Enhanced Description
-                          _buildEnhancedDescription(course),
-                          
-                          const SizedBox(height: 30),
-                          
-                          // Enhanced Learning Objectives
-                          if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
-                            _buildEnhancedLearningObjectives(course),
-                          
-                          const SizedBox(height: 30),
-                          
-                          // Enhanced Requirements
-                          if (course.requirements != null && course.requirements!.isNotEmpty)
-                            _buildEnhancedRequirements(course),
-                          
-                          const SizedBox(height: 30),
-
-                          // Enhanced Instructor Info
-                          _buildEnhancedInstructorInfo(course),
-                          
-                          const SizedBox(height: 30),
-                          
-                          // Enhanced Enroll Button
-                          _buildEnhancedEnrollSection(context, course, ref, isEnrolledAsync),
-                        ],
-                      ),
-                    ),
-                  ),
+  Widget _buildError(Object error) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final accentColor = const Color(0xFF10B981);
+    
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.15 : 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ),
-        );
-      },
-      loading: () => Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF047857), Color(0xFF10B981)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(color: Colors.white),
-          ),
-        ),
-      ),
-      error: (error, stack) => Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF047857), Color(0xFF10B981)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 60,
-                ),
-                const SizedBox(height: 20),
+                Icon(Icons.error_outline, color: const Color(0xFFEF4444), size: 48),
+                const SizedBox(height: 16),
                 Text(
-                  'Error loading course: $error',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  'Error loading course',
+                  style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // Refresh by rebuilding the widget
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
                         builder: (context) => CourseDetailScreen(courseId: widget.courseId),
@@ -652,8 +311,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF047857),
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Retry'),
                 ),
@@ -665,590 +326,362 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     );
   }
 
-  Widget _buildHorizontalCategoryCard(Course course) {
+  // ─── Main Content Builder ─────────────────────────────────────────────
+
+  Widget _buildCourseContent(Course course, AsyncValue<bool> isEnrolledAsync) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(
-              Icons.category_outlined,
-              color: Color(0xFF3B82F6),
-              size: 28,
+    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    final accentColor = const Color(0xFF10B981);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          // Header
+          _buildHeader(course, isDark, cardColor, textColor, dividerColor, accentColor),
+          
+          // Content sections
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.15 : 0.08),
+                    blurRadius: 30,
+                    offset: const Offset(0, -8),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPriceSection(course, isDark, textColor, accentColor, l10n),
+                    const SizedBox(height: 12),
+                    _buildEnrollSection(course, isEnrolledAsync, isDark, accentColor, l10n),
+                    const SizedBox(height: 20),
+                    if (course.category != null && course.category!['name'] != null)
+                      _buildCategoryCard(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
+                    const SizedBox(height: 20),
+                    _buildCourseStats(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
+                    const SizedBox(height: 20),
+                    _buildDescription(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
+                    const SizedBox(height: 20),
+                    if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
+                      _buildLearningObjectives(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
+                    const SizedBox(height: 20),
+                    if (course.requirements != null && course.requirements!.isNotEmpty)
+                      _buildRequirements(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
+                    const SizedBox(height: 20),
+                    _buildInstructorInfo(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
+                  ],
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'COURSE CATEGORY',
-                  style: TextStyle(
-                    color: isDark ? Colors.white60 : Colors.grey,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
-                  ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Header Section ─────────────────────────────────────────────────────
+
+  Widget _buildHeader(Course course, bool isDark, Color cardColor, Color textColor, Color dividerColor, Color accentColor) {
+    return SliverAppBar(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F7FA),
+      elevation: 0,
+      leading: _buildHeaderButton(Icons.arrow_back_ios_rounded, textColor, dividerColor, cardColor, () => context.pop()),
+      actions: [
+        _buildBookmarkButton(course, isDark, cardColor, textColor, dividerColor, accentColor),
+        _buildHeaderButton(Icons.share_outlined, textColor, dividerColor, cardColor, () => _handleShare(course)),
+      ],
+      expandedHeight: 240,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildCourseImage(course, isDark, accentColor),
+            _buildGradientOverlay(isDark),
+            _buildCourseInfoOverlay(course),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderButton(IconData icon, Color textColor, Color dividerColor, Color cardColor, VoidCallback onPressed) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: dividerColor, width: 1),
+      ),
+      child: IconButton(icon: Icon(icon, color: textColor, size: 20), onPressed: onPressed),
+    );
+  }
+
+  Widget _buildBookmarkButton(Course course, bool isDark, Color cardColor, Color textColor, Color dividerColor, Color accentColor) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final isBookmarkedAsync = ref.watch(isCourseInWishlistProvider(widget.courseId));
+        return Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: dividerColor, width: 1),
+          ),
+          child: IconButton(
+            icon: isBookmarkedAsync.when(
+              data: (isBookmarked) => Icon(
+                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                color: isBookmarked ? accentColor : textColor,
+                size: 20,
+              ),
+              loading: () => Icon(Icons.bookmark_border, color: textColor, size: 20),
+              error: (error, stack) => Icon(Icons.bookmark_border, color: textColor, size: 20),
+            ),
+            onPressed: () {
+              final wishlistNotifier = ref.read(wishlistNotifierProvider.notifier);
+              wishlistNotifier.toggleCourse(widget.courseId, course);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCourseImage(Course course, bool isDark, Color accentColor) {
+    return Container(
+      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF3F4F6),
+      child: course.thumbnail != null && course.thumbnail!.trim().isNotEmpty
+          ? NetworkImageWidget(
+              imageUrl: course.thumbnail!.trim(),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            )
+          : Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
+                child: Icon(Icons.play_circle_outline, color: accentColor, size: 64),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildGradientOverlay(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            isDark ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.1),
+            isDark ? Colors.black.withOpacity(0.7) : Colors.black.withOpacity(0.2),
+          ],
+          stops: const [0.4, 0.7, 1.0],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCourseInfoOverlay(Course course) {
+    return Positioned(
+      bottom: 16,
+      left: 16,
+      right: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            course.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
+              shadows: [
+                Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black26),
+              ],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                const SizedBox(width: 4),
                 Text(
-                  course.category!['name'],
-                  style: TextStyle(
-                    color: AppTheme.getTextColor(context),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  course.averageRating != null && course.averageRating! > 0 
+                    ? course.averageRating!.toStringAsFixed(1) 
+                    : '4.8',
+                  style: const TextStyle(
+                    color: Color(0xFF1F2937),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: isDark ? Colors.white60 : Colors.grey,
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildEnhancedPriceSection(Course course) {
+  // ─── Content Sections ─────────────────────────────────────────────────────
+
+  Widget _buildPriceSection(Course course, bool isDark, Color textColor, Color accentColor, AppLocalizations? l10n) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF047857), Color(0xFF10B981)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF047857).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFD1FAE5), width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth > 600;
-            
-            return isWideScreen
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildEnhancedPriceInfo(course),
-                      _buildEnhancedPurchaseButton(course),
-                    ],
-                  )
-                : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildEnhancedPriceInfo(course),
-                        const SizedBox(height: 20),
-                        _buildEnhancedPurchaseButton(course),
-                      ],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n?.coursePrice ?? 'Price',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : const Color(0xFF047857),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    (course.price ?? 0) == 0 ? 'FREE' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: (course.price ?? 0) == 0 ? accentColor : const Color(0xFF047857),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceSection(Course course) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWideScreen = constraints.maxWidth > 600;
-        
-        return GlassContainer(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: isWideScreen
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildPriceInfo(course),
-                      _buildPurchaseButton(course),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildPriceInfo(course),
-                      const SizedBox(height: 20),
-                      _buildPurchaseButton(course),
-                    ],
                   ),
+                  if ((course.price ?? 0) != 0) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      'RWF ${((course.price ?? 0) * 1.2).toStringAsFixed(0)}',
+                      style: TextStyle(
+                        color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                        fontSize: 14,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEnhancedPriceInfo(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n?.coursePrice ?? 'COURSE PRICE',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              (course.price ?? 0) == 0 ? 'FREE' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-              style: TextStyle(
-                color: (course.price ?? 0) == 0 ? Colors.white : Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(0, 2),
+          if (course.averageRating != null && course.averageRating! > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 4,
-                    color: Colors.black.withOpacity(0.2),
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    course.averageRating!.toStringAsFixed(1),
+                    style: const TextStyle(
+                      color: Color(0xFF1F2937),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
             ),
-            if ((course.price ?? 0) != 0) ...[
-              const SizedBox(width: 12),
-              Text(
-                'RWF ${((course.price ?? 0) * 1.2).toStringAsFixed(0)}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 20,
-                  decoration: TextDecoration.lineThrough,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n?.limitedTimeOffer ?? 'Limited time offer • 30-day money back guarantee',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildPriceInfo(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Price',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Row(
-          children: [
-            Text(
-              (course.price ?? 0) == 0 ? 'Free' : 'RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-              style: TextStyle(
-                color: (course.price ?? 0) == 0 ? Colors.green : Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
+  Widget _buildCategoryCard(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: dividerColor, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            if ((course.price ?? 0) != 0) ...[
-              const SizedBox(width: 10),
-              Text(
-                'RWF ${((course.price ?? 0) * 1.2).toStringAsFixed(0)}',
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 18,
-                  decoration: TextDecoration.lineThrough,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEnhancedPurchaseButton(Course course) {
-    print('🔨 Building purchase button for course: ${course.id} - ${course.title}');
-    print('🆔 Course ID type: ${course.id.runtimeType}, value: ${course.id}');
-    
-    // Force refresh the pending payment provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('🔄 Forcing refresh of pending payment provider');
-    });
-    
-    return Consumer(
-      builder: (context, ref, child) {
-        print('👀 Consumer rebuilding...');
-        final paymentState = ref.watch(initiatePaymentProvider);
-        final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
-        
-        print('💳 Payment state: ${paymentState.runtimeType}');
-        print('⏰ Pending payment state: ${hasPendingPayment.runtimeType}');
-        print('🆔 Watching courseId: ${course.id}');
-        
-        return SizedBox(
-          height: 60,
-          child: hasPendingPayment.when(
-            data: (hasPending) {
-              print('🎯 Has pending payment result: $hasPending');
-              if (hasPending) {
-                print('🟠 Showing Payment Pending button');
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Colors.orange, Colors.deepOrange],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orange.withOpacity(0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      context.go('/payment/pending', extra: {
-                        'course': course,
-                        'transactionId': 'pending',
-                        'amount': course.price ?? 0.0,
-                      });
-                    },
-                    child: Text(
-                      l10n?.paymentPending ?? 'Payment Pending',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                );
-              }
-              
-              // Show regular enrollment or payment button
-              final isFree = (course.price ?? 0) == 0;
-              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
-              
-              return ElevatedButton(
-                onPressed: isLoading ? null : () {
-                  if (isFree) {
-                    _handleEnrollment(ref, course.id);
-                  } else {
-                    print('💳 Initiating payment for course: ${course.id}');
-                    _handlePayment(ref, course);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isFree ? Colors.green : AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-              );
-            },
-            loading: () => Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Center(
-                child: Text(
-                  'Checking...',
+            child: const Icon(Icons.category_outlined, color: Color(0xFF3B82F6), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Category',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    color: secondaryTextColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  course.category!['name'],
+                  style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-            error: (error, stack) {
-              print('⚠️ Pending payment check error: $error');
-              // Show regular enrollment or payment button as fallback
-              final isFree = (course.price ?? 0) == 0;
-              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
-              
-              return ElevatedButton(
-                onPressed: isLoading ? null : () {
-                  if (isFree) {
-                    _handleEnrollment(ref, course.id);
-                  } else {
-                    print('💳 Initiating payment for course: ${course.id}');
-                    _handlePayment(ref, course);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isFree ? Colors.green : AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      isFree ? 'Enroll Now' : 'Pay ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-              );
-            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildEnhancedEnrollButton(Course course, WidgetRef ref) {
-    final isFree = course.price == 0;
-    final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
-    
-    if (isFree) {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.green, Colors.lightGreen],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.green.withOpacity(0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextButton(
-          onPressed: isLoading ? null : () {
-            _handleEnrollment(ref, course.id);
-          },
-          child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : const Text(
-                'Enroll Now',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-        ),
-      );
-    } else {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E3A8A).withOpacity(0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextButton(
-          onPressed: isLoading ? null : () {
-            _handlePayment(ref, course);
-          },
-          child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildPurchaseButton(Course course) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final paymentState = ref.watch(initiatePaymentProvider);
-        final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
-        
-        if (paymentState.response != null) {
-          return AnimatedButton(
-            text: 'Processing...',
-            onPressed: () {},
-            color: Colors.grey,
-            isLoading: true,
-          );
-        } else if (paymentState.isLoading) {
-          return AnimatedButton(
-            text: 'Processing...',
-            onPressed: () {},
-            color: Colors.grey,
-            isLoading: true,
-          );
-        } else {
-          return hasPendingPayment.when(
-            data: (hasPending) {
-                if (hasPending) {
-                  return AnimatedButton(
-                    text: 'Payment Pending',
-                    onPressed: () {
-                      context.go('/payment/pending', extra: {
-                        'course': course,
-                        'transactionId': 'pending',
-                        'amount': course.price ?? 0.0,
-                      });
-                    },
-                    color: Colors.orange,
-                  );
-                }
-                
-                if (course.price == 0) {
-                  return AnimatedButton(
-                    text: 'Enroll Now',
-                    onPressed: () {
-                      // Handle free enrollment
-                    },
-                    color: Colors.green,
-                  );
-                } else {
-                  return AnimatedButton(
-                    text: 'Buy Now',
-                    onPressed: () {
-                      _handlePayment(ref, course);
-                    },
-                    color: AppTheme.primary,
-                  );
-                }
-              },
-              loading: () => AnimatedButton(
-                text: 'Checking...',
-                onPressed: () {},
-                color: Colors.grey,
-              ),
-              error: (error, stack) {
-                if (course.price == 0) {
-                  return AnimatedButton(
-                    text: 'Enroll Now',
-                    onPressed: () {
-                      // Handle free enrollment
-                    },
-                    color: Colors.green,
-                  );
-                } else {
-                  return AnimatedButton(
-                    text: 'Buy Now',
-                    onPressed: () {
-                      _handlePayment(ref, course);
-                    },
-                    color: AppTheme.primary,
-                  );
-                }
-              }
-            );
-          }
-        },
-      );
-  }
-
-  Widget _buildEnrollButtonFallback(Course course) {
-    if (course.price == 0) {
-      return AnimatedButton(
-        text: 'Enroll Now',
-        onPressed: () {
-          // Handle free enrollment
-        },
-        color: Colors.green,
-      );
-    } else {
-      return AnimatedButton(
-        text: 'Buy Now',
-        onPressed: () {
-          // Handle paid enrollment
-        },
-        color: AppTheme.primary,
-      );
-    }
-  }
-
-  Widget _buildEnhancedCourseStats(Course course) {
+  Widget _buildCourseStats(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor) {
     return Consumer(
       builder: (context, ref, child) {
         final enrollmentCountAsync = ref.watch(courseStatsProvider(course.id));
@@ -1256,202 +689,95 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         return enrollmentCountAsync.when(
           data: (enrollmentCount) {
             final stats = [
-              {
-                'icon': Icons.access_time_outlined,
-                'value': _formatDuration(course),
-                'label': 'Duration',
-                'color': const Color(0xFF667eea)
-              },
-              {
-                'icon': Icons.speed_outlined,
-                'value': course.level,
-                'label': 'Level',
-                'color': const Color(0xFF764ba2)
-              },
-              {
-                'icon': Icons.people_outline,
-                'value': enrollmentCount.toString(),
-                'label': 'Students',
-                'color': const Color(0xFFf093fb)
-              },
-              {
-                'icon': Icons.update_outlined,
-                'value': _formatAccessDuration(course),
-                'label': 'Access',
-                'color': const Color(0xFF10B981)
-              },
+              {'icon': Icons.access_time_outlined, 'value': _formatDuration(course), 'label': 'Duration', 'color': const Color(0xFF667eea)},
+              {'icon': Icons.speed_outlined, 'value': course.level, 'label': 'Level', 'color': const Color(0xFF764ba2)},
+              {'icon': Icons.people_outline, 'value': enrollmentCount.toString(), 'label': 'Students', 'color': const Color(0xFFf093fb)},
+              {'icon': Icons.update_outlined, 'value': _formatAccessDuration(course), 'label': 'Access', 'color': const Color(0xFF10B981)},
             ];
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Course Overview',
-                  style: TextStyle(
-                    color: AppTheme.getTextColor(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
-                ),
-              ],
-            );
+            return _buildStatsList(stats, textColor, secondaryTextColor, cardColor, dividerColor, isDark);
           },
           loading: () {
-            // Show skeleton loading while fetching enrollment count
             final stats = [
-              {
-                'icon': Icons.access_time_outlined,
-                'value': _formatDuration(course),
-                'label': 'Duration',
-                'color': const Color(0xFF667eea)
-              },
-              {
-                'icon': Icons.speed_outlined,
-                'value': course.level,
-                'label': 'Level',
-                'color': const Color(0xFF764ba2)
-              },
-              {
-                'icon': Icons.people_outline,
-                'value': '...',
-                'label': 'Students',
-                'color': const Color(0xFFf093fb)
-              },
-              {
-                'icon': Icons.update_outlined,
-                'value': _formatAccessDuration(course),
-                'label': 'Access',
-                'color': const Color(0xFF10B981)
-              },
+              {'icon': Icons.access_time_outlined, 'value': _formatDuration(course), 'label': 'Duration', 'color': const Color(0xFF667eea)},
+              {'icon': Icons.speed_outlined, 'value': course.level, 'label': 'Level', 'color': const Color(0xFF764ba2)},
+              {'icon': Icons.people_outline, 'value': '...', 'label': 'Students', 'color': const Color(0xFFf093fb)},
+              {'icon': Icons.update_outlined, 'value': _formatAccessDuration(course), 'label': 'Access', 'color': const Color(0xFF10B981)},
             ];
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Course Overview',
-                  style: TextStyle(
-                    color: AppTheme.getTextColor(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
-                ),
-              ],
-            );
+            return _buildStatsList(stats, textColor, secondaryTextColor, cardColor, dividerColor, isDark);
           },
           error: (error, stack) {
-            // Fallback to showing 0 students if there's an error
             final stats = [
-              {
-                'icon': Icons.access_time_outlined,
-                'value': _formatDuration(course),
-                'label': 'Duration',
-                'color': const Color(0xFF667eea)
-              },
-              {
-                'icon': Icons.speed_outlined,
-                'value': course.level,
-                'label': 'Level',
-                'color': const Color(0xFF764ba2)
-              },
-              {
-                'icon': Icons.people_outline,
-                'value': (course.enrollmentCount ?? 0).toString(),
-                'label': 'Students',
-                'color': const Color(0xFFf093fb)
-              },
-              {
-                'icon': Icons.update_outlined,
-                'value': _formatAccessDuration(course),
-                'label': 'Access',
-                'color': const Color(0xFF10B981)
-              },
+              {'icon': Icons.access_time_outlined, 'value': _formatDuration(course), 'label': 'Duration', 'color': const Color(0xFF667eea)},
+              {'icon': Icons.speed_outlined, 'value': course.level, 'label': 'Level', 'color': const Color(0xFF764ba2)},
+              {'icon': Icons.people_outline, 'value': (course.enrollmentCount ?? 0).toString(), 'label': 'Students', 'color': const Color(0xFFf093fb)},
+              {'icon': Icons.update_outlined, 'value': _formatAccessDuration(course), 'label': 'Access', 'color': const Color(0xFF10B981)},
             ];
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Course Overview',
-                  style: TextStyle(
-                    color: AppTheme.getTextColor(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: stats.map((stat) => _buildEnhancedStatItem(stat)).toList(),
-                ),
-              ],
-            );
+            return _buildStatsList(stats, textColor, secondaryTextColor, cardColor, dividerColor, isDark);
           },
         );
       },
     );
   }
 
-  Widget _buildEnhancedStatItem(Map<String, dynamic> stat) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildStatsList(List<Map<String, dynamic>> stats, Color textColor, Color secondaryTextColor, Color cardColor, Color dividerColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Overview',
+          style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
+            final isMobile = screenWidth < 600;
+            final crossAxisCount = isMobile ? 2 : 4;
+            
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: isMobile ? 1.3 : 1.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: stats.length,
+              itemBuilder: (context, index) {
+                return _buildStatItem(stats[index], textColor, secondaryTextColor, cardColor, dividerColor, isDark);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(Map<String, dynamic> stat, Color textColor, Color secondaryTextColor, Color cardColor, Color dividerColor, bool isDark) {
     return Container(
-      width: 95,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppTheme.getCardColor(context),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6)),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: dividerColor, width: 1),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: stat['color'].withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(stat['icon'], color: stat['color'], size: 24),
-          ),
-          const SizedBox(height: 12),
+          Icon(stat['icon'], color: stat['color'], size: 18),
+          const SizedBox(height: 6),
           Text(
             stat['value'],
-            style: TextStyle(
-              color: AppTheme.getTextColor(context),
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             stat['label'],
-            style: TextStyle(
-              color: AppTheme.getSecondaryTextColor(context),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: secondaryTextColor, fontSize: 10, fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1459,918 +785,345 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     );
   }
 
-  Widget _buildCourseStats(Course course) {
-    final stats = [
-      {
-        'icon': Icons.access_time_outlined,
-        'value': _formatDuration(course),
-        'label': 'Duration'
-      },
-      {
-        'icon': Icons.speed_outlined,
-        'value': course.level,
-        'label': 'Level'
-      },
-    ];
-
-    // Only add language if it's provided in the course data
-    if (course.category != null && course.category!['name'] != null) {
-      stats.add({
-        'icon': Icons.category_outlined,
-        'value': course.category!['name'],
-        'label': 'Category'
-      });
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Course Details',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Wrap(
-          spacing: 15,
-          runSpacing: 15,
-          children: stats.map((stat) => _buildStatItem(stat)).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(Map<String, dynamic> stat) {
-    return Container(
-      width: 120,
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(stat['icon'], color: Colors.white, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            stat['value'],
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            stat['label'],
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEnhancedDescription(Course course) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildDescription(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor, AppLocalizations? l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n?.aboutThisCourse ?? 'About This Course',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          l10n?.aboutThisCourse ?? 'About',
+          style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            course.description,
-            style: TextStyle(
-              color: AppTheme.getSecondaryTextColor(context),
-              fontSize: 16,
-              height: 1.7,
-            ),
-          ),
+        const SizedBox(height: 10),
+        Text(
+          course.description,
+          style: TextStyle(color: secondaryTextColor, fontSize: 14, height: 1.5),
         ),
       ],
     );
   }
 
-  Widget _buildDescription(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Description',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            course.description,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-              height: 1.6,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEnhancedLearningObjectives(Course course) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildLearningObjectives(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor, Color accentColor, AppLocalizations? l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n?.whatYouWillLearn ?? 'What You Will Learn',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          l10n?.whatYouWillLearn ?? 'What You\'ll Learn',
+          style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.getCardColor(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: course.learningObjectives!.asMap().entries.map((entry) {
-              final index = entry.key;
-              final objective = entry.value;
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: index == course.learningObjectives!.length - 1 
-                    ? null 
-                    : Border(
-                        bottom: BorderSide(
-                          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
-                          width: 1,
-                        ),
-                      ),
+        const SizedBox(height: 10),
+        ...course.learningObjectives!.asMap().entries.map((entry) {
+          final objective = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.check_circle, color: accentColor, size: 16),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(objective, style: TextStyle(color: secondaryTextColor, fontSize: 13, height: 1.4)),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        objective,
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
+              ],
+            ),
+          );
+        }).toList(),
       ],
     );
   }
 
-  Widget _buildLearningObjectives(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'What You Will Learn',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: course.learningObjectives!.asMap().entries.map((entry) {
-              final index = entry.key;
-              final objective = entry.value;
-              return Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  border: index == course.learningObjectives!.length - 1 
-                    ? null 
-                    : Border(
-                        bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        objective,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEnhancedRequirements(Course course) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildRequirements(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor, AppLocalizations? l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l10n?.requirements ?? 'Requirements',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.getCardColor(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: course.requirements!.asMap().entries.map((entry) {
-              final index = entry.key;
-              final requirement = entry.value;
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: index == course.requirements!.length - 1 
-                    ? null 
-                    : Border(
-                        bottom: BorderSide(
-                          color: isDark ? const Color(0xFF374151) : const Color(0xFFF3F4F6),
-                          width: 1,
-                        ),
-                      ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.orange,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.info_outline,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        requirement,
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRequirements(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Requirements',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: course.requirements!.asMap().entries.map((entry) {
-              final index = entry.key;
-              final requirement = entry.value;
-              return Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  border: index == course.requirements!.length - 1 
-                    ? null 
-                    : Border(
-                        bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        requirement,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCurriculumPreview() {
-    final curriculum = [
-      {'title': 'Introduction to Flutter', 'duration': '15 mins', 'isCompleted': true},
-      {'title': 'Setting up Development Environment', 'duration': '25 mins', 'isCompleted': true},
-      {'title': 'Dart Basics', 'duration': '45 mins', 'isCompleted': false},
-      {'title': 'Widgets and Layouts', 'duration': '1 hour', 'isCompleted': false},
-      {'title': 'State Management', 'duration': '1.5 hours', 'isCompleted': false},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Curriculum Preview',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: curriculum.asMap().entries.map((entry) {
-              final index = entry.key;
-              final lesson = entry.value;
-              return _buildLessonItem(index, lesson, index == curriculum.length - 1);
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLessonItem(int index, Map<String, dynamic> lesson, bool isLast) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        border: isLast ? null : Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.1),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: lesson['isCompleted'] 
-                  ? Colors.green.withOpacity(0.3) 
-                  : Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              lesson['isCompleted'] ? Icons.check : Icons.play_arrow_outlined,
-              color: lesson['isCompleted'] ? Colors.green : Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
+        const SizedBox(height: 10),
+        ...course.requirements!.asMap().entries.map((entry) {
+          final requirement = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  lesson['title'],
-                  style: TextStyle(
-                    color: lesson['isCompleted'] ? Colors.white60 : Colors.white,
-                    fontSize: 16,
-                    fontWeight: lesson['isCompleted'] ? FontWeight.normal : FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  lesson['duration'],
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 14,
-                  ),
+                Icon(Icons.info_outline, color: const Color(0xFFF59E0B), size: 16),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(requirement, style: TextStyle(color: secondaryTextColor, fontSize: 13, height: 1.4)),
                 ),
               ],
             ),
-          ),
-          Icon(
-            Icons.lock_outline,
-            color: lesson['isCompleted'] ? Colors.green : Colors.white54,
-            size: 20,
-          ),
-        ],
-      ),
+          );
+        }).toList(),
+      ],
     );
   }
 
-  Widget _buildEnhancedInstructorInfo(Course course) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildInstructorInfo(Course course, bool isDark, Color cardColor, Color textColor, Color secondaryTextColor, Color dividerColor, Color accentColor, AppLocalizations? l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n?.meetYourInstructor ?? 'Meet Your Instructor',
-          style: TextStyle(
-            color: AppTheme.getTextColor(context),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          l10n?.meetYourInstructor ?? 'Instructor',
+          style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.getCardColor(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1E3A8A).withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      course.displayInstructor.split(' ').map((n) => n[0]).join('').toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course.displayInstructor,
-                        style: TextStyle(
-                          color: AppTheme.getTextColor(context),
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Lead Instructor & Course Creator',
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontSize: 15,
-                        ),
-                      ),
-                      if (course.createdBy.email.isNotEmpty == true) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.email_outlined,
-                              color: AppTheme.getSecondaryTextColor(context),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              course.createdBy.email,
-                              style: TextStyle(
-                                color: AppTheme.getSecondaryTextColor(context),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Text(
-                        'With 5+ years of teaching experience and expertise in modern development practices, our instructor brings real-world knowledge to help you succeed.',
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInstructorInfo(Course course) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Instructor',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white.withOpacity(0.2),
-                  child: Text(
-                    course.displayInstructor.split(' ').map((n) => n[0]).join('').toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course.displayInstructor,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      const Text(
-                        'Course Creator',
-                        style: TextStyle(
-                          color: Colors.white60,
-                          fontSize: 14,
-                        ),
-                      ),
-                      if (course.createdBy.email.isNotEmpty == true) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          course.createdBy.email,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEnrollButton(BuildContext context, Course course, WidgetRef ref) {
-    if (course.price == 0) {
-      return AnimatedButton(
-        text: 'Enroll Now',
-        onPressed: () async {
-          _handleEnrollment(ref, widget.courseId);
-        },
-        color: Colors.green,
-      );
-    } else {
-      return AnimatedButton(
-        text: 'Buy Now - RWF ${(course.price ?? 0).toStringAsFixed(0)}',
-        onPressed: () {
-          _handlePayment(ref, course);
-        },
-        color: AppTheme.primary,
-      );
-    }
-  }
-
-  Widget _buildEnhancedEnrollSection(BuildContext context, Course course, WidgetRef ref, AsyncValue<bool> isEnrolledAsync) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF047857), Color(0xFF10B981)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF047857).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+        const SizedBox(height: 10),
+        Row(
           children: [
-            Text(
-              l10n?.readyToStart ?? 'Ready to Start Learning?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)]),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n?.joinThousands ?? 'Join thousands of students who have already transformed their skills',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            isEnrolledAsync.when(
-              data: (isEnrolled) {
-                return isEnrolled 
-                  ? _buildEnhancedContinueLearningButton(context, course) 
-                  : _buildEnhancedEnrollButton(course, ref);
-              },
-              loading: () => Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
+              child: Center(
+                child: Text(
+                  course.displayInstructor.split(' ').map((n) => n[0]).join('').toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                child: Center(
-                  child: Text(
-                    l10n?.checkingEnrollment ?? 'Checking enrollment status...',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    course.displayInstructor,
+                    style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Course Creator',
+                    style: TextStyle(color: secondaryTextColor, fontSize: 12),
+                  ),
+                ],
               ),
-              error: (error, stack) => _buildEnhancedEnrollButton(course, ref),
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildEnrollSection(Course course, AsyncValue<bool> isEnrolledAsync, bool isDark, Color accentColor, AppLocalizations? l10n) {
+    return isEnrolledAsync.when(
+      data: (isEnrolled) {
+        return isEnrolled 
+          ? _buildContinueLearningButton(course, isDark, l10n) 
+          : _buildEnrollButton(course, isDark, accentColor, l10n);
+      },
+      loading: () => Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: Text(
+            l10n?.checkingEnrollment ?? 'Checking...',
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF047857),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+      error: (error, stack) => _buildEnrollButton(course, isDark, accentColor, l10n),
+    );
+  }
+
+  Widget _buildEnrollButton(Course course, bool isDark, Color accentColor, AppLocalizations? l10n) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
+        
+        return SizedBox(
+          height: 56,
+          child: hasPendingPayment.when(
+            data: (hasPending) {
+              if (hasPending) {
+                return _buildPaymentPendingButton(isDark);
+              }
+              
+              final isFree = (course.price ?? 0) == 0;
+              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+              
+              return _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n);
+            },
+            loading: () => _buildLoadingButton(isDark),
+            error: (error, stack) {
+              final isFree = (course.price ?? 0) == 0;
+              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+              return _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentPendingButton(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: TextButton(
+        onPressed: () {
+          final ref = context as WidgetRef;
+          final courseAsync = ref.read(_courseProvider(widget.courseId));
+          courseAsync.whenData((course) {
+            if (context.mounted) {
+              context.go('/payment/pending', extra: {
+                'course': course,
+                'transactionId': 'pending',
+                'amount': course?.price ?? 0.0,
+              });
+            }
+          });
+        },
+        child: const Text(
+          'Payment Pending',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
 
-  Widget _buildEnhancedContinueLearningButton(BuildContext context, Course course) {
+  Widget _buildPurchaseButton(Course course, bool isFree, bool isLoading, bool isDark, Color accentColor, AppLocalizations? l10n) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isFree 
+            ? [accentColor, const Color(0xFF34D399)]
+            : [const Color(0xFF047857), accentColor],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: (isFree ? accentColor : const Color(0xFF047857)).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: isLoading ? null : () {
+          final ref = context as WidgetRef;
+          if (isFree) {
+            _handleEnrollment(ref, course.id);
+          } else {
+            _handlePayment(ref, course);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingButton(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Center(
+        child: Text(
+          'Checking...',
+          style: TextStyle(color: Color(0xFF047857), fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinueLearningButton(Course course, bool isDark, AppLocalizations? l10n) {
     return Consumer(
       builder: (context, ref, child) {
         final courseAccessAsync = ref.watch(courseAccessProvider(course.id));
         
         return Column(
           children: [
-            // Course expiration countdown
             courseAccessAsync.when(
               data: (accessData) {
-                if (accessData != null) {
-                  print('Course access data in detail screen: $accessData');
-                  
-                  if (accessData['accessExpirationDate'] != null) {
-                    try {
-                      final expirationDateString = accessData['accessExpirationDate'];
-                      print('Expiration date string in detail screen: $expirationDateString');
-                      
-                      // Parse the date string to a DateTime object
-                      DateTime expirationDate;
-                      
-                      // Handle different date formats
-                      if (expirationDateString is String) {
-                        expirationDate = DateTime.parse(expirationDateString);
-                      } else if (expirationDateString is int) {
-                        // Handle timestamp format
-                        expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationDateString);
-                      } else {
-                        print('Unexpected expiration date format in detail screen: ${expirationDateString.runtimeType}');
-                        return const SizedBox.shrink();
-                      }
-                      
-                      print('Parsed expiration date in detail screen: $expirationDate');
-                      
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: CountdownTimer(
-                          expirationDate: expirationDate,
-                          onExpiration: () {
-                            // Handle expiration if needed
-                            print('Course access has expired');
-                          },
-                        ),
-                      );
-                    } catch (e) {
-                      print('Error parsing expiration date in detail screen: $e');
+                if (accessData != null && accessData['accessExpirationDate'] != null) {
+                  try {
+                    final expirationDateString = accessData['accessExpirationDate'];
+                    DateTime expirationDate;
+                    
+                    if (expirationDateString is String) {
+                      expirationDate = DateTime.parse(expirationDateString);
+                    } else if (expirationDateString is int) {
+                      expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationDateString);
+                    } else {
                       return const SizedBox.shrink();
                     }
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: CountdownTimer(
+                        expirationDate: expirationDate,
+                        onExpiration: () {
+                          print('Course access has expired');
+                        },
+                      ),
+                    );
+                  } catch (e) {
+                    return const SizedBox.shrink();
                   }
                 }
-                
-                // If no expiration date or access data, don't show the counter
                 return const SizedBox.shrink();
               },
               loading: () => const SizedBox.shrink(),
               error: (error, stack) => const SizedBox.shrink(),
             ),
             
-            // Continue Learning Button
             Container(
-              height: 60,
+              height: 56,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+                  BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
                 ],
               ),
               child: TextButton(
                 onPressed: () {
-                  // Navigate directly to the learning screen using GoRouter
                   context.push('/learning/${course.id}');
                 },
                 child: Text(
                   l10n?.continueLearning ?? 'Continue Learning',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildContinueLearningButton(BuildContext context, Course course) {
-    return AnimatedButton(
-      text: 'Continue Learning',
-      onPressed: () {
-        // Navigate directly to the learning screen using GoRouter
-        context.push('/learning/${course.id}');
-      },
-      color: Colors.orange,
     );
   }
 }

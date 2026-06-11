@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,12 +16,14 @@ class ScheduleLiveSessionScreen extends ConsumerStatefulWidget {
   final String? courseId;
   final String? sectionId;
   final String? lessonId;
+  final LiveSession? editingSession;
 
   const ScheduleLiveSessionScreen({
     super.key,
     this.courseId,
     this.sectionId,
     this.lessonId,
+    this.editingSession,
   });
 
   @override
@@ -60,6 +63,22 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     _selectedCourseId = widget.courseId;
     _selectedSectionId = widget.sectionId;
     _selectedLessonId = widget.lessonId;
+
+    // Initialize with editing session data if provided
+    if (widget.editingSession != null) {
+      final session = widget.editingSession!;
+      _titleController.text = session.title;
+      _descriptionController.text = session.description ?? '';
+      _scheduledDate = session.scheduledAt;
+      _scheduledTime = TimeOfDay(hour: session.scheduledAt.hour, minute: session.scheduledAt.minute);
+      _duration = session.duration;
+      _maxParticipants = session.maxParticipants;
+      _settings = session.settings;
+      _selectedCourseId = session.courseId;
+      _selectedSectionId = session.sectionId;
+      _selectedLessonId = session.lessonId;
+    }
+
     _loadData();
   }
 
@@ -118,7 +137,10 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     if (confirmed == true && mounted) {
       await ref.read(authProvider.notifier).logout();
       if (mounted) {
-        context.go('/auth-selection');
+        final isDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || 
+                                    defaultTargetPlatform == TargetPlatform.linux || 
+                                    defaultTargetPlatform == TargetPlatform.macOS);
+        context.go(isDesktop ? '/email-auth-option' : '/auth-selection');
       }
     }
   }
@@ -152,14 +174,10 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     final picked = await showTimePicker(
       context: context,
       initialTime: _scheduledTime,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
+      debugPrint('Time picked: ${picked.hour}:${picked.minute}');
+      debugPrint('Time picked formatted: ${picked.format(context)}');
       setState(() => _scheduledTime = picked);
     }
   }
@@ -193,10 +211,10 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
       return;
     }
 
-    // Validate that scheduled time is in the future
+    // Validate that scheduled time is in the future (only for new sessions)
     final scheduledAt = _scheduledDateTime;
     final now = DateTime.now();
-    if (scheduledAt.isBefore(now)) {
+    if (widget.editingSession == null && scheduledAt.isBefore(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Cannot schedule sessions in the past. Please select a future date and time.'),
@@ -209,32 +227,54 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     setState(() => _isCreating = true);
 
     try {
-      // Use the calculated scheduled datetime
+      // Convert to UTC to ensure consistent timezone handling
+      final scheduledAtUtc = scheduledAt.toUtc();
+      
+      // Debug: print the times being sent
+      debugPrint('Local scheduled time: $scheduledAt');
+      debugPrint('UTC scheduled time: $scheduledAtUtc');
+      debugPrint('ISO string: ${scheduledAtUtc.toIso8601String()}');
 
-      await _liveSessionService.createSession(
-        courseId: _selectedCourseId!,
-        sectionId: _selectedSectionId!,
-        lessonId: _selectedLessonId,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isNotEmpty
-            ? _descriptionController.text.trim()
-            : null,
-        scheduledAt: scheduledAt,
-        duration: _duration,
-        maxParticipants: _maxParticipants,
-        settings: _settings,
-      );
+      if (widget.editingSession != null) {
+        // Update existing session
+        await _liveSessionService.updateSession(
+          sessionId: widget.editingSession!.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
+          scheduledAt: scheduledAtUtc,
+          duration: _duration,
+          maxParticipants: _maxParticipants,
+          settings: _settings,
+        );
+      } else {
+        // Create new session
+        await _liveSessionService.createSession(
+          courseId: _selectedCourseId!,
+          sectionId: _selectedSectionId!,
+          lessonId: _selectedLessonId,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
+          scheduledAt: scheduledAtUtc,
+          duration: _duration,
+          maxParticipants: _maxParticipants,
+          settings: _settings,
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Live session scheduled successfully')),
+          SnackBar(content: Text(widget.editingSession != null ? 'Live session updated successfully' : 'Live session scheduled successfully')),
         );
         context.pop(true);
       }
     } catch (e) {
       setState(() => _isCreating = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error creating session: $e')),
+        SnackBar(content: Text('Error ${widget.editingSession != null ? 'updating' : 'creating'} session: $e')),
       );
     }
   }
@@ -372,7 +412,7 @@ class _ScheduleLiveSessionScreenState extends ConsumerState<ScheduleLiveSessionS
     return Scaffold(
       backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
-        title: const Text('Schedule Live Session'),
+        title: Text(widget.editingSession != null ? 'Edit Live Session' : 'Schedule Live Session'),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         actions: [

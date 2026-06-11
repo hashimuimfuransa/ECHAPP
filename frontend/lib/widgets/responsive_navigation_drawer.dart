@@ -174,6 +174,77 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       },
     ];
 
+    // Simplified mobile items - only essential ones not in header/quick actions
+    final mobileNavItems = isAuth ? navItems : isAdmin ? [
+      {
+        'title': l10n?.dashboard ?? 'Dashboard',
+        'icon': Icons.dashboard_outlined,
+        'route': '/admin',
+        'key': 'dashboard'
+      },
+      {
+        'title': l10n?.courses ?? 'Courses',
+        'icon': Icons.school_outlined,
+        'route': '/admin/courses',
+        'key': 'courses'
+      },
+      {
+        'title': l10n?.sidebarAdminStudents ?? 'Students',
+        'icon': Icons.people_outline,
+        'route': '/admin/students',
+        'key': 'students'
+      },
+      {
+        'title': l10n?.profile ?? 'Profile',
+        'icon': Icons.person_outline,
+        'route': '/profile',
+        'key': 'profile'
+      },
+      {
+        'title': l10n?.settings ?? 'Settings',
+        'icon': Icons.settings_outlined,
+        'route': '/settings',
+        'key': 'settings'
+      },
+    ] : [
+      {
+        'title': l10n?.myLearning ?? 'My Learning',
+        'icon': Icons.play_circle_outline,
+        'route': '/my-courses',
+        'key': 'my-courses'
+      },
+      {
+        'title': l10n?.courses ?? 'Courses',
+        'icon': Icons.school_outlined,
+        'route': '/courses',
+        'key': 'courses'
+      },
+      {
+        'title': l10n?.categories ?? 'Categories',
+        'icon': Icons.category_outlined,
+        'route': '/categories',
+        'key': 'categories'
+      },
+      {
+        'title': l10n?.certificates ?? 'Certificates',
+        'icon': Icons.verified_outlined,
+        'route': '/certificates',
+        'key': 'certificates'
+      },
+      {
+        'title': l10n?.profile ?? 'Profile',
+        'icon': Icons.person_outline,
+        'route': '/profile',
+        'key': 'profile'
+      },
+      {
+        'title': l10n?.settings ?? 'Settings',
+        'icon': Icons.settings_outlined,
+        'route': '/settings',
+        'key': 'settings'
+      },
+    ];
+
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isPlatformDesktop = !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
     
@@ -184,7 +255,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     if (useSidebarStyle) {
       return _buildDesktopDrawer(context, navItems, ref, isCollapsed, isAuth);
     } else {
-      return _buildMobileDrawer(context, navItems, ref);
+      return _buildMobileDrawer(context, mobileNavItems, ref);
     }
   }
 
@@ -311,38 +382,40 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
     return Drawer(
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      width: MediaQuery.of(context).size.width * 0.82,
+      width: MediaQuery.of(context).size.width * 0.85,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topRight: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          topRight: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
       ),
       child: Column(
         children: [
           _buildMobileHeader(context, user),
           
+          // Logout button at top for visibility
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: _buildModernMobileLogoutButton(context, ref),
+          ),
+          
+          const Divider(height: 1),
+          
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               physics: const BouncingScrollPhysics(),
               children: [
-                ...items.map((item) => _buildNavItem(
+                ...items.map((item) => _buildModernMobileNavItem(
                   context,
                   item['title'] as String,
                   item['icon'] as IconData,
                   item['route'] as String,
                   item['key'] as String,
                   currentPage == item['key'],
-                  false, // Mobile is never collapsed
                 )),
               ],
             ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: _buildLogoutButton(context, ref, false), // Mobile is never collapsed
           ),
         ],
       ),
@@ -351,77 +424,102 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
 
   Widget _buildMobileHeader(BuildContext context, user) {
     final l10n = AppLocalizations.of(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(
+        16, 
+        isSmallScreen ? 40 : 50, 
+        16, 
+        isSmallScreen ? 12 : 16
+      ),
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF00C896), Color(0xFF059669)],
+          colors: [
+            const Color(0xFF00C896),
+            const Color(0xFF059669),
+            const Color(0xFF047857),
+          ],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Image.asset(
                   'assets/logo.png',
-                  width: 28,
-                  height: 28,
+                  width: isSmallScreen ? 24 : 28,
+                  height: isSmallScreen ? 24 : 28,
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n?.excellenceHub ?? 'Excellence Hub',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n?.excellenceHub ?? 'Excellence Hub',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 16 : 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    l10n?.sidebarLearningPlatform ?? 'LEARNING PLATFORM',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.0,
+                    Text(
+                      l10n?.sidebarLearningPlatform ?? 'LEARNING PLATFORM',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 7,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.0,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
           if (user != null) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: isSmallScreen ? 10 : 14),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1.5,
                 ),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: isSmallScreen ? 36 : 40,
+                    height: isSmallScreen ? 36 : 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       image: user.profilePicture != null && user.profilePicture!.isNotEmpty
@@ -430,6 +528,10 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                             fit: BoxFit.cover,
                           )
                         : null,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.4),
+                        width: 2,
+                      ),
                     ),
                     child: user.profilePicture == null || user.profilePicture!.isEmpty
                       ? Container(
@@ -440,9 +542,9 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                           child: Center(
                             child: Text(
                               user.fullName[0].toUpperCase(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: isSmallScreen ? 14 : 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -450,16 +552,17 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                         )
                       : null,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           user.fullName,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                           maxLines: 1,
@@ -468,9 +571,9 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           user.email,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 11,
+                            fontSize: isSmallScreen ? 9 : 10,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -483,6 +586,167 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  // Modern mobile nav item with cleaner design
+  Widget _buildModernMobileNavItem(
+    BuildContext context,
+    String title,
+    IconData icon,
+    String route,
+    String key,
+    bool isSelected,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: InkWell(
+        onTap: () {
+          if (!isSelected) {
+            context.go(route);
+          }
+          Navigator.of(context).pop();
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppTheme.primaryGreen.withOpacity(0.15),
+                      AppTheme.primaryGreen.withOpacity(0.05),
+                    ],
+                  )
+                : null,
+            color: isSelected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: isSelected
+                ? Border.all(
+                    color: AppTheme.primaryGreen.withOpacity(0.3),
+                    width: 1.5,
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.primaryGreen,
+                            const Color(0xFF059669),
+                          ],
+                        )
+                      : null,
+                  color: isSelected ? null : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05)),
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black54),
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected 
+                        ? AppTheme.primaryGreen 
+                        : (isDark ? Colors.white.withOpacity(0.9) : Colors.black87),
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppTheme.primaryGreen,
+                  size: 18,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Modern mobile logout button
+  Widget _buildModernMobileLogoutButton(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.red.withOpacity(0.08),
+            Colors.red.withOpacity(0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.red.withOpacity(0.15),
+          width: 1.5,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => _showLogoutDialog(context, ref),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: Colors.red.shade600,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  l10n?.logout ?? 'Logout',
+                  style: TextStyle(
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

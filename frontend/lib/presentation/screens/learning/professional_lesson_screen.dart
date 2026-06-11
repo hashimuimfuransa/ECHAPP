@@ -4486,7 +4486,7 @@ class _ProfessionalLessonScreenState
     try {
       final title = _lesson!.title;
       final description = _lesson!.description ?? 'Check out this lesson from Excellence Coaching Hub';
-      final shareText = '$title\n\n$description\n\nDownload the app to learn more!';
+      final shareText = '$title\n\n$description\n\nDownload the Excellence Coaching Hub app: https://play.google.com/store/apps/details?id=com.excellencecoachinghub.app&pcampaignid=web_share';
       
       await Share.share(
         shareText,

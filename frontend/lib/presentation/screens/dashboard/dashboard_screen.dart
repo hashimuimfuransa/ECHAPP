@@ -639,9 +639,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 12),
-                        _buildModernSearchBar(context),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // Sticky Search Bar
+          if (!_isOffline)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickySearchBarDelegate(
+                isMobile: isMobile,
+                buildSearchBar: () => _buildModernSearchBar(context),
+              ),
+            ),
+          // Main Content (continues)
+          if (!_isOffline)
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         // For new users: Show recommended first, then popular
                         // For returning users: Show continue learning first
                         userEnrollmentsAsync.when(
@@ -849,6 +873,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               constraints: const BoxConstraints(maxWidth: 1180),
               child: Row(
                 children: [
+                  // Menu button to open drawer (mobile only)
+                  if (isMobile)
+                    _buildCompactHeaderButton(
+                      icon: Icons.menu_rounded,
+                      tooltip: 'Menu',
+                      onTap: () => Scaffold.of(context).openDrawer(),
+                      isDark: isDark,
+                    ),
+                  if (isMobile) const SizedBox(width: 12),
                   // Profile Avatar
                   _buildProfileAvatar(context, user, isMobile),
                   const SizedBox(width: 12),
@@ -861,22 +894,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         Text(
                           '$greeting, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
                           style: TextStyle(
-                            fontSize: isMobile ? 16 : 18,
+                            fontSize: isMobile ? 18 : 20,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.getTextColor(context),
                             height: 1.2,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l10n?.studentDashboard ?? 'Student dashboard',
-                          style: TextStyle(
-                            fontSize: isMobile ? 12 : 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
                         ),
                       ],
                     ),
@@ -885,37 +909,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   Row(
                     children: [
                       _buildLanguageSwitcher(),
-                      const SizedBox(width: 8),
-                      _isRefreshing
-                          ? SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: Center(
-                                child: SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      isDark ? Colors.white : AppTheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          : _buildCompactHeaderButton(
-                              icon: Icons.refresh_rounded,
-                              tooltip: l10n?.refresh ?? 'Refresh',
-                              onTap: _refreshDashboard,
-                              isDark: isDark,
-                            ),
-                      const SizedBox(width: 8),
-                      _buildCompactHeaderButton(
-                        icon: Icons.contact_support_rounded,
-                        tooltip: l10n?.contactUs ?? 'Contact Us',
-                        onTap: () => _showContactInfoDialog(context),
-                        isDark: isDark,
-                      ),
                       const SizedBox(width: 8),
                       Consumer(
                         builder: (context, ref, child) {
@@ -1452,10 +1445,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Column(
       children: [
         Container(
-          height: isMobile ? 52 : 56,
+          height: isMobile ? 50 : 56,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
             border: Border.all(
               color: _selectedCategoryId != null
                   ? const Color(0xFF0F766E)
@@ -1476,11 +1469,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             children: [
               // Search Icon - simple and subtle
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
                 child: Icon(
                   Icons.search_rounded,
                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  size: 22,
+                  size: isMobile ? 20 : 22,
                 ),
               ),
               // Text Field
@@ -1492,7 +1485,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: _selectedCategoryName == null
-                        ? l10n?.searchHint ?? 'Search courses...'
+                        ? 'Search courses, topics, instructors...'
                         : 'Search in $_selectedCategoryName...',
                     hintStyle: TextStyle(
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8),
@@ -1517,11 +1510,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Padding(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(isMobile ? 6 : 8),
                         child: Icon(
                           Icons.close_rounded,
                           color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          size: 18,
+                          size: isMobile ? 16 : 18,
                         ),
                       ),
                     ),
@@ -2114,8 +2107,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 const SizedBox(height: 2),
                 Text(
                   courseTitle.isNotEmpty
-                      ? '$courseTitle · ${session.formattedScheduledTime}'
-                      : session.formattedScheduledTime,
+                      ? '$courseTitle · ${session.timeProgressInfo}'
+                      : session.timeProgressInfo,
                   style: TextStyle(
                     fontSize: 12,
                     color: isLive
@@ -2325,7 +2318,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     ];
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 6 : 8),
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 0 : 0),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: isMobile ? 8 : 12),
       decoration: _modernPanelDecoration(
         context,
         accent: AppTheme.primary,
@@ -2348,25 +2342,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 6 : 8),
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 3 : 4),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 12, vertical: isMobile ? 6 : 10),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
         border: Border.all(color: color.withOpacity(0.14)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: isMobile ? 28 : 32,
-            height: isMobile ? 28 : 32,
+            width: isMobile ? 22 : 32,
+            height: isMobile ? 22 : 32,
             decoration: BoxDecoration(
               color: color.withOpacity(isDark ? 0.18 : 0.12),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(isMobile ? 5 : 8),
             ),
-            child: Icon(icon, color: color, size: isMobile ? 16 : 18),
+            child: Icon(icon, color: color, size: isMobile ? 12 : 18),
           ),
-          SizedBox(width: isMobile ? 6 : 8),
+          SizedBox(width: isMobile ? 4 : 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -2374,7 +2369,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: isMobile ? 16 : 18,
+                  fontSize: isMobile ? 13 : 18,
                   fontWeight: FontWeight.w800,
                   color: color,
                   height: 1.0,
@@ -2383,7 +2378,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: isMobile ? 9 : 10,
+                  fontSize: isMobile ? 7 : 10,
                   color: AppTheme.getSecondaryTextColor(context),
                   fontWeight: FontWeight.w600,
                   height: 1.0,
@@ -4602,7 +4597,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isSmallMobile = ResponsiveBreakpoints.isSmallMobile(context);
 
-    final quickActions = [
+    // Simplified for mobile - only essential items not in header
+    final quickActions = isMobile ? [
+      {
+        'title': 'Library',
+        'subtitle': 'Browse Resources',
+        'icon': Icons.local_library_rounded,
+        'color': const Color(0xFF6366F1),
+        'onTap': () => context.go('/library'),
+      },
+      {
+        'title': 'Downloads',
+        'subtitle': 'Offline Content',
+        'icon': Icons.download_done_rounded,
+        'color': const Color(0xFF3B82F6),
+        'onTap': () => context.go('/downloads'),
+      },
+    ] : [
       {
         'title': 'Library',
         'subtitle': 'Browse Resources',
@@ -4648,21 +4659,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         const SizedBox(height: 16),
         // Responsive grid layout
         if (isMobile)
-          Column(
-            children: quickActions
-                .map((action) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildQuickActionCard(
-                        context: context,
-                        title: action['title'] as String,
-                        subtitle: action['subtitle'] as String,
-                        icon: action['icon'] as IconData,
-                        color: action['color'] as Color,
-                        onTap: action['onTap'] as Function,
-                        isFullWidth: true,
-                      ),
-                    ))
-                .toList(),
+          // Modern horizontal scroll for mobile
+          SizedBox(
+            height: isSmallMobile ? 100 : 110,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: quickActions.length,
+              itemBuilder: (context, index) {
+                final action = quickActions[index];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: index < quickActions.length - 1 ? 12 : 0,
+                  ),
+                  child: _buildModernQuickActionCard(
+                    context: context,
+                    title: action['title'] as String,
+                    subtitle: action['subtitle'] as String,
+                    icon: action['icon'] as IconData,
+                    color: action['color'] as Color,
+                    onTap: action['onTap'] as Function,
+                    isSmallMobile: isSmallMobile,
+                  ),
+                );
+              },
+            ),
           )
         else
           Row(
@@ -4762,6 +4782,97 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Icons.chevron_right_rounded,
               color: AppTheme.getSecondaryTextColor(context),
               size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modern horizontal card for mobile
+  Widget _buildModernQuickActionCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required Function onTap,
+    required bool isSmallMobile,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardWidth = isSmallMobile ? 140.0 : 160.0;
+
+    return GestureDetector(
+      onTap: () => onTap(),
+      child: Container(
+        width: cardWidth,
+        padding: EdgeInsets.all(isSmallMobile ? 12 : 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.15),
+              color.withOpacity(0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: isSmallMobile ? 36 : 40,
+              height: isSmallMobile ? 36 : 40,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: isSmallMobile ? 18 : 20,
+              ),
+            ),
+            SizedBox(height: isSmallMobile ? 8 : 10),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: isSmallMobile ? 13 : 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.getTextColor(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: isSmallMobile ? 10 : 11,
+                color: AppTheme.getSecondaryTextColor(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -6920,9 +7031,59 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 }
-// FIX #1 & #2: Removed the two invalid top-level stubs that were outside the class:
-//   void _showLogoutDialog(BuildContext context) {}
-//   class _navigateToCategories {}
+
+// Sticky Search Bar Delegate
+class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
+  final bool isMobile;
+  final Widget Function() buildSearchBar;
+
+  _StickySearchBarDelegate({
+    required this.isMobile,
+    required this.buildSearchBar,
+  });
+
+  @override
+  double get minExtent {
+    final topPadding = isMobile ? 44.0 : 0.0; // Default status bar height
+    return (isMobile ? 58.0 : 64.0) + topPadding;
+  }
+
+  @override
+  double get maxExtent {
+    final topPadding = isMobile ? 44.0 : 0.0; // Default status bar height
+    return (isMobile ? 58.0 : 64.0) + topPadding;
+  }
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final topPadding = isMobile ? MediaQuery.of(context).padding.top.toDouble() : 0.0;
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: EdgeInsets.only(
+        left: isMobile ? 16.0 : 28.0,
+        right: isMobile ? 16.0 : 28.0,
+        top: topPadding,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: isMobile ? 4 : 4,
+              bottom: isMobile ? 4 : 4,
+            ),
+            child: buildSearchBar(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_StickySearchBarDelegate oldDelegate) {
+    return isMobile != oldDelegate.isMobile;
+  }
+}
 
 // Desktop stat card widget
 class _DesktopStatCard extends StatelessWidget {

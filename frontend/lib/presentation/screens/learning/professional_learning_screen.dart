@@ -1457,7 +1457,7 @@ class _ProfessionalLearningScreenState
                 Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  '${session.formattedScheduledDate}',
+                  session.timeProgressInfo,
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,

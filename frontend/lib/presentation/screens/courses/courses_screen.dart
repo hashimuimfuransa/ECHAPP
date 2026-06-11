@@ -1478,7 +1478,28 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 12)));
 
       // Add courses for this category
-      if (isDesktop) {
+      if (categoryName == 'Recommended for You' || categoryName == l10n?.recommendedForYou) {
+        // Use horizontal layout for recommended courses (like dashboard)
+        final isMobile = ResponsiveBreakpoints.isMobile(context);
+        slivers.add(SliverToBoxAdapter(
+          child: SizedBox(
+            height: isMobile ? 244 : 264,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: categoryCourses.length,
+              padding: EdgeInsets.zero,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _buildRecommendedCourseCard(
+                    context, categoryCourses[index], enrolledCourses,
+                  ),
+                );
+              },
+            ),
+          ),
+        ));
+      } else if (isDesktop) {
         final gridCount = ResponsiveGridCount(context);
         slivers.add(SliverGrid(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1519,7 +1540,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       BuildContext context, String categoryName, int courseCount) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isRecommended = categoryName == 'Recommended for You';
+    final isRecommended = categoryName == 'Recommended for You' || categoryName == l10n?.recommendedForYou;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -1634,7 +1655,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       });
       
       if (recommendedCourses.isNotEmpty) {
-        orderedGrouped['Recommended for You'] = recommendedCourses;
+        orderedGrouped[l10n?.recommendedForYou ?? 'Recommended for You'] = recommendedCourses;
       }
     }
     
@@ -2034,6 +2055,187 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedCourseCard(
+      BuildContext context, Course course, List<Course> enrolledCourses) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isEnrolled = enrolledCourses.any((c) => c.id == course.id);
+
+    final cardWidth = isMobile ? 178.0 : 206.0;
+    final price = course.price ?? 0;
+    final isFree = price == 0;
+
+    return EnhancedCourseNavigation(
+      course: course,
+      showRipple: true,
+      enableHapticFeedback: true,
+      child: Container(
+        width: cardWidth,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111C2F) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0xFF263449) : const Color(0xFFF1E6D1),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : AppTheme.primary)
+                  .withOpacity(isDark ? 0.24 : 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Course Thumbnail
+            Expanded(
+              flex: 3,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                      ),
+                    ),
+                    child: course.thumbnail != null &&
+                            course.thumbnail!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                            child: NetworkImageWidget(
+                              imageUrl: course.thumbnail!,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.play_circle_filled,
+                              color: const Color(0xFF10B981).withOpacity(0.5),
+                              size: 40,
+                            ),
+                          ),
+                  ),
+                  if (isEnrolled)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Enrolled',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    right: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.58),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        isFree ? 'FREE' : 'RWF ${price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Course Info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    if (course.category != null)
+                      Text(
+                        course.category is String
+                            ? course.category as String
+                            : 'Category',
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 11,
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          color: const Color(0xFFF59E0B),
+                          size: isMobile ? 14 : 15,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          (course.averageRating ?? 0.0).toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: isMobile ? 10 : 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.getSecondaryTextColor(context),
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color:
+                              isDark ? Colors.white70 : const Color(0xFF0F766E),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
