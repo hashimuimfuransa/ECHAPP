@@ -129,7 +129,19 @@ class BBBService {
           createDate: result.response.createDate
         };
       } else {
-        throw new Error(result.response.message || 'Failed to create meeting');
+        // Handle specific BBB error messages with user-friendly English
+        const messageKey = result.response.messageKey;
+        const message = result.response.message;
+        
+        if (messageKey === 'noMoreFreeConnections' || message?.includes('nicht mehr genug freie Konferenzverbindungen')) {
+          throw new Error('Video conference service has reached its capacity limit. Please end existing sessions or upgrade your plan to create more concurrent sessions.');
+        } else if (messageKey === 'maxConcurrentUsersReached' || message?.includes('Teilnehmerzahl übersteigt')) {
+          throw new Error('The maximum number of participants has been reached. Please reduce the participant limit or upgrade your plan.');
+        } else if (messageKey === 'checksumError') {
+          throw new Error('BBB authentication failed. Please check your server configuration.');
+        }
+        
+        throw new Error(message || 'Failed to create meeting');
       }
     } catch (error) {
       console.error('BBB Create Meeting Error:', error.message);

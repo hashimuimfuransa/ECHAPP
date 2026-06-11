@@ -5,18 +5,64 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
+import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
+import 'package:excellencecoachinghub/services/live_session_service.dart';
 
 final enrollmentFilterProvider = StateProvider<String>((ref) => 'all');
 
-class EnrolledCoursesScreen extends ConsumerWidget {
+class EnrolledCoursesScreen extends ConsumerStatefulWidget {
   const EnrolledCoursesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EnrolledCoursesScreen> createState() => _EnrolledCoursesScreenState();
+}
+
+class _EnrolledCoursesScreenState extends ConsumerState<EnrolledCoursesScreen> {
+  final LiveSessionService _liveSessionService = LiveSessionService();
+  final Map<String, List<LiveSession>> _courseUpcomingSessions = {};
+  Future<void>? _loadUpcomingSessionsFuture;
+
+  @override
+  Widget build(BuildContext context) {
     final filter = ref.watch(enrollmentFilterProvider);
     return _buildEnrolledCoursesContent(context, ref, filter);
+  }
+
+  Future<void> _loadUpcomingSessionsForEnrolledCourses(List<Enrollment> enrollments) async {
+    if (enrollments.isEmpty) return;
+    
+    _courseUpcomingSessions.clear();
+    
+    for (final enrollment in enrollments) {
+      final course = enrollment.course;
+      if (course == null) continue;
+      
+      try {
+        final response = await _liveSessionService.getCourseSessions(
+          course.id,
+          status: 'scheduled',
+          limit: 5,
+        );
+        final now = DateTime.now();
+        final upcoming = response.sessions.where((s) {
+          return !s.isEnded &&
+              !s.isCancelled &&
+              s.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5)));
+        }).toList();
+        
+        if (upcoming.isNotEmpty) {
+          _courseUpcomingSessions[course.id] = upcoming;
+        }
+      } catch (e) {
+        debugPrint('Error loading sessions for course ${course.id}: $e');
+      }
+    }
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Widget _buildEnrolledCoursesContent(BuildContext context, WidgetRef ref, String filter) {
@@ -39,6 +85,11 @@ class EnrolledCoursesScreen extends ConsumerWidget {
 
         if (allEnrollments.isEmpty) {
           return _buildEmptyState(context);
+        }
+
+        // Load upcoming sessions for enrolled courses
+        if (_loadUpcomingSessionsFuture == null) {
+          _loadUpcomingSessionsFuture = _loadUpcomingSessionsForEnrolledCourses(allEnrollments);
         }
 
         // Apply filter
@@ -302,6 +353,8 @@ class EnrolledCoursesScreen extends ConsumerWidget {
     final cardPadding = isMobile ? 10.0 : 14.0;
     // Image height - compact to fit all content including button
     final imageHeight = isSmallMobile ? 90.0 : (isTablet ? 85.0 : 80.0);
+    final upcomingSessions = _courseUpcomingSessions[course.id] ?? [];
+    final hasUpcomingSessions = upcomingSessions.isNotEmpty;
 
     return EnhancedCourseNavigation(
       course: course,
@@ -324,10 +377,12 @@ class EnrolledCoursesScreen extends ConsumerWidget {
             ),
           ],
           border: Border.all(
-            color: isDark
-                ? AppTheme.darkTextSecondary.withOpacity(0.1)
-                : AppTheme.greyColor.withOpacity(0.15),
-            width: 1,
+            color: hasUpcomingSessions 
+                ? Colors.orange.withOpacity(0.5)
+                : (isDark
+                    ? AppTheme.darkTextSecondary.withOpacity(0.1)
+                    : AppTheme.greyColor.withOpacity(0.15)),
+            width: hasUpcomingSessions ? 2 : 1,
           ),
         ),
         child: Padding(
@@ -364,29 +419,65 @@ class EnrolledCoursesScreen extends ConsumerWidget {
                             size: 40,
                           ),
                   ),
-                  if (enrollment.isCompleted)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.white, size: 12),
-                            SizedBox(width: 4),
-                            Text(
-                              'Completed',
-                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasUpcomingSessions)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule, color: Colors.white, size: 10),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${upcomingSessions.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (hasUpcomingSessions && enrollment.isCompleted)
+                          const SizedBox(width: 4),
+                        if (enrollment.isCompleted)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryGreen,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Completed',
+                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

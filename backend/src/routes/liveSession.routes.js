@@ -13,7 +13,8 @@ const {
   cancelSession,
   deleteSession,
   getSessionRecordings,
-  getLessonSessions
+  getLessonSessions,
+  getAllSessions
 } = require('../controllers/liveSession.controller');
 
 // All routes require authentication
@@ -26,6 +27,9 @@ router.put('/sessions/:sessionId', authorize('instructor'), updateSession);
 router.put('/sessions/:sessionId/end', authorize('instructor'), endSession);
 router.put('/sessions/:sessionId/cancel', authorize('instructor'), cancelSession);
 router.delete('/sessions/:sessionId', authorize('instructor'), deleteSession);
+
+// Admin-only routes
+router.get('/admin/sessions', authorize('admin'), getAllSessions);
 
 // Student routes (enrollment checked in controller)
 router.get('/courses/:courseId/sessions', getCourseSessions);

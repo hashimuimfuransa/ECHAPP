@@ -873,6 +873,31 @@ class _ProfessionalLearningScreenState
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 8),
+                  // Upcoming sessions warning
+                  if (_upcomingSessions.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.schedule, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_upcomingSessions.length} upcoming session${_upcomingSessions.length > 1 ? 's' : ''}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   // Stats row
                   Row(
@@ -1143,10 +1168,10 @@ class _ProfessionalLearningScreenState
     });
     try {
       final service = LiveSessionService();
-      // Load all sessions without status filter
+      // Load scheduled and live sessions
       final response = await service.getCourseSessions(
         widget.courseId,
-        status: '', // Get all sessions
+        status: 'scheduled',
       );
       if (mounted) {
         final now = DateTime.now();
@@ -1406,11 +1431,8 @@ class _ProfessionalLearningScreenState
     final isLive = session.status == 'live' && !isActuallyEnded;
     final hasStarted = !isActuallyEnded &&
         (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
-    // Joinable if: live, already started, or starting within 15 min — never if ended
-    final canJoin = !isActuallyEnded &&
-        (isLive ||
-            (session.isScheduled &&
-                (hasStarted || session.scheduledAt.difference(now).inMinutes <= 15)));
+    // Joinable only if session is actually live
+    final canJoin = isLive;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

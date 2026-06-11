@@ -1907,10 +1907,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ],
             ),
             const SizedBox(height: 12),
-            ...sessions.take(3).map((session) => Padding(
+            ...sessions.take(4).map((session) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _buildSessionCard(context, session, isDark, isMobile),
             )),
+            if (sessions.length > 4)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: TextButton.icon(
+                  onPressed: () => context.push('/upcoming-sessions'),
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: const Text('View all upcoming sessions'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primaryGreen,
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -1968,11 +1980,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final hasStarted = !isActuallyEnded &&
         (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
     final isStarted = !isLive && session.isScheduled && hasStarted;
-    // Joinable if: live, already started, or starting within 15 min — never if ended
-    final canJoin = !isActuallyEnded &&
-        (isLive ||
-            (session.isScheduled &&
-                (hasStarted || session.scheduledAt.difference(now).inMinutes <= 15)));
+    // Joinable only if session is actually live
+    final canJoin = isLive;
     final courseTitle = session.course?['title'] as String? ?? '';
 
     // Visual theme per state

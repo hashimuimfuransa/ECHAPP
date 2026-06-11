@@ -863,6 +863,41 @@ async function _notifyMissedSession(session, reason) {
   }
 }
 
+/**
+ * Get all live sessions (admin only)
+ */
+const getAllSessions = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    const sessions = await LiveSession.find(query)
+      .populate('teacherId', 'fullName email avatar')
+      .populate('courseId', 'title thumbnail')
+      .populate('sectionId', 'title')
+      .populate('lessonId', 'title')
+      .sort({ scheduledAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await LiveSession.countDocuments(query);
+
+    sendSuccess(res, {
+      sessions: sessions,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      total
+    }, 'All sessions retrieved successfully');
+  } catch (error) {
+    console.error('Get All Sessions Error:', error);
+    sendError(res, 'Failed to retrieve sessions', 500, error.message);
+  }
+};
+
 module.exports = {
   createSession,
   getTeacherSessions,
@@ -874,5 +909,6 @@ module.exports = {
   cancelSession,
   deleteSession,
   getSessionRecordings,
-  getLessonSessions
+  getLessonSessions,
+  getAllSessions
 };

@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/data/repositories/course_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/category_utils.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
@@ -15,6 +16,7 @@ import 'package:excellencecoachinghub/presentation/providers/enrollment_provider
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/services/live_session_service.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -54,6 +56,11 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   String _selectedRatingFilter = 'all'; // all, 4plus, 4.5plus
 
   final CourseRepository _repository = CourseRepository();
+  final LiveSessionService _liveSessionService = LiveSessionService();
+
+  // Track courses with upcoming sessions
+  final Map<String, List<LiveSession>> _courseUpcomingSessions = {};
+  Future<void>? _loadUpcomingSessionsFuture;
 
   AppLocalizations? get l10n => AppLocalizations.of(context);
 
@@ -72,6 +79,38 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
     // Load user interests and then courses
     _loadUserInterestsAndCourses();
+  }
+
+  Future<void> _loadUpcomingSessionsForEnrolledCourses(List<Course> enrolledCourses) async {
+    if (enrolledCourses.isEmpty) return;
+    
+    _courseUpcomingSessions.clear();
+    
+    for (final course in enrolledCourses) {
+      try {
+        final response = await _liveSessionService.getCourseSessions(
+          course.id,
+          status: 'scheduled',
+          limit: 5,
+        );
+        final now = DateTime.now();
+        final upcoming = response.sessions.where((s) {
+          return !s.isEnded &&
+              !s.isCancelled &&
+              s.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5)));
+        }).toList();
+        
+        if (upcoming.isNotEmpty) {
+          _courseUpcomingSessions[course.id] = upcoming;
+        }
+      } catch (e) {
+        debugPrint('Error loading sessions for course ${course.id}: $e');
+      }
+    }
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _initializeFromWidgetParams() {
@@ -357,9 +396,14 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                               padding:
                                   ResponsiveBreakpoints.getPadding(context),
                               sliver: enrolledCoursesAsync.when(
-                                data: (enrolledCourses) =>
-                                    _buildSliverAllCourses(context,
-                                        _filteredCourses, enrolledCourses),
+                                data: (enrolledCourses) {
+                                  // Load upcoming sessions for enrolled courses
+                                  if (_loadUpcomingSessionsFuture == null) {
+                                    _loadUpcomingSessionsFuture = _loadUpcomingSessionsForEnrolledCourses(enrolledCourses);
+                                  }
+                                  return _buildSliverAllCourses(context,
+                                      _filteredCourses, enrolledCourses);
+                                },
                                 loading: () => const SliverToBoxAdapter(
                                   child: Center(
                                       child: CircularProgressIndicator()),
@@ -1759,6 +1803,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       BuildContext context, Course course, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
+    final upcomingSessions = _courseUpcomingSessions[course.id] ?? [];
+    final hasUpcomingSessions = upcomingSessions.isNotEmpty;
 
     return EnhancedCourseNavigation(
       course: course,
@@ -1776,8 +1822,10 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             ),
           ],
           border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
-            width: 0.5,
+            color: hasUpcomingSessions 
+                ? Colors.orange.withOpacity(0.5)
+                : Theme.of(context).dividerColor.withOpacity(0.1),
+            width: hasUpcomingSessions ? 2 : 0.5,
           ),
         ),
         child: Padding(
@@ -1825,35 +1873,73 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       Positioned(
                         top: 8,
                         right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasUpcomingSessions)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.schedule,
+                                        color: Colors.white, size: 10),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${upcomingSessions.length}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w800),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle_rounded,
-                                  color: Colors.white, size: 10),
+                            if (hasUpcomingSessions && isEnrolled)
                               const SizedBox(width: 4),
-                              Text(
-                                l10n?.enrolled ?? 'ENROLLED',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w800),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_rounded,
+                                      color: Colors.white, size: 10),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n?.enrolled ?? 'ENROLLED',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     else if ((course.price ?? 0) > 0)
@@ -2065,6 +2151,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isEnrolled = enrolledCourses.any((c) => c.id == course.id);
+    final upcomingSessions = _courseUpcomingSessions[course.id] ?? [];
+    final hasUpcomingSessions = upcomingSessions.isNotEmpty;
 
     final cardWidth = isMobile ? 178.0 : 206.0;
     final price = course.price ?? 0;
@@ -2133,21 +2221,52 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Enrolled',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasUpcomingSessions)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.schedule,
+                                      color: Colors.white, size: 10),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '${upcomingSessions.length}',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (hasUpcomingSessions && isEnrolled)
+                            const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Enrolled',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   Positioned(
@@ -2244,6 +2363,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   Widget _buildCourseListItem(
       BuildContext context, Course course, List<Course> enrolledCourses) {
     final bool isEnrolled = enrolledCourses.any((e) => e.id == course.id);
+    final upcomingSessions = _courseUpcomingSessions[course.id] ?? [];
+    final hasUpcomingSessions = upcomingSessions.isNotEmpty;
 
     return EnhancedCourseNavigation(
       course: course,
@@ -2306,15 +2427,46 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       Positioned(
                         top: 4,
                         right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Icon(Icons.check_circle_rounded,
-                              color: Colors.white, size: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasUpcomingSessions)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.schedule,
+                                        color: Colors.white, size: 8),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '${upcomingSessions.length}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 7,
+                                          fontWeight: FontWeight.w800),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (hasUpcomingSessions && isEnrolled)
+                              const SizedBox(width: 2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Icon(Icons.check_circle_rounded,
+                                  color: Colors.white, size: 10),
+                            ),
+                          ],
                         ),
                       )
                     else if ((course.price ?? 0) > 0)

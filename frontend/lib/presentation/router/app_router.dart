@@ -28,6 +28,7 @@ import 'package:excellencecoachinghub/presentation/screens/enrolled/enrolled_cou
 import 'package:excellencecoachinghub/presentation/screens/help/help_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_dashboard_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_courses_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/live/upcoming_sessions_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/create_course_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_course_content_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_create_lesson_screen.dart';
@@ -464,6 +465,13 @@ class AppRouter {
               child: AdminLiveSessionsScreen(),
             ),
           ),
+          GoRoute(
+            path: '/admin/exams-review',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Exams Review',
+              child: AdminLiveSessionsScreen(),
+            ),
+          ),
 
           // Teacher Routes - Outside MainLayout for full-screen experience
           GoRoute(
@@ -683,6 +691,10 @@ class AppRouter {
               GoRoute(
                 path: '/my-courses',
                 builder: (context, state) => const EnrolledCoursesScreen(),
+              ),
+              GoRoute(
+                path: '/upcoming-sessions',
+                builder: (context, state) => const UpcomingSessionsScreen(),
               ),
               GoRoute(
                 path: '/library',

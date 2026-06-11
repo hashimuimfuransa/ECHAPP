@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
+import 'package:excellencecoachinghub/presentation/screens/teacher/schedule_live_session_screen.dart';
 
 /// Live Sessions Screen - View and manage all live sessions
 class LiveSessionsScreen extends ConsumerStatefulWidget {
@@ -22,13 +23,17 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     with SingleTickerProviderStateMixin {
   final LiveSessionService _liveSessionService = LiveSessionService();
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
 
   List<LiveSession> _upcomingSessions = [];
+  List<LiveSession> _readyToStartSessions = [];
   List<LiveSession> _pastSessions = [];
   List<LiveSession> _allSessions = [];
+  List<LiveSession> _filteredSessions = [];
   
   bool _isLoading = true;
   String? _errorMessage;
+  String _searchQuery = '';
   
   int _currentPage = 1;
   int _totalPages = 1;
@@ -36,7 +41,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadSessions();
   }
@@ -45,64 +50,44 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onTabChanged() {
     if (!_tabController.indexIsChanging) {
-      String status;
-      switch (_tabController.index) {
-        case 0:
-          status = 'scheduled';
-          break;
-        case 1:
-          status = 'ended';
-          break;
-        default:
-          status = '';
-      }
-      _loadSessions(status: status.isEmpty ? null : status);
+      _filterSessionsForCurrentTab();
     }
   }
 
-  Future<void> _loadSessions({String? status}) async {
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+    _filterSessionsForCurrentTab();
+  }
+
+  Future<void> _loadSessions() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      // Fetch all sessions without status filter
       final response = await _liveSessionService.getTeacherSessions(
-        status: status,
-        page: _currentPage,
-        limit: 20,
+        limit: 100,
       );
 
-      List<LiveSession> filteredSessions = response.sessions;
-
-      // Filter and sort upcoming sessions
-      if (status == 'scheduled') {
-        final now = DateTime.now();
-        filteredSessions = response.sessions.where((session) {
-          return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
-                 session.status == 'live';
-        }).toList();
-        // Sort by scheduled date (soonest first)
-        filteredSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-      }
-
       setState(() {
-        if (status == 'scheduled') {
-          _upcomingSessions = filteredSessions;
-        } else if (status == 'ended') {
-          _pastSessions = response.sessions;
-        } else {
-          _allSessions = response.sessions;
-        }
+        _allSessions = response.sessions;
         _totalPages = response.totalPages;
         _currentPage = response.currentPage;
         _isLoading = false;
       });
+
+      // Filter for current tab
+      _filterSessionsForCurrentTab();
     } catch (e) {
       debugPrint('Error loading sessions: $e');
       setState(() {
@@ -110,6 +95,60 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
         _isLoading = false;
       });
     }
+  }
+
+  void _filterSessionsForCurrentTab() {
+    if (_allSessions.isEmpty) return;
+
+    final now = DateTime.now();
+    List<LiveSession> baseSessions;
+
+    switch (_tabController.index) {
+      case 0: // Upcoming
+        baseSessions = _allSessions.where((session) {
+          return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
+                 session.status == 'live';
+        }).toList();
+        baseSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        _upcomingSessions = baseSessions;
+        break;
+      case 1: // Ready to Start
+        baseSessions = _allSessions.where((session) {
+          return (session.status == 'scheduled' && 
+                  session.scheduledAt.isBefore(now.add(const Duration(minutes: 5))) &&
+                  !session.isEnded) ||
+                 session.status == 'live';
+        }).toList();
+        baseSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        _readyToStartSessions = baseSessions;
+        break;
+      case 2: // Past
+        baseSessions = _allSessions.where((session) {
+          return session.status == 'ended' || session.status == 'cancelled';
+        }).toList();
+        baseSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt)); // Most recent first
+        _pastSessions = baseSessions;
+        break;
+      case 3: // All
+        baseSessions = _allSessions;
+        break;
+      default:
+        baseSessions = [];
+    }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      _filteredSessions = baseSessions.where((session) {
+        return session.title.toLowerCase().contains(_searchQuery) ||
+               (session.course != null && session.course!['title']?.toLowerCase().contains(_searchQuery) == true) ||
+               (session.section != null && session.section!['title']?.toLowerCase().contains(_searchQuery) == true) ||
+               session.status.toLowerCase().contains(_searchQuery);
+      }).toList();
+    } else {
+      _filteredSessions = baseSessions;
+    }
+
+    setState(() {});
   }
 
   Future<void> _joinSession(LiveSession session) async {
@@ -208,7 +247,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     if (confirm == true) {
       try {
         await _liveSessionService.endSession(session.id);
-        _loadSessions();
+        await _loadSessions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Session ended successfully')),
@@ -238,7 +277,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     );
 
     if (result == true && mounted) {
-      _loadSessions();
+      await _loadSessions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Session updated successfully')),
@@ -271,7 +310,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     if (confirm == true) {
       try {
         await _liveSessionService.cancelSession(session.id);
-        _loadSessions();
+        await _loadSessions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Session cancelled')),
@@ -311,19 +350,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     if (confirm == true) {
       try {
         await _liveSessionService.deleteSession(session.id);
-        // Reload based on current tab
-        String status;
-        switch (_tabController.index) {
-          case 0:
-            status = 'scheduled';
-            break;
-          case 1:
-            status = 'ended';
-            break;
-          default:
-            status = '';
-        }
-        _loadSessions(status: status.isEmpty ? null : status);
+        await _loadSessions();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Session deleted')),
@@ -664,7 +691,36 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     return Scaffold(
       backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
-        title: const Text('Live Sessions'),
+        title: Row(
+          children: [
+            const Text('Live Sessions'),
+            if (_upcomingSessions.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.schedule, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_upcomingSessions.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -674,6 +730,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(text: 'Upcoming'),
+            Tab(text: 'Ready to Start'),
             Tab(text: 'Past'),
             Tab(text: 'All'),
           ],
@@ -682,19 +739,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // Get current tab status
-              String status;
-              switch (_tabController.index) {
-                case 0:
-                  status = 'scheduled';
-                  break;
-                case 1:
-                  status = 'ended';
-                  break;
-                default:
-                  status = '';
-              }
-              _loadSessions(status: status.isEmpty ? null : status);
+              _loadSessions();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Sessions refreshed')),
@@ -708,18 +753,52 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildSessionsList(_upcomingSessions, 'upcoming'),
-                    _buildSessionsList(_pastSessions, 'past'),
-                    _buildSessionsList(_allSessions, 'all'),
-                  ],
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search sessions by title, course, or status...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                filled: true,
+                fillColor: cardColor,
+              ),
+            ),
+          ),
+          // Tab Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                    ? _buildErrorWidget()
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildSessionsList(_filteredSessions, 'upcoming'),
+                          _buildSessionsList(_filteredSessions, 'ready'),
+                          _buildSessionsList(_filteredSessions, 'past'),
+                          _buildSessionsList(_filteredSessions, 'all'),
+                        ],
+                      ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _scheduleNewSession,
         icon: const Icon(Icons.add),
@@ -739,7 +818,7 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
           Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _loadSessions(),
+            onPressed: () async => await _loadSessions(),
             child: const Text('Retry'),
           ),
         ],

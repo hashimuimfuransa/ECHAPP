@@ -7,6 +7,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/services/teacher_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
+import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/models/teacher_course.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
@@ -27,6 +28,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   TeacherDashboardStats? _stats;
   List<TeacherCourse> _courses = [];
   List<LiveSession> _recentSessions = [];
+  List<LiveSession> _readyToStartSessions = [];
   String? _errorMessage;
 
   int _currentPage = 1;
@@ -56,19 +58,35 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
       // Load sessions separately with error handling
       List<LiveSession> sessions = [];
+      List<LiveSession> readyToStart = [];
       try {
+        // Get both scheduled and live sessions
         final sessionsResponse = await _liveSessionService.getTeacherSessions(
-          status: 'scheduled',
-          limit: 5,
+          limit: 10,
         );
-        // Filter to show only upcoming sessions (scheduled for future or currently live)
         final now = DateTime.now();
+        
+        // Filter upcoming sessions (scheduled for future)
         sessions = sessionsResponse.sessions.where((session) {
           return session.status == 'scheduled' && session.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5))) ||
                  session.status == 'live';
         }).toList();
-        // Sort by scheduled date (soonest first)
         sessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        
+        // Filter ready-to-start sessions (scheduled but time has passed, or already live)
+        readyToStart = sessionsResponse.sessions.where((session) {
+          return (session.status == 'scheduled' && 
+                  session.scheduledAt.isBefore(now.add(const Duration(minutes: 5))) &&
+                  !session.isEnded) ||
+                 session.status == 'live';
+        }).toList();
+        readyToStart.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        
+        // Schedule notifications for teacher sessions
+        await PushNotificationService.scheduleLiveSessionNotifications(
+          sessionsResponse.sessions,
+          isTeacher: true,
+        );
       } catch (sessionError) {
         debugPrint('Failed to load sessions: $sessionError');
         // Continue without sessions - don't fail the whole dashboard
@@ -79,6 +97,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
         _courses = coursesResponse.courses;
         _totalPages = coursesResponse.totalPages;
         _recentSessions = sessions;
+        _readyToStartSessions = readyToStart;
         _isLoading = false;
       });
     } catch (e) {
@@ -92,8 +111,8 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
   Future<void> _refreshSessions() async {
     try {
+      // Get both scheduled and live sessions
       final sessionsResponse = await _liveSessionService.getTeacherSessions(
-        status: 'scheduled',
         limit: 5,
       );
       // Filter to show only upcoming sessions
@@ -105,8 +124,18 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
       // Sort by scheduled date
       sessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
 
+      // Also update ready-to-start sessions
+      final readyToStart = sessionsResponse.sessions.where((session) {
+        return (session.status == 'scheduled' && 
+                session.scheduledAt.isBefore(now.add(const Duration(minutes: 5))) &&
+                !session.isEnded) ||
+               session.status == 'live';
+      }).toList();
+      readyToStart.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
       setState(() {
         _recentSessions = sessions;
+        _readyToStartSessions = readyToStart;
       });
 
       if (mounted) {
@@ -256,6 +285,19 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             _buildQuickActions(),
                             
                             const SizedBox(height: 24),
+                            
+                            // Ready to Start Sessions (urgent)
+                            if (_readyToStartSessions.isNotEmpty) ...[
+                              _buildSectionHeader(
+                                'Ready to Start',
+                                onSeeAll: _navigateToSessions,
+                                onRefresh: _refreshSessions,
+                                textColor: Colors.red,
+                                showWarning: true,
+                              ),
+                              _buildReadyToStartSessionsList(isDark: isDark, cardColor: cardColor, textPrimary: textPrimary, textSecondary: textSecondary),
+                              const SizedBox(height: 24),
+                            ],
                             
                             // Recent Sessions
                             if (_recentSessions.isNotEmpty) ...[
@@ -417,17 +459,45 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     );
   }
 
-  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll, VoidCallback? onRefresh, Color? textColor}) {
+  Widget _buildSectionHeader(String title, {required VoidCallback onSeeAll, VoidCallback? onRefresh, Color? textColor, bool showWarning = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
+        Row(
+          children: [
+            if (showWarning)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.warning, color: Colors.red, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Urgent',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (showWarning) const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ],
         ),
         Row(
           children: [
@@ -462,6 +532,28 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             cardColor: cardColor,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReadyToStartSessionsList({required bool isDark, required Color cardColor, required Color textPrimary, required Color textSecondary}) {
+    return SizedBox(
+      height: 160,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _readyToStartSessions.length,
+        itemBuilder: (context, index) {
+          final session = _readyToStartSessions[index];
+          return _SessionCard(
+            session: session,
+            onTap: () => context.push('/teacher/sessions'),
+            isDark: isDark,
+            cardColor: cardColor,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+            isUrgent: true,
           );
         },
       ),
@@ -628,6 +720,7 @@ class _SessionCard extends StatelessWidget {
   final Color cardColor;
   final Color textPrimary;
   final Color textSecondary;
+  final bool isUrgent;
 
   const _SessionCard({
     required this.session,
@@ -636,18 +729,28 @@ class _SessionCard extends StatelessWidget {
     required this.cardColor,
     required this.textPrimary,
     required this.textSecondary,
+    this.isUrgent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final isUpcoming = session.scheduledAt.isAfter(DateTime.now());
-    final statusBgColor = isUpcoming
-        ? (isDark ? Colors.orange.withOpacity(0.2) : Colors.orange[50])
-        : (isDark ? Colors.green.withOpacity(0.2) : Colors.green[50]);
+    final statusBgColor = isUrgent
+        ? (isDark ? Colors.red.withOpacity(0.2) : Colors.red[50])
+        : (isUpcoming
+            ? (isDark ? Colors.orange.withOpacity(0.2) : Colors.orange[50])
+            : (isDark ? Colors.green.withOpacity(0.2) : Colors.green[50]));
+    final statusColor = isUrgent ? Colors.red : (isUpcoming ? Colors.orange : Colors.green);
 
     return Card(
       margin: const EdgeInsets.only(right: 12),
       color: cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isUrgent
+            ? BorderSide(color: Colors.red.withOpacity(0.5), width: 2)
+            : BorderSide.none,
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -659,25 +762,49 @@ class _SessionCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusBgColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      session.status.toUpperCase(),
-                      style: TextStyle(
-                        color: isUpcoming ? Colors.orange : Colors.green,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  if (isUrgent)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning, color: Colors.red, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            'START NOW',
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusBgColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        session.status.toUpperCase(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
                   const Spacer(),
                   Icon(
-                    isUpcoming ? Icons.schedule : Icons.play_circle,
-                    color: isUpcoming ? Colors.orange : Colors.green,
+                    isUrgent ? Icons.play_circle : (isUpcoming ? Icons.schedule : Icons.play_circle),
+                    color: statusColor,
                     size: 20,
                   ),
                 ],

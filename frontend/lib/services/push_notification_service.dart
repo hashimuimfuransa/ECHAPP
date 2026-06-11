@@ -350,9 +350,12 @@ class PushNotificationService {
   /// Call this after fetching upcoming/live sessions.
   /// - Schedules a "starting soon" notification 15 min before each scheduled session.
   /// - Fires an immediate "session is live" notification for any live session.
+  /// - Fires "ready to start" notification for sessions where time has passed but not started.
   static Future<void> scheduleLiveSessionNotifications(
-      List<dynamic> sessions) async {
+      List<dynamic> sessions, {bool isTeacher = false}) async {
     if (defaultTargetPlatform == TargetPlatform.windows) return;
+
+    debugPrint('📅 Scheduling notifications for ${sessions.length} sessions (teacher: $isTeacher)');
 
     const AndroidNotificationChannel liveChannel = AndroidNotificationChannel(
       'live_session_channel',
@@ -383,18 +386,35 @@ class PushNotificationService {
     const NotificationDetails details =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
+    // Initialize timezone once
+    try {
+      tz_data.initializeTimeZones();
+    } catch (e) {
+      debugPrint('Failed to initialize timezones: $e');
+    }
+
     // Track which session IDs we have already notified to avoid duplicates
     final Set<String> fired = {};
+    int scheduledCount = 0;
+    int liveCount = 0;
+    int readyToStartCount = 0;
 
     for (final session in sessions) {
       final String id = session.id as String;
       final String title = session.title as String;
       final bool isLive = session.isLive as bool;
+      final bool isCancelled = session.isCancelled as bool;
       final DateTime scheduledAt = session.scheduledAt as DateTime;
       final notifId = id.hashCode.abs() % 100000;
 
       if (fired.contains(id)) continue;
       fired.add(id);
+
+      // Skip cancelled sessions
+      if (isCancelled) {
+        debugPrint('⏭️ Skipping cancelled session: $title');
+        continue;
+      }
 
       final int duration = session.duration as int;
       final DateTime expectedEnd = scheduledAt.add(Duration(minutes: duration));
@@ -402,28 +422,45 @@ class PushNotificationService {
 
       if (isLive) {
         // Fire immediately — session is live right now
+        debugPrint('🔴 Live session notification: $title');
         await _localNotifications.show(
           notifId,
           '🔴 Live Now: $title',
-          'Your class is live! Tap to join.',
+          isTeacher ? 'Your class is live! Start teaching now.' : 'Your class is live! Tap to join.',
           details,
-          payload: '/dashboard',
+          payload: isTeacher ? '/teacher/sessions' : '/dashboard',
         );
+        liveCount++;
       } else if (expectedEnd.isBefore(now)) {
         // Session has fully ended and the student never joined (status never became live)
+        // Only show if it ended recently (within last hour) to avoid spam
+        final hoursSinceEnd = now.difference(expectedEnd).inHours;
+        if (hoursSinceEnd < 1) {
+          debugPrint('📺 Missed session notification: $title');
+          await _localNotifications.show(
+            notifId + 10000,
+            'You missed a live session 📺',
+            '"$title" has ended. Open the app to check for recordings or upcoming sessions.',
+            details,
+            payload: '/my-courses',
+          );
+        }
+      } else if (isTeacher && scheduledAt.isBefore(now.add(const Duration(minutes: 5)))) {
+        // Teacher: Ready to start notification (time has passed but session not live yet)
+        debugPrint('⚡ Ready to start notification: $title');
         await _localNotifications.show(
-          notifId + 10000,
-          'You missed a live session 📺',
-          '"$title" has ended. Open the app to check for recordings or upcoming sessions.',
+          notifId + 20000,
+          '⚡ Ready to Start: $title',
+          'It\'s time to start your class! Tap to begin.',
           details,
-          payload: '/my-courses',
+          payload: '/teacher/sessions',
         );
+        readyToStartCount++;
       } else {
         // Schedule 15 min before start (only if reminder time is still in the future)
         final remind = scheduledAt.subtract(const Duration(minutes: 15));
         if (remind.isAfter(now)) {
           try {
-            tz_data.initializeTimeZones();
             final local = tz.local;
             final tzRemind = tz.TZDateTime.from(remind, local);
             await _localNotifications.zonedSchedule(
@@ -437,12 +474,18 @@ class PushNotificationService {
                   UILocalNotificationDateInterpretation.absoluteTime,
               payload: '/dashboard',
             );
-          } catch (_) {
-            // timezone scheduling unavailable; skip silently
+            debugPrint('⏰ Scheduled reminder for: $title at $remind');
+            scheduledCount++;
+          } catch (e) {
+            debugPrint('Failed to schedule notification for $title: $e');
           }
+        } else {
+          debugPrint('⏭️ Skipping reminder for $title (reminder time has passed)');
         }
       }
     }
+
+    debugPrint('✅ Notifications scheduled: $scheduledCount reminders, $liveCount live alerts');
   }
 
   // Get a random Duolingo-style reminder (translatable when context is available)

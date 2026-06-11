@@ -296,6 +296,40 @@ class LiveSessionService {
       throw ApiException('Failed to fetch session attendance: $e');
     }
   }
+
+  /// Get all live sessions (admin only)
+  Future<LiveSessionsResponse> getAllSessions({
+    String? status,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      String url = '${ApiConfig.baseUrl}/live/admin/sessions?page=$page&limit=$limit';
+      if (status != null) url += '&status=$status';
+
+      final response = await _apiClient.get(url);
+      response.validateStatus();
+
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+
+      final sessions = (data['sessions'] as List?)
+              ?.map((s) => LiveSession.fromJson(s))
+              .toList() ??
+          [];
+
+      return LiveSessionsResponse(
+        sessions: sessions,
+        totalPages: _toInt(data['totalPages']),
+        currentPage: _toInt(data['currentPage']),
+        total: _toInt(data['total']),
+      );
+    } catch (e) {
+      debugPrint('Get All Sessions Error: $e');
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch all sessions: $e');
+    }
+  }
 }
 
 /// Live Sessions Response

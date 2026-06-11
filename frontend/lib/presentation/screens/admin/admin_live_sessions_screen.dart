@@ -72,7 +72,7 @@ class _AdminLiveSessionsScreenState extends ConsumerState<AdminLiveSessionsScree
     });
 
     try {
-      final response = await _liveSessionService.getTeacherSessions(
+      final response = await _liveSessionService.getAllSessions(
         status: status,
         page: _currentPage,
         limit: 50,
