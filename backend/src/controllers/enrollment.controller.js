@@ -300,7 +300,7 @@ const updateEnrollmentProgress = async (req, res) => {
   }
 };
 
-// Mark section as completed (validates that lessons are actually completed)
+// Mark section as completed (marks all lessons in section as complete)
 const completeSection = async (req, res) => {
   try {
     const { id } = req.params; // enrollment id
@@ -332,6 +332,16 @@ const completeSection = async (req, res) => {
     if (completedInThisSection.length === 0) {
       return sendError(res, 'Please complete at least one lesson in this section before marking it as complete', 400);
     }
+    
+    // Mark all lessons in this section as complete
+    let addedCount = 0;
+    sectionLessonIds.forEach(lessonId => {
+      const alreadyCompleted = enrollment.completedLessons.some(id => id.toString() === lessonId);
+      if (!alreadyCompleted) {
+        enrollment.completedLessons.push(lessonId);
+        addedCount++;
+      }
+    });
     
     // Calculate real progress percentage based on actual completed lessons
     const totalLessons = await Lesson.countDocuments({ courseId: new mongoose.Types.ObjectId(enrollment.courseId) });

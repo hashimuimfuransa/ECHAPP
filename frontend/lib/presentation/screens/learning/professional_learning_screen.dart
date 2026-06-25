@@ -106,6 +106,7 @@ class _ProfessionalLearningScreenState
   List<Section>? _chapters;
   final Map<String, List<Lesson>> _chapterLessons = {};
   final Map<String, bool> _chapterCompletionStatus = {};
+  final Map<String, bool> _chapterUnlockedStatus = {};
   final Map<String, bool> _lessonCompletionStatus = {};
   int _currentSectionIndex = 0;
   bool _isChatExpanded = false;
@@ -402,6 +403,13 @@ class _ProfessionalLearningScreenState
     }
 
     setState(() {
+      // Mark all lessons in this chapter as complete
+      final chapterLessons = _chapterLessons[chapter.id] ?? [];
+      for (var lesson in chapterLessons) {
+        _lessonCompletionStatus[lesson.id] = true;
+      }
+      _completedLessonsCount = _lessonCompletionStatus.values.where((v) => v).length;
+
       // Mark chapter as complete
       _chapterCompletionStatus[chapter.id] = true;
       _completedChaptersCount = _chapterCompletionStatus.values.where((v) => v).length;
@@ -409,7 +417,7 @@ class _ProfessionalLearningScreenState
       // Unlock next chapter
       if (_chapters != null && chapterIndex + 1 < _chapters!.length) {
         final nextChapter = _chapters![chapterIndex + 1];
-        _chapterCompletionStatus[nextChapter.id] = true;
+        _chapterUnlockedStatus[nextChapter.id] = true;
         _currentSectionIndex = chapterIndex + 1;
       }
 
@@ -469,12 +477,18 @@ class _ProfessionalLearningScreenState
 
   void _initializeCompletionStatus() {
     if (_chapters == null) return;
-    if (_chapters!.isNotEmpty) {
-      _chapterCompletionStatus[_chapters![0].id] = true;
-    }
-    for (int i = 1; i < _chapters!.length; i++) {
+    
+    // Initialize all chapters as not completed
+    for (int i = 0; i < _chapters!.length; i++) {
       _chapterCompletionStatus[_chapters![i].id] = false;
+      _chapterUnlockedStatus[_chapters![i].id] = false;
     }
+    
+    // First chapter is always unlocked
+    if (_chapters!.isNotEmpty) {
+      _chapterUnlockedStatus[_chapters![0].id] = true;
+    }
+    
     if (_courseAccessData?['completedLessons'] != null) {
       final completedList = _courseAccessData!['completedLessons'] as List;
       _completedLessonsCount = completedList.length;
@@ -482,21 +496,33 @@ class _ProfessionalLearningScreenState
         _lessonCompletionStatus[id.toString()] = true;
       }
     }
+    
     if (_courseAccessData?['completedSections'] != null) {
       final completedSectionsList =
           _courseAccessData!['completedSections'] as List;
       final completedSet =
           completedSectionsList.map((e) => e.toString()).toSet();
+      
+      // Mark completed chapters
       for (var id in completedSectionsList) {
         _chapterCompletionStatus[id.toString()] = true;
       }
+      
+      // Unlock chapters based on completion
       if (_chapters != null) {
         for (int i = 0; i < _chapters!.length; i++) {
+          // First chapter is always unlocked
+          if (i == 0) {
+            _chapterUnlockedStatus[_chapters![i].id] = true;
+          }
+          // Unlock next chapter if current is completed
           if (completedSet.contains(_chapters![i].id) &&
               i + 1 < _chapters!.length) {
-            _chapterCompletionStatus[_chapters![i + 1].id] = true;
+            _chapterUnlockedStatus[_chapters![i + 1].id] = true;
           }
         }
+        
+        // Find current section index (first incomplete chapter)
         _currentSectionIndex = _chapters!.length - 1;
         for (int i = 0; i < _chapters!.length; i++) {
           if (!completedSet.contains(_chapters![i].id)) {
@@ -506,6 +532,7 @@ class _ProfessionalLearningScreenState
         }
       }
     }
+    
     _completedChaptersCount = _chapterCompletionStatus.values.where((v) => v).length;
     _xpPoints = (_completedLessonsCount * 10) + (_completedChaptersCount * 100);
     // Pre-mark already-completed chapters so no stale celebration fires
@@ -1179,7 +1206,7 @@ class _ProfessionalLearningScreenState
           section: s,
           chapterIndex: i,
           lessons: _chapterLessons[s.id] ?? [],
-          isUnlocked: _chapterCompletionStatus[s.id] ?? false,
+          isUnlocked: _chapterUnlockedStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
           isChapterCompleted: _chapterCompletionStatus[s.id] ?? false,
           lessonCompletionStatus: _lessonCompletionStatus,
@@ -1210,7 +1237,7 @@ class _ProfessionalLearningScreenState
           section: s,
           chapterIndex: i,
           lessons: _chapterLessons[s.id] ?? [],
-          isUnlocked: _chapterCompletionStatus[s.id] ?? false,
+          isUnlocked: _chapterUnlockedStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
           isChapterCompleted: _chapterCompletionStatus[s.id] ?? false,
           lessonCompletionStatus: _lessonCompletionStatus,
