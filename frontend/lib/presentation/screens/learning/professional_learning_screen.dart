@@ -386,7 +386,8 @@ class _ProfessionalLearningScreenState
 
     // Call backend API to mark section as complete
     try {
-      await ref.read(enrollmentRepositoryProvider).completeSection(enrollmentId, chapter.id);
+      final enrollmentNotifier = ref.read(enrollmentNotifierProvider.notifier);
+      await enrollmentNotifier.completeSection(enrollmentId, chapter.id, _course?.id ?? '');
       debugPrint('Successfully marked chapter ${chapter.id} as complete');
     } catch (e) {
       debugPrint('Error marking chapter complete: $e');

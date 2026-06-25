@@ -59,7 +59,7 @@ const lessonSchema = new mongoose.Schema({
   }],
   lessonType: {
     type: String,
-    enum: ['video', 'notes', 'quiz', 'mixed', 'Video + Notes', 'Video + Quiz', 'Notes + Quiz', 'Content'],
+    enum: ['video', 'Video', 'notes', 'Notes', 'quiz', 'Quiz', 'mixed', 'Mixed', 'Video + Notes', 'Video + Quiz', 'Notes + Quiz', 'Content'],
     default: 'Content'
   },
   isPublished: {

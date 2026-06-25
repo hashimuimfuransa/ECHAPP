@@ -3701,8 +3701,8 @@ class _ProfessionalLessonScreenState
     if (_isLessonCompleted || _isCompletingLesson || _lesson == null) return;
     setState(() => _isCompletingLesson = true);
     try {
-      final enrollmentRepo = ref.read(enrollmentRepositoryProvider);
-      await enrollmentRepo.markLessonComplete(_lesson!.id);
+      final enrollmentNotifier = ref.read(enrollmentNotifierProvider.notifier);
+      await enrollmentNotifier.markLessonComplete(_lesson!.id, _lesson!.courseId);
       setState(() {
         _isLessonCompleted = true;
         _checklist['complete'] = true;

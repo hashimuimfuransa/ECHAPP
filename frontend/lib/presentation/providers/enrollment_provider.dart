@@ -130,4 +130,38 @@ class EnrollmentNotifier extends AsyncNotifier<void> {
       state = AsyncValue.error(e, StackTrace.current);
     }
   }
+
+  Future<void> markLessonComplete(String lessonId, String courseId) async {
+    final repository = ref.read(enrollmentRepositoryProvider);
+    state = const AsyncValue.loading();
+    
+    try {
+      await repository.markLessonComplete(lessonId);
+      state = const AsyncValue.data(null);
+      
+      // Refresh all relevant providers to update progress across app
+      ref.invalidate(enrolledCoursesProvider);
+      ref.invalidate(courseAccessProvider(courseId));
+      ref.invalidate(userEnrollmentsProvider);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<void> completeSection(String enrollmentId, String sectionId, String courseId) async {
+    final repository = ref.read(enrollmentRepositoryProvider);
+    state = const AsyncValue.loading();
+    
+    try {
+      await repository.completeSection(enrollmentId, sectionId);
+      state = const AsyncValue.data(null);
+      
+      // Refresh all relevant providers to update progress across app
+      ref.invalidate(enrolledCoursesProvider);
+      ref.invalidate(courseAccessProvider(courseId));
+      ref.invalidate(userEnrollmentsProvider);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
 }
