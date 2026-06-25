@@ -66,6 +66,7 @@ router.put('/students/:id/toggle-status', protect, authorize('admin'), toggleStu
 router.put('/students/:id/reset-password', protect, authorize('admin'), resetStudentPassword);
 router.put('/students/:id', protect, authorize('admin'), updateStudent);
 router.delete('/courses/:courseId/enrollments/:studentId', protect, authorize('admin'), unenrollStudent);
+router.put('/enrollments/:id/permissions', protect, authorize('admin'), updateEnrollmentPermissions);
 
 // Manual expiration check
 router.post('/trigger-expiration-check', protect, authorize('admin'), manualExpirationCheck);

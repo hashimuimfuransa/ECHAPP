@@ -446,8 +446,6 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     final phoneController = TextEditingController(text: student.phone ?? '');
     String selectedRole = student.role;
     bool isLoading = false;
-    bool canAccessLiveSessions = student.canAccessLiveSessions;
-    bool canAccessChapters = student.canAccessChapters;
 
     showDialog(
       context: context,
@@ -549,36 +547,6 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       if (value != null) setDialogState(() => selectedRole = value);
                     },
                   ),
-                  const SizedBox(height: 20),
-                  const Divider(),
-                  const SizedBox(height: 15),
-                  Text(
-                    AppLocalizations.of(context)!.accessPermissions,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.blackColor,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  SwitchListTile(
-                    title: Text(AppLocalizations.of(context)!.canAccessLiveSessions),
-                    subtitle: Text(AppLocalizations.of(context)!.canAccessLiveSessionsDescription),
-                    value: canAccessLiveSessions,
-                    onChanged: (value) {
-                      setDialogState(() => canAccessLiveSessions = value);
-                    },
-                    activeColor: AppTheme.primaryGreen,
-                  ),
-                  SwitchListTile(
-                    title: Text(AppLocalizations.of(context)!.canAccessChapters),
-                    subtitle: Text(AppLocalizations.of(context)!.canAccessChaptersDescription),
-                    value: canAccessChapters,
-                    onChanged: (value) {
-                      setDialogState(() => canAccessChapters = value);
-                    },
-                    activeColor: AppTheme.primaryGreen,
-                  ),
                 ],
               ),
             ),
@@ -608,8 +576,6 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                               : null,
                           phone: phoneController.text.trim(),
                           role: selectedRole,
-                          canAccessLiveSessions: canAccessLiveSessions,
-                          canAccessChapters: canAccessChapters,
                         );
                         if (mounted) {
                           Navigator.pop(context);
@@ -1559,20 +1525,33 @@ class _StudentEnrollmentsModalState extends State<StudentEnrollmentsModal> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      IconButton(
-                        icon: _isUnenrolling
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.remove_circle_outline, color: Colors.red),
-                        onPressed: _isUnenrolling
-                            ? null
-                            : () => _showUnenrollConfirmation(context, enrollment),
-                        tooltip: 'Unenroll from course',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.settings, color: AppTheme.primaryGreen, size: 18),
+                            onPressed: () => _showEnrollmentPermissionsDialog(context, enrollment),
+                            tooltip: 'Manage permissions',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: _isUnenrolling
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.remove_circle_outline, color: Colors.red, size: 18),
+                            onPressed: _isUnenrolling
+                                ? null
+                                : () => _showUnenrollConfirmation(context, enrollment),
+                            tooltip: 'Unenroll from course',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1704,6 +1683,102 @@ class _StudentEnrollmentsModalState extends State<StudentEnrollmentsModal> {
         });
       }
     }
+  }
+
+  void _showEnrollmentPermissionsDialog(BuildContext context, Enrollment enrollment) {
+    bool canAccessLiveSessions = enrollment.canAccessLiveSessions;
+    bool canAccessChapters = enrollment.canAccessChapters;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.settings, color: AppTheme.primaryGreen),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Permissions - ${_getCourseTitle(enrollment)}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                title: Text(AppLocalizations.of(context)!.canAccessLiveSessions),
+                subtitle: Text(AppLocalizations.of(context)!.canAccessLiveSessionsDescription),
+                value: canAccessLiveSessions,
+                onChanged: isLoading ? null : (value) {
+                  setDialogState(() => canAccessLiveSessions = value);
+                },
+                activeColor: AppTheme.primaryGreen,
+              ),
+              SwitchListTile(
+                title: Text(AppLocalizations.of(context)!.canAccessChapters),
+                subtitle: Text(AppLocalizations.of(context)!.canAccessChaptersDescription),
+                value: canAccessChapters,
+                onChanged: isLoading ? null : (value) {
+                  setDialogState(() => canAccessChapters = value);
+                },
+                activeColor: AppTheme.primaryGreen,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: isLoading ? null : () async {
+                setDialogState(() => isLoading = true);
+                try {
+                  await _adminService.updateEnrollmentPermissions(
+                    enrollment.id,
+                    canAccessLiveSessions: canAccessLiveSessions,
+                    canAccessChapters: canAccessChapters,
+                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Permissions updated successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    widget.onClose();
+                  }
+                } catch (e) {
+                  setDialogState(() => isLoading = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.save),
+              label: const Text('Save'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen, foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

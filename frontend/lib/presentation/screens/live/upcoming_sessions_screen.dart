@@ -44,20 +44,35 @@ class _UpcomingSessionsScreenState extends ConsumerState<UpcomingSessionsScreen>
     final authState = ref.read(authProvider);
     final user = authState?.user;
     
-    // Check if student has permission to access live sessions
-    if (!_isTeacher && user != null && !user.canAccessLiveSessions) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.noPermissionToAccessLiveSessions),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-          context.pop();
-        }
-      });
+    // For teachers, always allow access
+    if (_isTeacher) return;
+    
+    // For students, check if they have any enrollment with live session access
+    if (user != null) {
+      final enrolledCoursesAsync = ref.read(enrolledCoursesProvider);
+      final enrolledCourses = enrolledCoursesAsync.when(
+        data: (courses) => courses,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      // Check if any enrollment allows live session access
+      final hasAccess = enrolledCourses.any((enrollment) => enrollment.canAccessLiveSessions);
+      
+      if (!hasAccess) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.noPermissionToAccessLiveSessions),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            context.pop();
+          }
+        });
+      }
     }
   }
 

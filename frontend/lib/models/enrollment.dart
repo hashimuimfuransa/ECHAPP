@@ -16,6 +16,8 @@ class Enrollment {
   final DateTime? accessExpirationDate;
   final double? rating;
   final String? feedback;
+  final bool canAccessLiveSessions;
+  final bool canAccessChapters;
   
   // Populated fields (from backend populate)
   final User? user;
@@ -36,6 +38,8 @@ class Enrollment {
     this.accessExpirationDate,
     this.rating,
     this.feedback,
+    this.canAccessLiveSessions = true,
+    this.canAccessChapters = true,
     this.user,
     this.course,
   });
@@ -156,6 +160,8 @@ class Enrollment {
           : null,
       rating: (json['rating'] as num?)?.toDouble(),
       feedback: json['feedback'] as String?,
+      canAccessLiveSessions: json['canAccessLiveSessions'] != false,
+      canAccessChapters: json['canAccessChapters'] != false,
       user: json['user'] != null 
           ? User.fromJson(json['user'] as Map<String, dynamic>)
           : null,
@@ -179,6 +185,8 @@ class Enrollment {
       if (accessExpirationDate != null) 'accessExpirationDate': accessExpirationDate!.toIso8601String(),
       'rating': rating,
       'feedback': feedback,
+      'canAccessLiveSessions': canAccessLiveSessions,
+      'canAccessChapters': canAccessChapters,
       if (user != null) 'user': user!.toJson(),
       if (course != null) 'course': course!.toJson(),
     };

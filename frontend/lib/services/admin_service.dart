@@ -227,8 +227,6 @@ class AdminService {
     String? phone,
     String? role,
     bool? isActive,
-    bool? canAccessLiveSessions,
-    bool? canAccessChapters,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -237,8 +235,6 @@ class AdminService {
       if (phone != null) body['phone'] = phone;
       if (role != null) body['role'] = role;
       if (isActive != null) body['isActive'] = isActive;
-      if (canAccessLiveSessions != null) body['canAccessLiveSessions'] = canAccessLiveSessions;
-      if (canAccessChapters != null) body['canAccessChapters'] = canAccessChapters;
 
       final response = await _apiClient.put(
         '${ApiConfig.admin}/students/$studentId',
@@ -473,6 +469,34 @@ class AdminService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to unenroll student: $e');
+    }
+  }
+
+  /// Update enrollment permissions (admin)
+  Future<void> updateEnrollmentPermissions(
+    String enrollmentId, {
+    required bool canAccessLiveSessions,
+    required bool canAccessChapters,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'canAccessLiveSessions': canAccessLiveSessions,
+        'canAccessChapters': canAccessChapters,
+      };
+
+      final response = await _apiClient.put(
+        '${ApiConfig.admin}/enrollments/$enrollmentId/permissions',
+        body: body,
+      );
+      response.validateStatus();
+      
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      if (jsonBody['success'] != true) {
+        throw ApiException(jsonBody['message'] as String? ?? 'Failed to update enrollment permissions');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update enrollment permissions: $e');
     }
   }
 

@@ -52,6 +52,14 @@ const enrollmentSchema = new mongoose.Schema({
     type: String,
     maxlength: [1000, 'Feedback cannot exceed 1000 characters'],
     default: null
+  },
+  canAccessLiveSessions: {
+    type: Boolean,
+    default: true
+  },
+  canAccessChapters: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

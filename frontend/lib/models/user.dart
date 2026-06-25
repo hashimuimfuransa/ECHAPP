@@ -15,8 +15,6 @@ class User {
   final String? midTermGoal;
   final String? longTermGoal;
   final bool hasCompletedOnboarding;
-  final bool canAccessLiveSessions;
-  final bool canAccessChapters;
 
   User({
     required this.id,
@@ -34,8 +32,6 @@ class User {
     this.midTermGoal,
     this.longTermGoal,
     this.hasCompletedOnboarding = false,
-    this.canAccessLiveSessions = true,
-    this.canAccessChapters = true,
   });
 
   /// Alias for fullName to maintain compatibility with legacy code
@@ -92,8 +88,6 @@ class User {
       'midTermGoal': midTermGoal,
       'longTermGoal': longTermGoal,
       'hasCompletedOnboarding': hasCompletedOnboarding,
-      'canAccessLiveSessions': canAccessLiveSessions,
-      'canAccessChapters': canAccessChapters,
     };
   }
 

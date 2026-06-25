@@ -1499,8 +1499,6 @@ const updateStudent = async (req, res) => {
     if (phone !== undefined) user.phone = phone.trim() || undefined;
     if (role !== undefined) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
-    if (canAccessLiveSessions !== undefined) user.canAccessLiveSessions = canAccessLiveSessions;
-    if (canAccessChapters !== undefined) user.canAccessChapters = canAccessChapters;
 
     await user.save();
 
@@ -2159,6 +2157,32 @@ const getTeacherActivity = async (req, res) => {
   }
 };
 
+// Update enrollment permissions (admin only)
+const updateEnrollmentPermissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { canAccessLiveSessions, canAccessChapters } = req.body;
+
+    const Enrollment = require('../models/Enrollment');
+    const enrollment = await Enrollment.findById(id);
+    if (!enrollment) return sendError(res, 'Enrollment not found', 404);
+
+    if (canAccessLiveSessions !== undefined) enrollment.canAccessLiveSessions = canAccessLiveSessions;
+    if (canAccessChapters !== undefined) enrollment.canAccessChapters = canAccessChapters;
+
+    await enrollment.save();
+
+    sendSuccess(res, {
+      id: enrollment._id,
+      canAccessLiveSessions: enrollment.canAccessLiveSessions,
+      canAccessChapters: enrollment.canAccessChapters,
+    }, 'Enrollment permissions updated successfully');
+  } catch (error) {
+    console.error('Error in updateEnrollmentPermissions:', error);
+    sendError(res, 'Failed to update enrollment permissions', 500, error.message);
+  }
+};
+
 module.exports = {
   getStudents,
   getAdmins,
@@ -2187,6 +2211,7 @@ module.exports = {
   getUserDeviceInfo,
   resetUserDevice,
   toggleStudentStatus,
+  updateEnrollmentPermissions,
   resetStudentPassword,
   unenrollStudent
 };

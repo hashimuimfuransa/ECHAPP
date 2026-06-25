@@ -99,14 +99,6 @@ const userSchema = new mongoose.Schema({
   hasCompletedOnboarding: {
     type: Boolean,
     default: false
-  },
-  canAccessLiveSessions: {
-    type: Boolean,
-    default: true
-  },
-  canAccessChapters: {
-    type: Boolean,
-    default: true
   }
 }, {
   timestamps: true

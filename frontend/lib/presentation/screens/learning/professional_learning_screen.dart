@@ -193,20 +193,36 @@ class _ProfessionalLearningScreenState
     final authState = ref.read(authProvider);
     final user = authState?.user;
     
-    // Check if student has permission to access chapters and materials
-    if (user != null && !user.canAccessChapters) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.noPermissionToAccessChapters),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-          context.pop();
-        }
-      });
+    // For students, check if they have enrollment access for this course
+    if (user != null && user.role == 'student') {
+      final enrolledCoursesAsync = ref.read(enrolledCoursesProvider);
+      final enrolledCourses = enrolledCoursesAsync.when(
+        data: (courses) => courses,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      // Find the enrollment for this course
+      final enrollment = enrolledCourses.firstWhere(
+        (e) => e.courseId == widget.courseId,
+        orElse: () => enrolledCourses.isNotEmpty ? enrolledCourses.first : enrolledCourses.first,
+      );
+
+      // Check if enrollment allows chapter access
+      if (!enrollment.canAccessChapters) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.noPermissionToAccessChapters),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            context.pop();
+          }
+        });
+      }
     }
   }
   
