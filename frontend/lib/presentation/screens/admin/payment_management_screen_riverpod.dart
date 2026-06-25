@@ -342,6 +342,11 @@ class _PaymentManagementScreenState extends ConsumerState<PaymentManagementScree
                         payment.user?.email ?? '',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
+                      if (payment.user?.phone != null && payment.user!.phone!.isNotEmpty)
+                        Text(
+                          payment.user!.phone!,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
                     ],
                   ),
                 ),

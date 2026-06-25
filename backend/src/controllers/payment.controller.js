@@ -150,7 +150,7 @@ const getAllPayments = async (req, res) => {
     }
     
     const payments = await Payment.find(filter)
-      .populate('userId', 'fullName email')
+      .populate('userId', 'fullName email phone')
       .populate('courseId', 'title price')
       .limit(finalLimit)
       .skip((page - 1) * finalLimit)

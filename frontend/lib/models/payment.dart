@@ -141,11 +141,13 @@ class PaymentUser {
   final String id;
   final String fullName;
   final String email;
+  final String? phone;
 
   PaymentUser({
     required this.id,
     required this.fullName,
     required this.email,
+    this.phone,
   });
 
   factory PaymentUser.fromJson(Map<String, dynamic> json) {
@@ -153,6 +155,7 @@ class PaymentUser {
       id: (json['id'] as String?) ?? (json['_id'] as String?) ?? '',
       fullName: json['fullName'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      phone: json['phone'] as String?,
     );
   }
 }
