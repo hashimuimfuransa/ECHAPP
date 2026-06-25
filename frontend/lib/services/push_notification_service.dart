@@ -11,6 +11,11 @@ import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Background message: ${message.notification?.title}');
+  
+  // Initialize Flutter bindings for background execution
+  // This is required for using Flutter plugins in background isolates
+  // Note: On Android, this may not work properly due to OS limitations
+  // For reliable background notifications, rely on FCM's system notifications
 }
 
 class PushNotificationService {

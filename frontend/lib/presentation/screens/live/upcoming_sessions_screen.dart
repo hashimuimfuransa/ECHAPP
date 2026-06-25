@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
@@ -103,14 +104,14 @@ class _UpcomingSessionsScreenState extends ConsumerState<UpcomingSessionsScreen>
         _courses = {};
       } else {
         // Load student's enrolled courses sessions
-        final enrolledCoursesAsync = ref.read(enrolledCoursesProvider);
-        final enrolledCourses = enrolledCoursesAsync.when(
-          data: (courses) => courses,
+        final userEnrollmentsAsync = ref.read(userEnrollmentsProvider);
+        final enrollments = userEnrollmentsAsync.when(
+          data: (enrollments) => enrollments,
           loading: () => [],
           error: (_, __) => [],
         );
 
-        if (enrolledCourses.isEmpty) {
+        if (enrollments.isEmpty) {
           setState(() {
             _isLoading = false;
             _allSessions = [];
@@ -124,7 +125,13 @@ class _UpcomingSessionsScreenState extends ConsumerState<UpcomingSessionsScreen>
         _sessionsByCourse = {};
         _courses = {};
 
-        for (final course in enrolledCourses) {
+        for (final enrollment in enrollments) {
+          // Skip if user doesn't have live session access for this enrollment
+          if (!enrollment.canAccessLiveSessions) continue;
+          
+          final course = enrollment.course;
+          if (course == null) continue;
+          
           _courses[course.id] = course;
 
           try {

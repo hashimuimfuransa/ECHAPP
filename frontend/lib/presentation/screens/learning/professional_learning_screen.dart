@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/services/api/section_service.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/section.dart';
 import 'package:excellencecoachinghub/models/lesson.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
@@ -193,37 +194,8 @@ class _ProfessionalLearningScreenState
     final authState = ref.read(authProvider);
     final user = authState?.user;
     
-    // For students, check if they have enrollment access for this course
-    if (user != null && user.role == 'student') {
-      final enrolledCoursesAsync = ref.read(enrolledCoursesProvider);
-      final enrolledCourses = enrolledCoursesAsync.when(
-        data: (courses) => courses,
-        loading: () => [],
-        error: (_, __) => [],
-      );
-
-      // Find the enrollment for this course
-      final enrollment = enrolledCourses.firstWhere(
-        (e) => e.courseId == widget.courseId,
-        orElse: () => enrolledCourses.isNotEmpty ? enrolledCourses.first : enrolledCourses.first,
-      );
-
-      // Check if enrollment allows chapter access
-      if (!enrollment.canAccessChapters) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context)!.noPermissionToAccessChapters),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            context.pop();
-          }
-        });
-      }
-    }
+    // For students, we'll filter content based on enrollment permissions
+    // No need to block the entire screen - just show content from courses they have access to
   }
   
   /// Load live sessions and switch to the Live tab if any exist
@@ -1134,6 +1106,33 @@ class _ProfessionalLearningScreenState
   //  CHAPTERS TAB
   // ─────────────────────────────────────────────
   Widget _buildChaptersTab() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has chapter access for this course
+    if (user != null && user.role == 'student') {
+      final userEnrollmentsAsync = ref.read(userEnrollmentsProvider);
+      final enrollments = userEnrollmentsAsync.when(
+        data: (enrollments) => enrollments,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      final enrollment = enrollments.cast<Enrollment?>().firstWhere(
+        (e) => e != null && e.courseId == widget.courseId,
+        orElse: () => null,
+      );
+
+      // If enrollment exists and doesn't have chapter access, show permission denied
+      if (enrollment != null && !enrollment.canAccessChapters) {
+        return _buildEmptyState(
+          icon: Icons.lock_rounded,
+          title: AppLocalizations.of(context)!.noPermissionToAccessChapters,
+          subtitle: 'Please contact your administrator for access to course materials',
+        );
+      }
+    }
+
     final chapters = _filteredChapters ?? _chapters;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final screenW = MediaQuery.of(context).size.width;
@@ -1352,6 +1351,33 @@ class _ProfessionalLearningScreenState
   }
 
   Widget _buildLiveSessionsTab() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has live session access for this course
+    if (user != null && user.role == 'student') {
+      final userEnrollmentsAsync = ref.read(userEnrollmentsProvider);
+      final enrollments = userEnrollmentsAsync.when(
+        data: (enrollments) => enrollments,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      final enrollment = enrollments.cast<Enrollment?>().firstWhere(
+        (e) => e != null && e.courseId == widget.courseId,
+        orElse: () => null,
+      );
+
+      // If enrollment exists and doesn't have live session access, show permission denied
+      if (enrollment != null && !enrollment.canAccessLiveSessions) {
+        return _buildEmptyState(
+          icon: Icons.lock_rounded,
+          title: AppLocalizations.of(context)!.noPermissionToAccessLiveSessions,
+          subtitle: 'Please contact your administrator for access to live sessions',
+        );
+      }
+    }
+
     // Load sessions exactly once
     if (!_sessionsLoaded && !_isLoadingSessions) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2206,6 +2232,33 @@ class _ProfessionalLearningScreenState
   //  MATERIALS TAB
   // ─────────────────────────────────────────────
   Widget _buildMaterialsTab() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has chapter access for this course
+    if (user != null && user.role == 'student') {
+      final userEnrollmentsAsync = ref.read(userEnrollmentsProvider);
+      final enrollments = userEnrollmentsAsync.when(
+        data: (enrollments) => enrollments,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      final enrollment = enrollments.cast<Enrollment?>().firstWhere(
+        (e) => e != null && e.courseId == widget.courseId,
+        orElse: () => null,
+      );
+
+      // If enrollment exists and doesn't have chapter access, show permission denied
+      if (enrollment != null && !enrollment.canAccessChapters) {
+        return _buildEmptyState(
+          icon: Icons.lock_rounded,
+          title: AppLocalizations.of(context)!.noPermissionToAccessChapters,
+          subtitle: 'Please contact your administrator for access to course materials',
+        );
+      }
+    }
+
     if (_chapters == null || _chapters!.isEmpty) {
       return _buildEmptyState(
           icon: Icons.folder_open_rounded,
@@ -2646,6 +2699,33 @@ class _ProfessionalLearningScreenState
   //  LIBRARY TAB
   // ─────────────────────────────────────────────
   Widget _buildLibraryTab() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has chapter access for this course
+    if (user != null && user.role == 'student') {
+      final userEnrollmentsAsync = ref.read(userEnrollmentsProvider);
+      final enrollments = userEnrollmentsAsync.when(
+        data: (enrollments) => enrollments,
+        loading: () => [],
+        error: (_, __) => [],
+      );
+
+      final enrollment = enrollments.cast<Enrollment?>().firstWhere(
+        (e) => e != null && e.courseId == widget.courseId,
+        orElse: () => null,
+      );
+
+      // If enrollment exists and doesn't have chapter access, show permission denied
+      if (enrollment != null && !enrollment.canAccessChapters) {
+        return _buildEmptyState(
+          icon: Icons.lock_rounded,
+          title: AppLocalizations.of(context)!.noPermissionToAccessChapters,
+          subtitle: 'Please contact your administrator for access to course materials',
+        );
+      }
+    }
+
     if (_isLoadingBooks) {
       return Center(
         child: CircularProgressIndicator(color: _DT.primary),

@@ -4378,8 +4378,14 @@ class _ProfessionalLessonScreenState
     return _quizAttempts.isNotEmpty ? 'Retake quiz' : 'Start quiz';
   }
 
-  void _navigateTo(Lesson lesson) {
-    context.pushReplacement('/lesson/${lesson.id}');
+  Future<void> _navigateTo(Lesson lesson) async {
+    // Mark current lesson as complete before navigating to next
+    if (!_isLessonCompleted && _lesson != null) {
+      await _markComplete();
+    }
+    if (mounted) {
+      context.pushReplacement('/lesson/${lesson.id}');
+    }
   }
 
   // Check if current lesson has completed downloads

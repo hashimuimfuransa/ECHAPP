@@ -300,7 +300,7 @@ const updateEnrollmentProgress = async (req, res) => {
   }
 };
 
-// Mark section as completed (all lessons in section)
+// Mark section as completed (validates that lessons are actually completed)
 const completeSection = async (req, res) => {
   try {
     const { id } = req.params; // enrollment id
@@ -324,33 +324,29 @@ const completeSection = async (req, res) => {
     
     const sectionLessonIds = sectionLessons.map(l => l._id.toString());
     
-    // Add missing lessons to completedLessons
-    let addedCount = 0;
-    sectionLessonIds.forEach(lessonId => {
-      // Ensure we compare strings to strings or use Mongoose's way
-      const alreadyCompleted = enrollment.completedLessons.some(id => id.toString() === lessonId);
-      if (!alreadyCompleted) {
-        enrollment.completedLessons.push(lessonId);
-        addedCount++;
-      }
-    });
+    // Check if user has completed at least one lesson in this section
+    const completedInThisSection = sectionLessonIds.filter(lessonId => 
+      enrollment.completedLessons.some(id => id.toString() === lessonId)
+    );
     
-    if (addedCount > 0 || enrollment.progress < 100) {
-      // Calculate real progress percentage
-      const totalLessons = await Lesson.countDocuments({ courseId: new mongoose.Types.ObjectId(enrollment.courseId) });
-      enrollment.progress = totalLessons > 0 
-        ? Math.round((enrollment.completedLessons.length / totalLessons) * 100) 
-        : 0;
-      
-      if (enrollment.progress === 100) {
-        enrollment.completionStatus = 'completed';
-        enrollment.certificateEligible = true;
-      } else {
-        enrollment.completionStatus = 'in-progress';
-      }
-      
-      await enrollment.save();
+    if (completedInThisSection.length === 0) {
+      return sendError(res, 'Please complete at least one lesson in this section before marking it as complete', 400);
     }
+    
+    // Calculate real progress percentage based on actual completed lessons
+    const totalLessons = await Lesson.countDocuments({ courseId: new mongoose.Types.ObjectId(enrollment.courseId) });
+    enrollment.progress = totalLessons > 0 
+      ? Math.round((enrollment.completedLessons.length / totalLessons) * 100) 
+      : 0;
+    
+    if (enrollment.progress === 100) {
+      enrollment.completionStatus = 'completed';
+      enrollment.certificateEligible = true;
+    } else {
+      enrollment.completionStatus = 'in-progress';
+    }
+    
+    await enrollment.save();
     
     sendSuccess(res, transformUrls(enrollment), 'Section marked as completed');
   } catch (error) {
