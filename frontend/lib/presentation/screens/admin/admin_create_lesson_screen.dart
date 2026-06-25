@@ -42,6 +42,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
   String? _notesPdfUrl; // Store direct PDF path from S3
   bool _processNotesWithAI = false; // Whether to process notes with AI
   int _duration = 0;
+  int? _lessonOrder; // Store lesson order for updates
   bool _isLoading = false;
   bool _isUploadingVideo = false;
   bool _isUploadingDocument = false; // Track document upload status (for AI notes)
@@ -131,6 +132,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           _selectedVideoId = lesson.videoId;
           _notesPdfUrl = lesson.notesPdfUrl;
           _duration = lesson.duration;
+          _lessonOrder = lesson.order;
           
           // Load materials if they exist
           if (lesson.materials != null && lesson.materials!.isNotEmpty) {
@@ -313,6 +315,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             videoId: _selectedVideoId,
             notesPdfUrl: _notesPdfUrl,
             duration: _duration,
+            order: _lessonOrder, // Include order to satisfy backend validation
             quizId: createdQuizId,
             lessonType: _determineLessonType(),
             materials: _documentPath != null ? [_documentPath!] : null,
@@ -537,13 +540,13 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
     final hasNotes = _documentPath != null || _notesPdfUrl != null;
     final hasQuiz = _includeQuiz;
     
-    if (hasVideo && hasNotes && hasQuiz) return 'Mixed';
+    if (hasVideo && hasNotes && hasQuiz) return 'mixed';
     if (hasVideo && hasNotes) return 'Video + Notes';
     if (hasVideo && hasQuiz) return 'Video + Quiz';
     if (hasNotes && hasQuiz) return 'Notes + Quiz';
-    if (hasVideo) return 'Video';
-    if (hasNotes) return 'Notes';
-    if (hasQuiz) return 'Quiz';
+    if (hasVideo) return 'video';
+    if (hasNotes) return 'notes';
+    if (hasQuiz) return 'quiz';
     return 'Content';
   }
   
@@ -1534,7 +1537,9 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _selectedVideoId,
+                        value: _selectedVideoId != null && _videos.any((v) => (v.videoId ?? v.url) == _selectedVideoId)
+                            ? _selectedVideoId
+                            : null,
                         decoration: const InputDecoration(
                           labelText: 'Select Existing Video',
                           border: OutlineInputBorder(),
@@ -1927,7 +1932,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
             
             // Quiz Type
             DropdownButtonFormField<String>(
-              initialValue: _selectedQuizType,
+              value: _selectedQuizType,
               decoration: const InputDecoration(
                 labelText: 'Quiz Type',
                 border: OutlineInputBorder(),
@@ -2290,7 +2295,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
           
           // Question Type Selection
           DropdownButtonFormField<String>(
-            initialValue: _selectedQuestionType,
+            value: _selectedQuestionType,
             decoration: const InputDecoration(
               labelText: 'Question Type',
               border: OutlineInputBorder(),
@@ -2361,7 +2366,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
               const SizedBox(width: 15),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  initialValue: _questionDifficulty,
+                  value: _questionDifficulty,
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     border: OutlineInputBorder(),
@@ -2653,7 +2658,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
-                  initialValue: _dragItemTargets[index].isEmpty ? null : _dragItemTargets[index],
+                  value: _dragItemTargets[index].isEmpty ? null : _dragItemTargets[index],
                   decoration: InputDecoration(
                     labelText: 'Target Zone',
                     border: const OutlineInputBorder(),
@@ -2887,7 +2892,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
         
         // Programming Language Selection
         DropdownButtonFormField<String>(
-          initialValue: _selectedProgrammingLanguage,
+          value: _selectedProgrammingLanguage,
           decoration: const InputDecoration(
             labelText: 'Programming Language',
             border: OutlineInputBorder(),
@@ -3112,7 +3117,7 @@ class _AdminCreateLessonScreenState extends ConsumerState<AdminCreateLessonScree
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      initialValue: _maxAttempts,
+                      value: _maxAttempts,
                       decoration: const InputDecoration(
                         labelText: 'Max Attempts',
                         border: OutlineInputBorder(),

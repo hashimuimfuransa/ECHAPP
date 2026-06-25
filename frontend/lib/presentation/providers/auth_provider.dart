@@ -768,6 +768,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
           await _storageManager.saveUserPhone(phone);
         }
         
+        // Save interests to storage
+        if (interests != null) {
+          await _storageManager.saveUserInterests(interests);
+        }
+        
+        // Save onboarding completion to storage for faster access
+        if (hasCompletedOnboarding != null) {
+          await _storageManager.saveHasCompletedOnboarding(hasCompletedOnboarding);
+        }
+        
         state = state.copyWith(isLoading: false, isEmailLoading: false, isGoogleLoading: false, user: updatedUser, error: 'Profile updated successfully!');
       } catch (updateError) {
         // If profile update fails with auth error, try to refresh token once
@@ -791,6 +801,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // Save updated phone number to storage
           if (phone != null) {
             await _storageManager.saveUserPhone(phone);
+          }
+          
+          // Save interests to storage
+          if (interests != null) {
+            await _storageManager.saveUserInterests(interests);
           }
           
           // Save onboarding completion to storage for faster access

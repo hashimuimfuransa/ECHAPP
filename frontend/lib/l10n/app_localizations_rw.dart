@@ -2848,6 +2848,32 @@ class AppLocalizationsRw extends AppLocalizations {
   String get paymentInitiatedSuccess => 'Ubwishyu bwawe bwatangiye neza.';
 
   @override
+  String get accessPermissions => 'Uburyo Bwo Kwinjira';
+
+  @override
+  String get canAccessLiveSessions =>
+      'Ashobora Kwinjira Muri Ibyerekeye Ibyerekeye';
+
+  @override
+  String get canAccessLiveSessionsDescription =>
+      'Emera umunyeshuri kwinjira muri ibyerekeye byo mu mwanya';
+
+  @override
+  String get canAccessChapters => 'Ashobora Kwinjira Muri Ibice N\'ibikoresho';
+
+  @override
+  String get canAccessChaptersDescription =>
+      'Emera umunyeshuri kureba ibiri muri somo';
+
+  @override
+  String get noPermissionToAccessLiveSessions =>
+      'Nta burenganzira bw\'ukwinjira muri ibyerekeye byo mu mwanya. Bwira umuyobozi wawe.';
+
+  @override
+  String get noPermissionToAccessChapters =>
+      'Nta burenganzira bw\'ukwinjira muri ibikoresho bya somo. Bwira umuyobozi wawe.';
+
+  @override
   String get nextSteps => 'Intambwe Zikurikira:';
 
   @override

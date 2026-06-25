@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @enrolled.
   ///
   /// In en, this message translates to:
-  /// **'ENROLLED'**
+  /// **'Enrolled'**
   String get enrolled;
 
   /// No description provided for @dashboard.
@@ -5575,6 +5575,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your payment has been initiated successfully.'**
   String get paymentInitiatedSuccess;
+
+  /// No description provided for @accessPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Access Permissions'**
+  String get accessPermissions;
+
+  /// No description provided for @canAccessLiveSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Can Access Live Sessions'**
+  String get canAccessLiveSessions;
+
+  /// No description provided for @canAccessLiveSessionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow student to join live sessions'**
+  String get canAccessLiveSessionsDescription;
+
+  /// No description provided for @canAccessChapters.
+  ///
+  /// In en, this message translates to:
+  /// **'Can Access Chapters & Materials'**
+  String get canAccessChapters;
+
+  /// No description provided for @canAccessChaptersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow student to view course content'**
+  String get canAccessChaptersDescription;
+
+  /// No description provided for @noPermissionToAccessLiveSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to access live sessions. Please contact your administrator.'**
+  String get noPermissionToAccessLiveSessions;
+
+  /// No description provided for @noPermissionToAccessChapters.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to access course materials. Please contact your administrator.'**
+  String get noPermissionToAccessChapters;
 
   /// No description provided for @nextSteps.
   ///

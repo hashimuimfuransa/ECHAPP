@@ -151,11 +151,6 @@ final recommendedCoursesProvider = FutureProvider<List<Course>>((ref) async {
   );
 });
 
-final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
-  final enrollmentRepository = ref.read(enrollmentRepositoryProvider);
-  return await enrollmentRepository.getEnrollments();
-});
-
 // Category providers with optimized loading
 final allCategoriesProvider = Provider<List<dynamic>>((ref) {
   // Use backend categories only - no fallback to mock data

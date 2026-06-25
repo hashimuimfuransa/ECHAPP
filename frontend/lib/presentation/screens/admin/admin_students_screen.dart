@@ -13,6 +13,7 @@ import 'package:excellencecoachinghub/models/user.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
   final String? studentId;
@@ -161,6 +162,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
             studentDetail: studentDetail,
             onClose: () => Navigator.pop(context),
             isLoading: false,
+            studentId: studentId,
           ),
         );
       }
@@ -444,6 +446,8 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     final phoneController = TextEditingController(text: student.phone ?? '');
     String selectedRole = student.role;
     bool isLoading = false;
+    bool canAccessLiveSessions = student.canAccessLiveSessions;
+    bool canAccessChapters = student.canAccessChapters;
 
     showDialog(
       context: context,
@@ -545,6 +549,36 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       if (value != null) setDialogState(() => selectedRole = value);
                     },
                   ),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 15),
+                  Text(
+                    AppLocalizations.of(context)!.accessPermissions,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.blackColor,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  SwitchListTile(
+                    title: Text(AppLocalizations.of(context)!.canAccessLiveSessions),
+                    subtitle: Text(AppLocalizations.of(context)!.canAccessLiveSessionsDescription),
+                    value: canAccessLiveSessions,
+                    onChanged: (value) {
+                      setDialogState(() => canAccessLiveSessions = value);
+                    },
+                    activeColor: AppTheme.primaryGreen,
+                  ),
+                  SwitchListTile(
+                    title: Text(AppLocalizations.of(context)!.canAccessChapters),
+                    subtitle: Text(AppLocalizations.of(context)!.canAccessChaptersDescription),
+                    value: canAccessChapters,
+                    onChanged: (value) {
+                      setDialogState(() => canAccessChapters = value);
+                    },
+                    activeColor: AppTheme.primaryGreen,
+                  ),
                 ],
               ),
             ),
@@ -574,6 +608,8 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                               : null,
                           phone: phoneController.text.trim(),
                           role: selectedRole,
+                          canAccessLiveSessions: canAccessLiveSessions,
+                          canAccessChapters: canAccessChapters,
                         );
                         if (mounted) {
                           Navigator.pop(context);
@@ -1205,21 +1241,31 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
 }
 
 // Student Enrollments Modal Widget
-class StudentEnrollmentsModal extends StatelessWidget {
+class StudentEnrollmentsModal extends StatefulWidget {
   final StudentDetail studentDetail;
   final VoidCallback onClose;
   final bool isLoading;
+  final String studentId;
 
   const StudentEnrollmentsModal({
     super.key,
     required this.studentDetail,
     required this.onClose,
     required this.isLoading,
+    required this.studentId,
   });
 
   @override
+  State<StudentEnrollmentsModal> createState() => _StudentEnrollmentsModalState();
+}
+
+class _StudentEnrollmentsModalState extends State<StudentEnrollmentsModal> {
+  final AdminService _adminService = AdminService();
+  bool _isUnenrolling = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (widget.isLoading) {
       return Dialog(
         child: Container(
           padding: const EdgeInsets.all(30),
@@ -1255,15 +1301,15 @@ class StudentEnrollmentsModal extends StatelessWidget {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white.withOpacity(0.2),
-                    child: studentDetail.user.profilePicture != null && studentDetail.user.profilePicture!.isNotEmpty
+                    child: widget.studentDetail.user.profilePicture != null && widget.studentDetail.user.profilePicture!.isNotEmpty
                         ? ClipOval(
                             child: NetworkImageWidget(
-                              imageUrl: studentDetail.user.profilePicture!,
+                              imageUrl: widget.studentDetail.user.profilePicture!,
                               width: 60,
                               height: 60,
                               fit: BoxFit.cover,
                               errorWidget: Text(
-                                (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
+                                (widget.studentDetail.user.fullName.isNotEmpty ? widget.studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -1273,7 +1319,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                             ),
                           )
                         : Text(
-                            (studentDetail.user.fullName.isNotEmpty ? studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
+                            (widget.studentDetail.user.fullName.isNotEmpty ? widget.studentDetail.user.fullName.substring(0, 1) : '?').toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -1295,7 +1341,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${studentDetail.user.fullName} - ${studentDetail.enrollments.length} Courses',
+                          '${widget.studentDetail.user.fullName} - ${widget.studentDetail.enrollments.length} Courses',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
@@ -1306,7 +1352,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: onClose,
+                    onPressed: widget.onClose,
                   ),
                 ],
               ),
@@ -1325,7 +1371,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                         _buildStatCard(
                           context,
                           'Total Enrollments',
-                          studentDetail.totalEnrollments.toString(),
+                          widget.studentDetail.totalEnrollments.toString(),
                           Icons.school,
                           AppTheme.primaryGreen,
                         ),
@@ -1333,7 +1379,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                         _buildStatCard(
                           context,
                           'Completed',
-                          studentDetail.completedCourses.toString(),
+                          widget.studentDetail.completedCourses.toString(),
                           Icons.check_circle,
                           Colors.green,
                         ),
@@ -1341,7 +1387,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
                         _buildStatCard(
                           context,
                           'In Progress',
-                          studentDetail.inProgressCourses.toString(),
+                          widget.studentDetail.inProgressCourses.toString(),
                           Icons.timelapse,
                           AppTheme.accent,
                         ),
@@ -1410,7 +1456,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 15),
-        if (studentDetail.enrollments.isEmpty)
+        if (widget.studentDetail.enrollments.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -1423,7 +1469,7 @@ class StudentEnrollmentsModal extends StatelessWidget {
             ),
           )
         else
-          ...studentDetail.enrollments.asMap().entries.map((entry) {
+          ...widget.studentDetail.enrollments.asMap().entries.map((entry) {
             final index = entry.key;
             final enrollment = entry.value;
             return Container(
@@ -1502,12 +1548,33 @@ class StudentEnrollmentsModal extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Text(
-                    'RWF ${enrollment.course?.price ?? 0}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryGreen,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'RWF ${enrollment.course?.price ?? 0}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      IconButton(
+                        icon: _isUnenrolling
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.remove_circle_outline, color: Colors.red),
+                        onPressed: _isUnenrolling
+                            ? null
+                            : () => _showUnenrollConfirmation(context, enrollment),
+                        tooltip: 'Unenroll from course',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1553,6 +1620,96 @@ class StudentEnrollmentsModal extends StatelessWidget {
 
   String _formatDateSimple(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _showUnenrollConfirmation(BuildContext context, Enrollment enrollment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unenroll Student'),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(color: Colors.black87, fontSize: 16),
+            children: [
+              const TextSpan(text: 'Are you sure you want to unenroll '),
+              TextSpan(
+                text: widget.studentDetail.user.fullName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: ' from '),
+              TextSpan(
+                text: _getCourseTitle(enrollment),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '?\n\n'),
+              const TextSpan(
+                text: 'This action will:\n• Remove the enrollment\n• Delete associated certificate\n• Remove payment records\n\nThis action cannot be undone!',
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _unenrollStudent(enrollment);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Unenroll'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _unenrollStudent(Enrollment enrollment) async {
+    setState(() {
+      _isUnenrolling = true;
+    });
+
+    try {
+      await _adminService.unenrollStudent(
+        enrollment.courseId,
+        widget.studentId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student unenrolled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Close the modal to refresh the data
+        widget.onClose();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error unenrolling student: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUnenrolling = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _adminService.dispose();
+    super.dispose();
   }
 }
 

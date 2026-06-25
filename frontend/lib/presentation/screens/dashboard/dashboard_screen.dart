@@ -628,32 +628,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             SliverToBoxAdapter(
               child: _buildOfflineBanner(context),
             ),
-          // Main Content
+          // Search Bar with Dropdown
           if (!_isOffline)
-            SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
-              sliver: SliverToBoxAdapter(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          // Sticky Search Bar
-          if (!_isOffline)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _StickySearchBarDelegate(
-                isMobile: isMobile,
-                buildSearchBar: () => _buildModernSearchBar(context),
-              ),
+            SliverToBoxAdapter(
+              child: _buildSearchBarWithDropdown(context),
             ),
           // Main Content (continues)
           if (!_isOffline)
@@ -704,7 +682,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 _buildContinueLearningCard(context, enrollments),
                                 // For returning users: Live sessions, Quick actions, Stats, Recommended, Popular
                                 if (!isNewUser) ...[
-                                  const SizedBox(height: 24),
+                                  const SizedBox(height: 8),
                                   _buildUpcomingLiveSessions(context, enrolledCourses),
                                   const SizedBox(height: 20),
                                   _buildQuickActions(context),
@@ -1437,152 +1415,117 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Clean Modern Search Bar
+  // Clean Modern Search Bar - matching courses page style
   Widget _buildModernSearchBar(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
-    return Column(
-      children: [
-        Container(
-          height: isMobile ? 50 : 56,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
-            border: Border.all(
-              color: _selectedCategoryId != null
-                  ? const Color(0xFF0F766E)
-                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
-              width: _selectedCategoryId != null ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withOpacity(0.2)
-                    : Colors.black.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+    return Container(
+      margin: EdgeInsets.only(
+        left: isMobile ? 16 : 28,
+        right: isMobile ? 16 : 28,
+        top: 4,
+        bottom: 4,
+      ),
+      height: isMobile ? 48 : 52,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onSubmitted: _performSearch,
+        onChanged: (_) {
+          if (mounted) setState(() {});
+        },
+        textInputAction: TextInputAction.search,
+        style: TextStyle(
+          color: AppTheme.getTextColor(context),
+          fontSize: isMobile ? 15 : 16,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          hintText: _selectedCategoryName == null
+              ? 'Search courses, topics, instructors...'
+              : 'Search in $_selectedCategoryName...',
+          hintStyle: TextStyle(
+            color: AppTheme.greyColor.withOpacity(0.7),
+            fontSize: isMobile ? 15 : 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF10B981),
+            size: 20,
+          ),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(
+                    Icons.clear_rounded,
+                    color: Color(0xFF6B7280),
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    if (mounted) setState(() {});
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              IconButton(
+                icon: Icon(
+                  _showCategoryDropdown
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.tune_rounded,
+                  color: _selectedCategoryId != null
+                      ? const Color(0xFF0F766E)
+                      : (isDark ? Colors.white70 : const Color(0xFF9A8A76)),
+                  size: 18,
+                ),
+                onPressed: () {
+                  if (mounted) {
+                    setState(() => _showCategoryDropdown = !_showCategoryDropdown);
+                  }
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
-          child: Row(
-            children: [
-              // Search Icon - simple and subtle
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  size: isMobile ? 20 : 22,
-                ),
-              ),
-              // Text Field
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  onSubmitted: _performSearch,
-                  onChanged: (_) => setState(() {}),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: _selectedCategoryName == null
-                        ? 'Search courses, topics, instructors...'
-                        : 'Search in $_selectedCategoryName...',
-                    hintStyle: TextStyle(
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              // Action Buttons - minimal
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Clear button
-                  if (_searchController.text.isNotEmpty)
-                    InkWell(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() {});
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: EdgeInsets.all(isMobile ? 6 : 8),
-                        child: Icon(
-                          Icons.close_rounded,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          size: isMobile ? 16 : 18,
-                        ),
-                      ),
-                    ),
-                  // Category Filter - simple chip style
-                  if (_selectedCategoryId != null)
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F766E).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _selectedCategoryName ?? '',
-                        style: const TextStyle(
-                          color: Color(0xFF0F766E),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  // Category Button
-                  InkWell(
-                    onTap: () => setState(() => _showCategoryDropdown = !_showCategoryDropdown),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(
-                        _showCategoryDropdown
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.tune_rounded,
-                        color: _selectedCategoryId != null
-                            ? const Color(0xFF0F766E)
-                            : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  // Search Button - compact
-                  InkWell(
-                    onTap: _onSearchButtonTap,
-                    borderRadius: const BorderRadius.horizontal(
-                      right: Radius.circular(16),
-                    ),
-                    child: Container(
-                      height: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF0F766E),
-                        borderRadius: BorderRadius.horizontal(
-                          right: Radius.circular(16),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBarWithDropdown(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildModernSearchBar(context),
         if (_showCategoryDropdown)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(
+              left: isMobile ? 16 : 28,
+              right: isMobile ? 16 : 28,
+              top: 4,
+            ),
             child: _buildCategoryDropdown(context),
           ),
       ],
@@ -2884,8 +2827,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildCategoryDropdown(BuildContext context) {
-    // Use .watch to get categories from AsyncNotifierProvider
-    final categoriesAsync = ref.watch(backendCategoriesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
@@ -2907,6 +2848,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
@@ -2939,97 +2881,97 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
+                InkWell(
                   onTap: () {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() => _showCategoryDropdown = false);
-                      }
-                    });
+                    if (mounted) {
+                      setState(() => _showCategoryDropdown = false);
+                    }
                   },
-                  child: Icon(
-                    Icons.close_rounded,
-                    color: AppTheme.getSecondaryTextColor(context),
-                    size: 20,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: AppTheme.getSecondaryTextColor(context),
+                      size: 20,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           // Category List
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: isMobile ? 200 : 300,
-            ),
-            child: categoriesAsync.when(
-              data: (categories) {
-                // Ensure categories is not null and is a list
-                if (categories.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                      child: Text(
-                        'No categories available',
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView(
-                  shrinkWrap: true,
-                  children: [
-                    // All Categories Option
-                    _buildCategoryOption(
-                      context,
-                      'all',
-                      l10n?.allCategories ?? 'All Categories',
-                      l10n?.searchAcrossAllCourses ?? 'Search across all available courses',
-                      Icons.grid_view_rounded,
-                      const Color(0xFF10B981),
-                      null,
-                    ),
-                    // Category Options - Add null checks
-                    ...categories
-                        .where((category) => category != null)
-                        .map((category) => _buildCategoryOption(
-                              context,
-                              category.id,
-                              category.name,
-                              'Courses in ${category.name}',
-                              CategoryUtils.getCategoryIcon(category.id,
-                                  name: category.name),
-                              CategoryUtils.getCategoryColor(category.id,
-                                  name: category.name),
-                              category,
-                            )),
-                  ],
-                );
-              },
-              loading: () => Container(
-                padding: const EdgeInsets.all(20),
-                child: const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF10B981)),
-                ),
-              ),
-              error: (_, __) => Container(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text(
-                    l10n?.failedToLoadCategories ?? 'Failed to load categories',
-                    style: TextStyle(
-                      color: AppTheme.getSecondaryTextColor(context),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          SizedBox(
+            height: isMobile ? 200 : 300,
+            child: _buildCategoryList(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryList(BuildContext context) {
+    final categoriesAsync = ref.watch(backendCategoriesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No categories available',
+                style: TextStyle(
+                  color: AppTheme.getSecondaryTextColor(context),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            _buildCategoryOption(
+              context,
+              'all',
+              l10n?.allCategories ?? 'All Categories',
+              l10n?.searchAcrossAllCourses ?? 'Search across all available courses',
+              Icons.grid_view_rounded,
+              const Color(0xFF10B981),
+              null,
+            ),
+            ...categories.map((category) => _buildCategoryOption(
+                  context,
+                  category.id,
+                  category.name,
+                  'Courses in ${category.name}',
+                  CategoryUtils.getCategoryIcon(category.id, name: category.name),
+                  CategoryUtils.getCategoryColor(category.id, name: category.name),
+                  category,
+                )),
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(color: Color(0xFF10B981)),
+        ),
+      ),
+      error: (_, __) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            l10n?.failedToLoadCategories ?? 'Failed to load categories',
+            style: TextStyle(
+              color: AppTheme.getSecondaryTextColor(context),
+              fontSize: 14,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -3051,6 +2993,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
+          if (!mounted) return;
           // Immediate response for better UX
           setState(() {
             _selectedCategoryId = categoryId;
@@ -3059,7 +3002,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           });
 
           // Perform search immediately if category is selected to improve UX
-          if (categoryId != 'all') {
+          if (categoryId != 'all' && mounted) {
             _performSearch(''); // Trigger search with selected category
           }
         },
@@ -7038,59 +6981,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ],
       ),
     );
-  }
-}
-
-// Sticky Search Bar Delegate
-class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
-  final bool isMobile;
-  final Widget Function() buildSearchBar;
-
-  _StickySearchBarDelegate({
-    required this.isMobile,
-    required this.buildSearchBar,
-  });
-
-  @override
-  double get minExtent {
-    final topPadding = isMobile ? 44.0 : 0.0; // Default status bar height
-    return (isMobile ? 58.0 : 64.0) + topPadding;
-  }
-
-  @override
-  double get maxExtent {
-    final topPadding = isMobile ? 44.0 : 0.0; // Default status bar height
-    return (isMobile ? 58.0 : 64.0) + topPadding;
-  }
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final topPadding = isMobile ? MediaQuery.of(context).padding.top.toDouble() : 0.0;
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: EdgeInsets.only(
-        left: isMobile ? 16.0 : 28.0,
-        right: isMobile ? 16.0 : 28.0,
-        top: topPadding,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
-          child: Padding(
-            padding: EdgeInsets.only(
-              top: isMobile ? 4 : 4,
-              bottom: isMobile ? 4 : 4,
-            ),
-            child: buildSearchBar(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_StickySearchBarDelegate oldDelegate) {
-    return isMobile != oldDelegate.isMobile;
   }
 }
 

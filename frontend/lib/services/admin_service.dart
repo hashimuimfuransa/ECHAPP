@@ -227,6 +227,8 @@ class AdminService {
     String? phone,
     String? role,
     bool? isActive,
+    bool? canAccessLiveSessions,
+    bool? canAccessChapters,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -235,6 +237,8 @@ class AdminService {
       if (phone != null) body['phone'] = phone;
       if (role != null) body['role'] = role;
       if (isActive != null) body['isActive'] = isActive;
+      if (canAccessLiveSessions != null) body['canAccessLiveSessions'] = canAccessLiveSessions;
+      if (canAccessChapters != null) body['canAccessChapters'] = canAccessChapters;
 
       final response = await _apiClient.put(
         '${ApiConfig.admin}/students/$studentId',

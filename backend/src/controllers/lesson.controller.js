@@ -205,7 +205,14 @@ const formatLessonUrls = (lesson, s3Service) => {
 const updateLesson = async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+    
+    // Remove null/undefined values to avoid overwriting existing data with null
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === null || updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
     
     // If notesPdfUrl is provided but notes is not, try to organize notes
     if (updateData.notesPdfUrl && !updateData.notes) {

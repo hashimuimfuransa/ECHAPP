@@ -11,6 +11,7 @@ import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/payment_riverpod_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/models/payment.dart';
 import 'package:excellencecoachinghub/models/payment_status.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
@@ -29,6 +30,8 @@ import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/live_session_countdown.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -156,7 +159,7 @@ class _ProfessionalLearningScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
-    _liveSessionsTabController = TabController(length: 3, vsync: this);
+    _liveSessionsTabController = TabController(length: 4, vsync: this);
     _liveSessionsTabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -177,6 +180,7 @@ class _ProfessionalLearningScreenState
         .animate(CurvedAnimation(parent: _fabPulseCtrl, curve: Curves.easeInOut));
 
     _searchController.addListener(_onSearchChanged);
+    _checkPermissions();
     _loadCourseData();
     _loadCourseBooks();
     _tabController.addListener(() => setState(() {}));
@@ -184,12 +188,37 @@ class _ProfessionalLearningScreenState
     // Check for live sessions early to determine default tab
     _checkAndSwitchToLiveSessions();
   }
+
+  void _checkPermissions() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has permission to access chapters and materials
+    if (user != null && !user.canAccessChapters) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.noPermissionToAccessChapters),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          context.pop();
+        }
+      });
+    }
+  }
   
   /// Load live sessions and switch to the Live tab if any exist
   Future<void> _checkAndSwitchToLiveSessions() async {
     await _loadLiveSessions();
     if (mounted && _courseSessions.isNotEmpty) {
       _tabController.animateTo(1);
+      // If there are live now sessions, switch to the Live Now sub-tab
+      if (_liveNowSessions.isNotEmpty) {
+        _liveSessionsTabController.animateTo(0);
+      }
     }
   }
 
@@ -268,10 +297,10 @@ class _ProfessionalLearningScreenState
           return lessons.isEmpty;
         });
       } else {
-        // Keep chapters as null if sections data is missing or empty
-        // This allows us to show loading state for lazy loading scenarios
-        debugPrint('Setting chapters to null - data not ready or empty');
-        _chapters = null;
+        // Set chapters to empty list if sections data is missing or empty
+        // This will show the empty state instead of continuous loading
+        debugPrint('Setting chapters to empty list - no data available');
+        _chapters = [];
       }
 
       _initializeCompletionStatus();
@@ -311,6 +340,44 @@ class _ProfessionalLearningScreenState
     if (_celebratedChapters.contains(chapter.id)) return;
     _celebratedChapters.add(chapter.id);
     final lessons = _chapterLessons[chapter.id] ?? [];
+    final completedLessons = lessons.where((l) => _lessonCompletionStatus[l.id] == true).length;
+
+    // Require at least one lesson to be completed
+    if (completedLessons == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete at least one lesson before marking this chapter as complete.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark Chapter Complete'),
+        content: Text(
+          'You have completed $completedLessons of ${lessons.length} lessons. Mark this chapter as complete and proceed to the next one?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DT.primary,
+            ),
+            child: const Text('Mark Complete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
 
     // Get enrollmentId from course access data
     final enrollmentId = _courseAccessData?['enrollmentId']?.toString();
@@ -347,15 +414,7 @@ class _ProfessionalLearningScreenState
     }
 
     setState(() {
-      // Mark all lessons done
-      for (final l in lessons) {
-        if (_lessonCompletionStatus[l.id] != true) {
-          _lessonCompletionStatus[l.id] = true;
-          _completedLessonsCount++;
-          _completedDurationMinutes += l.duration;
-        }
-      }
-      // Mark chapter done
+      // Mark chapter as complete
       _chapterCompletionStatus[chapter.id] = true;
       _completedChaptersCount = _chapterCompletionStatus.values.where((v) => v).length;
 
@@ -366,7 +425,7 @@ class _ProfessionalLearningScreenState
         _currentSectionIndex = chapterIndex + 1;
       }
 
-      // XP reward: 100 chapter bonus (lesson XP already counted per lesson)
+      // XP reward: 100 chapter bonus
       _xpPoints += 100;
       
       // Clear loading state
@@ -1076,7 +1135,7 @@ class _ProfessionalLearningScreenState
           icon: Icons.library_books_rounded,
           title: _isSearchActive
               ? 'No chapters match your search'
-              : 'No chapters yet',
+              : 'No recorded material yet',
           subtitle: _isSearchActive
               ? 'Try a different keyword'
               : 'Check back soon for content');
@@ -1107,6 +1166,7 @@ class _ProfessionalLearningScreenState
           lessons: _chapterLessons[s.id] ?? [],
           isUnlocked: _chapterCompletionStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
+          isChapterCompleted: _chapterCompletionStatus[s.id] ?? false,
           lessonCompletionStatus: _lessonCompletionStatus,
           isDark: _isDark,
           isCompact: true,
@@ -1137,6 +1197,7 @@ class _ProfessionalLearningScreenState
           lessons: _chapterLessons[s.id] ?? [],
           isUnlocked: _chapterCompletionStatus[s.id] ?? false,
           isCurrent: i == _currentSectionIndex,
+          isChapterCompleted: _chapterCompletionStatus[s.id] ?? false,
           lessonCompletionStatus: _lessonCompletionStatus,
           isDark: _isDark,
           isCompact: false,
@@ -1153,6 +1214,7 @@ class _ProfessionalLearningScreenState
   //  LIVE SESSIONS TAB
   // ─────────────────────────────────────────────
   List<LiveSession> _courseSessions = [];
+  List<LiveSession> _liveNowSessions = [];
   List<LiveSession> _upcomingSessions = [];
   List<LiveSession> _pastSessions = [];
   List<LiveSession> _missedSessions = [];
@@ -1178,25 +1240,55 @@ class _ProfessionalLearningScreenState
         final allSessions = response.sessions;
 
         // Filter into categories
+        _liveNowSessions = allSessions.where((s) {
+          // Live if status is 'live' OR if scheduled time has passed but session hasn't ended
+          final isLive = s.status == 'live';
+          final hasStartedAndNotEnded = !s.isEnded && !s.isCancelled &&
+              (s.scheduledAt.isBefore(now) || s.scheduledAt.isAtSameMomentAs(now)) &&
+              s.calculatedEndTime.isAfter(now);
+          return isLive || hasStartedAndNotEnded;
+        }).toList();
+
         _upcomingSessions = allSessions.where((s) {
-          return !s.isEnded &&
-              !s.isCancelled &&
+          // Upcoming if scheduled time is in the future (or within 5 minutes) and not ended/cancelled
+          return !s.isEnded && !s.isCancelled &&
               s.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5)));
         }).toList();
 
         _pastSessions = allSessions.where((s) {
-          return s.isEnded || s.scheduledAt.isBefore(now.subtract(const Duration(minutes: 5)));
+          // Past only if status is 'ended' or 'cancelled'
+          return s.isEnded || s.isCancelled;
         }).toList();
 
         // Missed sessions: ended/cancelled that the user didn't attend
-        // For now, we'll show all past sessions as potentially missed
-        // In a real implementation, you'd check attendance records
+        final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+        final currentUserId = currentUser?.uid;
+        
         _missedSessions = allSessions.where((s) {
-          return (s.isEnded || s.isCancelled) &&
-              s.scheduledAt.isBefore(now.subtract(const Duration(minutes: 5)));
+          if (!(s.isEnded || s.isCancelled)) return false;
+          
+          // Check if user attended this session
+          if (currentUserId != null) {
+            final attendees = s.attendees ?? [];
+            final attendedAt = s.attendedAt ?? [];
+            
+            // User attended if they're in attendees list or attendedAt list
+            final didAttend = attendees.any((a) => 
+              a is Map ? a['_id'] == currentUserId || a['id'] == currentUserId : a == currentUserId
+            ) || attendedAt.any((a) => 
+              a is Map ? a['userId'] == currentUserId : a == currentUserId
+            );
+            
+            // Only show in missed if user did NOT attend
+            return !didAttend;
+          }
+          
+          // If no current user, show all ended/cancelled as potentially missed
+          return true;
         }).toList();
 
         // Sort each list
+        _liveNowSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
         _upcomingSessions.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
         _pastSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
         _missedSessions.sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
@@ -1335,6 +1427,7 @@ class _ProfessionalLearningScreenState
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
             tabs: const [
+              Tab(text: 'Live Now'),
               Tab(text: 'Upcoming'),
               Tab(text: 'Past'),
               Tab(text: 'Missed'),
@@ -1348,6 +1441,7 @@ class _ProfessionalLearningScreenState
           child: TabBarView(
             controller: _liveSessionsTabController,
             children: [
+              _buildSessionsList(_liveNowSessions, 'liveNow', isMobile),
               _buildSessionsList(_upcomingSessions, 'upcoming', isMobile),
               _buildSessionsList(_pastSessions, 'past', isMobile),
               _buildSessionsList(_missedSessions, 'missed', isMobile),
@@ -1372,6 +1466,10 @@ class _ProfessionalLearningScreenState
       String message;
       IconData icon;
       switch (type) {
+        case 'liveNow':
+          message = 'No live sessions right now';
+          icon = Icons.live_tv;
+          break;
         case 'upcoming':
           message = 'No upcoming live sessions';
           icon = Icons.schedule;
@@ -1408,6 +1506,7 @@ class _ProfessionalLearningScreenState
             ),
             const SizedBox(height: 8),
             Text(
+              type == 'liveNow' ? 'Live sessions will appear here when they start' :
               type == 'upcoming' ? 'Check back later for scheduled sessions' : 'Sessions will appear here',
               style: TextStyle(
                 color: Colors.grey[500],
@@ -3354,6 +3453,7 @@ class _ChapterCard extends StatelessWidget {
   final List<Lesson> lessons;
   final bool isUnlocked;
   final bool isCurrent;
+  final bool isChapterCompleted;
   final Map<String, bool> lessonCompletionStatus;
   final bool isDark;
   final bool isCompact;
@@ -3368,6 +3468,7 @@ class _ChapterCard extends StatelessWidget {
     required this.lessons,
     required this.isUnlocked,
     required this.isCurrent,
+    required this.isChapterCompleted,
     required this.lessonCompletionStatus,
     required this.isDark,
     required this.isCompact,
@@ -3397,12 +3498,12 @@ class _ChapterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: _DT.r20,
-        border: isFullyCompleted
+        border: isChapterCompleted
             ? Border.all(color: _DT.primary, width: 2)
             : isCurrent
                 ? Border.all(color: _DT.primary.withOpacity(0.5), width: 1.5)
                 : Border.all(color: _borderColor, width: 0.5),
-        boxShadow: isFullyCompleted
+        boxShadow: isChapterCompleted
             ? [
                 BoxShadow(
                     color: _DT.primary.withOpacity(0.18),
@@ -3677,7 +3778,7 @@ class _ChapterCard extends StatelessWidget {
   }
 
   Widget _buildMarkCompleteFooter() {
-    if (isFullyCompleted) {
+    if (isChapterCompleted) {
       return Container(
         margin: EdgeInsets.fromLTRB(isCompact ? 10 : 14, 0, isCompact ? 10 : 14, isCompact ? 10 : 14),
         padding: EdgeInsets.symmetric(
@@ -3715,7 +3816,7 @@ class _ChapterCard extends StatelessWidget {
         ),
       );
     }
-    // Show "Mark Complete" button when chapter is unlocked but not yet done
+    // Show "Mark Complete" button when chapter is unlocked but not yet marked complete
     return Padding(
       padding: EdgeInsets.fromLTRB(isCompact ? 10 : 14, 0, isCompact ? 10 : 14, isCompact ? 10 : 14),
       child: GestureDetector(

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/localization_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -153,10 +155,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (authState.user != null) {
       final name = authState.user!.fullName;
       final needsName = name.isEmpty || name == 'Unknown User';
+      final hasCompletedOnboarding = authState.user!.hasCompletedOnboarding;
+      
       if (needsName) {
         context.go('/name-collection');
+      } else if (!hasCompletedOnboarding) {
+        // User hasn't completed onboarding - show interest selection
+        context.go('/interest-selection');
       } else {
-        context.go('/dashboard');
+        // Check if user has active (non-completed) courses
+        try {
+          final enrollmentsAsync = await ref.read(userEnrollmentsProvider.future);
+          
+          // Filter out completed courses to get active courses
+          final activeEnrollments = enrollmentsAsync.where((enrollment) {
+            return !enrollment.isCompleted;
+          }).toList();
+          
+          if (activeEnrollments.isEmpty) {
+            // No active courses - redirect to courses page to select a course
+            context.go('/courses');
+          } else {
+            // Has active courses - go to dashboard
+            context.go('/dashboard');
+          }
+        } catch (e) {
+          // If there's an error checking enrolled courses, default to dashboard
+          debugPrint('Error checking enrolled courses: $e');
+          context.go('/dashboard');
+        }
       }
     } else {
       if (isDesktop) {

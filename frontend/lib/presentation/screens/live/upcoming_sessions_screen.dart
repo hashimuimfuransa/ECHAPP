@@ -8,6 +8,7 @@ import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 class UpcomingSessionsScreen extends ConsumerStatefulWidget {
   const UpcomingSessionsScreen({super.key});
@@ -30,12 +31,34 @@ class _UpcomingSessionsScreenState extends ConsumerState<UpcomingSessionsScreen>
   void initState() {
     super.initState();
     _checkUserRole();
+    _checkPermissions();
     _loadSessions();
   }
 
   void _checkUserRole() {
     final authState = ref.read(authProvider);
     _isTeacher = authState?.user?.role == 'instructor';
+  }
+
+  void _checkPermissions() {
+    final authState = ref.read(authProvider);
+    final user = authState?.user;
+    
+    // Check if student has permission to access live sessions
+    if (!_isTeacher && user != null && !user.canAccessLiveSessions) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.noPermissionToAccessLiveSessions),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          context.pop();
+        }
+      });
+    }
   }
 
   Future<void> _loadSessions() async {

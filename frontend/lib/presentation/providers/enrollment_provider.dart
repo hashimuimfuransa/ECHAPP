@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
 import 'package:excellencecoachinghub/models/course.dart';
+import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -60,6 +61,19 @@ final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
   } catch (e) {
     print('Error fetching enrolled courses: $e, trying cache');
     return await _loadCachedEnrolledCourses();
+  }
+});
+
+// Provider for user enrollments with completion status
+final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
+  final repository = ref.read(enrollmentRepositoryProvider);
+  
+  try {
+    final enrollments = await repository.getEnrollments();
+    return enrollments;
+  } catch (e) {
+    print('Error fetching enrollments: $e');
+    return [];
   }
 });
 

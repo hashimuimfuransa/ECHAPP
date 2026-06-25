@@ -78,7 +78,9 @@ class NetworkImageWidget extends StatelessWidget {
     try {
       final uri = Uri.parse(processedUrl);
       final safeUri = uri.hasAbsolutePath
-          ? uri.replace(path: uri.path, queryParameters: uri.queryParameters)
+          ? (uri.queryParameters.isEmpty
+              ? uri.replace(path: uri.path)
+              : uri.replace(path: uri.path, queryParameters: uri.queryParameters))
           : uri;
       processedUrl = safeUri.toString();
     } catch (_) {

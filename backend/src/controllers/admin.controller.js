@@ -1499,6 +1499,8 @@ const updateStudent = async (req, res) => {
     if (phone !== undefined) user.phone = phone.trim() || undefined;
     if (role !== undefined) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
+    if (canAccessLiveSessions !== undefined) user.canAccessLiveSessions = canAccessLiveSessions;
+    if (canAccessChapters !== undefined) user.canAccessChapters = canAccessChapters;
 
     await user.save();
 

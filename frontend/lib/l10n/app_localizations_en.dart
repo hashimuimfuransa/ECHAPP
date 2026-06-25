@@ -202,7 +202,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get home => 'Home';
 
   @override
-  String get enrolled => 'ENROLLED';
+  String get enrolled => 'Enrolled';
 
   @override
   String get dashboard => 'Dashboard';
@@ -2839,6 +2839,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get paymentInitiatedSuccess =>
       'Your payment has been initiated successfully.';
+
+  @override
+  String get accessPermissions => 'Access Permissions';
+
+  @override
+  String get canAccessLiveSessions => 'Can Access Live Sessions';
+
+  @override
+  String get canAccessLiveSessionsDescription =>
+      'Allow student to join live sessions';
+
+  @override
+  String get canAccessChapters => 'Can Access Chapters & Materials';
+
+  @override
+  String get canAccessChaptersDescription =>
+      'Allow student to view course content';
+
+  @override
+  String get noPermissionToAccessLiveSessions =>
+      'You do not have permission to access live sessions. Please contact your administrator.';
+
+  @override
+  String get noPermissionToAccessChapters =>
+      'You do not have permission to access course materials. Please contact your administrator.';
 
   @override
   String get nextSteps => 'Next Steps:';
