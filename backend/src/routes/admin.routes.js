@@ -29,7 +29,8 @@ const {
   toggleStudentStatus,
   unenrollStudent,
   resetStudentPassword,
-  updateStudent
+  updateStudent,
+  updateEnrollmentPermissions
 } = require('../controllers/admin.controller');
 const { manualExpirationCheck } = require('../controllers/admin-expiration.controller');
 const notificationController = require('../controllers/notification.controller');
