@@ -6,7 +6,6 @@ import 'package:excellencecoachinghub/models/download.dart';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -35,27 +34,6 @@ class DownloadService extends ChangeNotifier {
     },
   ));
 
-  /// Get authorization header with Firebase ID token
-  Future<Map<String, String>> _getAuthHeaders() async {
-    try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
-      
-      if (user != null) {
-        // Force refresh to ensure we have a valid token
-        final token = await user.getIdToken(true);
-        if (token != null) {
-          return {
-            'Authorization': 'Bearer $token',
-          };
-        }
-      }
-    } catch (e) {
-      print('DownloadService: Error getting auth token: $e');
-    }
-    
-    // Return empty headers when no valid token is available
-    return {};
-  }
   final Map<String, Download> _downloads = {}; // Key: lessonId
   final Map<String, CancelToken> _cancelTokens = {}; // Key: lessonId
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
@@ -547,16 +525,17 @@ class DownloadService extends ChangeNotifier {
         print('Starting actual download with Dio. Range: bytes=$downloadedBytes-');
         
         try {
-          // Get auth headers for the request
-          final authHeaders = await _getAuthHeaders();
-          
+          // Note: the video/material URL is a direct, unsigned CloudFront/S3 URL,
+          // not an API endpoint. Attaching the app's Firebase Authorization header
+          // here makes CloudFront/S3 try to parse it as an AWS signature and reject
+          // the request with 403 Access Denied, so no auth headers are sent here.
+
           // First, get the file size to enable chunked downloading
           int? totalFileSize;
           try {
             final headResponse = await _dio.head(
               url,
               options: Options(
-                headers: authHeaders,
                 validateStatus: (status) => status == 200 || status == 206,
               ),
               cancelToken: cancelToken,
@@ -573,7 +552,6 @@ class DownloadService extends ChangeNotifier {
             url: url,
             filePath: filePath,
             downloadedBytes: downloadedBytes,
-            authHeaders: authHeaders,
             cancelToken: cancelToken,
             download: download,
             lessonId: lessonId,
@@ -672,7 +650,6 @@ class DownloadService extends ChangeNotifier {
     required String url,
     required String filePath,
     required int downloadedBytes,
-    required Map<String, String> authHeaders,
     required CancelToken cancelToken,
     required Download download,
     required String lessonId,
@@ -685,7 +662,6 @@ class DownloadService extends ChangeNotifier {
         followRedirects: true,
         validateStatus: (status) => status == 200 || status == 206,
         headers: {
-          ...authHeaders,
           if (downloadedBytes > 0) 'range': 'bytes=$downloadedBytes-',
         },
       ),
@@ -924,16 +900,15 @@ class DownloadService extends ChangeNotifier {
       notifyListeners();
       await _saveDownloadsToStorage();
 
-      // Get auth headers for request
-      final authHeaders = await _getAuthHeaders();
-      
+      // Note: this is a direct, unsigned CloudFront/S3 URL, not an API endpoint.
+      // Sending the app's Firebase Authorization header here makes CloudFront/S3
+      // try to parse it as an AWS signature and reject with 403 Access Denied.
       final response = await _dio.get<ResponseBody>(
         url,
         options: Options(
           responseType: ResponseType.stream,
           followRedirects: true,
           validateStatus: (status) => status == 200 || status == 206,
-          headers: authHeaders,
         ),
       );
 

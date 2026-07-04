@@ -182,6 +182,13 @@ class S3Service {
 
   // Get public URL (for publicly accessible files)
   getPublicUrl(key) {
+    if (!key) return key;
+    // Some stored records already hold a full URL rather than a bare S3 key
+    // (e.g. lessons created from a client-side presigned upload). Prepending
+    // the CloudFront domain again would produce a doubled, invalid URL.
+    if (/^https?:\/\//i.test(key)) {
+      return key;
+    }
     // For public files, we can use the direct CloudFront URL
     return `${this.cloudfrontUrl}/${key}`;
   }
