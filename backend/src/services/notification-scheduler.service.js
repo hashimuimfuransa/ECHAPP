@@ -1,3 +1,4 @@
+const cron = require('node-cron');
 const User = require('../models/User');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
@@ -70,22 +71,25 @@ class NotificationSchedulerService {
     }
   }
 
-  static schedule(intervalHours = 24) {
-    console.log(`Scheduling notification checks every ${intervalHours} hours`);
-    
+  static schedule(hour = 9) {
+    // Cron expression instead of setInterval: setInterval's countdown resets on every
+    // server restart/redeploy, so a restart within the 24h window can delay or skip a
+    // day's reminders. Cron fires at a fixed wall-clock time regardless of uptime.
+    const cronExpression = `0 ${hour} * * *`;
+    console.log(`Scheduling notification checks daily at ${hour}:00 (cron: "${cronExpression}")`);
+
     // Run initial check after a short delay to not block startup
     setTimeout(() => {
       this.checkInactivityAndProgress().catch(console.error);
     }, 10000);
-    
-    // Set up interval
-    setInterval(async () => {
+
+    cron.schedule(cronExpression, async () => {
       try {
         await this.checkInactivityAndProgress();
       } catch (error) {
         console.error('Scheduled notification check failed:', error);
       }
-    }, intervalHours * 60 * 60 * 1000);
+    });
   }
 }
 

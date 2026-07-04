@@ -433,7 +433,7 @@ class _ProfessionalLearningScreenState
     try {
       await PushNotificationService.sendCongratulatoryNotification(
         'Chapter Complete! 🎉',
-        'Congratulations! You completed "${chapter.displayName}"',
+        'Congratulations! You completed "Chapter ${chapterIndex + 1}: ${chapter.title}"',
       );
       debugPrint('Chapter completion notification sent');
     } catch (e) {
@@ -448,7 +448,7 @@ class _ProfessionalLearningScreenState
     final totalChapters = _chapters?.length ?? 1;
     final isLastChapter = chapterIndex + 1 >= totalChapters;
     final nextChapterName = (!isLastChapter && _chapters != null)
-        ? _chapters![chapterIndex + 1].displayName
+        ? 'Chapter ${chapterIndex + 2}: ${_chapters![chapterIndex + 1].title}'
         : null;
 
     showGeneralDialog(
@@ -462,7 +462,7 @@ class _ProfessionalLearningScreenState
         child: FadeTransition(opacity: anim, child: child),
       ),
       pageBuilder: (ctx, _, __) => _ChapterCompletionDialog(
-        chapterName: chapter.displayName,
+        chapterName: 'Chapter ${chapterIndex + 1}: ${chapter.title}',
         chapterNumber: chapterIndex + 1,
         xpEarned: xpEarned,
         totalXp: _xpPoints,
@@ -549,7 +549,7 @@ class _ProfessionalLearningScreenState
       _filteredChapters = q.isEmpty
           ? _chapters
           : _chapters?.where((s) =>
-              s.displayName.toLowerCase().contains(q) ||
+              s.title.toLowerCase().contains(q) ||
               (s.description?.toLowerCase().contains(q) ?? false)).toList();
     });
   }
@@ -1214,7 +1214,7 @@ class _ProfessionalLearningScreenState
           isDark: _isDark,
           isCompact: true,
           onLessonTap: _openLesson,
-          onMoreTap: () => _openChapterDetails(s),
+          onMoreTap: () => _openChapterDetails(s, i),
           onMarkComplete: () => _markChapterComplete(s, i),
           isLoading: _markingCompleteChapterId == s.id,
         );
@@ -1245,7 +1245,7 @@ class _ProfessionalLearningScreenState
           isDark: _isDark,
           isCompact: false,
           onLessonTap: _openLesson,
-          onMoreTap: () => _openChapterDetails(s),
+          onMoreTap: () => _openChapterDetails(s, i),
           onMarkComplete: () => _markChapterComplete(s, i),
           isLoading: _markingCompleteChapterId == s.id,
         );
@@ -2031,7 +2031,7 @@ class _ProfessionalLearningScreenState
 
             return _ChapterProgressRow(
               index: i + 1,
-              title: s.displayName,
+              title: 'Chapter ${i + 1}: ${s.title}',
               done: done,
               total: lessons.length,
               pct: pct,
@@ -3220,7 +3220,7 @@ class _ProfessionalLearningScreenState
   // ─────────────────────────────────────────────
   //  CHAPTER DETAILS MODAL
   // ─────────────────────────────────────────────
-  void _openChapterDetails(Section section) {
+  void _openChapterDetails(Section section, int chapterIndex) {
     final lessons = _chapterLessons[section.id] ?? [];
     showModalBottomSheet(
       context: context,
@@ -3228,6 +3228,7 @@ class _ProfessionalLearningScreenState
       backgroundColor: Colors.transparent,
       builder: (ctx) => _ChapterDetailsSheet(
         section: section,
+        chapterIndex: chapterIndex,
         lessons: lessons,
         lessonCompletionStatus: _lessonCompletionStatus,
         isDark: _isDark,
@@ -3683,7 +3684,7 @@ class _ChapterCard extends StatelessWidget {
               SizedBox(width: isCompact ? 8 : 12),
               Expanded(
                 child: Text(
-                  section.displayName,
+                  'Chapter ${chapterIndex + 1}: ${section.title}',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isCompact ? 13 : 17,
@@ -4128,6 +4129,7 @@ class _LessonRow extends StatelessWidget {
 // ═════════════════════════════════════════════
 class _ChapterDetailsSheet extends StatelessWidget {
   final Section section;
+  final int chapterIndex;
   final List<Lesson> lessons;
   final Map<String, bool> lessonCompletionStatus;
   final bool isDark;
@@ -4136,6 +4138,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
 
   const _ChapterDetailsSheet({
     required this.section,
+    required this.chapterIndex,
     required this.lessons,
     required this.lessonCompletionStatus,
     required this.isDark,
@@ -4220,7 +4223,7 @@ class _ChapterDetailsSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(section.displayName,
+                      Text('Chapter ${chapterIndex + 1}: ${section.title}',
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 17,
@@ -4341,7 +4344,7 @@ class _ChapterMaterialsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(section.displayName,
+                  child: Text('Chapter ${chapterIndex + 1}: ${section.title}',
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,

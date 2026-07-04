@@ -124,9 +124,9 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     CourseExpirationService.scheduleExpirationChecks(60);
     console.log('🔄 Course expiration checks scheduled (every 60 minutes)');
 
-    // Schedule notification checks (every 24 hours)
-    NotificationSchedulerService.schedule(24);
-    console.log('📧 Notification checks scheduled (every 24 hours)');
+    // Schedule notification checks (daily at 9am server time)
+    NotificationSchedulerService.schedule(9);
+    console.log('📧 Notification checks scheduled (daily at 9am)');
 
     // Initialize BBB config from environment variables (if not already in database)
     const BBBConfig = require('./src/models/BBBConfig');

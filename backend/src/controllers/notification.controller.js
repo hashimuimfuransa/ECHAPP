@@ -460,19 +460,6 @@ class NotificationController {
         notification: {
           title: title,
           body: message,
-          android: {
-            channelId: 'high_importance_channel',
-            priority: 'high',
-            notificationCount: 1
-          },
-          apns: {
-            payload: {
-              aps: {
-                badge: 1,
-                sound: 'default'
-              }
-            }
-          }
         },
         data: {
           ...data,
@@ -482,11 +469,21 @@ class NotificationController {
         token: fcmToken,
         android: {
           priority: 'high',
-          ttl: 86400 // 24 hours
+          ttl: 86400, // 24 hours
+          notification: {
+            channelId: 'high_importance_channel',
+            notificationCount: 1
+          }
         },
         apns: {
           headers: {
             'apns-priority': '10'
+          },
+          payload: {
+            aps: {
+              badge: 1,
+              sound: 'default'
+            }
           }
         }
       };

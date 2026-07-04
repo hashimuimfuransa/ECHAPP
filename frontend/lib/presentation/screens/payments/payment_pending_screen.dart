@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/course.dart';
@@ -133,6 +134,37 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     super.dispose();
   }
 
+  Future<void> _launchPhoneCall(String phoneNumber) async {
+    final String cleaned = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri uri = Uri(scheme: 'tel', path: cleaned);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _launchWhatsApp(String phoneNumber) async {
+    final String cleaned = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    final Uri uri = Uri.parse('https://wa.me/$cleaned');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _launchSms(String phoneNumber) async {
+    final String cleaned = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri uri = Uri(scheme: 'sms', path: cleaned);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _launchEmailContact(String email) async {
+    final Uri uri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -212,6 +244,36 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
               const SizedBox(height: 24),
 
+              // Action Required Banner
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withOpacity(0.5), width: 1.5),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Action required: your enrollment will only be activated after you contact us below and confirm your payment.',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF7A4A00),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
               // Contact Information Card
               Card(
                 child: Padding(
@@ -235,7 +297,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        _l10n?.toCompletePayment ?? 'To complete your payment, reach us via:',
+                        _l10n?.toCompletePayment ?? 'Tap a number below to call or message us directly on WhatsApp:',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
@@ -341,10 +403,10 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
     if (settings != null) {
       // Use Backend settings
-      if (settings.paymentInfo.mtnMomo.enabled && 
-          (settings.paymentInfo.mtnMomo.accountName.isNotEmpty || 
+      if (settings.paymentInfo.mtnMomo.enabled &&
+          (settings.paymentInfo.mtnMomo.accountName.isNotEmpty ||
            settings.paymentInfo.mtnMomo.accountNumber.isNotEmpty)) {
-        instructions.add(_buildContactInstruction(
+        instructions.add(_buildInfoRow(
           _l10n?.paymentViaMtnMomo ?? 'Payment via MTN MoMo:',
           '${settings.paymentInfo.mtnMomo.accountName} - ${settings.paymentInfo.mtnMomo.accountNumber}',
           Icons.phone_android,
@@ -355,7 +417,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
       if (settings.paymentInfo.airtelMoney.enabled &&
           (settings.paymentInfo.airtelMoney.accountName.isNotEmpty ||
            settings.paymentInfo.airtelMoney.accountNumber.isNotEmpty)) {
-        instructions.add(_buildContactInstruction(
+        instructions.add(_buildInfoRow(
           _l10n?.paymentViaAirtelMoney ?? 'Payment via Airtel Money:',
           '${settings.paymentInfo.airtelMoney.accountName} - ${settings.paymentInfo.airtelMoney.accountNumber}',
           Icons.phone_android,
@@ -366,7 +428,7 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
       if (settings.paymentInfo.bankTransfer.enabled &&
           (settings.paymentInfo.bankTransfer.accountName.isNotEmpty ||
            settings.paymentInfo.bankTransfer.accountNumber.isNotEmpty)) {
-        instructions.add(_buildContactInstruction(
+        instructions.add(_buildInfoRow(
           _l10n?.paymentViaBankTransfer(settings.paymentInfo.bankTransfer.bankName) ??
               'Payment via Bank Transfer (${settings.paymentInfo.bankTransfer.bankName}):',
           '${settings.paymentInfo.bankTransfer.accountName} - ${settings.paymentInfo.bankTransfer.accountNumber}',
@@ -375,69 +437,59 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
         instructions.add(const SizedBox(height: 8));
       }
 
-      // Contact Info
+      // Contact Info - clickable (call / WhatsApp direct actions)
       final support = settings.paymentInfo.contactSupport;
       if (support.phone.isNotEmpty) {
-        instructions.add(_buildContactInstruction(
+        instructions.add(_buildPhoneRow(
           _l10n?.contactSupportPhone ?? 'Contact Support Phone:',
           support.phone,
-          Icons.phone,
+          isPrimary: true,
+        ));
+        instructions.add(const SizedBox(height: 8));
+      }
+
+      if (support.whatsapp.isNotEmpty && support.whatsapp != support.phone) {
+        instructions.add(_buildPhoneRow(
+          _l10n?.contactOnWhatsapp ?? 'Contact on WhatsApp:',
+          support.whatsapp,
         ));
         instructions.add(const SizedBox(height: 8));
       }
 
       if (support.email.isNotEmpty) {
-        instructions.add(_buildContactInstruction(
+        instructions.add(_buildEmailRow(
           _l10n?.contactSupportEmail ?? 'Contact Support Email:',
           support.email,
-          Icons.email,
-        ));
-        instructions.add(const SizedBox(height: 8));
-      }
-
-      if (support.whatsapp.isNotEmpty) {
-        instructions.add(_buildContactInstruction(
-          _l10n?.contactOnWhatsapp ?? 'Contact on WhatsApp:',
-          support.whatsapp,
-          Icons.chat,
         ));
         instructions.add(const SizedBox(height: 8));
       }
     }
 
-    // If no instructions from backend (or settings is null), show fallbacks
+    // If no instructions from backend (or settings is null), show fallbacks.
+    // Additional contact is listed first and marked as the recommended one to call.
     if (instructions.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildContactInstruction(
-            _l10n?.contactForPayment ?? '1. Contact for payment via:',
-            'MTN: +250 793 828 834',
-            Icons.phone,
+          _buildPhoneRow(
+            _l10n?.additionalContact ?? 'Additional contact:',
+            '+250 788 535 156',
+            isPrimary: true,
           ),
           const SizedBox(height: 8),
-          _buildContactInstruction(
-            _l10n?.alsoAvailableVia ?? '2. Also available via:',
-            'MTN: +250 788 535 156',
-            Icons.phone,
+          _buildPhoneRow(
+            _l10n?.contactForPayment ?? 'Primary contact for payment:',
+            '+250 781 671 517',
           ),
           const SizedBox(height: 8),
-          _buildContactInstruction(
-            _l10n?.additionalContact ?? '3. Additional contact:',
-            'MTN: +250 781 671 517',
-            Icons.phone,
+          _buildPhoneRow(
+            _l10n?.alsoAvailableVia ?? 'Also available via:',
+            '+250 793 828 834',
           ),
           const SizedBox(height: 8),
-          _buildContactInstruction(
-            _l10n?.contactViaEmail ?? '4. Contact via email:',
+          _buildEmailRow(
+            _l10n?.contactViaEmail ?? 'Contact via email:',
             'info@excellencecoachinghub.com',
-            Icons.email,
-          ),
-          const SizedBox(height: 8),
-          _buildContactInstruction(
-            _l10n?.contactOnWhatsappNumber ?? '5. Or contact us on WhatsApp:',
-            '+250 793 828 834 / +250 788 535 156 / +250 781 671 517',
-            Icons.chat,
           ),
         ],
       );
@@ -449,8 +501,8 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     );
   }
 
-  Widget _buildContactInstruction(
-      String instruction, String contact, IconData icon) {
+  /// Non-actionable info row (e.g. payment destination account numbers).
+  Widget _buildInfoRow(String instruction, String contact, IconData icon) {
     return Builder(
       builder: (context) {
         return Container(
@@ -495,6 +547,180 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Clickable phone contact row: tap Call to dial directly, or WhatsApp to
+  /// open a chat directly. [isPrimary] highlights the number the user
+  /// should try first.
+  Widget _buildPhoneRow(String label, String phoneNumber, {bool isPrimary = false}) {
+    return Builder(
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isPrimary
+                ? AppTheme.primary.withOpacity(0.08)
+                : AppTheme.getSurfaceColor(context),
+            borderRadius: BorderRadius.circular(8),
+            border: isPrimary
+                ? Border.all(color: AppTheme.primary.withOpacity(0.5), width: 1.2)
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.phone, size: 16, color: AppTheme.getSecondaryTextColor(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                    ),
+                  ),
+                  if (isPrimary)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'CALL THIS FIRST',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                phoneNumber,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.getTextColor(context),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.phone,
+                    color: Colors.green,
+                    label: 'Call',
+                    onTap: () => _launchPhoneCall(phoneNumber),
+                  ),
+                  _buildActionButton(
+                    icon: Icons.sms,
+                    color: Colors.blue,
+                    label: 'Text',
+                    onTap: () => _launchSms(phoneNumber),
+                  ),
+                  _buildActionButton(
+                    icon: Icons.chat,
+                    color: const Color(0xFF25D366),
+                    label: 'WhatsApp',
+                    onTap: () => _launchWhatsApp(phoneNumber),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmailRow(String label, String email) {
+    return Builder(
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.getSurfaceColor(context),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => _launchEmailContact(email),
+            child: Row(
+              children: [
+                Icon(Icons.email, size: 16, color: AppTheme.getSecondaryTextColor(context)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.getTextColor(context),
+                        ),
+                      ),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.open_in_new, size: 16, color: AppTheme.primary),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

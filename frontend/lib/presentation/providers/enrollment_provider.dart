@@ -136,7 +136,7 @@ class EnrollmentNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     
     try {
-      await repository.markLessonComplete(lessonId);
+      await repository.markLessonComplete(lessonId, courseId);
       state = const AsyncValue.data(null);
       
       // Refresh all relevant providers to update progress across app

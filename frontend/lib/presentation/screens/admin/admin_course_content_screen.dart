@@ -575,7 +575,7 @@ class _AdminCourseContentScreenState
         await _sectionService.createSection(
           courseId: widget.courseId,
           title: titleCtrl.text.trim(),
-          order: _sections.length,
+          order: _sections.length + 1,
         );
         _showSuccessSnackBar('Section created successfully');
         _loadCourseContent();

@@ -296,7 +296,7 @@ class EnrollmentService {
   }
 
   /// Mark lesson as completed
-  Future<void> markLessonComplete(String lessonId) async {
+  Future<void> markLessonComplete(String lessonId, String courseId) async {
     try {
       final requestBody = {
         'lessonId': lessonId,
@@ -307,21 +307,30 @@ class EnrollmentService {
       // This will work with the existing backend endpoint
       final enrollmentsResponse = await _apiClient.get('${ApiConfig.enrollments}/my-courses');
       enrollmentsResponse.validateStatus();
-      
+
       final enrollmentsJson = jsonDecode(enrollmentsResponse.body) as Map<String, dynamic>;
       if (enrollmentsJson['success'] != true) {
         throw ApiException('Failed to get enrollments');
       }
-      
+
       final enrollments = enrollmentsJson['data'] as List;
       if (enrollments.isEmpty) {
         throw ApiException('No active enrollments found');
       }
-      
-      // Use the first active enrollment (simplified approach)
-      final firstEnrollment = enrollments.first as Map<String, dynamic>;
-      final enrollmentId = firstEnrollment['_id']?.toString();
-      
+
+      // Find the enrollment matching the course this lesson belongs to
+      final matchingEnrollment = enrollments.cast<Map<String, dynamic>>().firstWhere(
+        (enrollment) {
+          final enrolledCourse = enrollment['courseId'];
+          final enrolledCourseId = enrolledCourse is Map
+              ? enrolledCourse['_id']?.toString()
+              : enrolledCourse?.toString();
+          return enrolledCourseId == courseId;
+        },
+        orElse: () => throw ApiException('No enrollment found for this course'),
+      );
+      final enrollmentId = matchingEnrollment['_id']?.toString();
+
       if (enrollmentId == null) {
         throw ApiException('No enrollment found');
       }

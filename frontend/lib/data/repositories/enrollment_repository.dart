@@ -54,7 +54,7 @@ class EnrollmentRepository {
   }
 
   /// Mark lesson as completed
-  Future<void> markLessonComplete(String lessonId) async {
-    return await _enrollmentService.markLessonComplete(lessonId);
+  Future<void> markLessonComplete(String lessonId, String courseId) async {
+    return await _enrollmentService.markLessonComplete(lessonId, courseId);
   }
 }
