@@ -193,11 +193,13 @@ const getCourseSessions = async (req, res) => {
     }
 
     const query = { courseId };
-    
+
     // For upcoming sessions, include both 'scheduled' and 'live' so active sessions surface
     if (status === 'scheduled') {
       query.status = { $in: ['scheduled', 'live'] };
       query.scheduledAt = { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }; // Include sessions from last 24h
+    } else if (status === 'all') {
+      // No status filter - return sessions of every status (scheduled, live, ended, cancelled)
     } else {
       query.status = status;
     }

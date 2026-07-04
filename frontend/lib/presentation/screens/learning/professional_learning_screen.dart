@@ -202,12 +202,16 @@ class _ProfessionalLearningScreenState
   /// Load live sessions and switch to the Live tab if any exist
   Future<void> _checkAndSwitchToLiveSessions() async {
     await _loadLiveSessions();
-    if (mounted && _courseSessions.isNotEmpty) {
+    if (!mounted) return;
+    if (_courseSessions.isNotEmpty) {
       _tabController.animateTo(1);
-      // If there are live now sessions, switch to the Live Now sub-tab
-      if (_liveNowSessions.isNotEmpty) {
-        _liveSessionsTabController.animateTo(0);
-      }
+    }
+    // Default the Live Sessions sub-tab: Live Now if something is live right
+    // now, otherwise Upcoming (rather than sitting on an empty Live Now tab).
+    if (_liveNowSessions.isNotEmpty) {
+      _liveSessionsTabController.animateTo(0);
+    } else if (_upcomingSessions.isNotEmpty) {
+      _liveSessionsTabController.animateTo(1);
     }
   }
 
@@ -1273,10 +1277,12 @@ class _ProfessionalLearningScreenState
     });
     try {
       final service = LiveSessionService();
-      // Load scheduled and live sessions
+      // Load every session for this course (scheduled, live, ended, cancelled)
+      // so Past/Missed tabs have data to show, not just upcoming ones.
       final response = await service.getCourseSessions(
         widget.courseId,
-        status: 'scheduled',
+        status: 'all',
+        limit: 100,
       );
       if (mounted) {
         final now = DateTime.now();
@@ -1476,24 +1482,24 @@ class _ProfessionalLearningScreenState
         Container(
           margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: _isDark ? _DT.surfaceDk : Colors.grey[200],
             borderRadius: BorderRadius.circular(12),
           ),
           child: TabBar(
             controller: _liveSessionsTabController,
             indicator: BoxDecoration(
-              color: Colors.white,
+              color: _isDark ? _DT.cardDark : Colors.white,
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(_isDark ? 0.3 : 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             labelColor: const Color(0xFF00C853),
-            unselectedLabelColor: Colors.grey[600],
+            unselectedLabelColor: _isDark ? Colors.grey[400] : Colors.grey[600],
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
             tabs: const [
@@ -1564,13 +1570,13 @@ class _ProfessionalLearningScreenState
             Icon(
               icon,
               size: 64,
-              color: Colors.grey[400],
+              color: _isDark ? Colors.grey[600] : Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
               message,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: _isDark ? Colors.grey[300] : Colors.grey[600],
                 fontSize: 16,
               ),
             ),
@@ -1579,9 +1585,10 @@ class _ProfessionalLearningScreenState
               type == 'liveNow' ? 'Live sessions will appear here when they start' :
               type == 'upcoming' ? 'Check back later for scheduled sessions' : 'Sessions will appear here',
               style: TextStyle(
-                color: Colors.grey[500],
+                color: _isDark ? Colors.grey[500] : Colors.grey[500],
                 fontSize: 14,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1594,16 +1601,57 @@ class _ProfessionalLearningScreenState
     );
   }
 
+  Future<void> _watchRecording(LiveSession session) async {
+    final url = session.recordingUrl;
+    if (url == null || url.isEmpty) return;
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cannot open recording: $url')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening recording: $e')),
+        );
+      }
+    }
+  }
+
   Widget _buildSessionCard(LiveSession session) {
     final now = DateTime.now();
-    final isActuallyEnded = session.isEnded || session.calculatedEndTime.isBefore(now);
-    final isLive = session.status == 'live' && !isActuallyEnded;
-    final hasStarted = !isActuallyEnded &&
-        (session.scheduledAt.isBefore(now) || session.scheduledAt.isAtSameMomentAs(now));
+    final isActuallyEnded = session.isEnded ||
+        session.isCancelled ||
+        session.calculatedEndTime.isBefore(now);
+    final isLive =
+        session.status == 'live' && !isActuallyEnded && !session.isCancelled;
     // Joinable only if session is actually live
     final canJoin = isLive;
+    final mutedText = _isDark ? Colors.grey[400] : Colors.grey[600];
+
+    late final String badgeLabel;
+    late final MaterialColor badgeColor;
+    if (isLive) {
+      badgeLabel = 'LIVE NOW';
+      badgeColor = Colors.red;
+    } else if (session.isCancelled) {
+      badgeLabel = 'CANCELLED';
+      badgeColor = Colors.grey;
+    } else if (isActuallyEnded) {
+      badgeLabel = 'ENDED';
+      badgeColor = Colors.blueGrey;
+    } else {
+      badgeLabel = 'UPCOMING';
+      badgeColor = Colors.orange;
+    }
+    final badgeTextColor = _isDark ? badgeColor[300]! : badgeColor[700]!;
 
     return Card(
+      color: _cardBg,
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1617,7 +1665,7 @@ class _ProfessionalLearningScreenState
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isLive ? Colors.red[50] : Colors.orange[50],
+                    color: badgeColor.withOpacity(_isDark ? 0.2 : 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -1634,9 +1682,9 @@ class _ProfessionalLearningScreenState
                         ),
                       if (isLive) const SizedBox(width: 6),
                       Text(
-                        isLive ? 'LIVE NOW' : 'UPCOMING',
+                        badgeLabel,
                         style: TextStyle(
-                          color: isLive ? Colors.red : Colors.orange[700],
+                          color: badgeTextColor,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1645,12 +1693,12 @@ class _ProfessionalLearningScreenState
                   ),
                 ),
                 const Spacer(),
-                Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                Icon(Icons.schedule, size: 16, color: mutedText),
                 const SizedBox(width: 4),
                 Text(
                   session.timeProgressInfo,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: mutedText,
                     fontSize: 12,
                   ),
                 ),
@@ -1659,9 +1707,10 @@ class _ProfessionalLearningScreenState
             const SizedBox(height: 12),
             Text(
               session.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: _textPrimary,
               ),
             ),
             if (session.description != null && session.description!.isNotEmpty) ...[
@@ -1669,7 +1718,7 @@ class _ProfessionalLearningScreenState
               Text(
                 session.description!,
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: mutedText,
                   fontSize: 14,
                 ),
                 maxLines: 2,
@@ -1685,11 +1734,11 @@ class _ProfessionalLearningScreenState
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                Icon(Icons.timer, size: 16, color: mutedText),
                 const SizedBox(width: 4),
                 Text(
                   '${session.duration} min',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(color: mutedText, fontSize: 12),
                 ),
                 const Spacer(),
                 if (canJoin)
@@ -1703,13 +1752,36 @@ class _ProfessionalLearningScreenState
                       foregroundColor: Colors.white,
                     ),
                   )
+                else if (isActuallyEnded && session.hasRecording)
+                  ElevatedButton.icon(
+                    onPressed: () => _watchRecording(session),
+                    icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
+                    label: const Text('Watch Recording'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _DT.accent,
+                      foregroundColor: Colors.white,
+                    ),
+                  )
+                else if (isActuallyEnded)
+                  OutlinedButton.icon(
+                    onPressed: null,
+                    icon: Icon(session.isCancelled
+                        ? Icons.event_busy_rounded
+                        : Icons.check_circle_outline_rounded),
+                    label: Text(session.isCancelled ? 'Cancelled' : 'Ended'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: mutedText,
+                      side: BorderSide(color: _borderColor),
+                    ),
+                  )
                 else
                   OutlinedButton.icon(
                     onPressed: null,
                     icon: const Icon(Icons.schedule),
                     label: const Text('Scheduled'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey[600],
+                      foregroundColor: mutedText,
+                      side: BorderSide(color: _borderColor),
                     ),
                   ),
               ],
