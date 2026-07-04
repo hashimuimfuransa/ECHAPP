@@ -29,7 +29,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // Videos, Notes, Materials
+    _tabController = TabController(length: 2, vsync: this); // Videos, Materials (notes are shown under Materials)
   }
 
   @override
@@ -71,7 +71,6 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           indicatorColor: AppTheme.primaryGreen,
           tabs: const [
             Tab(text: 'Videos', icon: Icon(Icons.video_file)),
-            Tab(text: 'Notes', icon: Icon(Icons.description)),
             Tab(text: 'Materials', icon: Icon(Icons.attach_file)),
           ],
         ),
@@ -112,9 +111,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildDownloadsList(DownloadType.video, downloadService),
-                _buildDownloadsList(DownloadType.notes, downloadService),
-                _buildDownloadsList(DownloadType.material, downloadService),
+                _buildDownloadsList(const [DownloadType.video], downloadService),
+                _buildDownloadsList(const [DownloadType.notes, DownloadType.material], downloadService),
               ],
             ),
           ),
@@ -123,10 +121,10 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     );
   }
 
-  Widget _buildDownloadsList(DownloadType type, DownloadService downloadService) {
-    final downloads = downloadService.getDownloadsByType(type);
+  Widget _buildDownloadsList(List<DownloadType> types, DownloadService downloadService) {
+    final downloads = types.expand((type) => downloadService.getDownloadsByType(type));
     final filteredDownloads = downloads.where((download) {
-      bool matchesSearch = _searchQuery.isEmpty || 
+      bool matchesSearch = _searchQuery.isEmpty ||
           download.originalTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           (download.lessonTitle?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
       bool matchesStatus = _statusFilter == null || download.status == _statusFilter;
@@ -134,7 +132,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     }).toList();
 
     if (filteredDownloads.isEmpty) {
-      return _buildEmptyState(type);
+      return _buildEmptyState(types.first);
     }
 
     return ListView.builder(
@@ -145,17 +143,17 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
   }
 
   Widget _buildEmptyState([DownloadType? type]) {
-    final String message = type != null 
-        ? 'No ${type.name} downloads found'
+    final String label = type == DownloadType.notes ? 'material' : (type?.name ?? '');
+    final String message = type != null
+        ? 'No $label downloads found'
         : 'No downloads found';
     final String subMessage = type != null
-        ? 'Download ${type.name} to access them offline'
+        ? 'Download $label to access them offline'
         : (_searchQuery.isEmpty && _statusFilter == null
             ? 'Download videos to watch them offline'
             : 'Try adjusting your search or filters');
     final IconData icon = type != null
-        ? (type == DownloadType.video ? Icons.video_file : 
-           type == DownloadType.notes ? Icons.description : Icons.attach_file)
+        ? (type == DownloadType.video ? Icons.video_file : Icons.attach_file)
         : Icons.download_outlined;
 
     return Center(
