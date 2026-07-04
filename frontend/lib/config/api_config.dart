@@ -16,6 +16,8 @@ class ApiConfig {
   static String get profile => '$baseUrl/auth/profile';
   static String get logout => '$baseUrl/auth/logout';
   static String get firebaseLogin => '$baseUrl/auth/firebase-login';
+  static String get sessionStart => '$baseUrl/auth/session/start';
+  static String get sessionHeartbeat => '$baseUrl/auth/session/heartbeat';
   
   // Course endpoints
   static String get courses => '$baseUrl/courses';

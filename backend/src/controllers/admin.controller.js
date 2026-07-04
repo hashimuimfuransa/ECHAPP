@@ -8,6 +8,7 @@ const Certificate = require('../models/Certificate');
 const Conversation = require('../models/Conversation');
 const ChatMessage = require('../models/ChatMessage');
 const { sendSuccess, sendError } = require('../utils/response.utils');
+const { getStudentCourseProgress } = require('../utils/studentProgress.utils');
 const admin = require('../config/firebase');
 
 // Helper function to escape special regex characters
@@ -755,17 +756,13 @@ const getStudentDetail = async (req, res) => {
         (examResults.length > 0 ? examResults[0].submittedAt : user.createdAt));
     
     // Get time tracking data from MongoDB user
+    // totalSessionTime is kept up to date by client heartbeats (see auth.controller.js
+    // recordSessionHeartbeat), so it already reflects all completed foreground time.
     let timeSpentInApp = 0;
     if (mongoUserId) {
-      const mongoUser = await User.findById(mongoUserId).select('totalSessionTime lastSessionStart sessionCount');
+      const mongoUser = await User.findById(mongoUserId).select('totalSessionTime sessionCount');
       if (mongoUser) {
         timeSpentInApp = mongoUser.totalSessionTime || 0;
-        
-        // If there's an active session, calculate current session time
-        if (mongoUser.lastSessionStart && !mongoUser.lastSessionStart) {
-          const currentSessionTime = Math.floor((Date.now() - mongoUser.lastSessionStart) / 1000);
-          timeSpentInApp += currentSessionTime;
-        }
       }
     }
     
@@ -969,11 +966,25 @@ const getStudentAnalytics = async (req, res) => {
       ]
     });
     
-    // Calculate average session duration (simplified - would need actual session tracking)
-    const avgSessionDuration = 45; // minutes - placeholder
-    
-    // Calculate total study hours (simplified)
-    const totalStudyHours = Math.round((totalEnrollments * 2.5)); // hours - placeholder
+    // Calculate average session duration and total study hours from real, tracked
+    // session time (User.totalSessionTime / sessionCount, updated via client heartbeats)
+    const sessionAgg = await User.aggregate([
+      { $match: { role: 'student' } },
+      {
+        $group: {
+          _id: null,
+          totalSeconds: { $sum: '$totalSessionTime' },
+          totalSessions: { $sum: '$sessionCount' }
+        }
+      }
+    ]);
+    const totalTrackedSeconds = sessionAgg[0]?.totalSeconds || 0;
+    const totalTrackedSessions = sessionAgg[0]?.totalSessions || 0;
+
+    const avgSessionDuration = totalTrackedSessions > 0
+      ? Math.round((totalTrackedSeconds / totalTrackedSessions) / 60)
+      : 0; // minutes
+    const totalStudyHours = Math.round(totalTrackedSeconds / 3600);
     
     sendSuccess(res, {
       totalStudents,
@@ -1132,6 +1143,23 @@ const getCourseAnalytics = async (req, res) => {
   } catch (error) {
     console.error('Error in getCourseAnalytics:', error);
     sendError(res, 'Failed to retrieve course analytics', 500, error.message);
+  }
+};
+
+// Get one student's chapter/lesson-level progress breakdown for a course
+const getStudentCoursePerformance = async (req, res) => {
+  try {
+    const { courseId, studentId } = req.params;
+
+    const data = await getStudentCourseProgress(courseId, studentId);
+    if (!data) {
+      return sendError(res, 'Student not enrolled in this course', 404);
+    }
+
+    sendSuccess(res, data, 'Student course performance retrieved successfully');
+  } catch (error) {
+    console.error('Error in getStudentCoursePerformance:', error);
+    sendError(res, 'Failed to retrieve student course performance', 500, error.message);
   }
 };
 
@@ -2204,6 +2232,7 @@ module.exports = {
   getExamStats,
   getStudentAnalytics,
   getCourseAnalytics,
+  getStudentCoursePerformance,
   createAdmin,
   syncFirebaseUser,
   deleteUserSync,

@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 const Result = require('../models/Result');
 const { sendSuccess, sendError } = require('../utils/response.utils');
+const { getStudentCourseProgress } = require('../utils/studentProgress.utils');
 
 /**
  * Get all courses assigned to the current teacher
@@ -329,98 +330,12 @@ const getStudentPerformance = async (req, res) => {
       return sendError(res, 'You are not assigned to teach this course', 403);
     }
 
-    // Get enrollment
-    const enrollment = await Enrollment.findOne({
-      userId: studentId,
-      courseId
-    }).populate('userId', 'fullName email phone avatar');
-
-    if (!enrollment) {
+    const data = await getStudentCourseProgress(courseId, studentId);
+    if (!data) {
       return sendError(res, 'Student not enrolled in this course', 404);
     }
 
-    // Get all quiz results for this student in this course
-    const quizResults = await Result.find({
-      userId: studentId,
-      courseId
-    })
-      .populate('quizId', 'title sectionId type passingScore')
-      .sort({ submittedAt: -1 });
-
-    // Get completed lessons details
-    const completedLessons = await Lesson.find({
-      _id: { $in: enrollment.completedLessons || [] }
-    }).select('title sectionId order');
-
-    // Get course sections for progress breakdown
-    const sections = await Section.find({ courseId }).sort({ order: 1 });
-    const lessons = await Lesson.find({ courseId }).sort({ order: 1 });
-
-    // Calculate section-wise progress
-    const sectionProgress = sections.map(section => {
-      const sectionLessons = lessons.filter(l => l.sectionId.toString() === section._id.toString());
-      const completedSectionLessons = enrollment.completedLessons?.filter(
-        cl => sectionLessons.some(sl => sl._id.toString() === cl.toString())
-      ).length || 0;
-      
-      return {
-        sectionId: section._id,
-        sectionTitle: section.title,
-        totalLessons: sectionLessons.length,
-        completedLessons: completedSectionLessons,
-        progress: sectionLessons.length > 0 
-          ? Math.round((completedSectionLessons / sectionLessons.length) * 100) 
-          : 0
-      };
-    });
-
-    // Get live session participation
-    const LiveSession = require('../models/LiveSession');
-    const courseSessions = await LiveSession.find({
-      courseId,
-      status: 'ended'
-    }).select('_id title scheduledAt');
-
-    sendSuccess(res, {
-      student: {
-        id: enrollment.userId._id,
-        fullName: enrollment.userId.fullName,
-        email: enrollment.userId.email,
-        phone: enrollment.userId.phone,
-        avatar: enrollment.userId.avatar
-      },
-      enrollment: {
-        enrollmentDate: enrollment.enrollmentDate,
-        completionStatus: enrollment.completionStatus,
-        progress: enrollment.progress,
-        certificateEligible: enrollment.certificateEligible
-      },
-      overallStats: {
-        totalLessons: lessons.length,
-        completedLessons: enrollment.completedLessons?.length || 0,
-        overallProgress: enrollment.progress,
-        quizAttempts: quizResults.length,
-        averageQuizScore: quizResults.length > 0
-          ? Math.round((quizResults.reduce((acc, r) => acc + (r.score || 0), 0) / quizResults.length) * 100) / 100
-          : 0,
-        passedQuizzes: quizResults.filter(r => r.passed).length
-      },
-      sectionProgress,
-      quizHistory: quizResults.map(r => ({
-        quizId: r.quizId?._id,
-        quizTitle: r.quizId?.title,
-        score: r.score,
-        passed: r.passed,
-        submittedAt: r.submittedAt,
-        timeSpent: r.timeSpent
-      })),
-      completedLessons: completedLessons.map(l => ({
-        lessonId: l._id,
-        title: l.title,
-        sectionId: l.sectionId
-      })),
-      availableSessions: courseSessions
-    }, 'Student performance retrieved successfully');
+    sendSuccess(res, data, 'Student performance retrieved successfully');
   } catch (error) {
     console.error('Get Student Performance Error:', error);
     sendError(res, 'Failed to retrieve student performance', 500, error.message);

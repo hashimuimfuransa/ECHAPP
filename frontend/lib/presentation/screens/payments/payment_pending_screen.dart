@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
@@ -32,8 +31,6 @@ class PaymentPendingScreen extends ConsumerStatefulWidget {
 class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
   Timer? _timer;
   bool _isChecking = false;
-  String _statusMessage = 'Waiting for admin approval...';
-  Color _statusColor = Colors.orange;
   AppLocalizations? _l10n;
 
   @override
@@ -85,31 +82,26 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
           _handlePaymentApproved();
         } else if (coursePayment.status == PaymentStatus.failed ||
             coursePayment.status == PaymentStatus.cancelled) {
-          // Payment rejected/cancelled
-          setState(() {
-            _statusMessage = 'Payment ${coursePayment.status.displayName}';
-            _statusColor = Colors.red;
-          });
-        } else {
-          // Still pending
-          setState(() {
-            _statusMessage = 'Still waiting for admin approval...';
-            _statusColor = Colors.orange;
-          });
+          // Payment rejected/cancelled - stop polling and let the user know
+          _timer?.cancel();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment ${coursePayment.status.displayName}. Please contact us for assistance.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
-      } else {
-        // No payment found for this course
-        setState(() {
-          _statusMessage = 'No payment found for this course';
-          _statusColor = Colors.red;
-        });
       }
     } catch (e) {
-      print('Error checking payment status: $e');
+      debugPrint('Error checking payment status: $e');
     } finally {
-      setState(() {
-        _isChecking = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isChecking = false;
+        });
+      }
     }
   }
 
@@ -117,10 +109,14 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     // Stop the timer since payment is approved
     _timer?.cancel();
 
-    setState(() {
-      _statusMessage = 'Payment Approved! Redirecting to course...';
-      _statusColor = Colors.green;
-    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment approved! Redirecting to your course...'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
 
     // Navigate to the course learning page after a brief delay
     Future.delayed(const Duration(milliseconds: 1500), () {
@@ -154,9 +150,9 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
 
   Widget _buildSafeContent(BuildContext context) {
     final settingsAsync = ref.watch(platformSettingsProvider);
-    
+
     return Container(
-      color: Colors.white,
+      color: AppTheme.getBackgroundColor(context),
       child: SafeArea(
         child: settingsAsync.when(
           data: (settings) => _buildContent(context, settings),
@@ -181,224 +177,40 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
             children: [
               const SizedBox(height: 16),
 
+              // Icon
+              Icon(
+                Icons.hourglass_top_rounded,
+                size: 64,
+                color: AppTheme.primary,
+              ),
+
+              const SizedBox(height: 16),
+
               // Title
               Text(
-                _l10n?.paymentPendingApproval ?? 'Payment Pending Approval',
+                _l10n?.paymentPendingApproval ?? 'Payment Pending',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isWideScreen ? 28 : 24,
                   fontWeight: FontWeight.bold,
+                  color: AppTheme.getTextColor(context),
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // Status indicator
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _statusColor.withOpacity(0.1),
-                  border: Border.all(color: _statusColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _isChecking
-                          ? Icons.autorenew
-                          : (_statusColor == Colors.green
-                              ? Icons.check_circle
-                              : (_statusColor == Colors.red
-                                  ? Icons.error
-                                  : Icons.hourglass_empty)),
-                      color: _statusColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _statusMessage,
-                      style: TextStyle(
-                        color: _statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Description
+              // Instructions
               Text(
                 _l10n?.paymentPendingDescription(widget.course.title) ??
-                    'Your payment for "${widget.course.title}" is currently pending admin approval.',
+                    'To complete your enrollment in "${widget.course.title}", please contact us using the details below and share your payment confirmation.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isWideScreen ? 18 : 16,
-                  color: Colors.grey[600],
+                  color: AppTheme.getSecondaryTextColor(context),
                 ),
               ),
 
               const SizedBox(height: 24),
-
-              // Direct Payment Information
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.payment, color: Colors.green.shade700, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          _l10n?.directPaymentAvailable ?? 'Direct Payment Available',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.copy, color: Colors.green.shade600, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            _l10n?.momoCode ?? 'MoMo Code',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '81671517',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () async {
-                              await Clipboard.setData(const ClipboardData(text: '81671517'));
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(_l10n?.momoCodeCopied ?? 'MoMo code copied to clipboard!'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Icon(
-                              Icons.content_copy,
-                              color: Colors.green.shade600,
-                              size: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _l10n?.directPaymentDescription ?? 'You can pay directly using the MoMo code above or contact us for other payment options.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Access Duration Information
-              if (widget.course.accessDuration != null && widget.course.accessDuration! > 0) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            _l10n?.courseAccessDuration ?? 'Course Access Duration',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _l10n?.courseAccessDurationDescription(
-                              widget.course.accessDuration.toString(),
-                              widget.course.accessDurationUnit ?? 'days',
-                            ) ??
-                            'You will have access to this course for ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                _l10n?.courseAccessDurationWarning(
-                                      widget.course.accessDuration.toString(),
-                                      widget.course.accessDurationUnit ?? 'days',
-                                    ) ??
-                                    'Important: You must complete the course within this time period. Access will expire automatically after ${widget.course.accessDuration} ${widget.course.accessDurationUnit ?? 'days'} and you will need to repurchase to regain access.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
 
               // Contact Information Card
               Card(
@@ -409,85 +221,33 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.contact_phone, color: Colors.orange),
-                          SizedBox(width: 8),
+                          Icon(Icons.contact_phone, color: AppTheme.primary),
+                          const SizedBox(width: 8),
                           Text(
-                            _l10n?.needHelp ?? 'Need Help?',
+                            _l10n?.needHelp ?? 'Contact Us to Pay',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange,
+                              color: AppTheme.primary,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        _l10n?.toCompletePayment ?? 'To complete your payment:',
+                        _l10n?.toCompletePayment ?? 'To complete your payment, reach us via:',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
+                          color: AppTheme.getTextColor(context),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      
+
                       // Payment and Contact Instructions from Backend or Fallback
                       _buildPaymentAndContactInstructions(settings),
-                      
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber,
-                                color: Colors.amber, size: 16),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _l10n?.keepTransactionId ?? 'Important: Keep your transaction ID for reference and send proof of payment to admin.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.amber[800]!,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Auto-refresh info
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  border: Border.all(color: Colors.blue[200]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.sync, color: Colors.blue[700], size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _l10n?.autoCheckingPayment ?? 'Automatically checking payment status every 5 seconds...',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
 
@@ -689,70 +449,52 @@ class _PaymentPendingScreenState extends ConsumerState<PaymentPendingScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildContactInstruction(
       String instruction, String contact, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  instruction,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    contact,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+    return Builder(
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 16, color: AppTheme.getSecondaryTextColor(context)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      instruction,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.getTextColor(context),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.getSurfaceColor(context),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        contact,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.getTextColor(context),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

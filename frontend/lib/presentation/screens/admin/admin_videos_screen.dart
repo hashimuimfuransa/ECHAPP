@@ -604,7 +604,9 @@ class _AdminVideosScreenState extends State<AdminVideosScreen> {
             return AlertDialog(
               title: const Text('Upload Video to Section'),
               content: SizedBox(
-                width: 500,
+                width: MediaQuery.of(context).size.width < 560
+                    ? MediaQuery.of(context).size.width * 0.85
+                    : 500,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,

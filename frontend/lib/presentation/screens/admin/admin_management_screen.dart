@@ -351,7 +351,9 @@ class _PromoteAdminDialogState extends State<PromoteAdminDialog> {
     return AlertDialog(
       title: const Text('Promote Student to Admin'),
       content: SizedBox(
-        width: 400,
+        width: MediaQuery.of(context).size.width < 440
+            ? MediaQuery.of(context).size.width * 0.85
+            : 400,
         height: 400,
         child: Column(
           children: [

@@ -15,6 +15,7 @@ import 'package:excellencecoachinghub/presentation/providers/notification_provid
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
+import 'package:excellencecoachinghub/services/session_tracking_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:media_kit/media_kit.dart';
 
@@ -190,8 +191,53 @@ class ExcellenceCoachingHubApp extends ConsumerWidget {
             ),
           );
         }
-        return child ?? const SizedBox.shrink();
+        return _SessionLifecycleObserver(child: child ?? const SizedBox.shrink());
       },
     );
   }
+}
+
+/// Starts/stops [SessionTrackingService]'s foreground stopwatch in step with
+/// the app's lifecycle so "time spent in app" only counts real foreground time.
+class _SessionLifecycleObserver extends StatefulWidget {
+  final Widget child;
+  const _SessionLifecycleObserver({required this.child});
+
+  @override
+  State<_SessionLifecycleObserver> createState() => _SessionLifecycleObserverState();
+}
+
+class _SessionLifecycleObserverState extends State<_SessionLifecycleObserver>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    SessionTrackingService.instance.appResumed();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        SessionTrackingService.instance.appResumed();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        SessionTrackingService.instance.appPaused();
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

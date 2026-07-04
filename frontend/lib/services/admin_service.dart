@@ -5,6 +5,7 @@ import './infrastructure/api_client.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
 import '../models/enrollment.dart';
+import '../models/student_performance.dart';
 
 /// Service for admin-related API operations using the new professional architecture
 class AdminService {
@@ -381,6 +382,27 @@ class AdminService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch course analytics: $e');
+    }
+  }
+
+  /// Get one student's chapter/lesson-level progress breakdown for a course
+  Future<DetailedStudentPerformance> getStudentCourseProgress(
+    String courseId,
+    String studentId,
+  ) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.admin}/courses/$courseId/students/$studentId/performance',
+      );
+      response.validateStatus();
+
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>;
+
+      return DetailedStudentPerformance.fromJson(data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch student course progress: $e');
     }
   }
 

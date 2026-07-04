@@ -215,13 +215,14 @@ class OverallStats {
   }
 }
 
-/// Section Progress Model
+/// Section (chapter) Progress Model
 class SectionProgress {
   final String sectionId;
   final String sectionTitle;
   final int totalLessons;
   final int completedLessons;
   final int progress;
+  final List<LessonProgress> lessons;
 
   SectionProgress({
     required this.sectionId,
@@ -229,6 +230,7 @@ class SectionProgress {
     required this.totalLessons,
     required this.completedLessons,
     required this.progress,
+    this.lessons = const [],
   });
 
   factory SectionProgress.fromJson(Map<String, dynamic> json) {
@@ -238,6 +240,35 @@ class SectionProgress {
       totalLessons: json['totalLessons'] ?? 0,
       completedLessons: json['completedLessons'] ?? 0,
       progress: json['progress'] ?? 0,
+      lessons: json['lessons'] != null
+          ? (json['lessons'] as List)
+              .map((l) => LessonProgress.fromJson(l))
+              .toList()
+          : [],
+    );
+  }
+}
+
+/// A single lesson within a chapter and whether this student has completed it.
+class LessonProgress {
+  final String lessonId;
+  final String title;
+  final int order;
+  final bool completed;
+
+  LessonProgress({
+    required this.lessonId,
+    required this.title,
+    required this.order,
+    required this.completed,
+  });
+
+  factory LessonProgress.fromJson(Map<String, dynamic> json) {
+    return LessonProgress(
+      lessonId: json['lessonId'] ?? '',
+      title: json['title'] ?? '',
+      order: json['order'] ?? 0,
+      completed: json['completed'] ?? false,
     );
   }
 }

@@ -424,8 +424,8 @@ class _AdminCreateCourseScreenState extends ConsumerState<AdminCreateCourseScree
             ) 
           : null,
         title: Text(_isEditing ? 'Edit Course' : 'Create New Course'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: AppTheme.getCardColor(context),
+        foregroundColor: AppTheme.getTextColor(context),
         elevation: 0,
         actions: [
           IconButton(

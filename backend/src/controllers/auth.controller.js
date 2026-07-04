@@ -257,6 +257,59 @@ const logout = async (req, res) => {
   sendSuccess(res, null, 'Logged out successfully');
 };
 
+// Called when the app becomes active (cold start, or resume from background) -
+// marks the beginning of a new foreground session for "time spent in app" tracking.
+const startSession = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    user.sessionCount = (user.sessionCount || 0) + 1;
+    user.lastSessionStart = new Date();
+    user.lastActive = new Date();
+    await user.save();
+
+    sendSuccess(res, { sessionCount: user.sessionCount }, 'Session started');
+  } catch (error) {
+    console.error('Start Session Error:', error);
+    sendError(res, 'Failed to start session', 500, error.message);
+  }
+};
+
+// Called periodically while the app is in the foreground, and once more when it
+// backgrounds, reporting how many seconds of real foreground time elapsed since
+// the last heartbeat. The client's own stopwatch is the only reliable source of
+// "time spent in app" - it can't be reconstructed from login/logout timestamps
+// alone since users rarely explicitly log out.
+const recordSessionHeartbeat = async (req, res) => {
+  try {
+    const seconds = Number(req.body.seconds);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return sendError(res, 'A positive "seconds" value is required', 400);
+    }
+    // Clamp a single heartbeat so a stalled or long-backgrounded client can't
+    // report a huge backlog as if it were active foreground time.
+    const clampedSeconds = Math.min(Math.round(seconds), 300);
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    user.totalSessionTime = (user.totalSessionTime || 0) + clampedSeconds;
+    user.lastSessionStart = new Date();
+    user.lastActive = new Date();
+    await user.save();
+
+    sendSuccess(res, { totalSessionTime: user.totalSessionTime }, 'Session heartbeat recorded');
+  } catch (error) {
+    console.error('Record Session Heartbeat Error:', error);
+    sendError(res, 'Failed to record session heartbeat', 500, error.message);
+  }
+};
+
 // Google Sign-In - Legacy method, may be deprecated in favor of Firebase auth
 const googleSignIn = async (req, res) => {
   try {
@@ -788,6 +841,8 @@ module.exports = {
   getProfile,
   updateProfile,
   logout,
+  startSession,
+  recordSessionHeartbeat,
   googleSignIn,
   firebaseLogin,
   forgotPassword,

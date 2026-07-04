@@ -8,6 +8,7 @@ import 'package:excellencecoachinghub/presentation/providers/wishlist_provider.d
 import 'package:excellencecoachinghub/presentation/providers/course_stats_provider.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
 import 'package:excellencecoachinghub/widgets/countdown_timer.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -358,30 +359,44 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ),
                 ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPriceSection(course, isDark, textColor, accentColor, l10n),
-                    const SizedBox(height: 12),
-                    _buildEnrollSection(course, isEnrolledAsync, isDark, accentColor, l10n),
-                    const SizedBox(height: 20),
-                    if (course.category != null && course.category!['name'] != null)
-                      _buildCategoryCard(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
-                    const SizedBox(height: 20),
-                    _buildCourseStats(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
-                    const SizedBox(height: 20),
-                    _buildDescription(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
-                    const SizedBox(height: 20),
-                    if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
-                      _buildLearningObjectives(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
-                    const SizedBox(height: 20),
-                    if (course.requirements != null && course.requirements!.isNotEmpty)
-                      _buildRequirements(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
-                    const SizedBox(height: 20),
-                    _buildInstructorInfo(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
-                  ],
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: ResponsiveBreakpoints.isDesktop(context)
+                        ? 840
+                        : ResponsiveBreakpoints.isTablet(context)
+                            ? 680
+                            : double.infinity,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveBreakpoints.isSmallMobile(context) ? 12 : 16,
+                      vertical: 20,
+                    ).copyWith(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPriceSection(course, isDark, textColor, accentColor, l10n),
+                        const SizedBox(height: 12),
+                        _buildEnrollSection(course, isEnrolledAsync, isDark, accentColor, l10n),
+                        const SizedBox(height: 20),
+                        if (course.category != null && course.category!['name'] != null)
+                          _buildCategoryCard(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
+                        const SizedBox(height: 20),
+                        _buildCourseStats(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor),
+                        const SizedBox(height: 20),
+                        _buildDescription(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
+                        const SizedBox(height: 20),
+                        if (course.learningObjectives != null && course.learningObjectives!.isNotEmpty)
+                          _buildLearningObjectives(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
+                        const SizedBox(height: 20),
+                        if (course.requirements != null && course.requirements!.isNotEmpty)
+                          _buildRequirements(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, l10n),
+                        const SizedBox(height: 20),
+                        _buildInstructorInfo(course, isDark, cardColor, textColor, secondaryTextColor, dividerColor, accentColor, l10n),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -606,11 +621,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF334155) : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -622,8 +637,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   const SizedBox(width: 4),
                   Text(
                     course.averageRating!.toStringAsFixed(1),
-                    style: const TextStyle(
-                      color: Color(0xFF1F2937),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -989,9 +1004,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             }
           });
         },
-        child: const Text(
-          'Payment Pending',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        child: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'Payment Pending',
+            maxLines: 1,
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
@@ -1026,7 +1045,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: ResponsiveBreakpoints.isSmallMobile(context) ? 16 : 24,
+            vertical: 16,
+          ),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: isLoading
@@ -1038,9 +1060,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Text(
-                isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                  maxLines: 1,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                ),
               ),
       ),
     );
@@ -1052,10 +1078,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'Checking...',
-          style: TextStyle(color: Color(0xFF047857), fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF047857),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -1115,9 +1145,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 onPressed: () {
                   context.push('/learning/${course.id}');
                 },
-                child: Text(
-                  l10n?.continueLearning ?? 'Continue Learning',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    l10n?.continueLearning ?? 'Continue Learning',
+                    maxLines: 1,
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),

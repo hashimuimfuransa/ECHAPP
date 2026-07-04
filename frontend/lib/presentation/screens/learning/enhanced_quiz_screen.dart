@@ -1418,16 +1418,16 @@ class _EnhancedQuizScreenState extends ConsumerState<EnhancedQuizScreen>
                 controller: TextEditingController(text: userOutput),
                 maxLines: 6,
                 readOnly: true,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
-                  backgroundColor: Colors.white,
+                  color: AppTheme.getTextColor(context),
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: InputBorder.none,
                   filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.all(12),
+                  fillColor: AppTheme.getCardColor(context),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 onChanged: (value) {
                   setState(() {

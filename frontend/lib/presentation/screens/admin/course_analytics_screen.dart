@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/widgets/analytics_charts.dart';
+import 'package:excellencecoachinghub/models/student_performance.dart';
 
 class CourseAnalyticsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -98,6 +99,44 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
         ),
       );
     }
+  }
+
+  void _showStudentProgressDialog(CourseStudentPerformance student) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
+          child: FutureBuilder<DetailedStudentPerformance>(
+            future: _adminService.getStudentCourseProgress(widget.courseId, student.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      const SizedBox(height: 12),
+                      Text('Failed to load progress: ${snapshot.error}', textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+                    ],
+                  ),
+                );
+              }
+              return _StudentProgressContent(student: student, performance: snapshot.data!);
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -669,12 +708,20 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
                                 ),
                               ),
                             Expanded(
-                              child: Center(
-                                child: IconButton(
-                                  icon: const Icon(Icons.person_remove_outlined, color: Colors.red, size: 20),
-                                  onPressed: () => _unenrollStudent(student),
-                                  tooltip: 'Unenroll Student',
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.checklist_rounded, color: AppTheme.primaryGreen, size: 20),
+                                    onPressed: () => _showStudentProgressDialog(student),
+                                    tooltip: 'View Chapter/Lesson Progress',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.person_remove_outlined, color: Colors.red, size: 20),
+                                    onPressed: () => _unenrollStudent(student),
+                                    tooltip: 'Unenroll Student',
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -746,7 +793,7 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
               });
             }
           },
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.getCardColor(context),
           selectedColor: AppTheme.primaryGreen,
           checkmarkColor: Colors.white,
           side: BorderSide(
@@ -809,5 +856,142 @@ extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;
     return '${this[0].toUpperCase()}${substring(1)}';
+  }
+}
+
+/// Shows a single student's per-chapter, per-lesson completion breakdown for a course.
+class _StudentProgressContent extends StatelessWidget {
+  final CourseStudentPerformance student;
+  final DetailedStudentPerformance performance;
+
+  const _StudentProgressContent({required this.student, required this.performance});
+
+  @override
+  Widget build(BuildContext context) {
+    final overall = performance.overallStats;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                child: Text(
+                  student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(student.email, style: const TextStyle(fontSize: 12, color: AppTheme.greyColor)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              _statChip('Overall', '${overall.overallProgress}%'),
+              const SizedBox(width: 8),
+              _statChip('Lessons', '${overall.completedLessons}/${overall.totalLessons}'),
+              const SizedBox(width: 8),
+              _statChip('Quizzes Passed', '${overall.passedQuizzes}/${overall.quizAttempts}'),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Flexible(
+          child: performance.sectionProgress.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('No chapters found for this course.'),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: performance.sectionProgress.length,
+                  itemBuilder: (context, index) {
+                    final section = performance.sectionProgress[index];
+                    return ExpansionTile(
+                      title: Text(section.sectionTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6, right: 8),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: section.totalLessons > 0 ? section.completedLessons / section.totalLessons : 0,
+                            backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+                            valueColor: const AlwaysStoppedAnimation(AppTheme.primaryGreen),
+                            minHeight: 4,
+                          ),
+                        ),
+                      ),
+                      trailing: Text(
+                        '${section.completedLessons}/${section.totalLessons}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryGreen, fontSize: 13),
+                      ),
+                      children: section.lessons.isEmpty
+                          ? const [
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Text('No lessons in this chapter.', style: TextStyle(color: AppTheme.greyColor)),
+                              ),
+                            ]
+                          : section.lessons.map((lesson) {
+                              return ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  lesson.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  color: lesson.completed ? Colors.green : AppTheme.greyColor,
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  lesson.title,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: lesson.completed ? null : AppTheme.greyColor,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statChip(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryGreen.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryGreen)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.greyColor)),
+          ],
+        ),
+      ),
+    );
   }
 }
