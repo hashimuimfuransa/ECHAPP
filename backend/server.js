@@ -69,6 +69,7 @@ const bookRoutes = require('./src/routes/book.routes'); // Book routes
 const teacherRoutes = require('./src/routes/teacher.routes'); // Teacher routes
 const liveSessionRoutes = require('./src/routes/liveSession.routes'); // Live Session routes
 const bbbAdminRoutes = require('./src/routes/admin/bbb.routes'); // BBB Admin routes
+const backupRoutes = require('./src/routes/backup.routes'); // Database backup routes
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -78,6 +79,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/bbb', bbbAdminRoutes);
+app.use('/api/admin/backups', backupRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/lessons', lessonRoutes);
@@ -127,6 +129,10 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     // Schedule notification checks (daily at 9am server time)
     NotificationSchedulerService.schedule(9);
     console.log('📧 Notification checks scheduled (daily at 9am)');
+
+    // Schedule database backups (daily at 2am server time, low-traffic hour)
+    const BackupService = require('./src/services/backup.service');
+    BackupService.schedule(parseInt(process.env.BACKUP_HOUR || '2', 10));
 
     // Initialize BBB config from environment variables (if not already in database)
     const BBBConfig = require('./src/models/BBBConfig');

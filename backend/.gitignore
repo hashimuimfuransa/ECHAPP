@@ -125,6 +125,9 @@ public/
 # Firebase service account key (KEEP THIS!)
 serviceAccountKey.json
 
+# Database backups (local copies — see src/services/backup.service.js)
+/backups/
+
 # IDE files
 .vscode/
 .idea/

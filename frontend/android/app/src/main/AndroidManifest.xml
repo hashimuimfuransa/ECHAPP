@@ -18,9 +18,14 @@
     
     <!-- WAKE_LOCK permission to wake device for background notifications -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
+
     <!-- BOOT_COMPLETED permission to restart services after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Foreground service so course downloads keep running after the app is
+         closed/backgrounded, instead of being killed with the process. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     
     <application
         android:label="Excellence Coaching Hub"
@@ -56,6 +61,14 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Foreground service used to keep course downloads (video + material)
+             running after the app is closed. stopWithTask="false" (set by the
+             plugin's own manifest) keeps the process alive when swiped from
+             Recents, as long as this service is active. -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="dataSync" />
         
         <!-- Default notification channel for FCM -->
         <meta-data

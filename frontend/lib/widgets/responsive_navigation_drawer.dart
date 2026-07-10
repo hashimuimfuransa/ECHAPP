@@ -301,6 +301,11 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                     width: 28,
                     height: 28,
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: Icon(Icons.school, color: Colors.white, size: 20),
+                    ),
                   ),
                 ),
                 if (!isCollapsed) ...[
@@ -470,6 +475,11 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                   width: isSmallScreen ? 24 : 28,
                   height: isSmallScreen ? 24 : 28,
                   fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => SizedBox(
+                    width: isSmallScreen ? 24 : 28,
+                    height: isSmallScreen ? 24 : 28,
+                    child: const Icon(Icons.school, color: Colors.white, size: 20),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),

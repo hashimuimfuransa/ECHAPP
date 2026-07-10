@@ -381,20 +381,13 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           controller: _scrollController,
                           slivers: [
                             SliverPadding(
-                              padding:
-                                  ResponsiveBreakpoints.getPadding(context),
-                              sliver: SliverToBoxAdapter(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 8),
-                                  ],
-                                ),
+                              padding: EdgeInsets.fromLTRB(
+                                ResponsiveBreakpoints.getPadding(context).left,
+                                4,
+                                ResponsiveBreakpoints.getPadding(context)
+                                    .right,
+                                16,
                               ),
-                            ),
-                            SliverPadding(
-                              padding:
-                                  ResponsiveBreakpoints.getPadding(context),
                               sliver: enrolledCoursesAsync.when(
                                 data: (enrolledCourses) {
                                   // Load upcoming sessions for enrolled courses
@@ -442,7 +435,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         Container(
           margin: EdgeInsets.symmetric(
             horizontal: _getResponsiveHorizontalPadding(context),
-            vertical: _getResponsiveVerticalPadding(context),
+            vertical: _getResponsiveVerticalPadding(context) * 0.5,
           ),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1F2937) : Colors.white,
@@ -1519,7 +1512,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         child:
             _buildCategoryHeader(context, categoryName, categoryCourses.length),
       ));
-      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 12)));
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 10)));
 
       // Add courses for this category
       if (categoryName == 'Recommended for You' || categoryName == l10n?.recommendedForYou) {
@@ -1548,8 +1541,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
         slivers.add(SliverGrid(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: gridCount.crossAxisCount,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
             childAspectRatio: gridCount.childAspectRatio,
           ),
           delegate: SliverChildBuilderDelegate(
@@ -1572,7 +1565,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       }
 
       // Add spacing between categories
-      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 18)));
     }
 
     return SliverMainAxisGroup(

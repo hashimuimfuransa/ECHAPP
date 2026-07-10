@@ -578,6 +578,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
+  // Content width scales with the window so wide desktop monitors aren't
+  // left with a narrow column and huge unused side gutters, while still
+  // capping line/card widths at a sane reading width on ultra-wide screens.
+  double _dashboardContentMaxWidth(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 1700) return 1560;
+    if (width >= 1400) return 1320;
+    return 1180;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -640,7 +650,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
+                    constraints:
+                        BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -768,7 +779,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
+                    constraints:
+                        BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -848,7 +860,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1180),
+              constraints: BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
               child: Row(
                 children: [
                   // Menu button to open drawer (mobile only)
@@ -1514,21 +1526,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildSearchBarWithDropdown(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
-    
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildModernSearchBar(context),
-        if (_showCategoryDropdown)
-          Padding(
-            padding: EdgeInsets.only(
-              left: isMobile ? 16 : 28,
-              right: isMobile ? 16 : 28,
-              top: 4,
-            ),
-            child: _buildCategoryDropdown(context),
-          ),
-      ],
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildModernSearchBar(context),
+            if (_showCategoryDropdown)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: isMobile ? 16 : 28,
+                  right: isMobile ? 16 : 28,
+                  top: 4,
+                ),
+                child: _buildCategoryDropdown(context),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -5194,8 +5211,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildRecommendedCourses(BuildContext context, List<Course> courses,
       List<Course> enrolledCourses) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
 
     final displayCourses = courses.take(8).toList();
 
@@ -5232,33 +5250,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: isMobile ? 244 : 264,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: displayCourses.length,
-            padding: EdgeInsets.zero,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: _buildModernCourseCard(
-                    context, displayCourses[index], enrolledCourses),
+        if (isDesktop || isTablet)
+          // On wider screens lay the cards out in a grid that fills the
+          // available width instead of a fixed-width horizontal scroller,
+          // so the section reads well on large monitors without requiring
+          // a scroll gesture to see the rest of the courses.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const idealCardWidth = 220.0;
+              final crossAxisCount = (constraints.maxWidth / idealCardWidth)
+                  .floor()
+                  .clamp(isTablet ? 3 : 4, 8);
+              const spacing = 16.0;
+              final cardWidth =
+                  (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
+                      crossAxisCount;
+              const cardHeight = 264.0;
+              final aspectRatio = cardWidth / cardHeight;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: aspectRatio,
+                ),
+                itemCount: displayCourses.length,
+                itemBuilder: (context, index) {
+                  return _buildModernCourseCard(
+                      context, displayCourses[index], enrolledCourses,
+                      width: cardWidth);
+                },
               );
             },
+          )
+        else
+          SizedBox(
+            height: 244,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: displayCourses.length,
+              padding: EdgeInsets.zero,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _buildModernCourseCard(
+                      context, displayCourses[index], enrolledCourses),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
 
   // Modern Course Card
   Widget _buildModernCourseCard(
-      BuildContext context, Course course, List<Course> enrolledCourses) {
+      BuildContext context, Course course, List<Course> enrolledCourses,
+      {double? width}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isEnrolled = enrolledCourses.any((c) => c.id == course.id);
 
-    final cardWidth = isMobile ? 178.0 : 206.0;
+    final cardWidth = width ?? (isMobile ? 178.0 : 206.0);
     final price = course.price ?? 0;
     final isFree = price == 0;
 
@@ -6170,7 +6226,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       List<Course> popularCourses, List<Course> enrolledCourses) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isTablet = ResponsiveBreakpoints.isTablet(context);
-    final crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -6197,11 +6252,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         if (isDesktop || isTablet)
           LayoutBuilder(
             builder: (context, constraints) {
+              // Target a comfortable card width and let the column count grow
+              // with the available space, so ultra-wide monitors show more
+              // cards per row instead of a few large ones.
+              const idealCardWidth = 260.0;
+              final crossAxisCount = (constraints.maxWidth / idealCardWidth)
+                  .floor()
+                  .clamp(isTablet ? 2 : 3, 6);
               // Calculate card width based on available space
               final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 20) / crossAxisCount;
-              // Card height = image (16:9 ratio of width) + content (120 fixed)
-              final imageHeight = cardWidth * 9 / 16;
-              final cardHeight = imageHeight + 120;
+              // _buildCourseCardV2's image has an 8px margin on every side, so
+              // the actual thumbnail width is (cardWidth - 16), and its content
+              // block below is a fixed 110px SizedBox plus 10+14px of vertical
+              // padding (134px total). A few extra px are added as a safety
+              // buffer against font-metric rounding.
+              final imageHeight = 16 + (cardWidth - 16) * 9 / 16;
+              final cardHeight = imageHeight + 134 + 6;
               final aspectRatio = cardWidth / cardHeight;
 
               return GridView.builder(

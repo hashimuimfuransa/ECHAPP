@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:excellencecoachinghub/services/background_download_service.dart';
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
@@ -44,6 +46,24 @@ class DownloadService extends ChangeNotifier {
   static const String _filenameMapKey = 'filename_to_lesson_id_map';
   bool _isInitialized = false;
   Future<void>? _initFuture;
+
+  // On Android, actual transfers run in a foreground service (see
+  // background_download_service.dart) so they survive the app being closed
+  // or swiped from Recents. Other platforms keep downloading in-process via
+  // the direct Dio methods below (background survival isn't attempted there).
+  bool get _useBackgroundService =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  BackgroundDownloadClient? _bgClient;
+  StreamSubscription<Map<String, dynamic>?>? _bgProgressSub;
+  StreamSubscription<Map<String, dynamic>?>? _bgCompleteSub;
+  StreamSubscription<Map<String, dynamic>?>? _bgErrorSub;
+
+  // Per-task (taskId = lessonId for videos, "material_$lessonId" for
+  // materials) bookkeeping for downloads running in the background service.
+  final Map<String, Completer<String>> _taskCompleters = {};
+  final Map<String, void Function(double)?> _taskOnProgress = {};
+  final Map<String, void Function()?> _taskOnSuccess = {};
+  final Map<String, void Function(String)?> _taskOnError = {};
 
   // Optional callback: called when a download completes or fails so the
   // caller (e.g. NotificationNotifier via the provider) can persist the
@@ -123,6 +143,20 @@ class DownloadService extends ChangeNotifier {
     } catch (e) {
       print('Error initializing notifications: $e');
       // Continue anyway - notifications are optional
+    }
+
+    if (_useBackgroundService) {
+      try {
+        await initializeBackgroundDownloadService();
+        final client = BackgroundDownloadClient();
+        _bgClient = client;
+        _bgProgressSub = client.onProgress.listen(_handleBgProgress);
+        _bgCompleteSub = client.onComplete.listen(_handleBgComplete);
+        _bgErrorSub = client.onError.listen(_handleBgError);
+      } catch (e) {
+        print('Error initializing background download service: $e');
+        _bgClient = null;
+      }
     }
 
     // Always load from storage, even if other initialization fails
@@ -452,8 +486,204 @@ class DownloadService extends ChangeNotifier {
     return directory.path;
   }
 
+  // ─────────────────────────────────────────────
+  //  Background-service event handlers
+  //  (taskId == lessonId for videos, "material_$lessonId" for materials)
+  // ─────────────────────────────────────────────
+  void _handleBgProgress(Map<String, dynamic>? event) {
+    if (event == null) return;
+    final taskId = event['taskId'] as String?;
+    if (taskId == null) return;
+    final progress = (event['progress'] as num?)?.toDouble() ?? 0.0;
+
+    final download = _downloads[taskId];
+    if (download != null) {
+      _downloads[taskId] = download.copyWith(downloadProgress: progress);
+      notifyListeners();
+      if (progress >= 0) {
+        _showDownloadProgressNotification(taskId, download.originalTitle, progress);
+      }
+      if (progress >= 1.0) {
+        _saveDownloadsToStorage();
+      }
+    }
+    _taskOnProgress[taskId]?.call(progress);
+  }
+
+  void _handleBgComplete(Map<String, dynamic>? event) async {
+    if (event == null) return;
+    final taskId = event['taskId'] as String?;
+    if (taskId == null) return;
+    final filePath = event['filePath'] as String? ?? _downloads[taskId]?.localPath ?? '';
+
+    final download = _downloads[taskId];
+    if (download != null) {
+      _downloads[taskId] = download.copyWith(
+        isDownloading: false,
+        downloadProgress: 1.0,
+        status: DownloadStatus.completed,
+      );
+      notifyListeners();
+      await _saveDownloadsToStorage();
+      await _showDownloadCompleteNotification(taskId, download.originalTitle);
+      await onNotificationCreated?.call(
+        title: 'Download Complete',
+        message: '${download.originalTitle} is ready to watch',
+        type: 'success',
+      );
+    }
+
+    _taskOnSuccess[taskId]?.call();
+    _taskCompleters.remove(taskId)?.complete(filePath);
+    _taskOnProgress.remove(taskId);
+    _taskOnSuccess.remove(taskId);
+    _taskOnError.remove(taskId);
+  }
+
+  void _handleBgError(Map<String, dynamic>? event) async {
+    if (event == null) return;
+    final taskId = event['taskId'] as String?;
+    if (taskId == null) return;
+    final message = event['message'] as String? ?? 'Download failed';
+    final cancelled = event['cancelled'] == true;
+
+    final download = _downloads[taskId];
+    if (download != null) {
+      _downloads[taskId] = cancelled
+          ? download.copyWith(isDownloading: false, status: DownloadStatus.paused)
+          : download.copyWith(isDownloading: false, status: DownloadStatus.failed, error: message);
+      notifyListeners();
+      await _saveDownloadsToStorage();
+      if (!cancelled) {
+        await _showDownloadFailedNotification(taskId, download.originalTitle, message);
+        await onNotificationCreated?.call(
+          title: 'Download Failed',
+          message: '${download.originalTitle}: $message',
+          type: 'error',
+        );
+      }
+    }
+
+    if (cancelled) {
+      _taskCompleters.remove(taskId)?.complete(download?.localPath ?? '');
+    } else {
+      _taskOnError[taskId]?.call(message);
+      _taskCompleters.remove(taskId)?.completeError(Exception(message));
+    }
+    _taskOnProgress.remove(taskId);
+    _taskOnSuccess.remove(taskId);
+  }
+
   // Download video with progress tracking and pause/resume support
   Future<String> downloadVideo({
+    required String url,
+    required String fileName,
+    required String originalTitle,
+    required String lessonId,
+    Function(double)? onProgress,
+    Function()? onSuccess,
+    Function(String)? onError,
+  }) async {
+    if (_useBackgroundService && _bgClient != null) {
+      return _downloadVideoViaService(
+        url: url,
+        fileName: fileName,
+        originalTitle: originalTitle,
+        lessonId: lessonId,
+        onProgress: onProgress,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+    }
+    return _downloadVideoDirect(
+      url: url,
+      fileName: fileName,
+      originalTitle: originalTitle,
+      lessonId: lessonId,
+      onProgress: onProgress,
+      onSuccess: onSuccess,
+      onError: onError,
+    );
+  }
+
+  // Queues a video download with the Android foreground service so it keeps
+  // running after the app is closed. The returned Future completes (or
+  // throws) when the service reports the task done/failed.
+  Future<String> _downloadVideoViaService({
+    required String url,
+    required String fileName,
+    required String originalTitle,
+    required String lessonId,
+    Function(double)? onProgress,
+    Function()? onSuccess,
+    Function(String)? onError,
+  }) async {
+    final directory = await _getAppDirectory();
+    final filePath = p.join(directory, "$fileName.mp4");
+
+    final file = File(filePath);
+    final existing = _downloads[lessonId];
+    if (await file.exists() && existing != null && existing.status == DownloadStatus.completed) {
+      onProgress?.call(1.0);
+      onSuccess?.call();
+      return filePath;
+    }
+
+    int downloadedBytes = 0;
+    if (await file.exists()) {
+      downloadedBytes = await file.length();
+    }
+
+    final download = Download(
+      id: lessonId,
+      lessonId: lessonId,
+      fileName: fileName,
+      originalTitle: originalTitle,
+      localPath: filePath,
+      url: url,
+      type: DownloadType.video,
+      downloadProgress: existing?.downloadProgress ?? (downloadedBytes > 0 ? -1.0 : 0.0),
+      isDownloading: true,
+      status: DownloadStatus.downloading,
+    );
+    _downloads[lessonId] = download;
+    _filenameToLessonId[fileName] = lessonId;
+    await _saveFilenameMap();
+    notifyListeners();
+    await _saveDownloadsToStorage();
+
+    final completer = Completer<String>();
+    _taskCompleters[lessonId] = completer;
+    _taskOnProgress[lessonId] = onProgress;
+    _taskOnSuccess[lessonId] = onSuccess;
+    _taskOnError[lessonId] = onError;
+
+    try {
+      await _bgClient!.enqueue(
+        taskId: lessonId,
+        url: url,
+        filePath: filePath,
+        downloadedBytes: downloadedBytes,
+        title: originalTitle,
+      );
+    } catch (e) {
+      _taskCompleters.remove(lessonId);
+      _taskOnProgress.remove(lessonId);
+      _taskOnSuccess.remove(lessonId);
+      _taskOnError.remove(lessonId);
+      _downloads[lessonId] = download.copyWith(isDownloading: false, status: DownloadStatus.failed, error: e.toString());
+      notifyListeners();
+      await _saveDownloadsToStorage();
+      onError?.call(e.toString());
+      rethrow;
+    }
+
+    return completer.future;
+  }
+
+  // Original in-process download path, used on platforms where the
+  // foreground service isn't available (iOS, desktop, web).
+  Future<String> _downloadVideoDirect({
     required String url,
     required String fileName,
     required String originalTitle,
@@ -725,6 +955,10 @@ class DownloadService extends ChangeNotifier {
 
   // Pause a download
   void pauseDownload(String lessonId) {
+    if (_useBackgroundService && _bgClient != null && _taskCompleters.containsKey(lessonId)) {
+      _bgClient!.cancel(lessonId);
+      return;
+    }
     if (_cancelTokens.containsKey(lessonId)) {
       _cancelTokens[lessonId]!.cancel();
       _cancelTokens.remove(lessonId);
@@ -851,10 +1085,137 @@ class DownloadService extends ChangeNotifier {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
+    if (_useBackgroundService && _bgClient != null) {
+      return _downloadNotesOrMaterialViaService(
+        url: url,
+        title: title,
+        lessonId: lessonId,
+        type: type,
+        lessonTitle: lessonTitle,
+        sectionTitle: sectionTitle,
+        onProgress: onProgress,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+    }
+    return _downloadNotesOrMaterialDirect(
+      url: url,
+      title: title,
+      lessonId: lessonId,
+      type: type,
+      lessonTitle: lessonTitle,
+      sectionTitle: sectionTitle,
+      onProgress: onProgress,
+      onSuccess: onSuccess,
+      onError: onError,
+    );
+  }
+
+  // Queues a notes/material download with the Android foreground service so
+  // it keeps running after the app is closed.
+  Future<String> _downloadNotesOrMaterialViaService({
+    required String url,
+    required String title,
+    required String lessonId,
+    required DownloadType type,
+    String? lessonTitle,
+    String? sectionTitle,
+    Function(double)? onProgress,
+    Function()? onSuccess,
+    Function(String)? onError,
+  }) async {
+    final downloadId = '${type.name}_$lessonId';
+
+    if (_downloads.containsKey(downloadId) && _downloads[downloadId]!.status == DownloadStatus.completed) {
+      onProgress?.call(1.0);
+      onSuccess?.call();
+      return _downloads[downloadId]!.localPath;
+    }
+
+    String fileExtension = '.pdf';
+    final lowerUrl = url.toLowerCase();
+    if (lowerUrl.endsWith('.doc') || lowerUrl.endsWith('.docx')) {
+      fileExtension = '.docx';
+    } else if (lowerUrl.endsWith('.txt')) {
+      fileExtension = '.txt';
+    } else if (lowerUrl.endsWith('.md')) {
+      fileExtension = '.md';
+    }
+
+    final directory = await _getAppDirectory();
+    final fileName = '${type.name}_$lessonId$fileExtension';
+    final filePath = p.join(directory, fileName);
+
+    int downloadedBytes = 0;
+    final file = File(filePath);
+    if (await file.exists()) {
+      downloadedBytes = await file.length();
+    }
+
+    final download = Download(
+      id: downloadId,
+      lessonId: lessonId,
+      fileName: fileName,
+      originalTitle: title,
+      localPath: filePath,
+      url: url,
+      type: type,
+      lessonTitle: lessonTitle,
+      sectionTitle: sectionTitle,
+      downloadProgress: downloadedBytes > 0 ? -1.0 : 0.0,
+      isDownloading: true,
+      status: DownloadStatus.downloading,
+    );
+    _downloads[downloadId] = download;
+    notifyListeners();
+    await _saveDownloadsToStorage();
+
+    final completer = Completer<String>();
+    _taskCompleters[downloadId] = completer;
+    _taskOnProgress[downloadId] = onProgress;
+    _taskOnSuccess[downloadId] = onSuccess;
+    _taskOnError[downloadId] = onError;
+
+    try {
+      await _bgClient!.enqueue(
+        taskId: downloadId,
+        url: url,
+        filePath: filePath,
+        downloadedBytes: downloadedBytes,
+        title: title,
+      );
+    } catch (e) {
+      _taskCompleters.remove(downloadId);
+      _taskOnProgress.remove(downloadId);
+      _taskOnSuccess.remove(downloadId);
+      _taskOnError.remove(downloadId);
+      _downloads[downloadId] = download.copyWith(isDownloading: false, status: DownloadStatus.failed, error: e.toString());
+      notifyListeners();
+      await _saveDownloadsToStorage();
+      onError?.call(e.toString());
+      rethrow;
+    }
+
+    return completer.future;
+  }
+
+  // Original in-process download path, used on platforms where the
+  // foreground service isn't available (iOS, desktop, web).
+  Future<String> _downloadNotesOrMaterialDirect({
+    required String url,
+    required String title,
+    required String lessonId,
+    required DownloadType type,
+    String? lessonTitle,
+    String? sectionTitle,
+    Function(double)? onProgress,
+    Function()? onSuccess,
+    Function(String)? onError,
+  }) async {
     try {
       // Generate a unique ID for this download
       final downloadId = '${type.name}_$lessonId';
-      
+
       // Check if already downloaded
       if (_downloads.containsKey(downloadId) && _downloads[downloadId]!.status == DownloadStatus.completed) {
         onProgress?.call(1.0);

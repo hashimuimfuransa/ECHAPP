@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
+import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -14,6 +15,10 @@ class _LandingScreenState extends State<LandingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final contentMaxWidth = isDesktop ? 720.0 : (isTablet ? 640.0 : double.infinity);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -30,7 +35,10 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
             child: SafeArea(
               child: SingleChildScrollView(
-                child: Column(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                    child: Column(
                   children: [
                     // Header with logo
                     Container(
@@ -270,8 +278,10 @@ class _LandingScreenState extends State<LandingScreen> {
 
                           const SizedBox(height: 20),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 20,
+                            runSpacing: 16,
                             children: [
                               _buildAccessOption(
                                 icon: '💻',
@@ -317,6 +327,8 @@ class _LandingScreenState extends State<LandingScreen> {
                       ),
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             ),

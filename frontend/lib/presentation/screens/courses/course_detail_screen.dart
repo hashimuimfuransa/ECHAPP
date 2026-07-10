@@ -24,14 +24,40 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
   _CourseDetailScreenState createState() => _CourseDetailScreenState();
 }
 
-class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
+class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with SingleTickerProviderStateMixin {
   // State variables
   bool _hasRedirected = false;
   bool _isPaymentLoading = false;
   bool _isEnrollmentLoading = false;
 
+  // Enroll button attention animation
+  late final AnimationController _enrollPulseController;
+  late final Animation<double> _enrollPulseScale;
+  late final Animation<double> _enrollGlowStrength;
+
   // Localization
   AppLocalizations? get l10n => AppLocalizations.of(context);
+
+  @override
+  void initState() {
+    super.initState();
+    _enrollPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat(reverse: true);
+    _enrollPulseScale = Tween<double>(begin: 1.0, end: 1.045).animate(
+      CurvedAnimation(parent: _enrollPulseController, curve: Curves.easeInOut),
+    );
+    _enrollGlowStrength = Tween<double>(begin: 0.35, end: 0.85).animate(
+      CurvedAnimation(parent: _enrollPulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _enrollPulseController.dispose();
+    super.dispose();
+  }
 
   // Course provider
   static final _courseProvider = FutureProvider.family<Course, String>((ref, courseId) async {
@@ -1017,22 +1043,39 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 
   Widget _buildPurchaseButton(Course course, bool isFree, bool isLoading, bool isDark, Color accentColor, AppLocalizations? l10n) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isFree 
-            ? [accentColor, const Color(0xFF34D399)]
-            : [const Color(0xFF047857), accentColor],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: (isFree ? accentColor : const Color(0xFF047857)).withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    // A punchy, high-contrast color pair so the CTA reads clearly against both
+    // the light and dark backgrounds behind it.
+    final glowColor = isFree ? const Color(0xFF00E676) : const Color(0xFFFF7A00);
+    final gradientColors = isFree
+        ? const [Color(0xFF00E676), Color(0xFF00C853)]
+        : const [Color(0xFFFF9100), Color(0xFFFF6D00)];
+
+    return AnimatedBuilder(
+      animation: _enrollPulseController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: isLoading ? 1.0 : _enrollPulseScale.value,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: gradientColors),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withOpacity(isDark ? 0.25 : 0.6),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: glowColor.withOpacity(isLoading ? 0.3 : _enrollGlowStrength.value),
+                  blurRadius: 22,
+                  spreadRadius: isLoading ? 0 : 2,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: child,
           ),
-        ],
-      ),
+        );
+      },
       child: ElevatedButton(
         onPressed: isLoading ? null : () {
           final ref = context as WidgetRef;
@@ -1062,10 +1105,22 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               )
             : FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
-                  maxLines: 1,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isFree ? (l10n?.enrollNow ?? 'Enroll Now') : '${l10n?.buyNow ?? 'Pay'} ${(course.price ?? 0).toStringAsFixed(0)} RWF',
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                  ],
                 ),
               ),
       ),

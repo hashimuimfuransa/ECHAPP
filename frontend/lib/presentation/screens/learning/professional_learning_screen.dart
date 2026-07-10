@@ -31,7 +31,6 @@ import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/live_session_countdown.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
 // ─────────────────────────────────────────────
@@ -199,11 +198,11 @@ class _ProfessionalLearningScreenState
     // No need to block the entire screen - just show content from courses they have access to
   }
   
-  /// Load live sessions and switch to the Live tab if any exist
+  /// Load live sessions and switch to the Live tab only if one is live now or upcoming
   Future<void> _checkAndSwitchToLiveSessions() async {
     await _loadLiveSessions();
     if (!mounted) return;
-    if (_courseSessions.isNotEmpty) {
+    if (_liveNowSessions.isNotEmpty || _upcomingSessions.isNotEmpty) {
       _tabController.animateTo(1);
     }
     // Default the Live Sessions sub-tab: Live Now if something is live right
@@ -779,7 +778,7 @@ class _ProfessionalLearningScreenState
     return Padding(
       padding: const EdgeInsets.all(10),
       child: GestureDetector(
-        onTap: () => context.canPop() ? context.pop() : context.go('/dashboard'),
+        onTap: () => context.go('/dashboard'),
         child: Container(
           decoration: BoxDecoration(
             color: _cardBg,
@@ -1309,29 +1308,36 @@ class _ProfessionalLearningScreenState
           return s.isEnded || s.isCancelled;
         }).toList();
 
-        // Missed sessions: ended/cancelled that the user didn't attend
-        final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
-        final currentUserId = currentUser?.uid;
-        
+        // Missed sessions: ended/cancelled that the user didn't attend.
+        // Attendee ids from the backend are Mongo user ids, so we must compare
+        // against the app-level user id (authProvider), not the Firebase uid.
+        final currentUserId = ref.read(authProvider)?.user?.id;
+
+        String? extractAttendeeId(dynamic a) {
+          if (a is Map) {
+            final nested = a['userId'];
+            if (nested is Map) return (nested['_id'] ?? nested['id'])?.toString();
+            return (nested ?? a['_id'] ?? a['id'])?.toString();
+          }
+          return a?.toString();
+        }
+
         _missedSessions = allSessions.where((s) {
           if (!(s.isEnded || s.isCancelled)) return false;
-          
+
           // Check if user attended this session
-          if (currentUserId != null) {
+          if (currentUserId != null && currentUserId.isNotEmpty) {
             final attendees = s.attendees ?? [];
             final attendedAt = s.attendedAt ?? [];
-            
+
             // User attended if they're in attendees list or attendedAt list
-            final didAttend = attendees.any((a) => 
-              a is Map ? a['_id'] == currentUserId || a['id'] == currentUserId : a == currentUserId
-            ) || attendedAt.any((a) => 
-              a is Map ? a['userId'] == currentUserId : a == currentUserId
-            );
-            
+            final didAttend = attendees.any((a) => extractAttendeeId(a) == currentUserId) ||
+                attendedAt.any((a) => extractAttendeeId(a) == currentUserId);
+
             // Only show in missed if user did NOT attend
             return !didAttend;
           }
-          
+
           // If no current user, show all ended/cancelled as potentially missed
           return true;
         }).toList();
@@ -3484,19 +3490,16 @@ class _ProfessionalLearningScreenState
       return;
     }
 
-    // Collect all lessons with videos
-    final videoLessons = <Lesson>[];
+    // Collect every lesson in the course (videos and/or materials)
+    final allLessons = <Lesson>[];
     for (final chapter in _chapters!) {
-      final lessons = _chapterLessons[chapter.id] ?? [];
-      for (final lesson in lessons) {
-        if (lesson.hasVideo) videoLessons.add(lesson);
-      }
+      allLessons.addAll(_chapterLessons[chapter.id] ?? []);
     }
 
-    if (videoLessons.isEmpty) {
+    if (allLessons.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No video lessons found in this course'),
+          content: Text('No lessons found in this course'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -3505,47 +3508,67 @@ class _ProfessionalLearningScreenState
 
     final downloadService = ref.read(downloadServiceProvider);
 
-    // Filter out already-downloaded lessons
-    final toDownload = videoLessons.where((l) {
+    // Filter out already-downloaded videos
+    final videoTasks = allLessons.where((l) {
+      if (!l.hasVideo) return false;
       final status = downloadService.getDownloadStatus(l.id);
       return status == null || status.status != DownloadStatus.completed;
     }).toList();
 
-    if (toDownload.isEmpty) {
+    // Filter out already-downloaded materials (PDFs / notes attachments)
+    final materialTasks = <Lesson>[];
+    for (final l in allLessons) {
+      if (l.notesPdfUrl == null || l.notesPdfUrl!.isEmpty) continue;
+      final alreadyDownloaded = await downloadService.isContentDownloaded(l.id, DownloadType.material);
+      if (!alreadyDownloaded) materialTasks.add(l);
+    }
+
+    final totalTasks = videoTasks.length + materialTasks.length;
+
+    if (totalTasks == 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('All videos and materials are already downloaded!'),
+            backgroundColor: _DT.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isCourseDownloading = true;
+        _courseDownloadTotal = totalTasks;
+        _courseDownloadDone = 0;
+        _courseDownloadFailed = 0;
+      });
+    }
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('All lessons are already downloaded!'),
+          content: Text('Starting download of $totalTasks item${totalTasks > 1 ? "s" : ""}… it will keep going even if you leave this page.'),
           backgroundColor: _DT.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 3),
         ),
       );
-      return;
     }
 
-    setState(() {
-      _isCourseDownloading = true;
-      _courseDownloadTotal = toDownload.length;
-      _courseDownloadDone = 0;
-      _courseDownloadFailed = 0;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Starting download of ${toDownload.length} lesson${toDownload.length > 1 ? "s" : ""}…'),
-        backgroundColor: _DT.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-
+    // NOTE: this loop intentionally keeps running after the user navigates
+    // away from this screen (no `mounted` guard on the loop itself) so the
+    // whole course keeps downloading in the background. `mounted` is only
+    // checked before touching widget state/UI below.
     final videoApiService = VideoApiService();
 
-    for (final lesson in toDownload) {
-      if (!mounted) break;
+    for (final lesson in videoTasks) {
       try {
         final signedUrl = await videoApiService.getVideoStreamUrl(lesson.id);
         if (signedUrl.isEmpty) throw Exception('Empty URL');
@@ -3564,7 +3587,29 @@ class _ProfessionalLearningScreenState
         );
       } catch (e) {
         if (mounted) setState(() => _courseDownloadFailed++);
-        debugPrint('Course download: failed for lesson ${lesson.id}: $e');
+        debugPrint('Course download: video failed for lesson ${lesson.id}: $e');
+      }
+    }
+
+    for (final lesson in materialTasks) {
+      try {
+        await downloadService.downloadNotesOrMaterial(
+          url: lesson.notesPdfUrl!,
+          title: 'Lesson Material',
+          lessonId: lesson.id,
+          type: DownloadType.material,
+          lessonTitle: lesson.title,
+          sectionTitle: null,
+          onSuccess: () {
+            if (mounted) setState(() => _courseDownloadDone++);
+          },
+          onError: (_) {
+            if (mounted) setState(() => _courseDownloadFailed++);
+          },
+        );
+      } catch (e) {
+        if (mounted) setState(() => _courseDownloadFailed++);
+        debugPrint('Course download: material failed for lesson ${lesson.id}: $e');
       }
     }
 
@@ -3576,7 +3621,7 @@ class _ProfessionalLearningScreenState
         SnackBar(
           content: Text(
             failed == 0
-                ? '$done lesson${done > 1 ? "s" : ""} downloaded successfully!'
+                ? '$done item${done > 1 ? "s" : ""} downloaded successfully!'
                 : '$done downloaded, $failed failed.',
           ),
           backgroundColor: failed == 0 ? _DT.primary : Colors.orange,

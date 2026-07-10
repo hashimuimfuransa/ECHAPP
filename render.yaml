@@ -1,0 +1,46 @@
+# Render Blueprint for the database backup Cron Job only.
+#
+# This file intentionally does NOT declare the existing web service — it was created
+# manually in the Render dashboard, and a Blueprint only manages the services it lists.
+# Applying this file (Render dashboard -> New -> Blueprint, pointing at this repo) adds
+# just the cron job below; it will not touch or take over the existing web service.
+#
+# Why a Cron Job and not the in-process node-cron scheduler in backend/server.js:
+# Render web services (in particular free/starter instances) spin down after a period
+# with no HTTP traffic. While asleep, the whole Node process — including any in-process
+# cron timers — simply isn't running, so a scheduled backup can silently never fire.
+# A Render Cron Job is spun up fresh on schedule regardless of the web service's
+# sleep/awake state, runs the command to completion, then shuts down — this is Render's
+# supported mechanism for reliable scheduled background work.
+#
+# See DATABASE_BACKUP_SYSTEM.md for setup/restore instructions.
+
+services:
+  - type: cron
+    name: echapp-db-backup
+    runtime: node
+    plan: starter # cron jobs bill per run duration, not idle time — check current Render pricing/plan names
+    region: oregon # change to match your existing web service's region
+    schedule: "0 2 * * *" # daily at 02:00 UTC — adjust for your timezone/traffic patterns
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node scripts/runBackup.js
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_BUCKET_URL
+        sync: false
+      - key: CLOUDFRONT_URL
+        sync: false
+      - key: BACKUP_RETENTION_DAYS
+        value: "14"
+      - key: BACKUP_EXCLUDE_COLLECTIONS
+        value: ""

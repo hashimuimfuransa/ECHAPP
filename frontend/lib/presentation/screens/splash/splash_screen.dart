@@ -354,10 +354,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Widget _buildDesktopLayout() {
-    return Center(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    // Wrapped in a scroll view with IntrinsicHeight so short/resized desktop
+    // windows don't overflow the fixed-size logo/card content below - it still
+    // centers normally once the window is tall enough to fit everything.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
           // Left side - Logo and branding with modern glassmorphism
           Expanded(
             flex: 1,
@@ -615,8 +623,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
             ),
           ),
-        ],
-      ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

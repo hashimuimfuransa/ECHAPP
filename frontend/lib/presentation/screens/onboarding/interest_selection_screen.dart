@@ -35,6 +35,8 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
   late Animation<Offset> _slideAnimation;
   late AnimationController _animController;
   int _hoveredIndex = -1;
+  final ScrollController _desktopScrollController = ScrollController();
+  bool _desktopCanScrollMore = false;
 
   // ─── Fixed dark theme to match language screen ─────────────────────────────
   Color get _backgroundColor => const Color(0xFF071810);
@@ -79,6 +81,22 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
       vsync: this,
       duration: const Duration(seconds: 15),
     )..repeat();
+
+    _desktopScrollController.addListener(_updateDesktopScrollHint);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateDesktopScrollHint());
+  }
+
+  // Shows a "scroll to continue" hint on desktop whenever the interests list
+  // is taller than the visible panel, so the Continue/Skip buttons below it
+  // aren't missed. Re-evaluated on every scroll/content-size change.
+  void _updateDesktopScrollHint() {
+    if (!mounted || !_desktopScrollController.hasClients) return;
+    final position = _desktopScrollController.position;
+    final canScrollMore = position.maxScrollExtent > 0 &&
+        _desktopScrollController.offset < position.maxScrollExtent - 12;
+    if (canScrollMore != _desktopCanScrollMore) {
+      setState(() => _desktopCanScrollMore = canScrollMore);
+    }
   }
 
   @override
@@ -86,6 +104,8 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
     _fadeController.dispose();
     _slideController.dispose();
     _animController.dispose();
+    _desktopScrollController.removeListener(_updateDesktopScrollHint);
+    _desktopScrollController.dispose();
     super.dispose();
   }
 
@@ -234,18 +254,81 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
           flex: 55,
           child: Container(
             color: const Color(0xFF0A2415),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-                  child: _buildContent(l10n, isDesktop: true),
+            child: Stack(
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: SingleChildScrollView(
+                      controller: _desktopScrollController,
+                      padding: const EdgeInsets.fromLTRB(48, 40, 48, 64),
+                      child: _buildContent(l10n, isDesktop: true),
+                    ),
+                  ),
+                ),
+                _buildDesktopScrollHint(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopScrollHint() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 20,
+      child: IgnorePointer(
+        ignoring: !_desktopCanScrollMore,
+        child: AnimatedOpacity(
+          opacity: _desktopCanScrollMore ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: Center(
+            child: GestureDetector(
+              onTap: () {
+                if (!_desktopScrollController.hasClients) return;
+                _desktopScrollController.animateTo(
+                  _desktopScrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutCubic,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: _kAccent.withOpacity(0.4), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Scroll to continue',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
+                  ],
                 ),
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -548,10 +631,16 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
           const SizedBox(height: 24),
         ],
 
-        // Interests grid - scrollable for long lists
-        Expanded(
-          child: _buildInterestsGrid(l10n, isDesktop: isDesktop, isTablet: isTablet, isMobile: !isDesktop && !isTablet),
-        ),
+        // Interests grid - scrollable for long lists.
+        // Desktop content already sits inside a SingleChildScrollView (unbounded
+        // height), so it can't use Expanded here - that requires a bounded parent
+        // and throws a RenderFlex layout error. Let the grid size itself instead.
+        if (isDesktop)
+          _buildInterestsGrid(l10n, isDesktop: isDesktop, isTablet: isTablet, isMobile: !isDesktop && !isTablet)
+        else
+          Expanded(
+            child: _buildInterestsGrid(l10n, isDesktop: isDesktop, isTablet: isTablet, isMobile: !isDesktop && !isTablet),
+          ),
 
         SizedBox(height: isDesktop ? 40 : (isTablet ? 28 : (isSmall ? 16 : (isVerySmall ? 12 : 24)))),
 
@@ -596,14 +685,19 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
             vertical: isDesktop ? 0 : 8,
           ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isDesktop ? 2 : (isTablet ? 2 : 1),
+            // Desktop content sits in a narrow (420px max) column, so 2 columns
+            // there leaves too little width for icon + name + checkbox per card
+            // (the category name gets squeezed down to a single visible letter).
+            crossAxisCount: isDesktop ? 1 : (isTablet ? 2 : 1),
             crossAxisSpacing: isDesktop ? 12 : (isTablet ? 10 : 8),
-            mainAxisSpacing: isDesktop ? 12 : (isTablet ? 10 : 8),
-            childAspectRatio: isDesktop ? 3.2 : (isTablet ? 3.0 : 4.0),
+            mainAxisSpacing: isDesktop ? 16 : (isTablet ? 10 : 8),
+            childAspectRatio: isDesktop ? 3.6 : (isTablet ? 3.0 : 4.0),
           ),
           itemCount: categories.length,
           shrinkWrap: true,
-          physics: const AlwaysScrollableScrollPhysics(),
+          // Desktop nests this grid inside the outer SingleChildScrollView, so it
+          // must defer scrolling to that ancestor instead of fighting it for gestures.
+          physics: isDesktop ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
           itemBuilder: (context, index) {
             final category = categories[index];
             final interest = category.name;
@@ -612,6 +706,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
             final color = CategoryUtils.getCategoryColor(category.id, name: category.name);
 
             return MouseRegion(
+              key: ValueKey(category.id),
               onEnter: (_) => setState(() => _hoveredIndex = index),
               onExit: (_) => setState(() => _hoveredIndex = -1),
               child: GestureDetector(
@@ -623,7 +718,7 @@ class _InterestSelectionScreenState extends ConsumerState<InterestSelectionScree
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
-                  padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : (isMobile ? 10 : 12))),
+                  padding: EdgeInsets.all(isDesktop ? 18 : (isTablet ? 14 : (isMobile ? 10 : 12))),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? color.withOpacity(0.15)

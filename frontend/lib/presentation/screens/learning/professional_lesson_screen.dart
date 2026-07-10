@@ -1086,7 +1086,7 @@ class _ProfessionalLessonScreenState
                           if (_isQuizOnlyLesson() && _activeTab == _Tab.quiz) {
                             _showQuizOnlyNotification();
                           } else {
-                            setState(() => _activeTab = _Tab.notes);
+                            _setActiveTab(_Tab.notes);
                           }
                         }),
                     _SidebarItem(Icons.quiz_outlined, 'Quiz',
@@ -1321,6 +1321,21 @@ class _ProfessionalLessonScreenState
     );
   }
 
+  void _setActiveTab(_Tab tab) {
+    final wasNotes = _activeTab == _Tab.notes;
+    setState(() => _activeTab = tab);
+    if (tab == _Tab.notes && !wasNotes) {
+      final url = _lesson?.notesPdfUrl;
+      if (url != null && url.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _activeTab == _Tab.notes) {
+            _openPdfFullScreen(url);
+          }
+        });
+      }
+    }
+  }
+
   // ── Tab bar ───────────────────────────────────────────────────────────────
 
   Widget _buildTabBar() {
@@ -1354,7 +1369,7 @@ class _ProfessionalLessonScreenState
                 if (_isQuizOnlyLesson() && _activeTab == _Tab.quiz && tab != _Tab.quiz) {
                   _showQuizOnlyNotification();
                 } else {
-                  setState(() => _activeTab = tab);
+                  _setActiveTab(tab);
                 }
               },
               child: AnimatedContainer(
