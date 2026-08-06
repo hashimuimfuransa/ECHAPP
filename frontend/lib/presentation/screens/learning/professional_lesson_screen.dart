@@ -17,6 +17,7 @@ import 'package:excellencecoachinghub/presentation/screens/certificates/certific
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
@@ -2525,6 +2526,9 @@ final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
   }
 
   Widget _buildPdfViewer() {
+    // On web, PDFs on CloudFront/S3 must be fetched via the media proxy to
+    // satisfy browser CORS. Native platforms use the direct URL.
+    final pdfUrl = mediaProxyUrl(_lesson!.notesPdfUrl);
     return Container(
       height: 600,
       decoration: BoxDecoration(
@@ -2535,14 +2539,17 @@ final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          SfPdfViewer.network(
-            _lesson!.notesPdfUrl!,
-            canShowScrollHead: true,
-            canShowScrollStatus: true,
-            onDocumentLoadFailed: (details) {
-              _showSnack('Failed to load PDF: ${details.error}', isError: true);
-            },
-          ),
+          if (pdfUrl.isNotEmpty)
+            SfPdfViewer.network(
+              pdfUrl,
+              canShowScrollHead: true,
+              canShowScrollStatus: true,
+              onDocumentLoadFailed: (details) {
+                _showSnack('Failed to load PDF: ${details.error}', isError: true);
+              },
+            )
+          else
+            _buildNoNotes(),
           // Full screen button
           Positioned(
             top: 8,
@@ -2554,7 +2561,7 @@ final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
               ),
               child: IconButton(
                 icon: const Icon(Icons.fullscreen, color: Colors.white),
-                onPressed: () => _openPdfFullScreen(_lesson!.notesPdfUrl!),
+                onPressed: () => _openPdfFullScreen(pdfUrl),
                 tooltip: 'Full screen',
               ),
             ),
@@ -3933,7 +3940,7 @@ final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
               Expanded(
                 child: isPdf
                     ? SfPdfViewer.network(
-                        url,
+                        mediaProxyUrl(url),
                         canShowScrollHead: true,
                         canShowScrollStatus: true,
                         onDocumentLoadFailed: (details) {
@@ -4006,7 +4013,7 @@ final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
             ],
           ),
           body: SfPdfViewer.network(
-            url,
+            mediaProxyUrl(url),
             canShowScrollHead: true,
             canShowScrollStatus: true,
             canShowPaginationDialog: true,

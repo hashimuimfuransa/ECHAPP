@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class DocumentViewer extends StatefulWidget {
   final String documentPath;
@@ -82,7 +83,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
       return Stack(
         children: [
           SfPdfViewer.network(
-            widget.documentPath,
+            mediaProxyUrl(widget.documentPath),
             key: _pdfViewerKey,
             controller: _pdfViewerController,
             onDocumentLoaded: (PdfDocumentLoadedDetails details) {

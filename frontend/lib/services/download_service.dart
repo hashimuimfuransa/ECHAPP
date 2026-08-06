@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:excellencecoachinghub/services/background_download_service.dart';
+import 'package:universal_html/html.dart' as html;
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
@@ -673,12 +674,39 @@ class DownloadService extends ChangeNotifier {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
-    // Web has no file system — downloads must be handled by the browser
-    // (e.g. via a direct URL or blob download), not by writing to disk.
+    // Web has no file system to write to — trigger a browser download instead.
+    // This lets users download videos/notes directly in the browser.
     if (kIsWeb) {
-      final message = 'Downloads are not supported in the browser. Open the video in a new tab instead.';
-      onError?.call(message);
-      throw Exception(message);
+      try {
+        final response = await _dio.get<List<int>>(
+          url,
+          options: Options(
+            responseType: ResponseType.bytes,
+            followRedirects: true,
+            receiveTimeout: const Duration(minutes: 10),
+            validateStatus: (status) => status == 200,
+          ),
+        );
+        final bytes = response.data;
+        if (bytes == null || bytes.isEmpty) {
+          throw Exception('Empty response from server');
+        }
+        final blob = html.Blob([bytes]);
+        final objectUrl = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: objectUrl)
+          ..download = '$fileName.mp4'
+          ..click();
+        Future.delayed(const Duration(milliseconds: 200), () {
+          html.Url.revokeObjectUrl(objectUrl);
+        });
+        onProgress?.call(1.0);
+        onSuccess?.call();
+        return objectUrl;
+      } catch (e) {
+        final message = 'Download failed: $e';
+        onError?.call(message);
+        rethrow;
+      }
     }
     if (_useBackgroundService && _bgClient != null) {
       return _downloadVideoViaService(
@@ -1236,12 +1264,42 @@ class DownloadService extends ChangeNotifier {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
-    // Web has no file system — downloads must be handled by the browser
-    // (e.g. via a direct URL or blob download), not by writing to disk.
+    // Web has no file system to write to — trigger a browser download instead.
+    // This lets users download PDFs/notes/materials directly in the browser.
     if (kIsWeb) {
-      final message = 'Downloads are not supported in the browser. Open the file in a new tab instead.';
-      onError?.call(message);
-      throw Exception(message);
+      try {
+        final response = await _dio.get<List<int>>(
+          url,
+          options: Options(
+            responseType: ResponseType.bytes,
+            followRedirects: true,
+            receiveTimeout: const Duration(minutes: 10),
+            validateStatus: (status) => status == 200,
+          ),
+        );
+        final bytes = response.data;
+        if (bytes == null || bytes.isEmpty) {
+          throw Exception('Empty response from server');
+        }
+
+        // Determine the correct file extension for the download
+        final resolvedExtension = _resolveFileExtension(url, fileExtension);
+        final blob = html.Blob([bytes]);
+        final objectUrl = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: objectUrl)
+          ..download = '${type.name}_$lessonId$resolvedExtension'
+          ..click();
+        Future.delayed(const Duration(milliseconds: 200), () {
+          html.Url.revokeObjectUrl(objectUrl);
+        });
+        onProgress?.call(1.0);
+        onSuccess?.call();
+        return objectUrl;
+      } catch (e) {
+        final message = 'Download failed: $e';
+        onError?.call(message);
+        rethrow;
+      }
     }
     if (_useBackgroundService && _bgClient != null) {
       return _downloadNotesOrMaterialViaService(

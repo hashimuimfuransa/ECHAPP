@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class BookReaderScreen extends ConsumerStatefulWidget {
   final dynamic book;
@@ -607,7 +608,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
               child: Stack(
                 children: [
                   SfPdfViewer.network(
-                    url,
+                    mediaProxyUrl(url),
                     controller: _pdfViewerController,
                     canShowScrollHead: true,
                     canShowScrollStatus: true,
