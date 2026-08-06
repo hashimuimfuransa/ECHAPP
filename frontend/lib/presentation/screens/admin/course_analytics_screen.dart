@@ -6,6 +6,7 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/admin_service.dart';
 import 'package:excellencecoachinghub/widgets/analytics_charts.dart';
 import 'package:excellencecoachinghub/models/student_performance.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class CourseAnalyticsScreen extends ConsumerStatefulWidget {
   final String courseId;
@@ -262,7 +263,7 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 image: DecorationImage(
-                  image: NetworkImage(_analytics!.course['thumbnail']),
+                  image: NetworkImage(mediaProxyUrl(_analytics!.course['thumbnail'])),
                   fit: BoxFit.cover,
                 ),
               ),

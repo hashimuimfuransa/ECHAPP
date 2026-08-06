@@ -375,8 +375,16 @@ class DownloadsSection extends ConsumerWidget {
       context,
       MaterialPageRoute(
         builder: (context) {
-          // Use better_player_enhanced for mobile, CustomVideoPlayer for desktop
-          if (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+// better_player has no web implementation; use video_player/chewie (CustomVideoPlayer) on browsers.
+          if (kIsWeb) {
+            return CustomVideoPlayer(
+              videoId: download.lessonId,
+              videoUrl: videoPath,
+              title: download.originalTitle,
+              description: 'Local video file',
+              showAppBar: true,
+            );
+          } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
             return OptimizedVideoPlayer(
               videoId: download.lessonId,
               videoUrl: videoPath,

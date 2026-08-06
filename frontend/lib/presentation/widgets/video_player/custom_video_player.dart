@@ -8,6 +8,7 @@ import 'package:chewie/chewie.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 import 'dart:io';
@@ -77,6 +78,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     String processedUrl = url;
     if (processedUrl.contains('echcoahing.s3.amazonaws.com')) {
       processedUrl = processedUrl.replaceFirst('echcoahing.s3.amazonaws.com', 'd3ofk5ujo941v.cloudfront.net');
+    }
+
+    // On web, CloudFront/S3 media is fetched via XHR which is subject to CORS.
+    // Route it through the backend media proxy to add the proper CORS headers.
+    if (kIsWeb) {
+      return mediaProxyUrl(processedUrl);
     }
 
     if (processedUrl.startsWith('http://')) {

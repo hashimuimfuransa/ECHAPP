@@ -27,6 +27,7 @@ import 'package:excellencecoachinghub/presentation/screens/library/book_reader_s
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
 import 'package:excellencecoachinghub/services/api/video_api_service.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
@@ -878,7 +879,7 @@ class _ProfessionalLearningScreenState
             // ── Background: thumbnail or fallback gradient ──
             if (_course?.thumbnail != null && _course!.thumbnail!.isNotEmpty)
               Image.network(
-                _course!.thumbnail!,
+                mediaProxyUrl(_course!.thumbnail),
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   decoration: const BoxDecoration(
@@ -2940,7 +2941,7 @@ class _ProfessionalLearningScreenState
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
-                  coverUrl,
+                  mediaProxyUrl(coverUrl),
                   height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,

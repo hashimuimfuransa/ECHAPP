@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'dart:convert';
 
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/models/course.dart';
@@ -859,9 +860,9 @@ class _AdminBooksScreenState extends ConsumerState<AdminBooksScreen> {
             child: book['coverUrl'] != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      book['coverUrl'],
-                      fit: BoxFit.cover,
+                      child: Image.network(
+                        mediaProxyUrl(book['coverUrl']),
+                        fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Icon(
                           Icons.menu_book_rounded,
@@ -1855,7 +1856,7 @@ class _AddBookDialogState extends ConsumerState<AddBookDialog> {
                                             ? ClipRRect(
                                                 borderRadius: BorderRadius.circular(4),
                                                 child: Image.network(
-                                                  course.thumbnail!,
+                                                  mediaProxyUrl(course.thumbnail),
                                                   width: 48,
                                                   height: 48,
                                                   fit: BoxFit.cover,

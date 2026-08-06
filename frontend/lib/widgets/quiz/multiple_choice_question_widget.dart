@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/models/question.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class MultipleChoiceQuestionWidget extends StatefulWidget {
   final Question question;
@@ -116,8 +117,8 @@ class _MultipleChoiceQuestionWidgetState extends State<MultipleChoiceQuestionWid
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            image,
+child: Image.network(
+                            mediaProxyUrl(image),
                             height: 120,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -158,8 +159,8 @@ class _MultipleChoiceQuestionWidgetState extends State<MultipleChoiceQuestionWid
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                widget.question.questionImage!,
+child: Image.network(
+                mediaProxyUrl(widget.question.questionImage),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[200],

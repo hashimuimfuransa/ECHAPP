@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Modern Widget to display individual chat messages with avatars and animations
@@ -346,7 +347,7 @@ class _AIChatMessageWidgetState extends State<AIChatMessageWidget>
         borderRadius: BorderRadius.circular(12),
         child: isRemote
             ? Image.network(
-                attachPath,
+                mediaProxyUrl(attachPath),
                 height: 160,
                 width: double.infinity,
                 fit: BoxFit.cover,

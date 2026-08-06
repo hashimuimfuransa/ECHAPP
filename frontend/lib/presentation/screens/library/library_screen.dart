@@ -10,6 +10,7 @@ import 'package:excellencecoachinghub/presentation/widgets/downloaded_material_v
 import 'package:excellencecoachinghub/services/book_service.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/utils/book_download.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -582,7 +583,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                               top: Radius.circular(16),
                             ),
                             child: CachedNetworkImage(
-                              imageUrl: book.coverUrl!,
+                              imageUrl: mediaProxyUrl(book.coverUrl),
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Container(
                                 color: const Color(0xFF10B981).withOpacity(0.1),
@@ -749,7 +750,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                               top: Radius.circular(16),
                             ),
                             child: CachedNetworkImage(
-                              imageUrl: book['coverUrl'],
+                              imageUrl: mediaProxyUrl(book['coverUrl']),
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Container(
                                 color: const Color(0xFF10B981).withOpacity(0.1),

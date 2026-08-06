@@ -1861,22 +1861,31 @@ class _ProfessionalLessonScreenState
   Widget _buildVideoPlayer() {
     final videoUrl = _extractVideoUrl();
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
-        ? (kIsWeb || (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-            ? OptimizedVideoPlayer(
+final videoChild = _lesson!.videoId != null && videoUrl.isNotEmpty
+        ? (kIsWeb
+            // better_player has no web implementation; use video_player/chewie (CustomVideoPlayer) on browsers.
+            ? CustomVideoPlayer(
                 videoId: _lesson!.videoId!,
                 videoUrl: videoUrl,
                 title: _lesson!.title,
                 description: _lesson!.description ?? '',
                 showAppBar: true,
               )
-            : CustomVideoPlayer(
-                videoId: _lesson!.videoId!,
-                videoUrl: videoUrl,
-                title: _lesson!.title,
-                description: _lesson!.description ?? '',
-                showAppBar: true,
-              ))
+            : (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS
+                ? OptimizedVideoPlayer(
+                    videoId: _lesson!.videoId!,
+                    videoUrl: videoUrl,
+                    title: _lesson!.title,
+                    description: _lesson!.description ?? '',
+                    showAppBar: true,
+                  )
+                : CustomVideoPlayer(
+                    videoId: _lesson!.videoId!,
+                    videoUrl: videoUrl,
+                    title: _lesson!.title,
+                    description: _lesson!.description ?? '',
+                    showAppBar: true,
+                  )))
         : _buildVideoPlaceholder();
 
     return Container(

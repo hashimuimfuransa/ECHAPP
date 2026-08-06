@@ -12,6 +12,7 @@ import 'package:excellencecoachinghub/presentation/providers/course_provider.dar
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_notification_provider.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -910,7 +911,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                     image: user.profilePicture != null && user.profilePicture!.isNotEmpty
                       ? DecorationImage(
-                          image: NetworkImage(user.profilePicture!),
+                          image: NetworkImage(mediaProxyUrl(user.profilePicture)),
                           fit: BoxFit.cover,
                         )
                       : null,

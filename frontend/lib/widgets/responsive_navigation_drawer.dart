@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
@@ -534,7 +535,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                       shape: BoxShape.circle,
                       image: user.profilePicture != null && user.profilePicture!.isNotEmpty
                         ? DecorationImage(
-                            image: NetworkImage(user.profilePicture!),
+                            image: NetworkImage(mediaProxyUrl(user.profilePicture)),
                             fit: BoxFit.cover,
                           )
                         : null,

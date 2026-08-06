@@ -1468,7 +1468,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 image: course.thumbnail != null && course.thumbnail!.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(course.thumbnail!), fit: BoxFit.cover)
+                        image: NetworkImage(mediaProxyUrl(course.thumbnail)), fit: BoxFit.cover)
                     : null,
               ),
               child: course.thumbnail == null || course.thumbnail!.isEmpty

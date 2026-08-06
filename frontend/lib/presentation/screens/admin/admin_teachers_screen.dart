@@ -12,6 +12,7 @@ import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_pro
 import 'package:excellencecoachinghub/services/infrastructure/api_client.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/models/user.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 /// Admin Teachers Screen - Manage teachers and course assignments
 class AdminTeachersScreen extends ConsumerStatefulWidget {
@@ -1219,7 +1220,7 @@ class _AssignCoursesDialogState extends State<AssignCoursesDialog> {
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
                                   child: Image.network(
-                                    course.thumbnail!,
+                                    mediaProxyUrl(course.thumbnail),
                                     width: 48,
                                     height: 48,
                                     fit: BoxFit.cover,

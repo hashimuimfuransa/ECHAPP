@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class NetworkImageWidget extends StatelessWidget {
   final String imageUrl;
@@ -88,16 +89,16 @@ class NetworkImageWidget extends StatelessWidget {
       processedUrl = processedUrl.replaceAll(' ', '%20');
     }
 
-    debugPrint('NetworkImageWidget: optimizedUrl="$processedUrl"');
+debugPrint('NetworkImageWidget: optimizedUrl="$processedUrl"');
     return processedUrl;
 
   }
 
-
-  @override
+@override
   Widget build(BuildContext context) {
+    final resolvedUrl = mediaProxyUrl(_getOptimizedUrl(imageUrl));
     Widget image = CachedNetworkImage(
-      imageUrl: _getOptimizedUrl(imageUrl),
+      imageUrl: resolvedUrl,
       fadeInDuration: const Duration(milliseconds: 150),
       fadeOutDuration: const Duration(milliseconds: 75),
       // Ensure image is actually fetched immediately (some pages rebuild with new widgets).

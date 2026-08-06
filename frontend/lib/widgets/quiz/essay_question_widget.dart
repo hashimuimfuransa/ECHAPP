@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/models/question.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class EssayQuestionWidget extends StatefulWidget {
   final Question question;
@@ -61,8 +62,8 @@ class _EssayQuestionWidgetState extends State<EssayQuestionWidget> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                widget.question.questionImage!,
+child: Image.network(
+                mediaProxyUrl(widget.question.questionImage),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[200],

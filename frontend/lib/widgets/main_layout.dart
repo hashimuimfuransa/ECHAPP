@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:excellencecoachinghub/utils/navigation_optimizer.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
@@ -378,7 +379,7 @@ class MainLayout extends ConsumerWidget {
               radius: 18,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.2),
               backgroundImage: user?.profilePicture != null
-                  ? NetworkImage(user!.profilePicture!)
+                  ? NetworkImage(mediaProxyUrl(user!.profilePicture))
                   : null,
               child: user?.profilePicture == null
                   ? Text(

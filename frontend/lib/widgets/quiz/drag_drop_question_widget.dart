@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/models/question.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 
 class DragDropQuestionWidget extends StatefulWidget {
   final Question question;
@@ -134,7 +135,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(3),
                 child: Image.network(
-                  item.image!,
+                  mediaProxyUrl(item.image),
                   width: isSmallScreen ? 16 : 20,
                   height: isSmallScreen ? 16 : 20,
                   fit: BoxFit.cover,
@@ -202,7 +203,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(3),
                   child: Image.network(
-                    item.image!,
+                    mediaProxyUrl(item.image),
                     width: isSmallScreen ? 16 : 20,
                     height: isSmallScreen ? 16 : 20,
                     fit: BoxFit.cover,
@@ -330,7 +331,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(2),
                                 child: Image.network(
-                                  item.image!,
+                                  mediaProxyUrl(item.image),
                                   width: isSmallScreen ? 12 : 16,
                                   height: isSmallScreen ? 12 : 16,
                                   fit: BoxFit.cover,
@@ -427,7 +428,7 @@ class _DragDropQuestionWidgetState extends State<DragDropQuestionWidget> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  widget.question.questionImage!,
+                  mediaProxyUrl(widget.question.questionImage),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: Colors.grey[200],
