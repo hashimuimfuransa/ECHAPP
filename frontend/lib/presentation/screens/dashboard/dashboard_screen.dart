@@ -590,7 +590,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final enrolledCoursesAsync = ref.watch(enrolledCoursesProvider);
     final userEnrollmentsAsync = ref.watch(userEnrollmentsProvider);
 
@@ -1013,7 +1013,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildNewUserWelcome(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? (l10n?.goodMorning ?? 'Good morning')

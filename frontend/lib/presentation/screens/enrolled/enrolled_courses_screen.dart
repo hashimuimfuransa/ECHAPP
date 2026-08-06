@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
-import 'package:excellencecoachinghub/data/repositories/enrollment_repository.dart';
+import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/models/enrollment.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -22,26 +22,76 @@ class EnrolledCoursesScreen extends ConsumerStatefulWidget {
 class _EnrolledCoursesScreenState extends ConsumerState<EnrolledCoursesScreen> {
   final LiveSessionService _liveSessionService = LiveSessionService();
   final Map<String, List<LiveSession>> _courseUpcomingSessions = {};
-  Future<void>? _loadUpcomingSessionsFuture;
+  // Which set of courses the session badges were fetched for, so the per-course
+  // lookups only re-run when the enrollment list itself changes.
+  String? _sessionsFetchKey;
 
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(enrollmentFilterProvider);
-    return _buildEnrolledCoursesContent(context, ref, filter);
+    final enrollmentsAsync = ref.watch(userEnrollmentsProvider);
+
+    // Keep painting the last loaded list while a refresh is in flight, so a
+    // rebuild (filter tap, returning from a course) never flashes a spinner.
+    final allEnrollments = enrollmentsAsync.valueOrNull;
+
+    if (allEnrollments == null) {
+      if (enrollmentsAsync.hasError) {
+        return _buildErrorState(context, enrollmentsAsync.error!);
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (allEnrollments.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    _scheduleUpcomingSessionsLoad(allEnrollments);
+
+    final filteredEnrollments = allEnrollments.where((enrollment) {
+      if (filter == 'all') return true;
+      return enrollment.completionStatus == filter;
+    }).toList();
+
+    return _buildEnrolledCoursesGrid(context, ref, filteredEnrollments, filter);
+  }
+
+  Future<void> _refresh() async {
+    _sessionsFetchKey = null;
+    ref.invalidate(userEnrollmentsProvider);
+    // Riverpod keeps the previous value on the AsyncLoading it emits, so the
+    // list stays on screen behind the refresh spinner instead of blanking.
+    try {
+      await ref.read(userEnrollmentsProvider.future);
+    } catch (_) {
+      // Surfaced by the watching build via AsyncError.
+    }
+  }
+
+  void _scheduleUpcomingSessionsLoad(List<Enrollment> enrollments) {
+    final key = enrollments.map((e) => e.courseId).join('|');
+    if (_sessionsFetchKey == key) return;
+    _sessionsFetchKey = key;
+
+    // Never kick off network work inside build().
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadUpcomingSessionsForEnrolledCourses(enrollments);
+    });
   }
 
   Future<void> _loadUpcomingSessionsForEnrolledCourses(List<Enrollment> enrollments) async {
-    if (enrollments.isEmpty) return;
-    
-    _courseUpcomingSessions.clear();
-    
-    for (final enrollment in enrollments) {
-      final course = enrollment.course;
-      if (course == null) continue;
-      
+    final courseIds = <String>[
+      for (final enrollment in enrollments)
+        if (enrollment.course != null) enrollment.course!.id,
+    ];
+    if (courseIds.isEmpty) return;
+
+    // Fire the per-course lookups together - run sequentially they cost a full
+    // round trip per enrolled course before any badge could appear.
+    final results = await Future.wait(courseIds.map((courseId) async {
       try {
         final response = await _liveSessionService.getCourseSessions(
-          course.id,
+          courseId,
           status: 'scheduled',
           limit: 5,
         );
@@ -51,107 +101,145 @@ class _EnrolledCoursesScreenState extends ConsumerState<EnrolledCoursesScreen> {
               !s.isCancelled &&
               s.scheduledAt.isAfter(now.subtract(const Duration(minutes: 5)));
         }).toList();
-        
-        if (upcoming.isNotEmpty) {
-          _courseUpcomingSessions[course.id] = upcoming;
-        }
+        return MapEntry(courseId, upcoming);
       } catch (e) {
-        debugPrint('Error loading sessions for course ${course.id}: $e');
+        debugPrint('Error loading sessions for course $courseId: $e');
+        return MapEntry(courseId, <LiveSession>[]);
       }
-    }
-    
-    if (mounted) {
-      setState(() {});
-    }
+    }));
+
+    if (!mounted) return;
+    setState(() {
+      _courseUpcomingSessions
+        ..clear()
+        ..addEntries(results.where((entry) => entry.value.isNotEmpty));
+    });
   }
 
-  Widget _buildEnrolledCoursesContent(BuildContext context, WidgetRef ref, String filter) {
-    return FutureBuilder<List<Enrollment>>(
-      future: _fetchEnrollments(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
+  /// Wraps content that is too short to scroll so pull-to-refresh still works.
+  Widget _pullToRefresh({required Widget child}) {
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      color: AppTheme.primaryGreen,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: child,
+            ),
           );
-        }
+        },
+      ),
+    );
+  }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-
-        final allEnrollments = snapshot.data ?? [];
-
-        if (allEnrollments.isEmpty) {
-          return _buildEmptyState(context);
-        }
-
-        // Load upcoming sessions for enrolled courses
-        if (_loadUpcomingSessionsFuture == null) {
-          _loadUpcomingSessionsFuture = _loadUpcomingSessionsForEnrolledCourses(allEnrollments);
-        }
-
-        // Apply filter
-        final filteredEnrollments = allEnrollments.where((enrollment) {
-          if (filter == 'all') return true;
-          return enrollment.completionStatus == filter;
-        }).toList();
-
-        return _buildEnrolledCoursesGrid(context, ref, filteredEnrollments, filter);
-      },
+  Widget _buildErrorState(BuildContext context, Object error) {
+    return _pullToRefresh(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 64,
+                color: AppTheme.greyColor.withOpacity(0.4),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Could not load your courses',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.getTextColor(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$error',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.getSecondaryTextColor(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _refresh,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.school_outlined,
-              size: 80,
-              color: AppTheme.greyColor.withOpacity(0.3),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Enrolled Courses',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.getTextColor(context)
+    return _pullToRefresh(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.school_outlined,
+                size: 80,
+                color: AppTheme.greyColor.withOpacity(0.3),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Start learning by enrolling in courses',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.getSecondaryTextColor(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.push('/courses'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Browse Courses',
+              const SizedBox(height: 24),
+              Text(
+                'No Enrolled Courses',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.getTextColor(context),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                'Start learning by enrolling in courses',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.getSecondaryTextColor(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go('/courses'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Browse Courses',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -254,33 +342,39 @@ class _EnrolledCoursesScreenState extends ConsumerState<EnrolledCoursesScreen> {
           _buildFilters(ref, activeFilter),
           const SizedBox(height: 24),
           Expanded(
-            child: enrollments.isEmpty 
+            child: enrollments.isEmpty
               ? _buildNoFilteredResults(activeFilter)
-              : isMobile
-                // Use ListView for all mobile screens for better responsiveness
-                ? ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    itemCount: enrollments.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildCourseCard(context, enrollments[index], true),
-                      );
-                    },
-                  )
-                // Use GridView for tablet and desktop only
-                : GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: isDesktop ? 3 : 2,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
-                      childAspectRatio: isDesktop ? 1.0 : 0.9,
-                    ),
-                    itemCount: enrollments.length,
-                    itemBuilder: (context, index) {
-                      return _buildCourseCard(context, enrollments[index], true);
-                    },
-                  ),
+              : RefreshIndicator(
+                  onRefresh: _refresh,
+                  color: AppTheme.primaryGreen,
+                  child: isMobile
+                    // Use ListView for all mobile screens for better responsiveness
+                    ? ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        itemCount: enrollments.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildCourseCard(context, enrollments[index], true),
+                          );
+                        },
+                      )
+                    // Use GridView for tablet and desktop only
+                    : GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: isDesktop ? 3 : 2,
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
+                          childAspectRatio: isDesktop ? 1.0 : 0.9,
+                        ),
+                        itemCount: enrollments.length,
+                        itemBuilder: (context, index) {
+                          return _buildCourseCard(context, enrollments[index], true);
+                        },
+                      ),
+                ),
           ),
         ],
       ),
@@ -570,20 +664,6 @@ class _EnrolledCoursesScreenState extends ConsumerState<EnrolledCoursesScreen> {
         ),
       ),
     );
-  }
-
-  Future<List<Enrollment>> _fetchEnrollments() async {
-    try {
-      final enrollmentRepo = EnrollmentRepository();
-      return await enrollmentRepo.getEnrollments();
-    } catch (e) {
-      print('Error fetching enrollments: $e');
-      return [];
-    }
-  }
-
-  void _viewCourse(BuildContext context, Enrollment enrollment) {
-    _continueLearning(context, enrollment);
   }
 
   void _continueLearning(BuildContext context, Enrollment enrollment) {

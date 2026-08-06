@@ -9,7 +9,8 @@ import 'package:excellencecoachinghub/presentation/providers/download_provider.d
 import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:excellencecoachinghub/presentation/widgets/download_thumbnail.dart';
+import 'package:excellencecoachinghub/presentation/widgets/downloaded_material_viewer.dart';
 import 'dart:io';
 
 class DownloadsSection extends ConsumerWidget {
@@ -83,27 +84,30 @@ class DownloadsSection extends ConsumerWidget {
     bool isPaused = download.status == DownloadStatus.paused;
     Color statusColor = _getStatusColor(download.status);
     
-    // Get icon and color based on download type
-    IconData typeIcon;
+    // Colour and label for the type badge. The preview image below picks its
+    // own artwork, so only the badge is decided here.
     Color typeColor;
     String typeLabel;
-    
-    switch (download.type) {
-      case DownloadType.video:
-        typeIcon = isCompleted ? Icons.play_circle_fill : Icons.video_file;
-        typeColor = isCompleted ? AppTheme.primaryGreen : AppTheme.accent;
-        typeLabel = 'Video';
-        break;
-      case DownloadType.notes:
-        typeIcon = Icons.description;
-        typeColor = Colors.blue;
-        typeLabel = 'Notes';
-        break;
-      case DownloadType.material:
-        typeIcon = download.url.toLowerCase().endsWith('.pdf') ? Icons.picture_as_pdf : Icons.attach_file;
-        typeColor = download.url.toLowerCase().endsWith('.pdf') ? Colors.red : AppTheme.accent;
-        typeLabel = download.url.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Material';
-        break;
+
+    if (download.isBook) {
+      typeColor = Colors.blue;
+      typeLabel = 'Book';
+    } else {
+      switch (download.type) {
+        case DownloadType.video:
+          typeColor = isCompleted ? AppTheme.primaryGreen : AppTheme.accent;
+          typeLabel = 'Video';
+          break;
+        case DownloadType.notes:
+          typeColor = Colors.blue;
+          typeLabel = 'Notes';
+          break;
+        case DownloadType.material:
+          final isPdf = download.localPath.toLowerCase().endsWith('.pdf');
+          typeColor = isPdf ? Colors.red : AppTheme.accent;
+          typeLabel = isPdf ? 'PDF' : 'Material';
+          break;
+      }
     }
 
     return Container(
@@ -132,17 +136,12 @@ class DownloadsSection extends ConsumerWidget {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 70,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: (isCompleted ? typeColor : AppTheme.greyColor).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                typeIcon,
-                color: isCompleted ? typeColor : AppTheme.greyColor,
-                size: 30,
+            Opacity(
+              opacity: isCompleted ? 1 : 0.55,
+              child: DownloadThumbnail(
+                download: download,
+                width: double.infinity,
+                height: 70,
               ),
             ),
             const SizedBox(height: 10),
@@ -400,46 +399,8 @@ class DownloadsSection extends ConsumerWidget {
   }
 
   void _openNotesOrMaterial(BuildContext context, Download download) {
-    // Check if it's a PDF
-    if (download.url.toLowerCase().endsWith('.pdf') || download.localPath.toLowerCase().endsWith('.pdf')) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Scaffold(
-            appBar: AppBar(
-              title: Text(download.originalTitle),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            ),
-            body: SfPdfViewer.file(
-              File(download.localPath),
-            ),
-          ),
-        ),
-      );
-    } else {
-      // For non-PDF materials, show a dialog with the URL or content
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(download.originalTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('This material is available at:'),
-              const SizedBox(height: 8),
-              SelectableText(download.url.isNotEmpty ? download.url : download.localPath),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-    }
+    // Opens the copy on disk — PDFs and text in-app, anything else through the
+    // platform viewer — so it works with no connection.
+    openDownloadedMaterial(context, download);
   }
 }

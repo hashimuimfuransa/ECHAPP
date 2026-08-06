@@ -29,14 +29,21 @@ class HelpScreen extends StatelessWidget {
     }
   }
 
+  /// Slightly stronger brand tints in dark mode - the same alpha that reads as a
+  /// soft wash on a white surface all but disappears on a near-black one.
+  static double _tintOpacity(BuildContext context, double light, double dark) {
+    return Theme.of(context).brightness == Brightness.dark ? dark : light;
+  }
+
   @override
   Widget build(BuildContext context) {
     final textPrimary = AppTheme.getTextColor(context);
     final textSecondary = AppTheme.getSecondaryTextColor(context);
-    final cardColor = AppTheme.getCardColor(context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      // Was transparent, which let the black void behind the route show through
+      // and left light-mode content sitting on a dark backdrop.
+      backgroundColor: AppTheme.getBackgroundColor(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -51,16 +58,18 @@ class HelpScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.08),
+                          color: AppTheme.primary.withOpacity(_tintOpacity(context, 0.08, 0.14)),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+                          border: Border.all(
+                            color: AppTheme.primary.withOpacity(_tintOpacity(context, 0.2, 0.32)),
+                          ),
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981),
+                                color: AppTheme.primary,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(Icons.help_outline, color: Colors.white, size: 26),
@@ -149,9 +158,8 @@ class HelpScreen extends StatelessWidget {
                       const SizedBox(height: 25),
                       
                       // Contact Support
-                      Card(
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      _buildCard(
+                        context,
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
@@ -206,9 +214,8 @@ class HelpScreen extends StatelessWidget {
                       const SizedBox(height: 25),
                       
                       // Alternative Contact
-                      Card(
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      _buildCard(
+                        context,
                         child: Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
@@ -259,12 +266,16 @@ class HelpScreen extends StatelessWidget {
             onPressed: () => context.pop(),
             icon: Icon(Icons.arrow_back_ios_rounded, color: textPrimary, size: 20),
           ),
-          Text(
-            AppLocalizations.of(context)!.helpAndSupport,
-            style: TextStyle(
-              color: textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
+          Expanded(
+            child: Text(
+              AppLocalizations.of(context)!.helpAndSupport,
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -272,11 +283,30 @@ class HelpScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFAQSection(BuildContext context, String title, List<Map<String, String>> faqs) {
-    final textPrimary = AppTheme.getTextColor(context);
+  /// One card treatment for the whole page. Dark mode leans on an outline
+  /// instead of a shadow, which is invisible against a near-black background.
+  Widget _buildCard(BuildContext context, {required Widget child}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: AppTheme.getCardColor(context),
+      elevation: isDark ? 0 : 3,
+      shadowColor: Colors.black.withOpacity(0.08),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: AppTheme.getBorderColor(context).withOpacity(isDark ? 0.6 : 0.7),
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildFAQSection(BuildContext context, String title, List<Map<String, String>> faqs) {
+    final textPrimary = AppTheme.getTextColor(context);
+    return _buildCard(
+      context,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
         child: Column(
@@ -290,8 +320,22 @@ class HelpScreen extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 8),
-            ...faqs.map((faq) => _buildFAQItem(context, faq['question']!, faq['answer']!)),
+            const SizedBox(height: 4),
+            ...faqs.asMap().entries.map((entry) {
+              final faq = entry.value;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (entry.key > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppTheme.getBorderColor(context).withOpacity(0.4),
+                    ),
+                  _buildFAQItem(context, faq['question']!, faq['answer']!),
+                ],
+              );
+            }),
           ],
         ),
       ),
@@ -302,6 +346,15 @@ class HelpScreen extends StatelessWidget {
     final textPrimary = AppTheme.getTextColor(context);
     final textSecondary = AppTheme.getSecondaryTextColor(context);
     return ExpansionTile(
+      // The card already draws the outline; the tile's own default borders would
+      // double it up once expanded.
+      shape: const Border(),
+      collapsedShape: const Border(),
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: EdgeInsets.zero,
+      expansionAnimationStyle: AnimationStyle(curve: Curves.easeOutCubic),
+      backgroundColor: Colors.transparent,
+      collapsedBackgroundColor: Colors.transparent,
       title: Text(
         question,
         style: TextStyle(
@@ -310,11 +363,11 @@ class HelpScreen extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      iconColor: const Color(0xFF10B981),
+      iconColor: AppTheme.primary,
       collapsedIconColor: textSecondary,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.only(bottom: 16),
           child: Text(
             answer,
             style: TextStyle(
@@ -347,10 +400,10 @@ class HelpScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
+                color: AppTheme.primary.withOpacity(_tintOpacity(context, 0.1, 0.18)),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: const Color(0xFF10B981), size: 22),
+              child: Icon(icon, color: AppTheme.primary, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(

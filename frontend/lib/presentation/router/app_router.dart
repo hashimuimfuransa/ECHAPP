@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excellencecoachinghub/widgets/admin_layout_wrapper.dart';
@@ -70,6 +72,8 @@ import 'package:excellencecoachinghub/presentation/screens/library/library_scree
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/router/offline_route_policy.dart';
+import 'package:excellencecoachinghub/services/connectivity_service.dart';
 
 /// Custom page transition for smooth navigation with performance monitoring
 class _FadeTransitionPage extends CustomTransitionPage<void> {
@@ -132,9 +136,16 @@ class AppRouter {
   GoRouter get router => _router;
 
 
-  GoRouter _buildRouter() => GoRouter(
+  GoRouter _buildRouter() {
+    // Safety net in case the app entry point didn't initialize it: the offline
+    // guard below is only correct once the service is listening.
+    unawaited(ConnectivityService.instance.initialize());
+    return GoRouter(
         initialLocation: '/',
         debugLogDiagnostics: false,
+        // Re-runs the redirect below whenever connectivity flips, which is what
+        // moves a user off an online-only screen the moment the network drops.
+        refreshListenable: ConnectivityService.instance,
         errorBuilder: (context, state) => Scaffold(
           body: Center(
             child: Text('Route not found: ${state.uri.path}'),
@@ -571,9 +582,13 @@ class AppRouter {
             builder: (context, state) {
               final lessonId = state.pathParameters['lessonId'] ?? '';
               final isAdminPreview = state.uri.queryParameters['admin'] == 'true';
+              // ?tab=notes / video / quiz — lets callers open the lesson on the
+              // tab matching the material the student tapped
+              final initialTab = state.uri.queryParameters['tab'];
               return ProfessionalLessonScreen(
                 lessonId: lessonId,
                 isAdminPreview: isAdminPreview,
+                initialTab: initialTab,
               );
             },
           ),
@@ -686,7 +701,9 @@ class AppRouter {
               ),
               GoRoute(
                 path: '/downloads',
-                builder: (context, state) => const DownloadsScreen(),
+                builder: (context, state) => DownloadsScreen(
+                  initialTab: state.uri.queryParameters['tab'],
+                ),
               ),
               GoRoute(
                 path: '/my-courses',
@@ -754,6 +771,17 @@ class AppRouter {
           ),
         ],
         redirect: (context, state) {
+          // Offline guard: online-only screens fall back to Downloads. This
+          // covers both directions — navigating to such a screen while already
+          // offline, and the connection dropping while the screen is open
+          // (refreshListenable re-runs this callback on every change).
+          final connectivity = ConnectivityService.instance;
+          if (connectivity.isOffline &&
+              OfflineRoutePolicy.requiresInternet(state.matchedLocation)) {
+            connectivity.recordBlockedLocation(state.uri.toString());
+            return OfflineRoutePolicy.offlineFallbackRoute;
+          }
+
           // Auth guard: prevent landing on auth selection when a valid session exists.
           if (state.matchedLocation == '/auth-selection') {
             // Using Riverpod directly from GoRouter redirect is not reliable because
@@ -768,4 +796,5 @@ class AppRouter {
           return null;
         },
       );
+  }
 }

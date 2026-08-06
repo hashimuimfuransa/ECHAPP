@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/data/repositories/certificate_repository.dart';
 import 'package:excellencecoachinghub/models/certificate.dart';
+import 'package:excellencecoachinghub/presentation/providers/certificate_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 import 'package:intl/intl.dart';
 
@@ -27,45 +28,54 @@ class CertificatesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: _buildCertificateContent(context),
+      body: _buildCertificateContent(context, ref),
     );
   }
 
-  Widget _buildCertificateContent(BuildContext context) {
-    return FutureBuilder<List<Certificate>>(
-      future: _fetchCertificates(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+  Future<void> _refresh(WidgetRef ref) async {
+    ref.invalidate(userCertificatesProvider);
+    try {
+      await ref.read(userCertificatesProvider.future);
+    } catch (_) {
+      // Surfaced by the watching build via AsyncError.
+    }
+  }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text('Error: ${snapshot.error}'),
-                TextButton(
-                  onPressed: () => (context as Element).markNeedsBuild(),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        }
+  Widget _buildCertificateContent(BuildContext context, WidgetRef ref) {
+    final certificatesAsync = ref.watch(userCertificatesProvider);
 
-        final certificates = snapshot.data ?? [];
+    // Keep the loaded grid on screen while a refresh runs, so a rebuild never
+    // drops back to a spinner.
+    final certificates = certificatesAsync.valueOrNull;
 
-        if (certificates.isEmpty) {
-          return _buildEmptyState(context);
-        }
+    if (certificates == null) {
+      if (certificatesAsync.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: ${certificatesAsync.error}'),
+              TextButton(
+                onPressed: () => _refresh(ref),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        return _buildCertificateGrid(context, certificates);
-      },
+    if (certificates.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _refresh(ref),
+      color: AppTheme.primaryGreen,
+      child: _buildCertificateGrid(context, certificates),
     );
   }
 
@@ -126,6 +136,7 @@ class CertificatesScreen extends ConsumerWidget {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: isDesktop ? const EdgeInsets.all(40) : const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,16 +350,6 @@ class CertificatesScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<List<Certificate>> _fetchCertificates() async {
-    try {
-      final certRepo = CertificateRepository();
-      return await certRepo.getCertificates();
-    } catch (e) {
-      print('Error fetching certificates: $e');
-      rethrow;
-    }
   }
 
   void _viewCertificate(BuildContext context, Certificate certificate) {

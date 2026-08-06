@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
+import 'package:excellencecoachinghub/models/download.dart';
+import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
+import 'package:excellencecoachinghub/presentation/widgets/downloaded_material_viewer.dart';
 import 'package:excellencecoachinghub/services/book_service.dart';
+import 'package:excellencecoachinghub/services/download_service.dart';
+import 'package:excellencecoachinghub/utils/book_download.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -46,6 +51,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Keeps every card's download badge in step with the service as books are
+    // saved, paused or deleted.
+    ref.watch(downloadServiceProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -558,46 +566,56 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             // Book Cover
             Expanded(
               flex: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: book.coverUrl != null && book.coverUrl!.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: CachedNetworkImage(
-                          imageUrl: book.coverUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: const Color(0xFF10B981).withOpacity(0.1),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF10B981),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                    child: book.coverUrl != null && book.coverUrl!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: book.coverUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: const Color(0xFF10B981).withOpacity(0.1),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Center(
+                                child: Icon(
+                                  Icons.menu_book_rounded,
+                                  color: const Color(0xFF10B981),
+                                  size: 48,
+                                ),
                               ),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Center(
+                          )
+                        : Center(
                             child: Icon(
                               Icons.menu_book_rounded,
                               color: const Color(0xFF10B981),
                               size: 48,
                             ),
                           ),
-                        ),
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          color: const Color(0xFF10B981),
-                          size: 48,
-                        ),
-                      ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildDownloadBadge(context, book),
+                  ),
+                ],
               ),
             ),
             // Book Info
@@ -715,46 +733,56 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             // Book Cover
             Expanded(
               flex: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: book['coverUrl'] != null && book['coverUrl'].isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: CachedNetworkImage(
-                          imageUrl: book['coverUrl'],
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: const Color(0xFF10B981).withOpacity(0.1),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF10B981),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                    child: book['coverUrl'] != null && book['coverUrl'].isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: book['coverUrl'],
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: const Color(0xFF10B981).withOpacity(0.1),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Center(
+                                child: Icon(
+                                  Icons.menu_book_rounded,
+                                  color: const Color(0xFF10B981),
+                                  size: 48,
+                                ),
                               ),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Center(
+                          )
+                        : Center(
                             child: Icon(
                               Icons.menu_book_rounded,
                               color: const Color(0xFF10B981),
                               size: 48,
                             ),
                           ),
-                        ),
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          color: const Color(0xFF10B981),
-                          size: 48,
-                        ),
-                      ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildDownloadBadge(context, book),
+                  ),
+                ],
               ),
             ),
             // Book Info
@@ -841,6 +869,161 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Save-for-offline control drawn on a book cover.
+  ///
+  /// A saved book is stored through [DownloadService] as a material, so it
+  /// shows up under Downloads › Materials and opens from local storage with no
+  /// connection. Books with no downloadable file get no badge at all.
+  Widget _buildDownloadBadge(BuildContext context, dynamic book) {
+    final target = resolveBookDownload(book);
+    if (target == null) return const SizedBox.shrink();
+
+    final downloadService = ref.watch(downloadServiceProvider);
+    final download = downloadService.getDownloadById(target.downloadId);
+    final status = download?.status;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    IconData icon;
+    Color color;
+    String tooltip;
+
+    if (status == DownloadStatus.completed) {
+      icon = Icons.offline_pin_rounded;
+      color = const Color(0xFF10B981);
+      tooltip = 'Saved — tap to read offline';
+    } else if (status == DownloadStatus.downloading || status == DownloadStatus.pending) {
+      icon = Icons.pause_rounded;
+      color = const Color(0xFF10B981);
+      tooltip = 'Pause download';
+    } else if (status == DownloadStatus.paused) {
+      icon = Icons.play_arrow_rounded;
+      color = const Color(0xFFF59E0B);
+      tooltip = 'Resume download';
+    } else if (status == DownloadStatus.failed) {
+      icon = Icons.refresh_rounded;
+      color = const Color(0xFFEF4444);
+      tooltip = 'Download failed — tap to retry';
+    } else {
+      icon = Icons.download_rounded;
+      color = const Color(0xFF10B981);
+      tooltip = 'Download for offline reading';
+    }
+
+    final progress = download?.downloadProgress ?? 0.0;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: (isDark ? const Color(0xFF1F2937) : Colors.white).withOpacity(0.92),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        elevation: 2,
+        child: InkWell(
+          onTap: () => _handleDownloadBadgeTap(target, status),
+          child: SizedBox(
+            width: 34,
+            height: 34,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (status == DownloadStatus.downloading)
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      // A negative progress means the server didn't send a
+                      // content length, so spin instead of showing a fake bar.
+                      value: progress < 0 ? null : progress,
+                      strokeWidth: 2.5,
+                      color: color,
+                      backgroundColor: color.withOpacity(0.15),
+                    ),
+                  ),
+                Icon(icon, size: 18, color: color),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDownloadBadgeTap(
+    BookDownloadTarget target,
+    DownloadStatus? status,
+  ) async {
+    final downloadService = ref.read(downloadServiceProvider);
+
+    if (status == DownloadStatus.completed) {
+      final download = downloadService.getDownloadById(target.downloadId);
+      if (download != null) {
+        await openDownloadedMaterial(context, download);
+      }
+      return;
+    }
+
+    if (status == DownloadStatus.downloading || status == DownloadStatus.pending) {
+      downloadService.pauseDownload(target.downloadId);
+      return;
+    }
+
+    try {
+      if (status == DownloadStatus.paused || status == DownloadStatus.failed) {
+        await downloadService.resumeDownload(target.downloadId, newUrl: target.url);
+        return;
+      }
+      await _startBookDownload(target, downloadService);
+    } catch (_) {
+      // The service reports failures through onError / the download record.
+    }
+  }
+
+  Future<void> _startBookDownload(
+    BookDownloadTarget target,
+    DownloadService downloadService,
+  ) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Downloading "${target.title}"...'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    await downloadService.downloadNotesOrMaterial(
+      url: target.url,
+      title: target.title,
+      lessonId: target.lessonId,
+      type: DownloadType.material,
+      lessonTitle: target.author,
+      sectionTitle: 'Library',
+      fileExtension: target.fileExtension,
+      thumbnailUrl: target.coverUrl,
+      onSuccess: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${target.title}" saved for offline reading'),
+            backgroundColor: const Color(0xFF10B981),
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () => context.push('/downloads?tab=materials'),
+            ),
+          ),
+        );
+      },
+      onError: (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $error'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      },
     );
   }
 

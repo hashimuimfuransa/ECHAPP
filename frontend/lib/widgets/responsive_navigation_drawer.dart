@@ -21,7 +21,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isCollapsed = ref.watch(sidebarProvider);
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final bool isAuth = user == null || currentPage == 'auth';
     final bool isAdmin = user?.role == 'admin';
 
@@ -382,7 +382,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
   }
 
   Widget _buildMobileDrawer(BuildContext context, List<Map<String, dynamic>> items, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Drawer(

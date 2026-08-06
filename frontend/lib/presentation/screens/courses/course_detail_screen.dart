@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/course.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
@@ -24,11 +26,20 @@ class CourseDetailScreen extends ConsumerStatefulWidget {
   _CourseDetailScreenState createState() => _CourseDetailScreenState();
 }
 
-class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with SingleTickerProviderStateMixin {
+class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   // State variables
   bool _hasRedirected = false;
   bool _isPaymentLoading = false;
   bool _isEnrollmentLoading = false;
+
+  // Payment status refresh
+  static const Duration _paymentPollInterval = Duration(seconds: 10);
+  Timer? _paymentPollTimer;
+  bool _isRefreshing = false;
+  bool _hasPendingPayment = false;
+  bool _isForeground = true;
+  DateTime? _lastCheckedAt;
 
   // Enroll button attention animation
   late final AnimationController _enrollPulseController;
@@ -41,6 +52,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _enrollPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1300),
@@ -55,8 +67,111 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
 
   @override
   void dispose() {
+    _paymentPollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _enrollPulseController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final bool isForeground = state == AppLifecycleState.resumed;
+    if (isForeground == _isForeground) return;
+    _isForeground = isForeground;
+
+    // Coming back from the MoMo prompt is the most likely moment for the
+    // payment to have been approved, so check straight away instead of waiting
+    // for the next poll tick.
+    if (isForeground && _hasPendingPayment) {
+      _refreshStatus();
+    }
+    _syncAutoRefresh();
+  }
+
+  // ─── Payment Status Refresh ─────────────────────────────────────────────
+
+  /// Polls only while a payment is actually awaiting approval and the screen is
+  /// in the foreground - there is nothing to watch for otherwise.
+  void _syncAutoRefresh() {
+    final bool shouldPoll = _hasPendingPayment && _isForeground && !_hasRedirected;
+
+    if (shouldPoll) {
+      _paymentPollTimer ??= Timer.periodic(
+        _paymentPollInterval,
+        (_) => _refreshStatus(),
+      );
+    } else {
+      _paymentPollTimer?.cancel();
+      _paymentPollTimer = null;
+    }
+  }
+
+  /// Re-checks payment, enrollment and course data. Used by the manual refresh
+  /// button, pull-to-refresh and the background poll.
+  Future<void> _refreshStatus({bool showFeedback = false}) async {
+    if (_isRefreshing || !mounted) return;
+    setState(() => _isRefreshing = true);
+
+    final bool wasPending = _hasPendingPayment;
+
+    try {
+      ref.invalidate(hasPendingPaymentProvider(widget.courseId));
+      ref.invalidate(isEnrolledInCourseProvider(widget.courseId));
+      ref.invalidate(courseAccessProvider(widget.courseId));
+      ref.invalidate(courseStatsProvider(widget.courseId));
+      ref.invalidate(_courseProvider(widget.courseId));
+
+      final results = await Future.wait([
+        ref.read(hasPendingPaymentProvider(widget.courseId).future),
+        ref.read(isEnrolledInCourseProvider(widget.courseId).future),
+      ]);
+      final bool hasPending = results[0];
+      final bool isEnrolled = results[1];
+
+      if (!mounted) return;
+      _lastCheckedAt = DateTime.now();
+
+      // The redirect to the learning screen is driven by the enrollment watch
+      // in build(); here we only explain what changed.
+      if (wasPending && !hasPending && !isEnrolled) {
+        _showStatusMessage(
+          'Your payment is no longer pending. Please contact support if it was not approved.',
+          Colors.orange,
+        );
+      } else if (showFeedback && !isEnrolled) {
+        _showStatusMessage(
+          hasPending
+              ? 'Payment is still awaiting approval.'
+              : 'Status updated.',
+          hasPending ? Colors.orange : AppTheme.primaryGreen,
+        );
+      }
+    } catch (e) {
+      if (showFeedback && mounted) {
+        _showStatusMessage('Could not refresh status: $e', Colors.red);
+      }
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
+
+  void _showStatusMessage(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  String _lastCheckedLabel() {
+    final checkedAt = _lastCheckedAt;
+    if (checkedAt == null) return 'Checking automatically';
+    final seconds = DateTime.now().difference(checkedAt).inSeconds;
+    if (seconds < 60) return 'Checked ${seconds}s ago';
+    return 'Checked ${DateTime.now().difference(checkedAt).inMinutes}m ago';
   }
 
   // Course provider
@@ -149,7 +264,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
         );
         
         await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(hasPendingPaymentProvider(course.id));
+        ref.invalidate(hasPendingPaymentProvider(course.id));
         await Future.delayed(const Duration(milliseconds: 1000));
         
         if (ref.context.mounted) {
@@ -192,9 +307,13 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
 
   @override
   Widget build(BuildContext context) {
-    final ref = context as WidgetRef;
     final courseAsync = ref.watch(_courseProvider(widget.courseId));
     final isEnrolledAsync = ref.watch(isEnrolledInCourseProvider(widget.courseId));
+    final pendingPaymentAsync = ref.watch(hasPendingPaymentProvider(widget.courseId));
+
+    // Keep the auto-refresh in step with the pending payment state.
+    _hasPendingPayment = pendingPaymentAsync.valueOrNull ?? _hasPendingPayment;
+    _syncAutoRefresh();
 
     // Pre-fetch course content if enrolled
     isEnrolledAsync.whenData((isEnrolled) {
@@ -366,8 +485,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: () => _refreshStatus(showFeedback: true),
+        color: accentColor,
+        backgroundColor: cardColor,
+        child: CustomScrollView(
+          // Guarantees the pull-to-refresh gesture is available even when the
+          // content is short enough not to scroll.
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           // Header
           _buildHeader(course, isDark, cardColor, textColor, dividerColor, accentColor),
           
@@ -427,7 +553,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -440,6 +567,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
       elevation: 0,
       leading: _buildHeaderButton(Icons.arrow_back_ios_rounded, textColor, dividerColor, cardColor, () => context.pop()),
       actions: [
+        _buildRefreshButton(textColor, dividerColor, cardColor, accentColor),
         _buildBookmarkButton(course, isDark, cardColor, textColor, dividerColor, accentColor),
         _buildHeaderButton(Icons.share_outlined, textColor, dividerColor, cardColor, () => _handleShare(course)),
       ],
@@ -466,6 +594,28 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
         border: Border.all(color: dividerColor, width: 1),
       ),
       child: IconButton(icon: Icon(icon, color: textColor, size: 20), onPressed: onPressed),
+    );
+  }
+
+  Widget _buildRefreshButton(Color textColor, Color dividerColor, Color cardColor, Color accentColor) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: dividerColor, width: 1),
+      ),
+      child: IconButton(
+        tooltip: 'Refresh payment status',
+        icon: _isRefreshing
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
+              )
+            : Icon(Icons.refresh_rounded, color: textColor, size: 20),
+        onPressed: _isRefreshing ? null : () => _refreshStatus(showFeedback: true),
+      ),
     );
   }
 
@@ -981,29 +1131,78 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> with Si
     return Consumer(
       builder: (context, ref, child) {
         final hasPendingPayment = ref.watch(hasPendingPaymentProvider(course.id));
-        
-        return SizedBox(
-          height: 56,
-          child: hasPendingPayment.when(
-            data: (hasPending) {
-              if (hasPending) {
-                return _buildPaymentPendingButton(isDark);
-              }
-              
-              final isFree = (course.price ?? 0) == 0;
-              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
-              
-              return _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n);
-            },
-            loading: () => _buildLoadingButton(isDark),
-            error: (error, stack) {
-              final isFree = (course.price ?? 0) == 0;
-              final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
-              return _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n);
-            },
-          ),
+
+        return hasPendingPayment.when(
+          data: (hasPending) {
+            if (hasPending) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 56, child: _buildPaymentPendingButton(isDark)),
+                  const SizedBox(height: 8),
+                  _buildPaymentCheckStatus(isDark, accentColor),
+                ],
+              );
+            }
+
+            final isFree = (course.price ?? 0) == 0;
+            final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+
+            return SizedBox(
+              height: 56,
+              child: _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n),
+            );
+          },
+          loading: () => SizedBox(height: 56, child: _buildLoadingButton(isDark)),
+          error: (error, stack) {
+            final isFree = (course.price ?? 0) == 0;
+            final isLoading = isFree ? _isEnrollmentLoading : _isPaymentLoading;
+            return SizedBox(
+              height: 56,
+              child: _buildPurchaseButton(course, isFree, isLoading, isDark, accentColor, l10n),
+            );
+          },
         );
       },
+    );
+  }
+
+  /// Shows that the pending payment is being watched automatically, plus an
+  /// escape hatch for users who do not want to wait for the next tick.
+  Widget _buildPaymentCheckStatus(bool isDark, Color accentColor) {
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 14,
+          height: 14,
+          child: _isRefreshing
+              ? CircularProgressIndicator(strokeWidth: 2, color: accentColor)
+              : Icon(Icons.autorenew_rounded, size: 14, color: secondaryTextColor),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            _isRefreshing ? 'Checking payment status...' : _lastCheckedLabel(),
+            style: TextStyle(color: secondaryTextColor, fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        TextButton(
+          onPressed: _isRefreshing ? null : () => _refreshStatus(showFeedback: true),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(0, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(
+            'Check now',
+            style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
 

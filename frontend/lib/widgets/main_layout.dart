@@ -24,6 +24,12 @@ class MainLayout extends ConsumerWidget {
   final Widget child;
   final String? title;
 
+  // Bottom nav metrics - kept here so the height budget used to size the icons
+  // stays in sync with what the label actually paints.
+  static const double _navLabelGap = 2;
+  static const double _navLabelLineHeight = 1.15;
+  static const double _navMaxTextScale = 1.2;
+
   const MainLayout({
     super.key,
     required this.child,
@@ -405,8 +411,7 @@ class MainLayout extends ConsumerWidget {
     }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Container(
       height: _getResponsiveNavBarHeight(context),
       decoration: BoxDecoration(
@@ -430,17 +435,38 @@ class MainLayout extends ConsumerWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: _getResponsiveNavBarPadding(context),
-            vertical: 8,
+            vertical: 6,
           ),
-          child: Row(
-            children: _buildNavItems(context, currentIndex, screenWidth).map((item) => Expanded(child: item)).toList(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The bar has a fixed height that the system inset (gesture bar)
+              // eats into, so size the icon from what is actually left after the
+              // label instead of assuming the full icon size always fits.
+              final textScaler = MediaQuery.textScalerOf(context)
+                  .clamp(maxScaleFactor: _navMaxTextScale);
+              final labelHeight =
+                  textScaler.scale(_getResponsiveNavTextSize(context)) *
+                      _navLabelLineHeight;
+              final iconSize =
+                  (constraints.maxHeight - labelHeight - _navLabelGap)
+                      .clamp(0.0, _getResponsiveNavIconSize(context));
+
+              return MediaQuery.withClampedTextScaling(
+                maxScaleFactor: _navMaxTextScale,
+                child: Row(
+                  children: _buildNavItems(context, currentIndex, iconSize)
+                      .map((item) => Expanded(child: item))
+                      .toList(),
+                ),
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  List<Widget> _buildNavItems(BuildContext context, int currentIndex, double screenWidth) {
+  List<Widget> _buildNavItems(BuildContext context, int currentIndex, double iconSize) {
     final l10n = AppLocalizations.of(context);
     final navItems = [
       {'icon': Icons.home_rounded, 'label': l10n?.home ?? 'Home'},
@@ -461,7 +487,7 @@ class MainLayout extends ConsumerWidget {
         label: item['label'] as String,
         isSelected: isSelected,
         onTap: _getNavigationAction(index, context),
-        screenWidth: screenWidth,
+        iconSize: iconSize,
       );
     }).toList();
   }
@@ -472,50 +498,58 @@ class MainLayout extends ConsumerWidget {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
-    required double screenWidth,
+    required double iconSize,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSmallScreen = screenWidth < 360;
-    
+    final itemColor = isSelected
+        ? const Color(0xFF10B981)
+        : (isDark ? Colors.white70 : Colors.black54);
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: _getResponsiveNavItemPadding(context),
-          vertical: 8,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: _getResponsiveNavIconSize(context),
-              height: _getResponsiveNavIconSize(context),
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
-                color: isSelected 
+                color: isSelected
                     ? const Color(0xFF10B981).withOpacity(0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(_getResponsiveNavIconRadius(context)),
               ),
               child: Icon(
                 icon,
-                size: _getResponsiveNavIconSize(context) * 0.6,
-                color: isSelected 
-                    ? const Color(0xFF10B981)
-                    : (isDark ? Colors.white70 : Colors.black54),
+                size: iconSize * 0.6,
+                color: itemColor,
               ),
             ),
-            const SizedBox(height: 1),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: _getResponsiveNavTextSize(context),
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected 
-                    ? const Color(0xFF10B981)
-                    : (isDark ? Colors.white70 : Colors.black54),
+            const SizedBox(height: _navLabelGap),
+            // Long single-word labels ("Downloads") cannot wrap inside a cell
+            // this narrow, so scale them down rather than let them spill.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: _getResponsiveNavTextSize(context),
+                    height: _navLabelLineHeight,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: itemColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

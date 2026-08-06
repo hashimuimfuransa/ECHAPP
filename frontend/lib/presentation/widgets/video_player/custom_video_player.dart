@@ -9,6 +9,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 import 'dart:io';
 import 'dart:async';
 
@@ -57,7 +58,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   bool _showSlowInternetError = false;
   bool _isOffline = false;
   StreamSubscription? _connectivitySubscription;
-  
+  // Desktop playback goes through mkv.Video, which keeps the screen awake by
+  // itself, so this only covers the mobile/web (Chewie) path.
+  final ScreenWakelock _wakelock = ScreenWakelock();
+
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
@@ -124,7 +128,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _showSlowInternetError = false;
       _isInitialized = false;
     });
-    
+
+    _wakelock.release();
     _stopBufferingTimer();
     
     if (_isMobile || kIsWeb) {
@@ -203,6 +208,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         autoPlay: false,
         looping: false,
         showControls: true,
+        // Left at the default on purpose: with allowedScreenSleep: false Chewie
+        // disables the wakelock when it leaves full screen, which would let the
+        // screen sleep while the video keeps playing inline. _wakelock owns it.
         placeholder: const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
         materialProgressColors: ChewieProgressColors(
           playedColor: AppTheme.primaryGreen,
@@ -233,6 +241,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (_vpController == null) return;
     
     if (_vpController!.value.hasError) {
+      _wakelock.release();
       if (mounted) {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -246,7 +255,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
     
     final position = _vpController!.value.position;
-    
+
+    // Hold the screen awake for as long as the video is actually playing, so
+    // watching a lesson is never cut short by the screen dimming or locking
+    if (_vpController!.value.isPlaying) {
+      _wakelock.acquire();
+    } else {
+      _wakelock.release();
+    }
+
     // Save progress periodically (every 5 seconds)
     if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
       videoProgressService.saveProgress(widget.videoId!, position);
@@ -427,6 +444,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   void dispose() {
+    _wakelock.release();
     _connectivitySubscription?.cancel();
     for (final s in _subscriptions) {
       s.cancel();

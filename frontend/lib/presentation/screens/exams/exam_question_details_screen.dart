@@ -18,14 +18,18 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
   int totalScore = 0;
   int maxScore = 0;
   double percentage = 0.0;
+  bool passed = false;
 
   @override
   void initState() {
     super.initState();
     results = List<Map<String, dynamic>>.from(widget.examResult['results'] ?? []);
-    totalScore = widget.examResult['totalScore'] as int? ?? 0;
-    maxScore = widget.examResult['maxScore'] as int? ?? 0;
+    totalScore = (widget.examResult['totalScore'] as num?)?.toInt() ?? 0;
+    maxScore = (widget.examResult['maxScore'] as num?)?.toInt() ?? 0;
     percentage = (widget.examResult['percentage'] as num?)?.toDouble() ?? 0.0;
+    // The submission stores the verdict graded against the quiz's own passing
+    // score; only guess when it's missing.
+    passed = widget.examResult['passed'] as bool? ?? percentage >= 70;
     
     // Debug logging
     print('Exam result received: ${widget.examResult}');
@@ -171,7 +175,9 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      // Card and text colors below follow the theme, so the page behind them
+      // has to as well or dark mode renders light text on a light background.
+      backgroundColor: AppTheme.getBackgroundColor(context),
       appBar: AppBar(
         backgroundColor: AppTheme.primary,
         title: const Text(
@@ -218,7 +224,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: percentage >= 70 ? Colors.green : Colors.red,
+                        color: passed ? Colors.green : Colors.red,
                       ),
                     ),
                   ],
@@ -240,7 +246,7 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: percentage >= 70 ? Colors.green : Colors.red,
+                        color: passed ? Colors.green : Colors.red,
                       ),
                     ),
                   ],
@@ -260,15 +266,15 @@ class _ExamQuestionDetailsScreenState extends State<ExamQuestionDetailsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: percentage >= 70 ? Colors.green.shade100 : Colors.red.shade100,
+                        color: passed ? Colors.green.shade100 : Colors.red.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        percentage >= 70 ? 'PASSED' : 'FAILED',
+                        passed ? 'PASSED' : 'FAILED',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: percentage >= 70 ? Colors.green.shade700 : Colors.red.shade700,
+                          color: passed ? Colors.green.shade700 : Colors.red.shade700,
                         ),
                       ),
                     ),

@@ -191,7 +191,7 @@ class _AdminManagementScreenState extends ConsumerState<AdminManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = ref.watch(authProvider).user;
+    final currentUser = ref.watch(authProvider.select((state) => state.user));
 
     return Scaffold(
       appBar: AppBar(

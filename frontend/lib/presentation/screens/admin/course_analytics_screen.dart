@@ -102,13 +102,19 @@ class _CourseAnalyticsScreenState extends ConsumerState<CourseAnalyticsScreen> {
   }
 
   void _showStudentProgressDialog(CourseStudentPerformance student) {
+    // Built once here rather than inside the builder - showDialog's builder
+    // re-runs on route rebuilds (keyboard, metrics changes) and would
+    // otherwise re-issue the request every time.
+    final progressFuture =
+        _adminService.getStudentCourseProgress(widget.courseId, student.id);
+
     showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
           child: FutureBuilder<DetailedStudentPerformance>(
-            future: _adminService.getStudentCourseProgress(widget.courseId, student.id),
+            future: progressFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(

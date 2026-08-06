@@ -12,6 +12,14 @@ class Download {
   final DownloadType type;
   final String? lessonTitle;
   final String? sectionTitle;
+
+  /// Where the preview image came from (book cover, course artwork).
+  final String? thumbnailUrl;
+
+  /// The preview image saved next to the download, so it still shows with no
+  /// connection. Null until it has been fetched, or when there is none.
+  final String? thumbnailPath;
+
   double downloadProgress;
   bool isDownloading;
   DownloadStatus status;
@@ -27,10 +35,17 @@ class Download {
     required this.type,
     this.lessonTitle,
     this.sectionTitle,
+    this.thumbnailUrl,
+    this.thumbnailPath,
     required this.downloadProgress,
     required this.isDownloading,
     required this.status,
   });
+
+  /// True for a book saved from the Library, as opposed to a material attached
+  /// to a lesson. Books are downloaded with a "book_<id>" lesson id (see
+  /// `resolveBookDownload`), which is what keeps the two apart in the UI.
+  bool get isBook => lessonId.startsWith('book_');
 
   Download copyWith({
     String? id,
@@ -43,6 +58,8 @@ class Download {
     DownloadType? type,
     String? lessonTitle,
     String? sectionTitle,
+    String? thumbnailUrl,
+    String? thumbnailPath,
     double? downloadProgress,
     bool? isDownloading,
     DownloadStatus? status,
@@ -58,6 +75,8 @@ class Download {
       type: type ?? this.type,
       lessonTitle: lessonTitle ?? this.lessonTitle,
       sectionTitle: sectionTitle ?? this.sectionTitle,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       isDownloading: isDownloading ?? this.isDownloading,
       status: status ?? this.status,
@@ -76,6 +95,8 @@ class Download {
       type: _downloadTypeFromString(json['type'] as String? ?? 'video'),
       lessonTitle: json['lessonTitle'] as String?,
       sectionTitle: json['sectionTitle'] as String?,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      thumbnailPath: json['thumbnailPath'] as String?,
       downloadProgress: (json['downloadProgress'] as num).toDouble(),
       isDownloading: json['isDownloading'] as bool,
       status: _downloadStatusFromString(json['status'] as String),
@@ -94,6 +115,8 @@ class Download {
       'type': _downloadTypeToString(type),
       'lessonTitle': lessonTitle,
       'sectionTitle': sectionTitle,
+      'thumbnailUrl': thumbnailUrl,
+      'thumbnailPath': thumbnailPath,
       'downloadProgress': downloadProgress,
       'isDownloading': isDownloading,
       'status': _downloadStatusToString(status),

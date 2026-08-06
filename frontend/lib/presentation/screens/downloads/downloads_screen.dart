@@ -9,48 +9,98 @@ import 'package:excellencecoachinghub/presentation/providers/download_provider.d
 import 'package:flutter/foundation.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/custom_video_player.dart';
 import 'package:excellencecoachinghub/presentation/widgets/video_player/optimized_video_player.dart';
+import 'package:excellencecoachinghub/presentation/widgets/downloaded_material_viewer.dart';
+import 'package:excellencecoachinghub/presentation/widgets/download_thumbnail.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
+import 'package:excellencecoachinghub/services/connectivity_service.dart';
 import 'dart:io';
 
 class DownloadsScreen extends ConsumerStatefulWidget {
-  const DownloadsScreen({super.key});
+  const DownloadsScreen({super.key, this.initialTab});
+
+  /// Which tab to open on: 'materials' for notes/materials (including books
+  /// saved from the Library), anything else for videos.
+  final String? initialTab;
 
   @override
   ConsumerState<DownloadsScreen> createState() => _DownloadsScreenState();
 }
 
+/// A labelled divider between the groups on a downloads tab.
+class _SectionHeaderData {
+  const _SectionHeaderData(this.label, this.icon, this.count, this.color);
+
+  final String label;
+  final IconData icon;
+  final int count;
+  final Color color;
+}
+
 class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerProviderStateMixin {
+  static const List<DownloadType> _videoTypes = [DownloadType.video];
+  static const List<DownloadType> _materialTypes = [DownloadType.notes, DownloadType.material];
+
   String _searchQuery = '';
   DownloadStatus? _statusFilter;
-  DownloadType? _typeFilter;
   late TabController _tabController;
+  late final DownloadService _downloadService;
+
+  /// Disk usage shown in the stats bar. Measuring it touches every downloaded
+  /// file, so it's only re-measured when the set of finished downloads changes
+  /// — not on every progress tick.
+  int _storageBytes = 0;
+  String? _storageSignature;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this); // Videos, Materials (notes are shown under Materials)
+    // Videos, Materials (notes are shown under Materials)
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab == 'materials' ? 1 : 0,
+    );
+
+    _downloadService = ref.read(downloadServiceProvider);
+    _downloadService.addListener(_onDownloadsChanged);
+    _onDownloadsChanged();
   }
 
   @override
   void dispose() {
+    _downloadService.removeListener(_onDownloadsChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onDownloadsChanged() {
+    final signature = _downloadService
+        .getAllDownloads()
+        .where((download) => download.status == DownloadStatus.completed)
+        .map((download) => download.id)
+        .join('|');
+    if (signature == _storageSignature) return;
+    _storageSignature = signature;
+    _measureStorage(signature);
+  }
+
+  Future<void> _measureStorage(String signature) async {
+    final bytes = await _downloadService.getTotalDownloadedSize();
+    // A newer measurement may have started while this one was running.
+    if (!mounted || signature != _storageSignature) return;
+    setState(() => _storageBytes = bytes);
   }
 
   @override
   Widget build(BuildContext context) {
     final downloadService = ref.watch(downloadServiceProvider);
-    final downloads = downloadService.getAllDownloads();
-    
-    final filteredDownloads = downloads.where((download) {
-      bool matchesSearch = _searchQuery.isEmpty || 
-          download.originalTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (download.lessonTitle?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      bool matchesStatus = _statusFilter == null || download.status == _statusFilter;
-      bool matchesType = _typeFilter == null || download.type == _typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
-    }).toList();
+    // Resolved once so the tab labels and the lists they open can never
+    // disagree about how much is in there.
+    final videos = _visibleDownloads(_videoTypes, downloadService);
+    final materials = _visibleDownloads(_materialTypes, downloadService);
+    final allDownloads = downloadService.getAllDownloads();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -69,9 +119,9 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           labelColor: AppTheme.primaryGreen,
           unselectedLabelColor: AppTheme.greyColor,
           indicatorColor: AppTheme.primaryGreen,
-          tabs: const [
-            Tab(text: 'Videos', icon: Icon(Icons.video_file)),
-            Tab(text: 'Materials', icon: Icon(Icons.attach_file)),
+          tabs: [
+            _buildTab('Videos', Icons.video_file, videos.length),
+            _buildTab('Materials/Books', Icons.attach_file, materials.length),
           ],
         ),
         actions: [
@@ -90,6 +140,11 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
       ),
       body: Column(
         children: [
+          ListenableBuilder(
+            listenable: ConnectivityService.instance,
+            builder: (context, _) => _buildOfflineNotice(context),
+          ),
+          _buildStatsBar(context, allDownloads),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -111,8 +166,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildDownloadsList(const [DownloadType.video], downloadService),
-                _buildDownloadsList(const [DownloadType.notes, DownloadType.material], downloadService),
+                _buildVideosList(videos, downloadService),
+                _buildMaterialsList(materials, downloadService),
               ],
             ),
           ),
@@ -121,40 +176,301 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     );
   }
 
-  Widget _buildDownloadsList(List<DownloadType> types, DownloadService downloadService) {
-    final downloads = types.expand((type) => downloadService.getDownloadsByType(type));
-    final filteredDownloads = downloads.where((download) {
-      bool matchesSearch = _searchQuery.isEmpty ||
-          download.originalTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (download.lessonTitle?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      bool matchesStatus = _statusFilter == null || download.status == _statusFilter;
-      return matchesSearch && matchesStatus;
-    }).toList();
+  /// Shown when the offline guard redirected the user here, so the jump to
+  /// Downloads doesn't look like a bug.
+  Widget _buildOfflineNotice(BuildContext context) {
+    final connectivity = ConnectivityService.instance;
+    if (!connectivity.isOffline || connectivity.blockedLocation == null) {
+      return const SizedBox.shrink();
+    }
 
-    if (filteredDownloads.isEmpty) {
-      return _buildEmptyState(types.first);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "You're offline. That page needs a connection, so here's what you "
+              'already downloaded.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.getTextColor(context).withOpacity(0.8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Downloads of [types] that survive the current search and status filter.
+  List<Download> _visibleDownloads(List<DownloadType> types, DownloadService downloadService) {
+    final query = _searchQuery.toLowerCase();
+    return types
+        .expand((type) => downloadService.getDownloadsByType(type))
+        .where((download) {
+          final matchesSearch = query.isEmpty ||
+              download.originalTitle.toLowerCase().contains(query) ||
+              (download.lessonTitle?.toLowerCase().contains(query) ?? false);
+          final matchesStatus = _statusFilter == null || download.status == _statusFilter;
+          return matchesSearch && matchesStatus;
+        })
+        .toList();
+  }
+
+  /// Tab label carrying how much is inside, so it's obvious at a glance which
+  /// tab has content without opening it.
+  Tab _buildTab(String label, IconData icon, int count) {
+    return Tab(
+      icon: Icon(icon),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            _buildCountPill(count, AppTheme.primaryGreen),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// What's on this device, at a glance: how many of each kind of download and
+  /// how much room they take up. Counts everything, not just what the current
+  /// search matches, so the totals stay steady while filtering.
+  Widget _buildStatsBar(BuildContext context, List<Download> all) {
+    if (all.isEmpty) return const SizedBox.shrink();
+
+    final videos = all.where((d) => d.type == DownloadType.video).length;
+    final books = all.where((d) => d.isBook).length;
+    final materials =
+        all.where((d) => d.type != DownloadType.video && !d.isBook).length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        children: [
+          _buildStatChip(
+            Icons.play_circle_fill,
+            AppTheme.primaryGreen,
+            '$videos',
+            videos == 1 ? 'Video' : 'Videos',
+          ),
+          const SizedBox(width: 8),
+          _buildStatChip(
+            Icons.menu_book_rounded,
+            Colors.blue,
+            '$books',
+            books == 1 ? 'Book' : 'Books',
+          ),
+          const SizedBox(width: 8),
+          _buildStatChip(
+            Icons.attach_file,
+            AppTheme.accent,
+            '$materials',
+            materials == 1 ? 'Material' : 'Materials',
+          ),
+          if (_storageBytes > 0) ...[
+            const SizedBox(width: 8),
+            _buildStatChip(
+              Icons.sd_storage_rounded,
+              AppTheme.greyColor,
+              _formatBytes(_storageBytes),
+              'used',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip(IconData icon, Color color, String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.getCardColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.getTextColor(context),
+                  ),
+                ),
+                TextSpan(
+                  text: ' $label',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.getSecondaryTextColor(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    const units = ['KB', 'MB', 'GB'];
+    double size = bytes / 1024;
+    int unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+      size /= 1024;
+      unit++;
+    }
+    return '${size.toStringAsFixed(size >= 10 ? 0 : 1)} ${units[unit]}';
+  }
+
+  Widget _buildCountPill(int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+      ),
+    );
+  }
+
+  Widget _buildVideosList(List<Download> videos, DownloadService downloadService) {
+    if (videos.isEmpty) return _buildEmptyState(DownloadType.video);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: videos.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _buildSectionHeader(
+            'Videos',
+            Icons.play_circle_fill,
+            videos.length,
+            AppTheme.primaryGreen,
+          );
+        }
+        return _buildDownloadItem(videos[index - 1], downloadService);
+      },
+    );
+  }
+
+  /// Books saved from the Library and materials attached to lessons both live
+  /// on this tab, so each gets its own labelled, counted section instead of one
+  /// undifferentiated list.
+  Widget _buildMaterialsList(List<Download> materials, DownloadService downloadService) {
+    if (materials.isEmpty) return _buildEmptyState(DownloadType.notes);
+
+    final books = materials.where((download) => download.isBook).toList();
+    final lessonMaterials = materials.where((download) => !download.isBook).toList();
+
+    final rows = <Object>[];
+    if (books.isNotEmpty) {
+      rows.add(_SectionHeaderData('Books', Icons.menu_book_rounded, books.length, Colors.blue));
+      rows.addAll(books);
+    }
+    if (lessonMaterials.isNotEmpty) {
+      rows.add(_SectionHeaderData(
+        'Course materials',
+        Icons.attach_file,
+        lessonMaterials.length,
+        AppTheme.accent,
+      ));
+      rows.addAll(lessonMaterials);
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: filteredDownloads.length,
-      itemBuilder: (context, index) => _buildDownloadItem(filteredDownloads[index], downloadService),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+        if (row is _SectionHeaderData) {
+          return _buildSectionHeader(row.label, row.icon, row.count, row.color);
+        }
+        return _buildDownloadItem(row as Download, downloadService);
+      },
+    );
+  }
+
+  Widget _buildSectionHeader(String label, IconData icon, int count, Color color) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.getTextColor(context),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildCountPill(count, color),
+        ],
+      ),
     );
   }
 
   Widget _buildEmptyState([DownloadType? type]) {
-    final String label = type == DownloadType.notes ? 'material' : (type?.name ?? '');
-    final String message = type != null
-        ? 'No $label downloads found'
-        : 'No downloads found';
-    final String subMessage = type != null
-        ? 'Download $label to access them offline'
-        : (_searchQuery.isEmpty && _statusFilter == null
-            ? 'Download videos to watch them offline'
-            : 'Try adjusting your search or filters');
-    final IconData icon = type != null
-        ? (type == DownloadType.video ? Icons.video_file : Icons.attach_file)
-        : Icons.download_outlined;
+    final bool isMaterials = type != null && type != DownloadType.video;
+    final bool isFiltering = _searchQuery.isNotEmpty || _statusFilter != null;
+
+    final String message;
+    if (isFiltering) {
+      message = 'Nothing matches here';
+    } else if (isMaterials) {
+      message = 'No materials or books yet';
+    } else if (type != null) {
+      message = 'No ${type.name} downloads found';
+    } else {
+      message = 'No downloads found';
+    }
+
+    final String subMessage;
+    if (isFiltering) {
+      subMessage = 'Try adjusting your search or filters';
+    } else if (isMaterials) {
+      subMessage = 'Download books from the Library, or lesson materials, to read them offline';
+    } else if (type != null) {
+      subMessage = 'Download ${type.name} to access them offline';
+    } else {
+      subMessage = 'Download videos to watch them offline';
+    }
+
+    final IconData icon = isFiltering
+        ? Icons.search_off_rounded
+        : (type != null
+            ? (type == DownloadType.video ? Icons.video_file : Icons.attach_file)
+            : Icons.download_outlined);
 
     return Center(
       child: Column(
@@ -195,16 +511,10 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: (isCompleted ? AppTheme.primaryGreen : (isFailed ? Colors.red : AppTheme.accent)).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getDownloadIcon(download),
-                      color: isCompleted ? AppTheme.primaryGreen : (isFailed ? Colors.red : AppTheme.accent),
-                    ),
+                  Opacity(
+                    // An unfinished download reads as pending rather than ready.
+                    opacity: isCompleted ? 1 : 0.55,
+                    child: DownloadThumbnail(download: download),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -232,11 +542,11 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
                             _buildStatusBadge(download.status),
                             const SizedBox(width: 8),
                             Text(
-                              download.type.name.toUpperCase(),
+                              _getTypeLabel(download),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: _getTypeColor(download.type),
+                                color: _getTypeColor(download),
                               ),
                             ),
                             if (isDownloading || isPaused || isFailed) ...[
@@ -323,16 +633,16 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
         if (download.status == DownloadStatus.downloading)
           IconButton(
             icon: const Icon(Icons.pause_circle_outline, color: Colors.blue),
-            onPressed: () => downloadService.pauseDownload(download.lessonId),
+            onPressed: () => downloadService.pauseDownload(download.id),
             tooltip: 'Pause',
           )
         else if (download.status == DownloadStatus.paused || download.status == DownloadStatus.failed)
           IconButton(
             icon: Icon(
-              download.status == DownloadStatus.failed ? Icons.refresh : Icons.play_circle_outline, 
+              download.status == DownloadStatus.failed ? Icons.refresh : Icons.play_circle_outline,
               color: download.status == DownloadStatus.failed ? Colors.red : Colors.blue
             ),
-            onPressed: () => downloadService.resumeDownload(download.lessonId),
+            onPressed: () => downloadService.resumeDownload(download.id),
             tooltip: download.status == DownloadStatus.failed ? 'Retry' : 'Resume',
           ),
         PopupMenuButton<String>(
@@ -367,7 +677,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              downloadService.deleteDownload(download.lessonId);
+              downloadService.deleteDownload(download.id);
               Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -377,21 +687,15 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
     );
   }
 
-  IconData _getDownloadIcon(Download download) {
-    switch (download.type) {
-      case DownloadType.video:
-        return download.status == DownloadStatus.completed 
-            ? Icons.play_circle_fill 
-            : Icons.video_file;
-      case DownloadType.notes:
-        return Icons.description;
-      case DownloadType.material:
-        return Icons.attach_file;
-    }
+  /// What the row calls itself. A saved book says BOOK rather than MATERIAL,
+  /// which is what it happens to be stored as.
+  String _getTypeLabel(Download download) {
+    return download.isBook ? 'BOOK' : download.type.name.toUpperCase();
   }
 
-  Color _getTypeColor(DownloadType type) {
-    switch (type) {
+  Color _getTypeColor(Download download) {
+    if (download.isBook) return Colors.blue;
+    switch (download.type) {
       case DownloadType.video:
         return AppTheme.primaryGreen;
       case DownloadType.notes:
@@ -416,84 +720,48 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> with TickerPr
   }
 
   void _openNotes(Download download) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _buildNotesViewer(download),
-      ),
-    );
-  }
-
-  void _openMaterial(Download download) {
-    if (download.url.endsWith('.pdf')) {
+    // Lesson notes written in the app keep their text in `url` and have no file
+    // on disk; everything else (PDFs, downloaded books) opens from local storage.
+    if (download.localPath.isEmpty || !File(download.localPath).existsSync()) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => _buildPdfViewer(download),
+          builder: (context) => _buildNotesViewer(download),
         ),
       );
-    } else {
-      _showUrlDialog(download);
+      return;
     }
+    openDownloadedMaterial(context, download);
+  }
+
+  void _openMaterial(Download download) {
+    openDownloadedMaterial(context, download);
   }
 
   Widget _buildNotesViewer(Download download) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(download.originalTitle),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Container(
-        padding: const EdgeInsets.all(16),
-        child: download.url.toLowerCase().endsWith('.pdf') || download.localPath.toLowerCase().endsWith('.pdf')
-            ? SfPdfViewer.file(File(download.localPath))
-            : SingleChildScrollView(
-                child: MarkdownBody(
-                  data: download.url, // For text notes, URL contains the content
-                  styleSheet: MarkdownStyleSheet(
-                    h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    h2: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    h3: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                    p: const TextStyle(fontSize: 16, height: 1.5),
+    return KeepScreenAwake(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(download.originalTitle),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: Container(
+          padding: const EdgeInsets.all(16),
+          child: download.url.toLowerCase().endsWith('.pdf') || download.localPath.toLowerCase().endsWith('.pdf')
+              ? SfPdfViewer.file(File(download.localPath))
+              : SingleChildScrollView(
+                  child: MarkdownBody(
+                    data: download.url, // For text notes, URL contains the content
+                    styleSheet: MarkdownStyleSheet(
+                      h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      h2: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      h3: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                      p: const TextStyle(fontSize: 16, height: 1.5),
+                    ),
                   ),
                 ),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildPdfViewer(Download download) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(download.originalTitle),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SfPdfViewer.file(File(download.localPath)),
-    );
-  }
-
-  void _showUrlDialog(Download download) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(download.originalTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This material is available at:'),
-            const SizedBox(height: 8),
-            SelectableText(download.url),
-          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

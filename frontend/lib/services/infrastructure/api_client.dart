@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/api_response.dart';
 import '../../models/course.dart';
 import '../../config/api_config.dart';
+import '../connectivity_service.dart';
 
 /// Centralized HTTP client with interceptors and error handling
 class ApiClient {
@@ -220,7 +221,11 @@ class ApiClient {
         final response = await requestFn().timeout(
           Duration(seconds: _timeoutSeconds),
         );
-        
+
+        // Any response at all proves the backend is reachable, whatever the
+        // status code. Clears an offline state set by an earlier failure.
+        ConnectivityService.instance.reportServerReachable();
+
         // Log request for debugging
         print('API Request: ${response.request?.method} ${response.request?.url}');
         print('Response Status: ${response.statusCode}');
@@ -282,9 +287,12 @@ class ApiClient {
         
         // Handle host lookup failure specifically
         if (e.osError?.errorCode == 7 || e.message.contains('Failed host lookup')) {
+          // DNS is dead — the app is offline for all practical purposes, even
+          // if the WiFi/mobile interface still looks up to connectivity_plus.
+          ConnectivityService.instance.reportServerUnreachable();
           throw ApiException.network('Cannot connect to the server. Please check your internet connection or DNS settings.');
         }
-        
+
         // Retry logic for other socket errors
         if (retryCount < maxRetries) {
           retryCount++;
@@ -292,7 +300,8 @@ class ApiClient {
           await Future.delayed(Duration(milliseconds: 1000 * retryCount)); // Exponential backoff
           continue;
         }
-        
+
+        ConnectivityService.instance.reportServerUnreachable();
         throw ApiException.network('Connection failed. Please check your internet connection and try again.');
       } on http.ClientException catch (e) {
         print('Network error: $e');
@@ -305,6 +314,7 @@ class ApiClient {
           continue;
         }
         
+        ConnectivityService.instance.reportServerUnreachable();
         throw ApiException.network('Network error occurred. Please check your network connection.');
       } on TimeoutException catch (e) {
         print('Request timeout: $e');

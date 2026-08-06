@@ -266,7 +266,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
           Consumer(
             builder: (context, ref, child) {
-              final user = ref.watch(authProvider).user;
+              final user = ref.watch(authProvider.select((state) => state.user));
               return PopupMenuButton(
                 icon: CircleAvatar(
                   radius: 20,
@@ -662,7 +662,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
               Consumer(
                 builder: (context, ref, child) {
-                  final user = ref.watch(authProvider).user;
+                  final user = ref.watch(authProvider.select((state) => state.user));
                   return PopupMenuButton(
                     icon: CircleAvatar(
                       radius: 18,
@@ -785,7 +785,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
   
   Widget _buildDrawer(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Drawer(

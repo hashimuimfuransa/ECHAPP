@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/services/video_progress_service.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 import 'dart:async';
 
 class OptimizedVideoPlayer extends StatefulWidget {
@@ -38,6 +39,7 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
   bool _isDataSaver = false;
   final double _playbackSpeed = 1.0;
   bool _isSlowNetwork = false;
+  final ScreenWakelock _wakelock = ScreenWakelock();
 
   @override
   void initState() {
@@ -178,6 +180,9 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
         iconsColor: Colors.white,
       ),
       handleLifecycle: true,
+      // Keeps the screen on in full screen. Inline playback is covered by
+      // _wakelock below, which better_player does not handle on its own.
+      allowedScreenSleep: false,
       errorBuilder: (context, errorMessage) {
         return _buildErrorPlaceholder(
           icon: Icons.error_outline,
@@ -237,13 +242,31 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
         await _betterPlayerController!.seekTo(startAt);
       }
 
-      // Listen to position changes for progress saving
+      // Listen to position changes for progress saving, and keep the screen
+      // awake for as long as the video is actually playing
       _betterPlayerController!.addEventsListener((event) {
-        if (event.betterPlayerEventType == BetterPlayerEventType.progress) {
-          final position = _betterPlayerController!.videoPlayerController!.value.position;
-          if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
-            videoProgressService.saveProgress(widget.videoId!, position);
-          }
+        switch (event.betterPlayerEventType) {
+          case BetterPlayerEventType.progress:
+            final position = _betterPlayerController!.videoPlayerController!.value.position;
+            if (widget.videoId != null && position.inSeconds % 5 == 0 && position.inSeconds > 0) {
+              videoProgressService.saveProgress(widget.videoId!, position);
+            }
+            break;
+          case BetterPlayerEventType.play:
+            _wakelock.acquire();
+            break;
+          case BetterPlayerEventType.pause:
+          case BetterPlayerEventType.finished:
+          case BetterPlayerEventType.exception:
+            _wakelock.release();
+            break;
+          case BetterPlayerEventType.hideFullscreen:
+            // better_player drops the wakelock whenever it leaves full screen,
+            // even though playback continues inline, so put ours back.
+            ScreenWakelock.reassert();
+            break;
+          default:
+            break;
         }
       });
 
@@ -267,7 +290,8 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
       _errorMessage = null;
       _isInitialized = false;
     });
-    
+
+    _wakelock.release();
     _betterPlayerController?.removeEventsListener((event) {});
     _betterPlayerController?.dispose();
     _betterPlayerController = null;
@@ -277,6 +301,7 @@ class _OptimizedVideoPlayerState extends State<OptimizedVideoPlayer> {
 
   @override
   void dispose() {
+    _wakelock.release();
     _connectivitySubscription?.cancel();
     _betterPlayerController?.removeEventsListener((event) {});
     _betterPlayerController?.dispose();

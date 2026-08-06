@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/lesson.dart';
+import '../../../utils/screen_wakelock.dart';
 
 class OrganizedNotesViewerScreen extends StatefulWidget {
   final String lessonId;
@@ -21,10 +22,20 @@ class _OrganizedNotesViewerScreenState extends State<OrganizedNotesViewerScreen>
   bool _isLoading = true;
   String? _error;
 
+  // Notes are read for minutes at a time without a tap, so keep the screen on
+  final ScreenWakelock _wakelock = ScreenWakelock();
+
   @override
   void initState() {
     super.initState();
+    _wakelock.acquire();
     _notesFuture = _fetchOrganizedNotes();
+  }
+
+  @override
+  void dispose() {
+    _wakelock.release();
+    super.dispose();
   }
 
   Future<Map<String, dynamic>?> _fetchOrganizedNotes() async {

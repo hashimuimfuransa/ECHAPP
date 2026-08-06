@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 
 class DocumentViewer extends StatefulWidget {
   final String documentPath;
@@ -26,6 +27,21 @@ class _DocumentViewerState extends State<DocumentViewer> {
   bool _isLoading = true;
   int _pageCount = 0;
   int _currentPage = 1;
+
+  // A document is read, not tapped, so keep the screen on while it is open
+  final ScreenWakelock _wakelock = ScreenWakelock();
+
+  @override
+  void initState() {
+    super.initState();
+    _wakelock.acquire();
+  }
+
+  @override
+  void dispose() {
+    _wakelock.release();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

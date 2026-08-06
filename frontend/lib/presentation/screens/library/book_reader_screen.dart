@@ -4,11 +4,13 @@ import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/data/services/gutenberg_service.dart';
 import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/models/download.dart';
+import 'package:excellencecoachinghub/utils/book_download.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/link.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 
 class BookReaderScreen extends ConsumerStatefulWidget {
   final dynamic book;
@@ -53,9 +55,14 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   // Reading Progress
   final double _readingProgress = 0.0;
 
+  // Reading a page takes minutes without a single tap, which is exactly when
+  // the screen would dim, so it stays awake for as long as the book is open
+  final ScreenWakelock _wakelock = ScreenWakelock();
+
   @override
   void initState() {
     super.initState();
+    _wakelock.acquire();
     _initTTS();
     
     // Check if this is an admin-uploaded book
@@ -86,6 +93,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
 
   @override
   void dispose() {
+    _wakelock.release();
     _pageController.dispose();
     _pdfViewerController.dispose();
     _searchController.dispose();
@@ -377,7 +385,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     }
 
     // For other formats, show download option
-    return _buildDownloadWidget(context, formatUrl);
+    return _buildDownloadWidget(context);
   }
 
   Widget _buildNoContentWidget(BuildContext context) {
@@ -670,7 +678,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     );
   }
 
-  Widget _buildDownloadWidget(BuildContext context, String url) {
+  Widget _buildDownloadWidget(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -699,7 +707,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => _downloadBook(url),
+            onPressed: _handleDownloadFromMenu,
             icon: const Icon(Icons.download),
             label: const Text('Download Book'),
             style: ElevatedButton.styleFrom(
@@ -846,40 +854,9 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
   }
 
   void _handleDownloadFromMenu() {
-    // Try to get download URL from different book formats
-    String? url;
+    final target = resolveBookDownload(widget.book);
 
-    print('Book type: ${widget.book.runtimeType}');
-    print('Book data: ${widget.book}');
-
-    if (widget.book is Book) {
-      // Gutenberg Book type
-      final book = widget.book as Book;
-      if (book.formats != null && book.formats!.isNotEmpty) {
-        // Prefer PDF format, otherwise use first available
-        url = book.formats!['application/pdf'] ??
-              book.formats!['text/html'] ??
-              book.formats!['text/plain'] ??
-              book.formats!.values.first;
-      }
-    } else if (widget.book is Map) {
-      // Map type from local library - handle any Map type
-      final bookMap = widget.book as Map;
-      url = bookMap['url']?.toString() ??
-            bookMap['pdfUrl']?.toString() ??
-            bookMap['fileUrl']?.toString() ??
-            bookMap['downloadUrl']?.toString() ??
-            bookMap['file_url']?.toString() ??
-            bookMap['download_url']?.toString();
-      print('Extracted URL from Map: $url');
-    }
-
-    if (url != null && url.isNotEmpty) {
-      _downloadBook(url);
-    } else {
-      // Show error if no URL found
-      print('No URL found for book');
-      // Get title safely
+    if (target == null) {
       String bookTitle = 'this book';
       if (widget.book is Book) {
         bookTitle = (widget.book as Book).title;
@@ -897,50 +874,36 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           ),
         );
       }
+      return;
     }
+
+    _downloadBook(target);
   }
 
-  void _downloadBook(String url) async {
+  void _downloadBook(BookDownloadTarget target) async {
     try {
       final downloadService = DownloadService();
-
-      // Extract title and id safely based on book type
-      String bookTitle;
-      String bookId;
-
-      if (widget.book is Book) {
-        final book = widget.book as Book;
-        bookTitle = book.title;
-        bookId = book.id.toString();
-      } else if (widget.book is Map) {
-        final bookMap = widget.book as Map;
-        bookTitle = bookMap['title']?.toString() ??
-                    bookMap['name']?.toString() ??
-                    'Unknown Book';
-        bookId = bookMap['id']?.toString() ??
-                 bookMap['_id']?.toString() ??
-                 DateTime.now().millisecondsSinceEpoch.toString();
-      } else {
-        bookTitle = 'Unknown Book';
-        bookId = DateTime.now().millisecondsSinceEpoch.toString();
-      }
 
       // Show download started snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloading "$bookTitle"...'),
-            duration: const Duration(seconds: 2),
+            content: Text('Downloading "${target.title}"... Find it in Downloads › Materials.'),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
 
       // Use DownloadService to download to app's internal storage
       await downloadService.downloadNotesOrMaterial(
-        url: url,
-        title: bookTitle,
-        lessonId: 'book_$bookId',
+        url: target.url,
+        title: target.title,
+        lessonId: target.lessonId,
         type: DownloadType.material,
+        lessonTitle: target.author,
+        sectionTitle: 'Library',
+        fileExtension: target.fileExtension,
+        thumbnailUrl: target.coverUrl,
         onProgress: (progress) {
           // Progress is handled internally by DownloadService
         },
@@ -948,7 +911,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('"$bookTitle" downloaded successfully!'),
+                content: Text('"${target.title}" downloaded successfully!'),
                 backgroundColor: Colors.green,
               ),
             );

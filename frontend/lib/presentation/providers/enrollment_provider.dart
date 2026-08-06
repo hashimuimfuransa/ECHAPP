@@ -64,17 +64,13 @@ final enrolledCoursesProvider = FutureProvider<List<Course>>((ref) async {
   }
 });
 
-// Provider for user enrollments with completion status
+// Provider for user enrollments with completion status.
+// Failures are surfaced as AsyncError rather than an empty list - every
+// consumer handles `error`, and swallowing here made a failed load
+// indistinguishable from "you are not enrolled in anything".
 final userEnrollmentsProvider = FutureProvider<List<Enrollment>>((ref) async {
   final repository = ref.read(enrollmentRepositoryProvider);
-  
-  try {
-    final enrollments = await repository.getEnrollments();
-    return enrollments;
-  } catch (e) {
-    print('Error fetching enrollments: $e');
-    return [];
-  }
+  return repository.getEnrollments();
 });
 
 // Cache enrolled courses to SharedPreferences

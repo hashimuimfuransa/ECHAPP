@@ -267,7 +267,7 @@ class DownloadService extends ChangeNotifier {
   }
 
   // Show download completion notification
-  Future<void> _showDownloadCompleteNotification(String lessonId, String title) async {
+  Future<void> _showDownloadCompleteNotification(String lessonId, String title, {String? message}) async {
     if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) return;
 
     // Cancel progress notification
@@ -303,7 +303,7 @@ class DownloadService extends ChangeNotifier {
       await _notifications.show(
         DateTime.now().millisecondsSinceEpoch % 100000,
         'Download Complete',
-        '$title is ready to watch',
+        message ?? '$title is ready to watch',
         platformDetails,
         payload: '/downloads',
       );
@@ -435,16 +435,17 @@ class DownloadService extends ChangeNotifier {
           // Verify the file still exists before adding to memory
           final file = File(download.localPath);
           if (await file.exists()) {
-            // Reset isDownloading status on load
-            _downloads[download.lessonId] = download.copyWith(
+            // Keyed by id, not lessonId: notes/materials use "${type}_$lessonId"
+            // so a lesson's video and its material don't overwrite each other.
+            _downloads[download.id] = download.copyWith(
               isDownloading: false,
-              status: download.status == DownloadStatus.downloading 
-                  ? DownloadStatus.paused 
+              status: download.status == DownloadStatus.downloading
+                  ? DownloadStatus.paused
                   : download.status,
             );
           } else {
             // File doesn't exist anymore, remove from storage
-            await _removeDownloadFromStorage(download.lessonId);
+            await _removeDownloadFromStorage(download.id);
           }
         }
         notifyListeners();
@@ -470,9 +471,9 @@ class DownloadService extends ChangeNotifier {
   }
 
   // Remove a specific download from storage
-  Future<void> _removeDownloadFromStorage(String lessonId) async {
+  Future<void> _removeDownloadFromStorage(String downloadId) async {
     try {
-      _downloads.remove(lessonId);
+      _downloads.remove(downloadId);
       await _saveDownloadsToStorage();
       notifyListeners();
     } catch (e) {
@@ -484,6 +485,81 @@ class DownloadService extends ChangeNotifier {
   Future<String> _getAppDirectory() async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
+  }
+
+  // ─────────────────────────────────────────────
+  //  Preview images
+  // ─────────────────────────────────────────────
+
+  /// Saves the preview image for [downloadId] onto the device and attaches it
+  /// to the record, so Downloads shows real artwork — a book's cover, a
+  /// course's image — instead of a generic icon, with or without a connection.
+  ///
+  /// Fire-and-forget: a preview is decoration, so any failure is swallowed and
+  /// the download itself is unaffected.
+  Future<void> _attachThumbnail(String downloadId, String? thumbnailUrl) async {
+    if (thumbnailUrl == null || thumbnailUrl.isEmpty) return;
+    if (kIsWeb) return;
+
+    try {
+      final existing = _downloads[downloadId];
+      // Already saved for this source? Nothing to do.
+      if (existing?.thumbnailPath != null && existing?.thumbnailUrl == thumbnailUrl) {
+        if (await File(existing!.thumbnailPath!).exists()) return;
+      }
+
+      final directory = await _getAppDirectory();
+      final extension = _imageExtension(thumbnailUrl);
+      final path = p.join(directory, 'thumb_$downloadId$extension');
+
+      final response = await _dio.get<List<int>>(
+        thumbnailUrl,
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          receiveTimeout: const Duration(seconds: 20),
+          validateStatus: (status) => status == 200,
+        ),
+      );
+
+      final bytes = response.data;
+      // Guard against an error page or an unreasonably large image.
+      if (bytes == null || bytes.isEmpty || bytes.length > 5 * 1024 * 1024) return;
+
+      await File(path).writeAsBytes(bytes, flush: true);
+
+      // Re-read: progress updates replace the record while this was in flight.
+      final current = _downloads[downloadId];
+      if (current == null) return;
+      _downloads[downloadId] = current.copyWith(
+        thumbnailUrl: thumbnailUrl,
+        thumbnailPath: path,
+      );
+      notifyListeners();
+      await _saveDownloadsToStorage();
+    } catch (e) {
+      print('DownloadService: could not save preview image for $downloadId: $e');
+    }
+  }
+
+  static String _imageExtension(String url) {
+    final path = (Uri.tryParse(url)?.path ?? url).toLowerCase();
+    for (final extension in const ['.jpg', '.jpeg', '.png', '.webp', '.gif']) {
+      if (path.endsWith(extension)) return extension;
+    }
+    return '.jpg';
+  }
+
+  /// Removes the preview image saved for [download], if any.
+  Future<void> _deleteThumbnail(Download download) async {
+    final path = download.thumbnailPath;
+    if (path == null || path.isEmpty) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (e) {
+      print('DownloadService: could not delete preview image: $e');
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -525,10 +601,13 @@ class DownloadService extends ChangeNotifier {
       );
       notifyListeners();
       await _saveDownloadsToStorage();
-      await _showDownloadCompleteNotification(taskId, download.originalTitle);
+      final readyMessage = download.type == DownloadType.video
+          ? '${download.originalTitle} is ready to watch'
+          : '${download.originalTitle} is ready to open';
+      await _showDownloadCompleteNotification(taskId, download.originalTitle, message: readyMessage);
       await onNotificationCreated?.call(
         title: 'Download Complete',
-        message: '${download.originalTitle} is ready to watch',
+        message: readyMessage,
         type: 'success',
       );
     }
@@ -580,6 +659,7 @@ class DownloadService extends ChangeNotifier {
     required String fileName,
     required String originalTitle,
     required String lessonId,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -590,6 +670,7 @@ class DownloadService extends ChangeNotifier {
         fileName: fileName,
         originalTitle: originalTitle,
         lessonId: lessonId,
+        thumbnailUrl: thumbnailUrl,
         onProgress: onProgress,
         onSuccess: onSuccess,
         onError: onError,
@@ -600,6 +681,7 @@ class DownloadService extends ChangeNotifier {
       fileName: fileName,
       originalTitle: originalTitle,
       lessonId: lessonId,
+      thumbnailUrl: thumbnailUrl,
       onProgress: onProgress,
       onSuccess: onSuccess,
       onError: onError,
@@ -614,6 +696,7 @@ class DownloadService extends ChangeNotifier {
     required String fileName,
     required String originalTitle,
     required String lessonId,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -642,6 +725,8 @@ class DownloadService extends ChangeNotifier {
       localPath: filePath,
       url: url,
       type: DownloadType.video,
+      thumbnailUrl: thumbnailUrl ?? existing?.thumbnailUrl,
+      thumbnailPath: existing?.thumbnailPath,
       downloadProgress: existing?.downloadProgress ?? (downloadedBytes > 0 ? -1.0 : 0.0),
       isDownloading: true,
       status: DownloadStatus.downloading,
@@ -651,6 +736,7 @@ class DownloadService extends ChangeNotifier {
     await _saveFilenameMap();
     notifyListeners();
     await _saveDownloadsToStorage();
+    unawaited(_attachThumbnail(lessonId, thumbnailUrl ?? existing?.thumbnailUrl));
 
     final completer = Completer<String>();
     _taskCompleters[lessonId] = completer;
@@ -688,6 +774,7 @@ class DownloadService extends ChangeNotifier {
     required String fileName,
     required String originalTitle,
     required String lessonId,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -736,6 +823,8 @@ class DownloadService extends ChangeNotifier {
           localPath: filePath,
           url: url,
           type: DownloadType.video, // Default to video type
+          thumbnailUrl: thumbnailUrl ?? _downloads[lessonId]?.thumbnailUrl,
+          thumbnailPath: _downloads[lessonId]?.thumbnailPath,
           downloadProgress: _downloads[lessonId]?.downloadProgress ?? (downloadedBytes > 0 ? -1.0 : 0.0), // -1 means unknown if we have file but no total
           isDownloading: true,
           status: DownloadStatus.downloading,
@@ -746,6 +835,7 @@ class DownloadService extends ChangeNotifier {
         await _saveFilenameMap();
         notifyListeners();
         await _saveDownloadsToStorage();
+        unawaited(_attachThumbnail(lessonId, download.thumbnailUrl));
 
         print('Download record created with localPath: $filePath');
 
@@ -953,29 +1043,50 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // Pause a download
-  void pauseDownload(String lessonId) {
-    if (_useBackgroundService && _bgClient != null && _taskCompleters.containsKey(lessonId)) {
-      _bgClient!.cancel(lessonId);
+  // Pause a download. [downloadId] is Download.id, which equals the lesson id
+  // for videos and "${type}_$lessonId" for notes/materials.
+  void pauseDownload(String downloadId) {
+    if (_useBackgroundService && _bgClient != null && _taskCompleters.containsKey(downloadId)) {
+      _bgClient!.cancel(downloadId);
       return;
     }
-    if (_cancelTokens.containsKey(lessonId)) {
-      _cancelTokens[lessonId]!.cancel();
-      _cancelTokens.remove(lessonId);
+    if (_cancelTokens.containsKey(downloadId)) {
+      _cancelTokens[downloadId]!.cancel();
+      _cancelTokens.remove(downloadId);
     }
   }
 
-  // Resume a download
-  Future<void> resumeDownload(String lessonId, {String? newUrl}) async {
-    final download = _downloads[lessonId];
-    if (download != null && (download.status == DownloadStatus.paused || download.status == DownloadStatus.failed)) {
+  // Resume a download. [downloadId] is Download.id (see pauseDownload).
+  Future<void> resumeDownload(String downloadId, {String? newUrl}) async {
+    final download = _downloads[downloadId];
+    if (download == null) return;
+    if (download.status != DownloadStatus.paused && download.status != DownloadStatus.failed) {
+      return;
+    }
+
+    if (download.type == DownloadType.video) {
       await downloadVideo(
         url: newUrl ?? download.url,
         fileName: download.fileName,
         originalTitle: download.originalTitle,
         lessonId: download.lessonId,
+        thumbnailUrl: download.thumbnailUrl,
       );
+      return;
     }
+
+    // Notes/materials keep their extension in the stored filename, so reuse it
+    // instead of re-sniffing the URL (which may not carry one).
+    await downloadNotesOrMaterial(
+      url: newUrl ?? download.url,
+      title: download.originalTitle,
+      lessonId: download.lessonId,
+      type: download.type,
+      lessonTitle: download.lessonTitle,
+      sectionTitle: download.sectionTitle,
+      fileExtension: p.extension(download.fileName),
+      thumbnailUrl: download.thumbnailUrl,
+    );
   }
 
   // Check if video is downloaded locally by lesson ID
@@ -1043,6 +1154,12 @@ class DownloadService extends ChangeNotifier {
     return _downloads[lessonId];
   }
 
+  // Get a download by its record id ("${type}_$lessonId" for notes/materials,
+  // the lesson id for videos)
+  Download? getDownloadById(String downloadId) {
+    return _downloads[downloadId];
+  }
+
   // Get all downloads
   List<Download> getAllDownloads() {
     // Ensure initialization is triggered (non-blocking)
@@ -1050,21 +1167,22 @@ class DownloadService extends ChangeNotifier {
     return _downloads.values.toList();
   }
 
-  // Delete a downloaded video
-  Future<bool> deleteDownload(String lessonId) async {
+  // Delete a download. [downloadId] is Download.id (see pauseDownload).
+  Future<bool> deleteDownload(String downloadId) async {
     try {
-      pauseDownload(lessonId); // Ensure it's not downloading
-      
-      final download = _downloads[lessonId];
+      pauseDownload(downloadId); // Ensure it's not downloading
+
+      final download = _downloads[downloadId];
       if (download != null) {
         final file = File(download.localPath);
-        
+
         if (await file.exists()) {
           await file.delete();
         }
-        
+        await _deleteThumbnail(download);
+
         // Remove from downloads map and storage
-        await _removeDownloadFromStorage(lessonId);
+        await _removeDownloadFromStorage(downloadId);
         return true;
       }
       return false;
@@ -1073,7 +1191,10 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // Download notes or materials with organization metadata
+  // Download notes or materials with organization metadata.
+  // [fileExtension] (e.g. ".pdf", ".txt") overrides sniffing the extension from
+  // the URL — needed for sources like Project Gutenberg whose download links
+  // (".../1234.txt.utf-8") don't end in a usable extension.
   Future<String> downloadNotesOrMaterial({
     required String url,
     required String title,
@@ -1081,6 +1202,8 @@ class DownloadService extends ChangeNotifier {
     required DownloadType type,
     String? lessonTitle,
     String? sectionTitle,
+    String? fileExtension,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -1093,6 +1216,8 @@ class DownloadService extends ChangeNotifier {
         type: type,
         lessonTitle: lessonTitle,
         sectionTitle: sectionTitle,
+        fileExtension: fileExtension,
+        thumbnailUrl: thumbnailUrl,
         onProgress: onProgress,
         onSuccess: onSuccess,
         onError: onError,
@@ -1105,10 +1230,30 @@ class DownloadService extends ChangeNotifier {
       type: type,
       lessonTitle: lessonTitle,
       sectionTitle: sectionTitle,
+      fileExtension: fileExtension,
+      thumbnailUrl: thumbnailUrl,
       onProgress: onProgress,
       onSuccess: onSuccess,
       onError: onError,
     );
+  }
+
+  // Picks the on-disk extension for a notes/material download. An explicit
+  // extension from the caller wins; otherwise it's read off the URL path
+  // (ignoring query strings, which signed S3/CloudFront links always carry).
+  static String _resolveFileExtension(String url, String? explicit) {
+    if (explicit != null && explicit.isNotEmpty) {
+      final normalized = explicit.startsWith('.') ? explicit : '.$explicit';
+      return normalized.toLowerCase() == '.doc' ? '.docx' : normalized.toLowerCase();
+    }
+
+    final path = (Uri.tryParse(url)?.path ?? url).toLowerCase();
+    for (final ext in const ['.pdf', '.docx', '.doc', '.txt', '.md', '.epub', '.html', '.htm']) {
+      if (path.endsWith(ext)) {
+        return ext == '.doc' ? '.docx' : ext;
+      }
+    }
+    return '.pdf'; // Default to PDF
   }
 
   // Queues a notes/material download with the Android foreground service so
@@ -1120,6 +1265,8 @@ class DownloadService extends ChangeNotifier {
     required DownloadType type,
     String? lessonTitle,
     String? sectionTitle,
+    String? fileExtension,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -1132,18 +1279,10 @@ class DownloadService extends ChangeNotifier {
       return _downloads[downloadId]!.localPath;
     }
 
-    String fileExtension = '.pdf';
-    final lowerUrl = url.toLowerCase();
-    if (lowerUrl.endsWith('.doc') || lowerUrl.endsWith('.docx')) {
-      fileExtension = '.docx';
-    } else if (lowerUrl.endsWith('.txt')) {
-      fileExtension = '.txt';
-    } else if (lowerUrl.endsWith('.md')) {
-      fileExtension = '.md';
-    }
+    final resolvedExtension = _resolveFileExtension(url, fileExtension);
 
     final directory = await _getAppDirectory();
-    final fileName = '${type.name}_$lessonId$fileExtension';
+    final fileName = '${type.name}_$lessonId$resolvedExtension';
     final filePath = p.join(directory, fileName);
 
     int downloadedBytes = 0;
@@ -1162,6 +1301,8 @@ class DownloadService extends ChangeNotifier {
       type: type,
       lessonTitle: lessonTitle,
       sectionTitle: sectionTitle,
+      thumbnailUrl: thumbnailUrl ?? _downloads[downloadId]?.thumbnailUrl,
+      thumbnailPath: _downloads[downloadId]?.thumbnailPath,
       downloadProgress: downloadedBytes > 0 ? -1.0 : 0.0,
       isDownloading: true,
       status: DownloadStatus.downloading,
@@ -1169,6 +1310,7 @@ class DownloadService extends ChangeNotifier {
     _downloads[downloadId] = download;
     notifyListeners();
     await _saveDownloadsToStorage();
+    unawaited(_attachThumbnail(downloadId, download.thumbnailUrl));
 
     final completer = Completer<String>();
     _taskCompleters[downloadId] = completer;
@@ -1208,6 +1350,8 @@ class DownloadService extends ChangeNotifier {
     required DownloadType type,
     String? lessonTitle,
     String? sectionTitle,
+    String? fileExtension,
+    String? thumbnailUrl,
     Function(double)? onProgress,
     Function()? onSuccess,
     Function(String)? onError,
@@ -1223,22 +1367,10 @@ class DownloadService extends ChangeNotifier {
         return _downloads[downloadId]!.localPath;
       }
 
-      // Determine file extension from URL
-      String fileExtension = '';
-      if (url.toLowerCase().endsWith('.pdf')) {
-        fileExtension = '.pdf';
-      } else if (url.toLowerCase().endsWith('.doc') || url.toLowerCase().endsWith('.docx')) {
-        fileExtension = '.docx';
-      } else if (url.toLowerCase().endsWith('.txt')) {
-        fileExtension = '.txt';
-      } else if (url.toLowerCase().endsWith('.md')) {
-        fileExtension = '.md';
-      } else {
-        fileExtension = '.pdf'; // Default to PDF
-      }
+      final resolvedExtension = _resolveFileExtension(url, fileExtension);
 
       final directory = await _getAppDirectory();
-      final fileName = '${type.name}_$lessonId$fileExtension';
+      final fileName = '${type.name}_$lessonId$resolvedExtension';
       final filePath = p.join(directory, fileName);
 
       // Create download record
@@ -1252,20 +1384,29 @@ class DownloadService extends ChangeNotifier {
         type: type,
         lessonTitle: lessonTitle,
         sectionTitle: sectionTitle,
+        thumbnailUrl: thumbnailUrl ?? _downloads[downloadId]?.thumbnailUrl,
+        thumbnailPath: _downloads[downloadId]?.thumbnailPath,
         downloadProgress: 0.0,
         isDownloading: true,
         status: DownloadStatus.downloading,
       );
-      
+
       _downloads[downloadId] = download;
       notifyListeners();
       await _saveDownloadsToStorage();
+      unawaited(_attachThumbnail(downloadId, download.thumbnailUrl));
+
+      // Keyed by downloadId so pauseDownload() can stop this transfer, the same
+      // way it stops a video.
+      final cancelToken = CancelToken();
+      _cancelTokens[downloadId] = cancelToken;
 
       // Note: this is a direct, unsigned CloudFront/S3 URL, not an API endpoint.
       // Sending the app's Firebase Authorization header here makes CloudFront/S3
       // try to parse it as an AWS signature and reject with 403 Access Denied.
       final response = await _dio.get<ResponseBody>(
         url,
+        cancelToken: cancelToken,
         options: Options(
           responseType: ResponseType.stream,
           followRedirects: true,
@@ -1320,6 +1461,7 @@ class DownloadService extends ChangeNotifier {
       }
       
       // Mark download as completed
+      _cancelTokens.remove(downloadId);
       _downloads[downloadId] = download.copyWith(
         isDownloading: false,
         downloadProgress: 1.0,
@@ -1327,12 +1469,35 @@ class DownloadService extends ChangeNotifier {
       );
       notifyListeners();
       await _saveDownloadsToStorage();
+      await _showDownloadCompleteNotification(downloadId, title);
+      await onNotificationCreated?.call(
+        title: 'Download Complete',
+        message: '$title is ready to open',
+        type: 'success',
+      );
       onSuccess?.call();
 
       return filePath;
     } on DioException catch (e) {
       final downloadId = '${type.name}_$lessonId';
-      
+      _cancelTokens.remove(downloadId);
+
+      // A cancel is the user pausing, not a failure: keep the record so the
+      // Downloads and Library screens can offer Resume.
+      if (CancelToken.isCancel(e)) {
+        final paused = _downloads[downloadId];
+        if (paused != null) {
+          _downloads[downloadId] = paused.copyWith(
+            isDownloading: false,
+            status: DownloadStatus.paused,
+          );
+          notifyListeners();
+          await _saveDownloadsToStorage();
+          return paused.localPath;
+        }
+        return '';
+      }
+
       // Handle specific HTTP errors
       String errorMessage = 'Download failed';
       if (e.response?.statusCode == 403) {
@@ -1359,14 +1524,21 @@ class DownloadService extends ChangeNotifier {
         );
         notifyListeners();
         await _saveDownloadsToStorage();
+        await _showDownloadFailedNotification(downloadId, title, errorMessage);
+        await onNotificationCreated?.call(
+          title: 'Download Failed',
+          message: '$title: $errorMessage',
+          type: 'error',
+        );
       }
-      
+
       onError?.call(errorMessage);
       rethrow;
     } catch (e) {
       final downloadId = '${type.name}_$lessonId';
+      _cancelTokens.remove(downloadId);
       print('Download failed for notes/materials: $e');
-      
+
       if (_downloads.containsKey(downloadId)) {
         _downloads[downloadId] = _downloads[downloadId]!.copyWith(
           isDownloading: false,
@@ -1375,8 +1547,14 @@ class DownloadService extends ChangeNotifier {
         );
         notifyListeners();
         await _saveDownloadsToStorage();
+        await _showDownloadFailedNotification(downloadId, title, e.toString());
+        await onNotificationCreated?.call(
+          title: 'Download Failed',
+          message: '$title: $e',
+          type: 'error',
+        );
       }
-      
+
       onError?.call(e.toString());
       rethrow;
     }

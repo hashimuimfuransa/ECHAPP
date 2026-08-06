@@ -16,6 +16,7 @@ import 'package:excellencecoachinghub/services/download_service.dart';
 import 'package:excellencecoachinghub/services/push_notification_service.dart';
 import 'package:excellencecoachinghub/services/fcm_token_service.dart';
 import 'package:excellencecoachinghub/services/session_tracking_service.dart';
+import 'package:excellencecoachinghub/services/connectivity_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/settings/settings_screen.dart';
 import 'package:media_kit/media_kit.dart';
 
@@ -50,6 +51,10 @@ Future<void> main() async {
       // Added a timeout and detailed logging to debug the "see nothing" issue
       await FirebaseAuthService.initializeFirebase();
       debugPrint('Main: Firebase initialized successfully');
+
+      // Must be ready before the router resolves its first route: the offline
+      // guard redirects online-only screens to Downloads based on this state.
+      await ConnectivityService.instance.initialize();
 
       // Initialize push notifications only on supported platforms (not Windows)
       if (defaultTargetPlatform != TargetPlatform.windows) {

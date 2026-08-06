@@ -70,6 +70,7 @@ const teacherRoutes = require('./src/routes/teacher.routes'); // Teacher routes
 const liveSessionRoutes = require('./src/routes/liveSession.routes'); // Live Session routes
 const bbbAdminRoutes = require('./src/routes/admin/bbb.routes'); // BBB Admin routes
 const backupRoutes = require('./src/routes/backup.routes'); // Database backup routes
+const videoCleanupRoutes = require('./src/routes/videoCleanup.routes'); // Orphaned S3 video cleanup routes (read-only, see S3_VIDEO_CLEANUP.md)
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -80,6 +81,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/bbb', bbbAdminRoutes);
 app.use('/api/admin/backups', backupRoutes);
+app.use('/api/admin/video-cleanup', videoCleanupRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/lessons', lessonRoutes);

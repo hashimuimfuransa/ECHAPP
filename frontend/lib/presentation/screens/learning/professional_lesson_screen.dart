@@ -13,6 +13,7 @@ import 'package:excellencecoachinghub/data/repositories/video_repository.dart';
 import 'package:excellencecoachinghub/widgets/ai_chat_dialog.dart';
 import 'package:excellencecoachinghub/services/ai_chat_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/download_provider.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
@@ -31,6 +32,7 @@ import 'package:excellencecoachinghub/data/repositories/certificate_repository.d
 import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 class _T {
@@ -66,10 +68,15 @@ class ProfessionalLessonScreen extends ConsumerStatefulWidget {
   final String lessonId;
   final bool isAdminPreview;
 
+  /// Tab to open on: 'video', 'notes', 'quiz', 'feedback' or 'ai'.
+  /// Ignored when the lesson has no content of that kind.
+  final String? initialTab;
+
   const ProfessionalLessonScreen({
     super.key,
     required this.lessonId,
     this.isAdminPreview = false,
+    this.initialTab,
   });
 
   @override
@@ -136,10 +143,16 @@ class _ProfessionalLessonScreenState
     'complete': false,
   };
 
+  // ── Screen wakelock ───────────────────────────────────────────────────────
+  // Held for the whole lesson: the notes and PDF tabs are read for minutes at a
+  // time without a tap, and the video player keeps its own handle on top
+  final ScreenWakelock _wakelock = ScreenWakelock();
+
   // ─────────────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
+    _wakelock.acquire();
     _loadLessonData();
     // Listen to download service changes
     final downloadService = ref.read(downloadServiceProvider);
@@ -148,6 +161,7 @@ class _ProfessionalLessonScreenState
 
   @override
   void dispose() {
+    _wakelock.release();
     final downloadService = ref.read(downloadServiceProvider);
     downloadService.removeListener(_onDownloadsChanged);
     _feedbackController.dispose();
@@ -234,15 +248,10 @@ class _ProfessionalLessonScreenState
             allLessons.indexWhere((l) => l.id == lesson.id) + 1;
         _totalLessonsInSection = allLessons.length;
         
-        // Set initial tab based on lesson content
-        if (_lesson!.hasQuiz && !_lesson!.hasVideo && !_lesson!.hasNotes) {
-          // Quiz-only lesson - show quiz tab first
-          _activeTab = _Tab.quiz;
-        } else {
-          // Default to video tab for other lesson types
-          _activeTab = _Tab.video;
-        }
-        
+        // Set initial tab from the caller's request, falling back to whatever
+        // content the lesson actually has
+        _activeTab = _resolveInitialTab(lesson);
+
         _isLoading = false;
       });
       
@@ -272,6 +281,33 @@ class _ProfessionalLessonScreenState
         _showSnack('Error loading lesson: $e', isError: true);
       }
     }
+  }
+
+  /// Picks the tab to land on. A requested tab (e.g. the student tapped a
+  /// notes card in the Materials tab) wins whenever the lesson has that
+  /// content; otherwise fall back to the lesson's own content.
+  _Tab _resolveInitialTab(Lesson lesson) {
+    switch (widget.initialTab?.toLowerCase()) {
+      case 'notes':
+        if (lesson.hasNotes) return _Tab.notes;
+        break;
+      case 'video':
+        if (lesson.hasVideo) return _Tab.video;
+        break;
+      case 'quiz':
+        if (lesson.hasQuiz) return _Tab.quiz;
+        break;
+      case 'feedback':
+        return _Tab.feedback;
+      case 'ai':
+        return _Tab.ai;
+    }
+
+    // No usable request — open whatever the lesson actually contains
+    if (lesson.hasVideo) return _Tab.video;
+    if (lesson.hasNotes) return _Tab.notes;
+    if (lesson.hasQuiz) return _Tab.quiz;
+    return _Tab.video;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -521,8 +557,17 @@ class _ProfessionalLessonScreenState
   }
 
   Future<void> _viewCertificate(Certificate certificate) async {
-    // Navigate to certificates screen
-    context.push('/certificates');
+    _openCertificates();
+  }
+
+  /// `/certificates` lives inside the MainLayout ShellRoute while this screen
+  /// sits above the shell, so `context.push` would add a second shell page
+  /// with the same page key and trip Navigator's duplicate-key assertion.
+  /// Pushing the screen directly keeps the lesson underneath it.
+  void _openCertificates() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CertificatesScreen()),
+    );
   }
 
   Future<void> _generateCertificateManually() async {
@@ -2019,14 +2064,16 @@ class _ProfessionalLessonScreenState
 
   Widget _buildMaterialsCard() {
     final materials = <_MaterialItem>[];
+    final hasNotesPdf = _lesson!.notesPdfUrl?.isNotEmpty == true;
     if (_lesson!.hasNotes) {
       materials.add(_MaterialItem(
-        title: 'Lesson Notes (PDF)',
+        title: hasNotesPdf ? 'Lesson Notes (PDF)' : 'Lesson Notes',
         subtitle: 'Comprehensive study guide',
         icon: Icons.description_outlined,
         color: _T.green,
         bgColor: _T.greenLight,
         url: _lesson!.notesPdfUrl,
+        isNotes: true,
       ));
     }
     if (_lesson!.materials != null) {
@@ -2062,7 +2109,11 @@ class _ProfessionalLessonScreenState
   Widget _buildMaterialRow(_MaterialItem m) {
     return GestureDetector(
       onTap: () {
-        if (m.url != null) _openMaterialInApp(m.title, m.url!);
+        if (m.isNotes) {
+          _setActiveTab(_Tab.notes);
+        } else if (m.url != null && m.url!.isNotEmpty) {
+          _openMaterialInApp(m.title, m.url!);
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -4002,7 +4053,7 @@ class _ProfessionalLessonScreenState
             
         if (hasCertificate) {
           // Navigate to certificates screen to view certificate
-          context.push('/certificates');
+          _openCertificates();
           return;
         }
         
@@ -4135,7 +4186,7 @@ class _ProfessionalLessonScreenState
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              context.push('/certificates');
+              _openCertificates();
             },
             icon: const Icon(Icons.visibility, size: 18),
             label: Text(l10n?.viewCertificates ?? 'View Certificates'),
@@ -5274,6 +5325,10 @@ class _MaterialItem {
   final Color bgColor;
   final String? url;
 
+  /// Lesson notes open the Notes tab instead of the generic file viewer, so
+  /// text-only notes (no PDF) still open something
+  final bool isNotes;
+
   const _MaterialItem({
     required this.title,
     required this.subtitle,
@@ -5281,5 +5336,6 @@ class _MaterialItem {
     required this.color,
     required this.bgColor,
     this.url,
+    this.isNotes = false,
   });
 }

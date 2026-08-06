@@ -20,6 +20,7 @@ import 'package:excellencecoachinghub/models/certificate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/widgets/student_guide_widget.dart';
 import 'package:excellencecoachinghub/utils/responsive_utils.dart';
+import 'package:excellencecoachinghub/utils/book_download.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:excellencecoachinghub/services/book_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
@@ -32,6 +33,18 @@ import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/live_session_countdown.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
+import 'package:excellencecoachinghub/services/api/quiz_service.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/exams/course_exam_history_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
+
+/// Everything the Materials tab needs to launch a quiz: the quiz document,
+/// the student's previous attempts (newest first) and how many questions it has.
+typedef _QuizLaunch = ({
+  Map<String, dynamic> quiz,
+  List<Map<String, dynamic>> attempts,
+  int questionCount,
+});
 
 // ─────────────────────────────────────────────
 //  Design Tokens
@@ -836,7 +849,7 @@ class _ProfessionalLearningScreenState
         icon: Icons.history_edu_rounded,
         isDark: _isDark,
         cardBg: _cardBg,
-        onTap: () => context.push('/exams/history'),
+        onTap: _openExamHistory,
       ),
       // Refresh
       _ActionChip(
@@ -2427,6 +2440,8 @@ class _ProfessionalLearningScreenState
               section: s,
               materials: materials,
               chapterIndex: i,
+              lessons: lessons,
+              lessonCompletionStatus: _lessonCompletionStatus,
               isDark: _isDark,
               onTap: _openMaterial,
             ),
@@ -3105,12 +3120,18 @@ class _ProfessionalLearningScreenState
 
     try {
       final downloadService = DownloadService();
+      // Resolved the same way the Library does it, so a book saved from either
+      // place is the one download record with the same cover art.
+      final target = resolveBookDownload(book);
       final bookId = book['_id'] ?? book['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
       await downloadService.downloadNotesOrMaterial(
         url: pdfUrl,
         title: title,
-        lessonId: 'book_$bookId',
+        lessonId: target?.lessonId ?? 'book_$bookId',
         type: DownloadType.material,
+        lessonTitle: target?.author,
+        sectionTitle: 'Library',
+        thumbnailUrl: target?.coverUrl ?? book['coverUrl']?.toString(),
         onProgress: (progress) {
           // Optional: Show progress updates
         },
@@ -3377,21 +3398,34 @@ class _ProfessionalLearningScreenState
     return materials;
   }
 
-  Future<void> _openLesson(Lesson lesson) async {
-    // Snapshot completion before navigating
-    final wasCompleted = _lessonCompletionStatus[lesson.id] == true;
+  Future<void> _openLesson(Lesson lesson) => _openLessonById(lesson.id);
 
-    await context.push('/lesson/${lesson.id}');
+  /// Opens a lesson, optionally landing directly on one of its tabs
+  /// ('video', 'notes', 'quiz'), then syncs the owning chapter's progress.
+  Future<void> _openLessonById(String lessonId, {String? tab}) async {
+    // Snapshot completion before navigating
+    final wasCompleted = _lessonCompletionStatus[lessonId] == true;
+
+    final query = (tab != null && tab.isNotEmpty) ? '?tab=$tab' : '';
+    await context.push('/lesson/$lessonId$query');
 
     if (!mounted) return;
 
+    await _syncChapterProgressForLesson(lessonId,
+        optimisticFallback: !wasCompleted);
+  }
+
+  /// Refreshes completion for the chapter that owns [lessonId] so progress
+  /// always lands on the right chapter, whichever material was opened.
+  Future<void> _syncChapterProgressForLesson(String lessonId,
+      {bool optimisticFallback = false}) async {
     // Find which chapter this lesson belongs to
     String? chapterId;
     int? chapterIndex;
     for (int i = 0; i < (_chapters?.length ?? 0); i++) {
       final ch = _chapters![i];
       final lessons = _chapterLessons[ch.id] ?? [];
-      if (lessons.any((l) => l.id == lesson.id)) {
+      if (lessons.any((l) => l.id == lessonId)) {
         chapterId = ch.id;
         chapterIndex = i;
         break;
@@ -3436,9 +3470,9 @@ class _ProfessionalLearningScreenState
       }
     } catch (e) {
       // Fallback: optimistically mark the lesson done if it wasn't before
-      if (!wasCompleted && mounted) {
+      if (optimisticFallback && mounted) {
         setState(() {
-          _lessonCompletionStatus[lesson.id] = true;
+          _lessonCompletionStatus[lessonId] = true;
           _completedLessonsCount++;
           _xpPoints += 10;
         });
@@ -3453,18 +3487,20 @@ class _ProfessionalLearningScreenState
     }
   }
 
-  void _openMaterial(Map<String, dynamic> m) {
+  Future<void> _openMaterial(Map<String, dynamic> m) async {
+    final lessonId = m['lessonId'] as String? ?? '';
+
     switch (m['type'] as String) {
+      // Land on the tab matching the material that was tapped: a notes card
+      // opens the notes, a video card opens the player
       case 'video':
+        if (lessonId.isNotEmpty) await _openLessonById(lessonId, tab: 'video');
+        break;
       case 'notes':
-        context.push('/lesson/${m["lessonId"]}');
+        if (lessonId.isNotEmpty) await _openLessonById(lessonId, tab: 'notes');
         break;
       case 'quiz':
-        final qid = m['quizId'] as String;
-        if (qid.isNotEmpty) {
-          context.push(
-              '/enhanced-quiz/$qid?lessonTitle=${Uri.encodeComponent(_course?.title ?? "Quiz")}');
-        }
+        await _openQuizMaterial(m);
         break;
       case 'document':
         final url = m['url'] as String? ?? m['notesPdfUrl'] as String?;
@@ -3473,6 +3509,625 @@ class _ProfessionalLearningScreenState
         }
         break;
     }
+  }
+
+  // ─────────────────────────────────────────────
+  //  QUIZ FLOW (Materials tab)
+  //  Same process as the lesson screen: load the quiz and the student's
+  //  attempts, show the instructions, run the proctored ExamTakingScreen,
+  //  then refresh progress and certificates with the result.
+  // ─────────────────────────────────────────────
+
+  Future<void> _openQuizMaterial(Map<String, dynamic> m) async {
+    final quizId = m['quizId'] as String? ?? '';
+    final lessonId = m['lessonId'] as String? ?? '';
+
+    if (quizId.isEmpty) {
+      _snack('This quiz is not available yet', isError: true);
+      return;
+    }
+
+    final launch = await _loadQuizForLaunch(quizId);
+    if (!mounted || launch == null) return;
+
+    final quiz = launch.quiz;
+
+    // Final exams are one-shot and gate the course certificate
+    if (_isFinalQuiz(quiz)) {
+      if (_validCourseCertificate() != null) {
+        _showCertificateEarnedDialog();
+        return;
+      }
+      if (launch.attempts.isNotEmpty) {
+        if (_hasPassedQuiz(quiz, launch.attempts)) {
+          _showCertificateProcessingDialog();
+        } else {
+          _showFinalExamFailedDialog();
+        }
+        return;
+      }
+    }
+
+    if (launch.questionCount == 0) {
+      _snack('This quiz has no questions yet', isError: true);
+      return;
+    }
+
+    final confirmed = await _showQuizInstructionsDialog(launch);
+    if (confirmed != true || !mounted) return;
+
+    await _runQuiz(quiz: quiz, quizId: quizId, lessonId: lessonId);
+  }
+
+  /// Fetches the quiz and the student's attempts behind a blocking loader.
+  /// Returns null (after showing an error) when the quiz can't be loaded.
+  Future<_QuizLaunch?> _loadQuizForLaunch(String quizId) async {
+    // canPop is false so a back press can't dismiss the loader and leave the
+    // pop below to close the learning screen instead
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator(color: _DT.primary)),
+      ),
+    );
+
+    Map<String, dynamic>? quiz;
+    List<Map<String, dynamic>> attempts = const [];
+    int questionCount = 0;
+    Object? error;
+
+    try {
+      final response = await QuizService.getQuiz(quizId);
+      final data = response['data'] as Map<String, dynamic>?;
+      quiz = (data?['quiz'] as Map<String, dynamic>?) ?? data;
+      if (quiz == null) throw Exception('Quiz not found');
+
+      // The API returns questions alongside the quiz, not nested inside it
+      questionCount = (data?['questions'] as List?)?.length ??
+          (quiz['questions'] as List?)?.length ??
+          0;
+
+      try {
+        attempts = await QuizService.getStudentQuizAttempts(quizId);
+      } catch (e) {
+        // Attempt history is optional — the quiz can still be taken without it
+        debugPrint('Failed to load quiz attempts: $e');
+      }
+    } catch (e) {
+      error = e;
+    }
+
+    if (!mounted) return null;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss the loader
+
+    if (error != null || quiz == null) {
+      debugPrint('Failed to load quiz $quizId: $error');
+      _snack('Could not open this quiz. Please try again.', isError: true);
+      return null;
+    }
+
+    return (quiz: quiz, attempts: attempts, questionCount: questionCount);
+  }
+
+  /// Runs the quiz, then syncs everything the result can change.
+  Future<void> _runQuiz({
+    required Map<String, dynamic> quiz,
+    required String quizId,
+    required String lessonId,
+  }) async {
+    final exam = <String, dynamic>{
+      'id': quizId,
+      'title': quiz['title'] ?? 'Quiz',
+      'type': quiz['type'] ?? 'quiz',
+      'timeLimit': quiz['timeLimit'] ?? 30,
+      'passingScore': quiz['passingScore'] ?? 70,
+      'courseId': widget.courseId,
+      'questions': const [], // ExamTakingScreen loads these itself
+    };
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ExamTakingScreen(exam: exam)),
+    );
+    if (!mounted) return;
+
+    // Re-read attempts so progress reflects what was just submitted
+    List<Map<String, dynamic>> attempts = const [];
+    try {
+      attempts = await QuizService.getStudentQuizAttempts(quizId);
+    } catch (e) {
+      debugPrint('Failed to refresh quiz attempts: $e');
+    }
+    if (!mounted) return;
+
+    final passed = _hasPassedQuiz(quiz, attempts);
+
+    // A passed quiz completes its lesson — the Materials tab shows chapter
+    // progress, so record it before re-syncing
+    if (passed &&
+        lessonId.isNotEmpty &&
+        _lessonCompletionStatus[lessonId] != true) {
+      try {
+        await ref
+            .read(enrollmentNotifierProvider.notifier)
+            .markLessonComplete(lessonId, widget.courseId);
+      } catch (e) {
+        debugPrint('Failed to mark lesson complete after quiz: $e');
+      }
+      if (!mounted) return;
+    }
+
+    if (lessonId.isNotEmpty) {
+      await _syncChapterProgressForLesson(lessonId, optimisticFallback: passed);
+      if (!mounted) return;
+    }
+
+    // Passing a final exam generates a certificate server-side
+    if (passed && _isFinalQuiz(quiz)) {
+      await _refreshCourseCertificates();
+    }
+  }
+
+  /// Opens the attempt history for this course's quizzes.
+  ///
+  /// Pushed imperatively rather than with `context.push('/exams/history')`:
+  /// that route lives inside the MainLayout ShellRoute, and this screen sits
+  /// above the shell, so routing to it would put a second shell page — with
+  /// the same page key — into the root navigator and trip Navigator's
+  /// duplicate-page-key assertion.
+  void _openExamHistory() {
+    final quizzes = <CourseQuizRef>[];
+    for (final chapter in _chapters ?? const <Section>[]) {
+      for (final lesson in _chapterLessons[chapter.id] ?? const <Lesson>[]) {
+        if (lesson.hasQuiz) {
+          quizzes.add(CourseQuizRef(
+            quizId: lesson.quizId!,
+            lessonTitle: lesson.title,
+            chapterTitle: chapter.title,
+          ));
+        }
+      }
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CourseExamHistoryScreen(
+          courseTitle: _course?.title ?? 'this course',
+          quizzes: quizzes,
+        ),
+      ),
+    );
+  }
+
+  /// Same shell-route caveat as [_openExamHistory] — `/certificates` is a
+  /// MainLayout route, so it is pushed as a plain page from here.
+  void _openCertificates() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CertificatesScreen()),
+    );
+  }
+
+  bool _isFinalQuiz(Map<String, dynamic> quiz) {
+    final type = quiz['type']?.toString().toLowerCase() ?? '';
+    final title = quiz['title']?.toString().toLowerCase() ?? '';
+    return type == 'final' || title.contains('final');
+  }
+
+  /// True when any attempt reached the passing score.
+  bool _hasPassedQuiz(
+      Map<String, dynamic> quiz, List<Map<String, dynamic>> attempts) {
+    final passingScore = (quiz['passingScore'] as num?) ?? 70;
+    return attempts.any((a) {
+      if (a['passed'] == true) return true;
+      final percentage = (a['percentage'] as num?) ?? (a['score'] as num?) ?? 0;
+      return percentage >= passingScore;
+    });
+  }
+
+  /// Highest percentage across attempts, or null when there are none.
+  num? _bestAttemptScore(List<Map<String, dynamic>> attempts) {
+    num? best;
+    for (final a in attempts) {
+      final percentage = (a['percentage'] as num?) ?? (a['score'] as num?);
+      if (percentage != null && (best == null || percentage > best)) {
+        best = percentage;
+      }
+    }
+    return best;
+  }
+
+  Certificate? _validCourseCertificate() {
+    for (final c in _courseCertificates ?? const <Certificate>[]) {
+      if (c.courseId == widget.courseId && c.isValid) return c;
+    }
+    return null;
+  }
+
+  Future<void> _refreshCourseCertificates() async {
+    try {
+      final certificates =
+          await CertificateRepository().getCertificatesByCourse(widget.courseId);
+      if (!mounted) return;
+      setState(() => _courseCertificates = certificates);
+    } catch (e) {
+      debugPrint('Failed to refresh certificates: $e');
+    }
+  }
+
+  void _snack(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : _DT.primary,
+      ),
+    );
+  }
+
+  // ── Quiz dialogs ─────────────────────────────
+
+  /// Briefs the student before the quiz starts. Resolves true when they
+  /// choose to begin.
+  Future<bool?> _showQuizInstructionsDialog(_QuizLaunch launch) {
+    final quiz = launch.quiz;
+    final attempts = launch.attempts;
+    final l10n = AppLocalizations.of(context);
+
+    final title = quiz['title']?.toString() ?? 'Lesson Quiz';
+    final type = quiz['type']?.toString() ?? 'quiz';
+    final rawInstructions = quiz['instructions']?.toString().trim() ?? '';
+    final instructions = rawInstructions.isNotEmpty
+        ? rawInstructions
+        : 'Test your understanding of this lesson.';
+    final passingScore = quiz['passingScore'] ?? 70;
+    final timeLimit = quiz['timeLimit'] ?? 30;
+    final isFinal = _isFinalQuiz(quiz);
+    final bestScore = _bestAttemptScore(attempts);
+
+    final textPrimary = _textPrimary;
+    final details = <(String, String)>[
+      ('Questions', '${launch.questionCount}'),
+      ('Time limit', '$timeLimit minutes'),
+      ('Passing score', '$passingScore%'),
+      if (attempts.isNotEmpty)
+        ('Attempts taken', '${attempts.length}'),
+      if (bestScore != null)
+        ('Best score', '${bestScore.toStringAsFixed(0)}%'),
+    ];
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.quiz_rounded,
+                color: Color(0xFFF59E0B), size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n?.quizInstructions ?? 'Quiz Instructions',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _DT.primary.withOpacity(0.12),
+                  borderRadius: _DT.r32,
+                ),
+                child: Text(
+                  type.toUpperCase(),
+                  style: const TextStyle(
+                      color: _DT.primaryDim,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (isFinal) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3CD),
+                    borderRadius: _DT.r8,
+                    border: Border.all(color: const Color(0xFFFFD700)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.workspace_premium_rounded,
+                          color: Color(0xFF856404), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Final exam — passing it earns your certificate. '
+                          'It can only be taken once.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF856404),
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              ...details.map((d) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline,
+                            color: _DT.primary, size: 16),
+                        const SizedBox(width: 8),
+                        Text('${d.$1}: ',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: textPrimary)),
+                        Text(d.$2,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _DT.primaryDim)),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 12),
+              Text('Instructions',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary)),
+              const SizedBox(height: 6),
+              Text(instructions,
+                  style: TextStyle(
+                      fontSize: 13, height: 1.5, color: _textSecondary)),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _surfaceBg,
+                  borderRadius: _DT.r8,
+                  border: Border.all(color: _borderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.lightbulb_outline,
+                            color: _DT.accent, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Before you start',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...[
+                      'Read each question carefully before answering',
+                      'The timer starts as soon as the quiz opens',
+                      'Leaving the app is recorded and auto-submits after 3 warnings',
+                      if (isFinal)
+                        'Final exams cannot be retaken'
+                      else
+                        'You can retake this quiz if needed',
+                    ].map((tip) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4, left: 26),
+                          child: Text('• $tip',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  color: _textSecondary)),
+                        )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: TextStyle(
+                    color: _textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+            label: Text(attempts.isNotEmpty ? 'Retake quiz' : 'Start quiz'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DT.primary,
+              foregroundColor: Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCertificateEarnedDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.verified_rounded, color: _DT.primary, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('Certificate earned',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary)),
+            ),
+          ],
+        ),
+        content: Text(
+          'You already passed this final exam and your certificate has been '
+          'issued, so it cannot be retaken.',
+          style: TextStyle(fontSize: 14, height: 1.5, color: _textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Close',
+                style: TextStyle(
+                    color: _textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _openCertificates();
+            },
+            icon: const Icon(Icons.visibility_rounded, size: 18),
+            label: Text(
+                AppLocalizations.of(context)?.viewCertificates ??
+                    'View certificate'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DT.primary,
+              foregroundColor: Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCertificateProcessingDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.hourglass_top_rounded,
+                color: _DT.accent, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  AppLocalizations.of(context)?.certificateProcessing ??
+                      'Certificate processing',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Congratulations! You have passed the final exam.',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: _textPrimary)),
+            const SizedBox(height: 10),
+            Text(
+              'Your certificate is being generated and will appear in the '
+              'Certificates section shortly.',
+              style: TextStyle(fontSize: 13, height: 1.5, color: _textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Got it',
+                style: TextStyle(
+                    color: _textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _openCertificates();
+            },
+            icon: const Icon(Icons.visibility_rounded, size: 18),
+            label: Text(
+                AppLocalizations.of(context)?.viewCertificates ??
+                    'View certificates'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DT.accent,
+              foregroundColor: Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFinalExamFailedDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  AppLocalizations.of(context)?.finalExamFailed ??
+                      'Final exam failed',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary)),
+            ),
+          ],
+        ),
+        content: Text(
+          'You did not pass this final exam and it cannot be retaken. To try '
+          'again you would need to unenroll and take the course from the start.',
+          style: TextStyle(fontSize: 14, height: 1.5, color: _textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Understood',
+                style: TextStyle(
+                    color: Colors.red, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ─────────────────────────────────────────────
@@ -3578,6 +4233,7 @@ class _ProfessionalLearningScreenState
           fileName: lesson.id,
           originalTitle: lesson.title,
           lessonId: lesson.id,
+          thumbnailUrl: _course?.thumbnail,
           onSuccess: () {
             if (mounted) setState(() => _courseDownloadDone++);
           },
@@ -3600,6 +4256,7 @@ class _ProfessionalLearningScreenState
           type: DownloadType.material,
           lessonTitle: lesson.title,
           sectionTitle: null,
+          thumbnailUrl: _course?.thumbnail,
           onSuccess: () {
             if (mounted) setState(() => _courseDownloadDone++);
           },
@@ -4411,6 +5068,8 @@ class _ChapterMaterialsCard extends StatelessWidget {
   final Section section;
   final List<Map<String, dynamic>> materials;
   final int chapterIndex;
+  final List<Lesson> lessons;
+  final Map<String, bool> lessonCompletionStatus;
   final bool isDark;
   final void Function(Map<String, dynamic>) onTap;
 
@@ -4418,6 +5077,8 @@ class _ChapterMaterialsCard extends StatelessWidget {
     required this.section,
     required this.materials,
     required this.chapterIndex,
+    required this.lessons,
+    required this.lessonCompletionStatus,
     required this.isDark,
     required this.onTap,
   });
@@ -4428,6 +5089,11 @@ class _ChapterMaterialsCard extends StatelessWidget {
     final textPrimary = isDark ? Colors.white : _DT.textPrimary;
     final border = isDark ? _DT.borderDark : _DT.border;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    // Progress for this chapter only — a material always belongs to one chapter
+    final doneCount =
+        lessons.where((l) => lessonCompletionStatus[l.id] == true).length;
+    final progress = lessons.isEmpty ? 0.0 : doneCount / lessons.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -4475,6 +5141,34 @@ class _ChapterMaterialsCard extends StatelessWidget {
               ],
             ),
           ),
+          // Chapter progress — updates as lessons in this chapter complete
+          if (lessons.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor:
+                            isDark ? _DT.borderDark : _DT.border,
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(_DT.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('$doneCount/${lessons.length} lessons',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _DT.textSecondary)),
+                ],
+              ),
+            ),
           // Grid
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -4489,6 +5183,8 @@ class _ChapterMaterialsCard extends StatelessWidget {
                   .map((m) => _MaterialTile(
                         material: m,
                         isDark: isDark,
+                        isCompleted:
+                            lessonCompletionStatus[m['lessonId']] == true,
                         onTap: () => onTap(m),
                       ))
                   .toList(),
@@ -4503,11 +5199,13 @@ class _ChapterMaterialsCard extends StatelessWidget {
 class _MaterialTile extends StatelessWidget {
   final Map<String, dynamic> material;
   final bool isDark;
+  final bool isCompleted;
   final VoidCallback onTap;
 
   const _MaterialTile(
       {required this.material,
       required this.isDark,
+      this.isCompleted = false,
       required this.onTap});
 
   @override
@@ -4539,6 +5237,12 @@ class _MaterialTile extends StatelessWidget {
                       Icon(material['icon'] as IconData, color: c, size: 14),
                 ),
                 const Spacer(),
+                if (isCompleted)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Icon(Icons.check_circle_rounded,
+                        color: _DT.primary, size: 14),
+                  ),
                 if (material['duration'] != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
