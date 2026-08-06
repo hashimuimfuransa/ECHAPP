@@ -47,6 +47,14 @@ All CDN `Image.network`, `NetworkImage`, and `CachedNetworkImage` calls now rout
 - `frontend/lib/widgets/main_layout.dart`
 - `frontend/lib/widgets/responsive_navigation_drawer.dart`
 
+## Large Video Playback Fix (streaming / 50MB limit removed)
+
+The original proxy buffered the entire file in memory with a hard **50 MB** limit. Any video larger than 50 MB failed with `maxContentLength size of 52428800 exceeded`, and the browser reported `MEDIA_ERR_SRC_NOT_SUPPORTED`.
+
+The current proxy **streams** the upstream response (no in-memory buffer, no size limit) and forwards the client's HTTP `Range` header, returning `206 Partial Content` with `Content-Range`/`Accept-Ranges`. This lets large videos play and seek correctly in the browser.
+
+> Note: This addresses the 50 MB + Range/seek issue. H.265/HEVC videos are a separate codec-compatibility concern and are not converted by this proxy.
+
 ## Recommended: Configure CloudFront CORS (proper long-term fix)
 
 The proxy is a **workaround**. For a proper fix, configure CORS directly on the CloudFront distribution so the CDN itself returns the `Access-Control-Allow-Origin` header. This removes the proxy round-trip and improves performance.
@@ -69,8 +77,7 @@ The proxy is a **workaround**. For a proper fix, configure CORS directly on the 
 
 If you prefer direct S3 access (bypassing CloudFront), add a CORS policy on the S3 bucket:
 
-```
-json
+```json
 [
   {
     "AllowedHeaders": ["*"],
