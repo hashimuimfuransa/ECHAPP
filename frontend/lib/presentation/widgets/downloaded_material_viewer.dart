@@ -6,6 +6,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path/path.dart' as p;
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/download.dart';
@@ -17,7 +18,21 @@ import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 /// material downloaded from the Library opens the same way with no connection.
 /// PDFs and text render in-app; anything else (EPUB, Word, …) is handed to the
 /// platform viewer.
+///
+/// On web there is no local file system, so this always reports that the file
+/// is not available locally.
 Future<void> openDownloadedMaterial(BuildContext context, Download download) async {
+  if (kIsWeb) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Offline downloads are not available in the browser.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
   final file = File(download.localPath);
   if (!await file.exists()) {
     if (!context.mounted) return;

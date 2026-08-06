@@ -159,21 +159,24 @@ class DownloadService extends ChangeNotifier {
       }
     }
 
-    // Always load from storage, even if other initialization fails
-    try {
-      await _loadFilenameMap();
-      await _loadDownloadsFromStorage();
-      print('Loaded ${_downloads.length} downloads from storage');
-      await _scanForExistingDownloads();
-      print('Scan complete. Total downloads now: ${_downloads.length}');
-    } catch (e) {
-      print('Error loading downloads from storage: $e');
-      // Try to load from storage again with error handling
+    // Always load from storage, even if other initialization fails.
+    // On web there is no file system, so skip local file scanning entirely.
+    if (!kIsWeb) {
       try {
+        await _loadFilenameMap();
         await _loadDownloadsFromStorage();
-        print('Retry: Loaded ${_downloads.length} downloads from storage');
-      } catch (e2) {
-        print('Retry failed: $e2');
+        print('Loaded ${_downloads.length} downloads from storage');
+        await _scanForExistingDownloads();
+        print('Scan complete. Total downloads now: ${_downloads.length}');
+      } catch (e) {
+        print('Error loading downloads from storage: $e');
+        // Try to load from storage again with error handling
+        try {
+          await _loadDownloadsFromStorage();
+          print('Retry: Loaded ${_downloads.length} downloads from storage');
+        } catch (e2) {
+          print('Retry failed: $e2');
+        }
       }
     }
 
@@ -481,8 +484,14 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // Get app documents directory
+  // Get app documents directory. On web, path_provider has no implementation,
+  // so return a synthetic in-memory path to avoid MissingPluginException.
+  // Downloads are not persisted to disk on web — they're handled via browser
+  // download (see downloadVideo/downloadNotesOrMaterial).
   Future<String> _getAppDirectory() async {
+    if (kIsWeb) {
+      return '/web-downloads';
+    }
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
@@ -664,6 +673,13 @@ class DownloadService extends ChangeNotifier {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
+    // Web has no file system — downloads must be handled by the browser
+    // (e.g. via a direct URL or blob download), not by writing to disk.
+    if (kIsWeb) {
+      final message = 'Downloads are not supported in the browser. Open the video in a new tab instead.';
+      onError?.call(message);
+      throw Exception(message);
+    }
     if (_useBackgroundService && _bgClient != null) {
       return _downloadVideoViaService(
         url: url,
@@ -1104,6 +1120,8 @@ class DownloadService extends ChangeNotifier {
   
   // Check if video is downloaded locally by filename
   Future<bool> isVideoDownloaded(String fileName) async {
+    // On web there is no file system, so no local video can exist.
+    if (kIsWeb) return false;
     try {
       final directory = await _getAppDirectory();
       final filePath = p.join(directory, "$fileName.mp4");
@@ -1116,6 +1134,8 @@ class DownloadService extends ChangeNotifier {
 
   // Get local file path for a downloaded video ONLY if it's fully completed
   Future<String?> getLocalVideoPathById(String lessonId) async {
+    // On web there is no file system, so no local video path exists.
+    if (kIsWeb) return null;
     try {
       final download = _downloads[lessonId];
       if (download != null && download.status == DownloadStatus.completed) {
@@ -1132,6 +1152,8 @@ class DownloadService extends ChangeNotifier {
 
   // Get local file path for a downloaded video by filename (legacy compatibility)
   Future<String?> getLocalVideoPath(String fileName) async {
+    // On web there is no file system, so no local video path exists.
+    if (kIsWeb) return null;
     try {
       // Find download record by filename
       final download = _downloads.values.firstWhere(
@@ -1169,6 +1191,12 @@ class DownloadService extends ChangeNotifier {
 
   // Delete a download. [downloadId] is Download.id (see pauseDownload).
   Future<bool> deleteDownload(String downloadId) async {
+    // On web there is no file system to delete from.
+    if (kIsWeb) {
+      _downloads.remove(downloadId);
+      notifyListeners();
+      return true;
+    }
     try {
       pauseDownload(downloadId); // Ensure it's not downloading
 
@@ -1208,6 +1236,13 @@ class DownloadService extends ChangeNotifier {
     Function()? onSuccess,
     Function(String)? onError,
   }) async {
+    // Web has no file system — downloads must be handled by the browser
+    // (e.g. via a direct URL or blob download), not by writing to disk.
+    if (kIsWeb) {
+      final message = 'Downloads are not supported in the browser. Open the file in a new tab instead.';
+      onError?.call(message);
+      throw Exception(message);
+    }
     if (_useBackgroundService && _bgClient != null) {
       return _downloadNotesOrMaterialViaService(
         url: url,
@@ -1579,6 +1614,8 @@ class DownloadService extends ChangeNotifier {
 
   // Get total storage used by downloads
   Future<int> getTotalDownloadedSize() async {
+    // On web there is no file system, so no local storage is used.
+    if (kIsWeb) return 0;
     int totalSize = 0;
     
     for (final download in _downloads.values) {

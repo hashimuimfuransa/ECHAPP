@@ -9,6 +9,7 @@ import 'package:excellencecoachinghub/config/api_config.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 /// Voice Chat Recording Widget
 class VoiceChatWidget extends StatefulWidget {
@@ -69,6 +70,15 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget> {
 
   Future<void> _startRecording() async {
     if (widget.isSpeaking) return;
+    // Audio recording via path_provider isn't supported on web.
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Voice recording is not supported in the browser. Please use the text input instead.')),
+        );
+      }
+      return;
+    }
     try {
       if (await _recorder.hasPermission()) {
         final tempDir = await getTemporaryDirectory();
