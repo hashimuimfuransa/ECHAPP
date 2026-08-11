@@ -86,9 +86,25 @@ class _CommunityChatViewState extends ConsumerState<CommunityChatView> {
     }
   }
 
+  /// Which room this view is, in the sync stream's naming.
+  String get _roomKey =>
+      widget.groupId == null ? 'course' : 'group:${widget.groupId}';
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chatRoomProvider(_key));
+
+    // The community-wide long poll knows about a new message roughly a second
+    // after it is sent; reload the moment it reports one for this room rather
+    // than waiting for this view's own slower refresh.
+    ref.listen(
+      chatInboxProvider(widget.courseId).select((s) => s.revision[_roomKey] ?? 0),
+      (previous, next) {
+        if (previous != null && next > previous) {
+          ref.read(chatRoomProvider(_key).notifier).load(silent: true);
+        }
+      },
+    );
 
     ref.listen(chatRoomProvider(_key), (previous, next) {
       if ((previous?.messages.length ?? 0) < next.messages.length) {

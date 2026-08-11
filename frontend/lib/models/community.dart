@@ -642,6 +642,123 @@ class CommunityChatMessage {
   }
 }
 
+/// One row in the unified Chat tab — the public course room, a study group,
+/// or a direct conversation. `key` identifies it across all three kinds.
+class ChatRoomSummary {
+  final String key;
+
+  /// course | group | direct
+  final String type;
+  final String title;
+  final String subtitle;
+  final String? lastMessageContent;
+  final String? lastMessageSender;
+  final bool lastMessageHasAttachment;
+  final DateTime? lastMessageAt;
+  final int unreadCount;
+  final String? groupId;
+  final String? conversationId;
+  final CommunityMember? contact;
+
+  const ChatRoomSummary({
+    required this.key,
+    required this.type,
+    required this.title,
+    this.subtitle = '',
+    this.lastMessageContent,
+    this.lastMessageSender,
+    this.lastMessageHasAttachment = false,
+    this.lastMessageAt,
+    this.unreadCount = 0,
+    this.groupId,
+    this.conversationId,
+    this.contact,
+  });
+
+  factory ChatRoomSummary.fromJson(Map<String, dynamic> json) {
+    final last = json['lastMessage'] as Map<String, dynamic>?;
+    return ChatRoomSummary(
+      key: _str(json['key']) ?? '',
+      type: _str(json['type']) ?? 'course',
+      title: _str(json['title']) ?? 'Chat',
+      subtitle: _str(json['subtitle']) ?? '',
+      lastMessageContent: last != null ? _str(last['content']) : null,
+      lastMessageSender: last != null ? _str(last['senderName']) : null,
+      lastMessageHasAttachment: last != null && last['hasAttachment'] == true,
+      lastMessageAt: _parseDate(json['lastMessageAt']),
+      unreadCount: _parseInt(json['unreadCount']) ?? 0,
+      groupId: _str(json['groupId']),
+      conversationId: _str(json['conversationId']),
+      contact: json['contact'] != null
+          ? CommunityMember.fromJson(json['contact'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  bool get isPublic => type == 'course';
+  bool get isGroup => type == 'group';
+  bool get isDirect => type == 'direct';
+  bool get hasUnread => unreadCount > 0;
+
+  /// The line shown under the room name in the list.
+  String get preview {
+    final text = (lastMessageContent ?? '').trim();
+    if (text.isEmpty) {
+      if (lastMessageHasAttachment) return '📎 Attachment';
+      return switch (type) {
+        'course' => 'Say something to the whole class',
+        'group' => 'No messages in this group yet',
+        _ => 'Say hello',
+      };
+    }
+    // A one-to-one thread does not need the sender's name repeated.
+    if (isDirect) {
+      return lastMessageSender == 'You' ? 'You: $text' : text;
+    }
+    return lastMessageSender != null ? '$lastMessageSender: $text' : text;
+  }
+}
+
+/// A message delivered by the live sync stream, tagged with its room.
+class ChatSyncMessage {
+  final String roomKey;
+  final String roomType;
+  final String id;
+  final String? content;
+  final String senderId;
+  final String? senderName;
+  final String? senderAvatar;
+  final bool isMine;
+  final bool hasAttachment;
+  final DateTime? createdAt;
+
+  const ChatSyncMessage({
+    required this.roomKey,
+    required this.roomType,
+    required this.id,
+    this.content,
+    this.senderId = '',
+    this.senderName,
+    this.senderAvatar,
+    this.isMine = false,
+    this.hasAttachment = false,
+    this.createdAt,
+  });
+
+  factory ChatSyncMessage.fromJson(Map<String, dynamic> json) => ChatSyncMessage(
+        roomKey: _str(json['roomKey']) ?? '',
+        roomType: _str(json['roomType']) ?? 'course',
+        id: _str(json['id']) ?? '',
+        content: _str(json['content']),
+        senderId: _str(json['senderId']) ?? '',
+        senderName: _str(json['senderName']),
+        senderAvatar: _str(json['senderAvatar']),
+        isMine: json['isMine'] == true,
+        hasAttachment: json['hasAttachment'] == true,
+        createdAt: _parseDate(json['createdAt']),
+      );
+}
+
 // ─────────────────────────────────────────────
 //  Assignments & submissions
 // ─────────────────────────────────────────────

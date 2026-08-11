@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/community_provider.dart';
-import 'community_chat_view.dart';
+import 'community_chat_inbox_view.dart';
 import 'community_dashboard_view.dart';
 import 'community_discussions_view.dart';
 import 'community_groups_view.dart';
@@ -151,7 +151,7 @@ class _CourseCommunityScreenState extends ConsumerState<CourseCommunityScreen>
             courseId: widget.courseId,
             isTeacher: isTeacher,
           ),
-          CommunityChatView(courseId: widget.courseId),
+          CommunityChatInboxView(courseId: widget.courseId),
           CommunityGroupsView(courseId: widget.courseId),
           CommunityWorkView(courseId: widget.courseId, isTeacher: isTeacher),
           CommunityResourcesView(

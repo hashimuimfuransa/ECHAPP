@@ -64,7 +64,11 @@ router.post('/:courseId/groups/:groupId/tasks', groupController.addTask);
 router.patch('/:courseId/groups/:groupId/tasks/:taskId', groupController.updateTask);
 router.delete('/:courseId/groups/:groupId/tasks/:taskId', groupController.deleteTask);
 
-// ── Chat (course room + per-group rooms) ────────────────────────
+// ── Chat (course room + per-group rooms + direct messages) ──────
+// Unified list of every room the student can talk in
+router.get('/:courseId/chat/inbox', chatController.getInbox);
+// Long-polled delivery across all of those rooms at once
+router.get('/:courseId/chat/sync', chatController.sync);
 router.get('/:courseId/chat/unread', chatController.getUnreadCounts);
 router.get('/:courseId/chat/messages', chatController.listMessages);
 router.post('/:courseId/chat/messages', chatController.sendMessage);

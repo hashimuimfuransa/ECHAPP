@@ -2,8 +2,20 @@ const mongoose = require('mongoose');
 const CommunityMessage = require('../../models/community/CommunityMessage');
 const StudyGroup = require('../../models/community/StudyGroup');
 const CoursePresence = require('../../models/community/CoursePresence');
+const DirectConversation = require('../../models/messaging/DirectConversation');
+const DirectMessage = require('../../models/messaging/DirectMessage');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../../utils/response.utils');
 const { PUBLIC_USER_FIELDS } = require('../../utils/community.utils');
+
+/**
+ * Stable identifier for a chat room across all three kinds, so the app can key
+ * one inbox and one sync stream off a single string.
+ */
+const roomKeys = {
+  course: () => 'course',
+  group: (groupId) => `group:${groupId}`,
+  direct: (conversationId) => `direct:${conversationId}`
+};
 
 const mapMessage = (msg, userId) => ({
   id: String(msg._id),
@@ -248,6 +260,327 @@ class ChatController {
       return sendError(res, 'Failed to load unread counts', 500, error.message);
     }
   }
+
+  /**
+   * Everything the student can talk in, in one list: the public course room,
+   * each of their study groups, and their direct conversations.
+   *
+   * The Chat tab shows all three together, so it needs them in a single shape
+   * rather than three separate calls.
+   */
+  async getInbox(req, res) {
+    try {
+      const { courseId, userId, course } = req.community;
+      const rooms = await buildInbox(courseId, userId, course);
+
+      return sendSuccess(res, {
+        rooms,
+        totalUnread: rooms.reduce((sum, r) => sum + r.unreadCount, 0)
+      }, 'Chat inbox loaded');
+    } catch (error) {
+      console.error('Error loading chat inbox:', error);
+      return sendError(res, 'Failed to load your chats', 500, error.message);
+    }
+  }
+
+  /**
+   * Near-real-time delivery by long polling.
+   *
+   * The request is held open until something arrives in any of the caller's
+   * rooms, or `wait` seconds elapse — so a message lands in about the time it
+   * takes to write it, without a socket layer. The client re-requests
+   * immediately with the returned cursor, making this a continuous stream of
+   * short-lived requests.
+   *
+   * Chosen over SSE because Flutter web's HTTP client buffers streamed
+   * responses rather than delivering them incrementally; a plain
+   * request/response works identically on every platform.
+   */
+  async sync(req, res) {
+    try {
+      const { courseId, userId, course } = req.community;
+
+      const waitSeconds = Math.min(30, Math.max(0, parseInt(req.query.wait, 10) || 0));
+      const since = req.query.since ? new Date(req.query.since) : null;
+      const cursor = since && !Number.isNaN(since.getTime())
+        ? since
+        : new Date(Date.now() - 60 * 1000);
+
+      const deadline = Date.now() + waitSeconds * 1000;
+      let clientGone = false;
+      req.on('close', () => { clientGone = true; });
+
+      // Poll the database rather than holding a change stream open per user:
+      // one indexed query every 1.5s is cheap, and it works on any MongoDB
+      // deployment (change streams need a replica set).
+      const POLL_MS = 1500;
+
+      while (true) {
+        const payload = await collectSince(courseId, userId, cursor, course);
+
+        if (payload.messages.length > 0 || Date.now() >= deadline || clientGone) {
+          if (clientGone) return; // nothing to write to
+          return sendSuccess(res, payload, 'Synced');
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      }
+    } catch (error) {
+      console.error('Error syncing chat:', error);
+      if (!res.headersSent) {
+        return sendError(res, 'Failed to sync chat', 500, error.message);
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Inbox / sync helpers
+// ─────────────────────────────────────────────
+
+/** The caller's active study groups in this course. */
+const myGroups = (courseId, userId) =>
+  StudyGroup.find({
+    courseId,
+    isArchived: false,
+    members: { $elemMatch: { userId, status: 'active' } }
+  })
+    .select('name')
+    .lean();
+
+/** The caller's direct conversations, newest first. */
+const myConversations = (userId) =>
+  DirectConversation.find({ participants: userId, hiddenBy: { $ne: userId } })
+    .sort({ lastMessageAt: -1 })
+    .limit(50)
+    .populate('participants', PUBLIC_USER_FIELDS)
+    .lean();
+
+const previewOf = (message) => {
+  if (!message) return null;
+  return {
+    content: message.isDeleted ? 'Message removed' : (message.content || ''),
+    senderName:
+      message.senderId && message.senderId.fullName
+        ? message.senderId.fullName
+        : null,
+    hasAttachment: (message.attachments || []).length > 0,
+    sentAt: message.createdAt
+  };
+};
+
+/** Builds the unified room list shown in the Chat tab. */
+async function buildInbox(courseId, userId, course) {
+  const [groups, conversations] = await Promise.all([
+    myGroups(courseId, userId),
+    myConversations(userId)
+  ]);
+
+  const groupIds = groups.map((g) => g._id);
+
+  const [courseLast, courseUnread, groupLasts, groupUnreads] = await Promise.all([
+    CommunityMessage.findOne({ courseId, scope: 'course', isDeleted: false })
+      .sort({ createdAt: -1 })
+      .populate('senderId', PUBLIC_USER_FIELDS)
+      .lean(),
+    CommunityMessage.countDocuments({
+      courseId,
+      scope: 'course',
+      isDeleted: false,
+      senderId: { $ne: userId },
+      readBy: { $ne: userId }
+    }),
+    CommunityMessage.aggregate([
+      { $match: { scope: 'group', groupId: { $in: groupIds }, isDeleted: false } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: '$groupId', message: { $first: '$$ROOT' } } }
+    ]),
+    CommunityMessage.aggregate([
+      {
+        $match: {
+          scope: 'group',
+          groupId: { $in: groupIds },
+          isDeleted: false,
+          senderId: { $ne: new mongoose.Types.ObjectId(String(userId)) },
+          readBy: { $ne: new mongoose.Types.ObjectId(String(userId)) }
+        }
+      },
+      { $group: { _id: '$groupId', count: { $sum: 1 } } }
+    ])
+  ]);
+
+  const groupLastMap = {};
+  groupLasts.forEach((g) => { groupLastMap[String(g._id)] = g.message; });
+  const groupUnreadMap = {};
+  groupUnreads.forEach((g) => { groupUnreadMap[String(g._id)] = g.count; });
+
+  const rooms = [];
+
+  // 1. The public course room — always present, always first.
+  rooms.push({
+    key: roomKeys.course(),
+    type: 'course',
+    title: course && course.title ? course.title : 'Course chat',
+    subtitle: 'Everyone in this course',
+    lastMessage: previewOf(courseLast),
+    lastMessageAt: courseLast ? courseLast.createdAt : null,
+    unreadCount: courseUnread,
+    groupId: null,
+    conversationId: null,
+    contact: null
+  });
+
+  // 2. My study groups.
+  groups.forEach((group) => {
+    const last = groupLastMap[String(group._id)];
+    rooms.push({
+      key: roomKeys.group(group._id),
+      type: 'group',
+      title: group.name,
+      subtitle: 'Study group',
+      lastMessage: previewOf(last),
+      lastMessageAt: last ? last.createdAt : null,
+      unreadCount: groupUnreadMap[String(group._id)] || 0,
+      groupId: String(group._id),
+      conversationId: null,
+      contact: null
+    });
+  });
+
+  // 3. Direct conversations.
+  conversations.forEach((conversation) => {
+    const other = (conversation.participants || []).find(
+      (p) => String(p._id) !== String(userId)
+    );
+    if (!other) return;
+
+    const unreadEntry = (conversation.unread || []).find(
+      (u) => String(u.userId) === String(userId)
+    );
+
+    rooms.push({
+      key: roomKeys.direct(conversation._id),
+      type: 'direct',
+      title: other.fullName || 'ECH User',
+      subtitle:
+        other.role === 'admin'
+          ? 'ECH Support'
+          : other.role === 'instructor'
+            ? 'Teacher'
+            : 'Student',
+      lastMessage: conversation.lastMessage && conversation.lastMessage.sentAt
+        ? {
+            content: conversation.lastMessage.content || '',
+            senderName:
+              String(conversation.lastMessage.senderId || '') === String(userId)
+                ? 'You'
+                : other.fullName,
+            hasAttachment: Boolean(conversation.lastMessage.hasAttachment),
+            sentAt: conversation.lastMessage.sentAt
+          }
+        : null,
+      lastMessageAt: conversation.lastMessageAt,
+      unreadCount: unreadEntry ? unreadEntry.count : 0,
+      groupId: null,
+      conversationId: String(conversation._id),
+      contact: {
+        id: String(other._id),
+        fullName: other.fullName || 'ECH User',
+        avatar: other.avatar || null,
+        role: other.role || 'student',
+        isTeacher: other.role === 'instructor' || other.role === 'admin'
+      }
+    });
+  });
+
+  // Rooms with activity float up; the course room holds its place when quiet.
+  rooms.sort((a, b) => {
+    if (a.type === 'course' && !a.lastMessageAt) return -1;
+    if (b.type === 'course' && !b.lastMessageAt) return 1;
+    const aAt = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bAt = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return bAt - aAt;
+  });
+
+  return rooms;
+}
+
+/**
+ * Collects every message across the caller's rooms newer than `cursor`,
+ * tagged with the room it belongs to.
+ */
+async function collectSince(courseId, userId, cursor, course) {
+  const [groups, conversations] = await Promise.all([
+    myGroups(courseId, userId),
+    DirectConversation.find({ participants: userId }).select('_id').lean()
+  ]);
+
+  const groupIds = groups.map((g) => g._id);
+  const conversationIds = conversations.map((c) => c._id);
+
+  const [communityMessages, directMessages] = await Promise.all([
+    CommunityMessage.find({
+      createdAt: { $gt: cursor },
+      $or: [
+        { courseId, scope: 'course' },
+        { scope: 'group', groupId: { $in: groupIds } }
+      ]
+    })
+      .sort({ createdAt: 1 })
+      .limit(100)
+      .populate('senderId', PUBLIC_USER_FIELDS)
+      .lean(),
+    DirectMessage.find({
+      conversationId: { $in: conversationIds },
+      createdAt: { $gt: cursor }
+    })
+      .sort({ createdAt: 1 })
+      .limit(100)
+      .populate('senderId', PUBLIC_USER_FIELDS)
+      .lean()
+  ]);
+
+  const messages = [
+    ...communityMessages.map((m) => ({
+      roomKey:
+        m.scope === 'group' ? roomKeys.group(m.groupId) : roomKeys.course(),
+      roomType: m.scope,
+      id: String(m._id),
+      content: m.isDeleted ? null : m.content,
+      senderId: String(m.senderId && (m.senderId._id || m.senderId)),
+      senderName: m.senderId && m.senderId.fullName ? m.senderId.fullName : null,
+      senderAvatar: m.senderId && m.senderId.avatar ? m.senderId.avatar : null,
+      isMine: String(m.senderId && (m.senderId._id || m.senderId)) === String(userId),
+      hasAttachment: (m.attachments || []).length > 0,
+      createdAt: m.createdAt
+    })),
+    ...directMessages.map((m) => ({
+      roomKey: roomKeys.direct(m.conversationId),
+      roomType: 'direct',
+      id: String(m._id),
+      content: m.isDeleted ? null : m.content,
+      senderId: String(m.senderId && (m.senderId._id || m.senderId)),
+      senderName: m.senderId && m.senderId.fullName ? m.senderId.fullName : null,
+      senderAvatar: m.senderId && m.senderId.avatar ? m.senderId.avatar : null,
+      isMine: String(m.senderId && (m.senderId._id || m.senderId)) === String(userId),
+      hasAttachment: (m.attachments || []).length > 0,
+      createdAt: m.createdAt
+    }))
+  ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  // Only rebuild the (heavier) inbox when something actually moved.
+  const rooms = messages.length > 0 ? await buildInbox(courseId, userId, course) : [];
+
+  const newest = messages.length > 0
+    ? messages[messages.length - 1].createdAt
+    : cursor;
+
+  return {
+    cursor: new Date(newest).toISOString(),
+    messages,
+    rooms,
+    totalUnread: rooms.reduce((sum, r) => sum + r.unreadCount, 0)
+  };
 }
 
 module.exports = new ChatController();

@@ -488,6 +488,56 @@ class CommunityService {
     _unwrap(await _apiClient.delete('${_base(courseId)}/chat/messages/$messageId'));
   }
 
+  /// Every room the student can talk in: the public course room, their study
+  /// groups, and their direct conversations — one list for the Chat tab.
+  Future<({List<ChatRoomSummary> rooms, int totalUnread})> getChatInbox(
+    String courseId,
+  ) async {
+    final data = _unwrap(await _apiClient.get('${_base(courseId)}/chat/inbox'));
+    return (
+      rooms: (data['rooms'] as List? ?? [])
+          .map((r) => ChatRoomSummary.fromJson(r as Map<String, dynamic>))
+          .toList(),
+      totalUnread: (data['totalUnread'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Long-polled delivery across every room at once.
+  ///
+  /// The request is held open by the server for up to [waitSeconds] and
+  /// returns the moment anything arrives, so messages land in about a second
+  /// without a socket layer. Call it again immediately with the returned
+  /// cursor to keep the stream going.
+  Future<({
+    String cursor,
+    List<ChatSyncMessage> messages,
+    List<ChatRoomSummary> rooms,
+    int totalUnread,
+  })> syncChat(
+    String courseId, {
+    DateTime? since,
+    int waitSeconds = 25,
+  }) async {
+    final response = await _apiClient.get(
+      '${_base(courseId)}/chat/sync',
+      queryParams: {
+        if (since != null) 'since': since.toIso8601String(),
+        'wait': waitSeconds,
+      },
+    );
+    final data = _unwrap(response);
+    return (
+      cursor: data['cursor'] as String? ?? '',
+      messages: (data['messages'] as List? ?? [])
+          .map((m) => ChatSyncMessage.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      rooms: (data['rooms'] as List? ?? [])
+          .map((r) => ChatRoomSummary.fromJson(r as Map<String, dynamic>))
+          .toList(),
+      totalUnread: (data['totalUnread'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   Future<({int course, Map<String, int> groups, int total})> getUnreadCounts(
     String courseId,
   ) async {

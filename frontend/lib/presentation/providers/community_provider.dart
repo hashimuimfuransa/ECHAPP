@@ -403,6 +403,191 @@ final chatUnreadProvider = FutureProvider.family<
 });
 
 // ─────────────────────────────────────────────
+//  Live chat inbox (public + groups + direct)
+// ─────────────────────────────────────────────
+
+class ChatInboxState {
+  final List<ChatRoomSummary> rooms;
+  final int totalUnread;
+  final bool isLoading;
+  final String? error;
+
+  /// True while the long poll is connected and delivering.
+  final bool isLive;
+
+  /// Bumped per room whenever new messages arrive, so an open room can
+  /// reload itself without every room listening to the whole message list.
+  final Map<String, int> revision;
+
+  const ChatInboxState({
+    this.rooms = const [],
+    this.totalUnread = 0,
+    this.isLoading = false,
+    this.error,
+    this.isLive = false,
+    this.revision = const {},
+  });
+
+  ChatInboxState copyWith({
+    List<ChatRoomSummary>? rooms,
+    int? totalUnread,
+    bool? isLoading,
+    String? error,
+    bool? isLive,
+    Map<String, int>? revision,
+  }) {
+    return ChatInboxState(
+      rooms: rooms ?? this.rooms,
+      totalUnread: totalUnread ?? this.totalUnread,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      isLive: isLive ?? this.isLive,
+      revision: revision ?? this.revision,
+    );
+  }
+
+  List<ChatRoomSummary> get publicRooms =>
+      rooms.where((r) => r.isPublic).toList();
+  List<ChatRoomSummary> get groupRooms => rooms.where((r) => r.isGroup).toList();
+  List<ChatRoomSummary> get directRooms =>
+      rooms.where((r) => r.isDirect).toList();
+}
+
+/// Drives the Chat tab: loads every room once, then holds a long poll open so
+/// messages from the course room, study groups and direct chats all arrive as
+/// they are sent.
+class ChatInboxNotifier extends StateNotifier<ChatInboxState> {
+  final CommunityService _service;
+  final String _courseId;
+
+  bool _running = false;
+  DateTime? _cursor;
+
+  ChatInboxNotifier(this._service, this._courseId) : super(const ChatInboxState());
+
+  /// How long the server holds each poll open before returning empty.
+  static const _holdSeconds = 25;
+
+  /// Backoff after a failed poll, so a flaky connection does not hammer.
+  static const _retryDelay = Duration(seconds: 4);
+
+  Future<void> loadInbox() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final result = await _service.getChatInbox(_courseId);
+      if (!mounted) return;
+      state = state.copyWith(
+        rooms: result.rooms,
+        totalUnread: result.totalUnread,
+        isLoading: false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  /// Starts the delivery loop. Safe to call repeatedly.
+  void start() {
+    if (_running) return;
+    _running = true;
+    _cursor ??= DateTime.now().toUtc();
+    _loop();
+  }
+
+  void stop() {
+    _running = false;
+    if (mounted) state = state.copyWith(isLive: false);
+  }
+
+  Future<void> _loop() async {
+    while (_running && mounted) {
+      try {
+        final result = await _service.syncChat(
+          _courseId,
+          since: _cursor,
+          waitSeconds: _holdSeconds,
+        );
+        if (!_running || !mounted) return;
+
+        if (result.cursor.isNotEmpty) {
+          _cursor = DateTime.tryParse(result.cursor) ?? _cursor;
+        }
+
+        if (result.messages.isEmpty) {
+          // Quiet window — the server simply timed out its hold.
+          state = state.copyWith(isLive: true, error: null);
+          continue;
+        }
+
+        // Bump the revision of every room that received something, so an
+        // open thread knows to pull the new messages in.
+        final revision = Map<String, int>.from(state.revision);
+        for (final message in result.messages) {
+          revision[message.roomKey] = (revision[message.roomKey] ?? 0) + 1;
+        }
+
+        state = state.copyWith(
+          rooms: result.rooms.isNotEmpty ? result.rooms : state.rooms,
+          totalUnread: result.totalUnread,
+          revision: revision,
+          isLive: true,
+          error: null,
+        );
+      } catch (e) {
+        if (!_running || !mounted) return;
+        state = state.copyWith(isLive: false);
+        await Future.delayed(_retryDelay);
+      }
+    }
+  }
+
+  /// Clears a room's badge locally the moment it is opened, so the UI does not
+  /// wait for the next sync to catch up with what the server already knows.
+  void markRoomRead(String roomKey) {
+    final rooms = state.rooms.map((room) {
+      if (room.key != roomKey || room.unreadCount == 0) return room;
+      return ChatRoomSummary(
+        key: room.key,
+        type: room.type,
+        title: room.title,
+        subtitle: room.subtitle,
+        lastMessageContent: room.lastMessageContent,
+        lastMessageSender: room.lastMessageSender,
+        lastMessageHasAttachment: room.lastMessageHasAttachment,
+        lastMessageAt: room.lastMessageAt,
+        unreadCount: 0,
+        groupId: room.groupId,
+        conversationId: room.conversationId,
+        contact: room.contact,
+      );
+    }).toList();
+
+    state = state.copyWith(
+      rooms: rooms,
+      totalUnread: rooms.fold<int>(0, (sum, r) => sum + r.unreadCount),
+    );
+  }
+
+  @override
+  void dispose() {
+    _running = false;
+    super.dispose();
+  }
+}
+
+final chatInboxProvider =
+    StateNotifierProvider.family<ChatInboxNotifier, ChatInboxState, String>(
+        (ref, courseId) {
+  final notifier = ChatInboxNotifier(ref.watch(communityServiceProvider), courseId);
+  ref.onDispose(notifier.stop);
+  return notifier;
+});
+
+// ─────────────────────────────────────────────
 //  Mutations
 // ─────────────────────────────────────────────
 
