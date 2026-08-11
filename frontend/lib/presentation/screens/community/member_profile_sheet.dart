@@ -294,13 +294,15 @@ class _MemberProfileBody extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () async {
+                  onPressed: () {
                     Navigator.of(context).pop();
-                    await openDirectChatWithUser(
+                    openDirectChatWithUser(
                       context,
                       ref,
                       member.id,
                       displayName: member.fullName,
+                      avatarUrl: member.avatar,
+                      roleLabel: member.isTeacher ? 'Teacher' : 'Student',
                       contextLabel: profile.currentlyStudying,
                       contextCourseId: courseId,
                     );

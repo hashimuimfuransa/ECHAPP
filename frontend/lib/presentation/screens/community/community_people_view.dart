@@ -300,6 +300,8 @@ class _MemberCard extends ConsumerWidget {
                 ref,
                 member.id,
                 displayName: member.fullName,
+                avatarUrl: member.avatar,
+                roleLabel: member.isTeacher ? 'Teacher' : 'Student',
               ),
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 19),
               color: CT.primary,

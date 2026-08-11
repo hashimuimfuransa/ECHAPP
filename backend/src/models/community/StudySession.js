@@ -195,6 +195,20 @@ studySessionSchema.methods.isWithinJoinWindow = function (now = new Date()) {
   return now.getTime() >= start - early && now.getTime() <= end + late;
 };
 
+/**
+ * Whether the session has not yet run its course.
+ *
+ * The organiser is held to this rather than the narrow join window: opening
+ * the room early to set up (or because everyone already turned up) is a
+ * deliberate act, and making them wait served no one.
+ */
+studySessionSchema.methods.isBeforeEnd = function (now = new Date()) {
+  if (!this.scheduledAt) return false;
+  const end =
+    new Date(this.scheduledAt).getTime() + (this.durationMinutes || 60) * 60 * 1000;
+  return now.getTime() <= end + this.constructor.LATE_JOIN_MINUTES * 60 * 1000;
+};
+
 studySessionSchema.methods.isParticipant = function (userId) {
   const id = String(userId);
   return (this.participants || []).some((p) => String(p.userId) === id);

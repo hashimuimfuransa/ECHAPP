@@ -98,8 +98,10 @@ class _ConversationTile extends StatelessWidget {
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => DirectChatScreen(
-            conversationId: conversation.id,
+            target: ChatTarget.conversation(conversation.id),
             contactName: contact?.fullName ?? 'Chat',
+            contactAvatar: contact?.avatar,
+            contactRole: contact?.roleLabel,
           ),
         ),
       ),
@@ -337,13 +339,17 @@ class _ContactPickerState extends ConsumerState<_ContactPicker> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: CommunityCard(
                       padding: const EdgeInsets.all(12),
-                      onTap: () async {
+                      onTap: () {
+                        // Close the picker first so the chat replaces it
+                        // rather than stacking on top of a sheet.
                         Navigator.of(context).pop();
-                        await openDirectChatWithUser(
+                        openDirectChatWithUser(
                           context,
                           ref,
                           contact.id,
                           displayName: contact.fullName,
+                          avatarUrl: contact.avatar,
+                          roleLabel: contact.roleLabel,
                         );
                       },
                       child: Row(

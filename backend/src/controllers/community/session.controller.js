@@ -44,6 +44,13 @@ const mapSession = (session, userId, isTeacher = false) => {
   const isActive = session.status === 'scheduled' || session.status === 'live';
   const isFull = participants.length >= session.maxParticipants;
 
+  // The organiser may open the room any time before the session's window
+  // closes; attendees wait for the narrower join window.
+  const beforeEnd = expectedEndAt
+    ? now.getTime() <= expectedEndAt.getTime() + lateMs
+    : false;
+  const moderatorCanOpen = canModerate && isActive && beforeEnd;
+
   return {
     id: String(session._id),
     topic: session.topic,
@@ -80,14 +87,18 @@ const mapSession = (session, userId, isTeacher = false) => {
         : null,
     isMine: isOrganiser,
     canModerate,
-    /** The organiser may open the room once the early-join window is reached. */
-    canStart: canModerate && isActive && withinWindow && session.status !== 'live',
-    /** Everyone else may enter once the room is actually live. */
-    canJoin:
-      isActive &&
-      withinWindow &&
-      (canModerate || session.status === 'live') &&
-      (Boolean(mine) || !isFull),
+    /** The organiser can open the room at any point before the session ends. */
+    canStart: moderatorCanOpen && session.status !== 'live',
+    /**
+     * Whether this caller can enter right now — unrestricted for the organiser
+     * while the session is still current, gated on the room actually being
+     * live for everyone else.
+     */
+    canJoin: moderatorCanOpen ||
+        (isActive &&
+            withinWindow &&
+            session.status === 'live' &&
+            (Boolean(mine) || !isFull)),
     isWithinJoinWindow: withinWindow,
     createdAt: session.createdAt
   };
@@ -329,7 +340,14 @@ class SessionController {
       const isOrganiser = String(session.createdBy) === String(userId);
       const canModerate = isOrganiser || isTeacher;
 
-      if (!session.isWithinJoinWindow()) {
+      // The organiser can open the room whenever they like, right up to the
+      // end of the session's window. Attendees wait for the join window so a
+      // BBB room is not spun up hours ahead by someone tapping around.
+      if (canModerate) {
+        if (!session.isBeforeEnd()) {
+          return sendError(res, 'This session\'s time has passed', 400);
+        }
+      } else if (!session.isWithinJoinWindow()) {
         const start = new Date(session.scheduledAt);
         if (Date.now() < start.getTime()) {
           return sendError(

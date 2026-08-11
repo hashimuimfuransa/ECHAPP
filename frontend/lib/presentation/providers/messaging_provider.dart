@@ -34,6 +34,33 @@ final messageContactsProvider =
 //  A single thread
 // ─────────────────────────────────────────────
 
+/// Identifies a chat thread by whichever handle the caller has.
+///
+/// The inbox knows the conversation; a "Message" button only knows the other
+/// person. Accepting both lets the screen navigate instantly and resolve in
+/// the background, instead of blocking on a round trip before it opens.
+class ChatTarget {
+  final String? conversationId;
+  final String? userId;
+
+  const ChatTarget.conversation(String id)
+      : conversationId = id,
+        userId = null;
+
+  const ChatTarget.user(String id)
+      : userId = id,
+        conversationId = null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChatTarget &&
+      other.conversationId == conversationId &&
+      other.userId == userId;
+
+  @override
+  int get hashCode => Object.hash(conversationId, userId);
+}
+
 class DirectChatState {
   final DirectConversation? conversation;
   final List<DirectMessage> messages;
@@ -73,11 +100,16 @@ class DirectChatState {
 class DirectChatNotifier extends StateNotifier<DirectChatState> {
   final MessagingService _service;
   final Ref _ref;
-  final String _conversationId;
+  final ChatTarget _target;
   Timer? _poller;
 
-  DirectChatNotifier(this._service, this._ref, this._conversationId)
-      : super(const DirectChatState());
+  /// Filled in once the thread is known — either handed to us, or resolved
+  /// from the other person's user id on first load.
+  String? _conversationId;
+
+  DirectChatNotifier(this._service, this._ref, this._target)
+      : _conversationId = _target.conversationId,
+        super(const DirectChatState());
 
   /// No socket layer yet — the open thread refreshes on a short timer.
   /// Swapping in a socket later only touches this notifier.
@@ -86,7 +118,24 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
   Future<void> load({bool silent = false}) async {
     if (!silent) state = state.copyWith(isLoading: true, error: null);
     try {
-      final result = await _service.getMessages(_conversationId);
+      // Opening from a "Message" button gives us a user id, not a thread.
+      // Resolving it also returns the first page, so this stays one round trip.
+      if (_conversationId == null) {
+        final opened = await _service.openConversation(_target.userId!);
+        _conversationId = opened.conversation.id;
+        if (!mounted) return;
+        state = state.copyWith(
+          conversation: opened.conversation,
+          messages: opened.messages,
+          hasMore: opened.hasMore,
+          isLoading: false,
+        );
+        _ref.invalidate(messagesUnreadProvider);
+        _ref.invalidate(conversationsProvider);
+        return;
+      }
+
+      final result = await _service.getMessages(_conversationId!);
       if (!mounted) return;
       state = state.copyWith(
         conversation: result.conversation,
@@ -108,11 +157,12 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
   }
 
   Future<void> loadOlder() async {
-    if (state.messages.isEmpty || !state.hasMore) return;
+    final id = _conversationId;
+    if (id == null || state.messages.isEmpty || !state.hasMore) return;
     final oldest = state.messages.first.createdAt;
     if (oldest == null) return;
     try {
-      final result = await _service.getMessages(_conversationId, before: oldest);
+      final result = await _service.getMessages(id, before: oldest);
       if (!mounted) return;
       state = state.copyWith(
         messages: [...result.messages, ...state.messages],
@@ -130,10 +180,15 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
     String? contextCourseId,
   }) async {
     if (content.trim().isEmpty) return false;
+    final id = _conversationId;
+    if (id == null) {
+      state = state.copyWith(error: 'Still opening the conversation — try again');
+      return false;
+    }
     state = state.copyWith(isSending: true, error: null);
     try {
       final message = await _service.sendMessage(
-        _conversationId,
+        id,
         content: content.trim(),
         replyTo: replyTo,
         contextLabel: contextLabel,
@@ -171,9 +226,11 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
   }
 
   Future<void> setBlocked(bool blocked) async {
+    final id = _conversationId;
+    if (id == null) return;
     try {
       final updated = await _service.updateConversation(
-        _conversationId,
+        id,
         blocked: blocked,
       );
       if (!mounted) return;
@@ -186,9 +243,11 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
   }
 
   Future<void> setMuted(bool muted) async {
+    final id = _conversationId;
+    if (id == null) return;
     try {
       final updated = await _service.updateConversation(
-        _conversationId,
+        id,
         muted: muted,
       );
       if (!mounted) return;
@@ -217,21 +276,7 @@ class DirectChatNotifier extends StateNotifier<DirectChatState> {
 }
 
 final directChatProvider =
-    StateNotifierProvider.family<DirectChatNotifier, DirectChatState, String>(
-        (ref, conversationId) {
-  return DirectChatNotifier(
-    ref.watch(messagingServiceProvider),
-    ref,
-    conversationId,
-  );
-});
-
-/// Opens (or resumes) the thread with a person and returns its id, so callers
-/// can navigate straight into the chat screen.
-final openConversationProvider =
-    FutureProvider.family<DirectConversation, String>((ref, userId) async {
-  final conversation =
-      await ref.watch(messagingServiceProvider).openConversation(userId);
-  ref.invalidate(conversationsProvider);
-  return conversation;
+    StateNotifierProvider.family<DirectChatNotifier, DirectChatState, ChatTarget>(
+        (ref, target) {
+  return DirectChatNotifier(ref.watch(messagingServiceProvider), ref, target);
 });

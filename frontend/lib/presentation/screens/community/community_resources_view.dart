@@ -1105,18 +1105,29 @@ class _SessionCardState extends ConsumerState<_SessionCard> {
       );
     }
 
-    // ── The organiser can open the room ──
-    if (s.canStart) {
-      return _PrimaryButton(
-        label: 'Open the room',
-        icon: Icons.play_circle_fill_rounded,
-        color: CT.primary,
-        isBusy: _isBusy,
-        onTap: _enterRoom,
+    // ── I organise this: opening the room is my action, not RSVP ──
+    if (s.canModerate) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _PrimaryButton(
+            label: 'Open the room',
+            icon: Icons.play_circle_fill_rounded,
+            color: CT.primary,
+            isBusy: _isBusy,
+            onTap: s.canStart ? _enterRoom : null,
+          ),
+          const SizedBox(height: 9),
+          _Notice(
+            icon: Icons.info_outline_rounded,
+            text: _organiserHint(s),
+            color: CT.subTextOf(context),
+          ),
+        ],
       );
     }
 
-    // ── Upcoming ──
+    // ── Upcoming, as an attendee ──
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1132,15 +1143,42 @@ class _SessionCardState extends ConsumerState<_SessionCard> {
         ),
         const SizedBox(height: 9),
         _Notice(
-          icon: s.canModerate ? Icons.lock_clock_rounded : Icons.notifications_active_rounded,
-          text: s.canModerate
-              ? 'You can open the room 15 minutes before the start time.'
-              : 'We will notify you a day before, 30 minutes before, and the '
-                  'moment the organiser opens the room.',
+          icon: Icons.notifications_active_rounded,
+          text: 'We will notify you a day before, 30 minutes before, and the '
+              'moment the organiser opens the room.',
           color: CT.subTextOf(context),
         ),
       ],
     );
+  }
+
+  /// Tells the organiser exactly what tapping "Open the room" will do, and
+  /// when — a bare "you can open it later" left people hunting for a button.
+  static String _organiserHint(StudySession s) {
+    if (!s.canStart) {
+      return 'This session\'s time has passed, so the room can no longer be opened.';
+    }
+
+    final until = s.timeUntilStart;
+    final peers = s.participantCount - 1;
+    final who = peers <= 0
+        ? 'Nobody else has signed up yet.'
+        : '$peers ${peers == 1 ? 'person' : 'people'} will be notified the '
+            'moment you open it.';
+
+    if (until == null || until == Duration.zero) {
+      return 'Tap to open the room and start now. $who';
+    }
+    if (until.inMinutes < 60) {
+      return 'Starts in ${until.inMinutes} min — you can open the room now to '
+          'set up early. $who';
+    }
+    if (until.inHours < 24) {
+      return 'Starts in ${until.inHours}h — open the room early if you want to '
+          'set up. $who';
+    }
+    return 'Scheduled for ${CT.formatDateTime(s.scheduledAt)}. You can open the '
+        'room whenever you are ready. $who';
   }
 
   static String _timingLabel(StudySession s) {

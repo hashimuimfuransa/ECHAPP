@@ -63,12 +63,24 @@ class MessagingService {
   }
 
   /// Opens (or resumes) the thread with someone. Idempotent.
-  Future<DirectConversation> openConversation(String userId) async {
+  ///
+  /// Returns the first page of messages too, so opening a chat from a
+  /// "Message" button costs one round trip rather than two.
+  Future<({DirectConversation conversation, List<DirectMessage> messages, bool hasMore})>
+      openConversation(String userId) async {
     final response = await _apiClient.post(
       '$_base/conversations',
       body: {'userId': userId},
     );
-    return DirectConversation.fromJson(_unwrap(response));
+    final data = _unwrap(response);
+    return (
+      conversation: DirectConversation.fromJson(
+          data['conversation'] as Map<String, dynamic>? ?? const {}),
+      messages: (data['messages'] as List? ?? [])
+          .map((m) => DirectMessage.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      hasMore: data['hasMore'] == true,
+    );
   }
 
   Future<({DirectConversation conversation, List<DirectMessage> messages, bool hasMore})>

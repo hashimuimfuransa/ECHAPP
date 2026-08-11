@@ -7,57 +7,45 @@ import '../community/community_theme.dart';
 
 /// Opens a one-to-one chat with someone.
 ///
-/// Resolves (or creates) the conversation first, so callers only need the
-/// other person's user id — which is what every "Message" button has.
-Future<void> openDirectChatWithUser(
+/// Navigates immediately and lets the screen resolve the conversation, rather
+/// than blocking behind a modal spinner: the caller only has a user id, and
+/// waiting on a round trip before opening made the chat feel frozen.
+void openDirectChatWithUser(
   BuildContext context,
   WidgetRef ref,
   String userId, {
   String? displayName,
+  String? avatarUrl,
+  String? roleLabel,
   String? contextLabel,
   String? contextCourseId,
-}) async {
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(strokeWidth: 2.4, color: CT.primary),
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => DirectChatScreen(
+        target: ChatTarget.user(userId),
+        contactName: displayName ?? 'Chat',
+        contactAvatar: avatarUrl,
+        contactRole: roleLabel,
+        contextLabel: contextLabel,
+        contextCourseId: contextCourseId,
+      ),
     ),
   );
-
-  try {
-    final conversation =
-        await ref.read(messagingServiceProvider).openConversation(userId);
-    ref.invalidate(conversationsProvider);
-
-    if (!context.mounted) return;
-    Navigator.of(context).pop(); // dismiss the loader
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DirectChatScreen(
-          conversationId: conversation.id,
-          contactName: conversation.contact?.fullName ?? displayName ?? 'Chat',
-          contextLabel: contextLabel,
-          contextCourseId: contextCourseId,
-        ),
-      ),
-    );
-  } catch (e) {
-    if (!context.mounted) return;
-    Navigator.of(context).pop();
-    communitySnack(
-      context,
-      e.toString().replaceFirst('Exception: ', ''),
-      isError: true,
-    );
-  }
 }
 
 /// A one-to-one conversation.
+///
+/// [target] may be a known conversation (from the inbox) or just the other
+/// person (from a "Message" button) — the notifier resolves either.
 class DirectChatScreen extends ConsumerStatefulWidget {
-  final String conversationId;
+  final ChatTarget target;
+
+  /// Shown in the app bar straight away, before the thread has loaded, so the
+  /// screen never opens on an empty header.
   final String contactName;
+  final String? contactAvatar;
+  final String? contactRole;
 
   /// Optional "about X" tag attached to the first message, so a chat started
   /// from a course or group carries that context with it.
@@ -66,8 +54,10 @@ class DirectChatScreen extends ConsumerStatefulWidget {
 
   const DirectChatScreen({
     super.key,
-    required this.conversationId,
+    required this.target,
     required this.contactName,
+    this.contactAvatar,
+    this.contactRole,
     this.contextLabel,
     this.contextCourseId,
   });
@@ -87,7 +77,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final notifier = ref.read(directChatProvider(widget.conversationId).notifier);
+      final notifier = ref.read(directChatProvider(widget.target).notifier);
       notifier.load();
       notifier.startPolling();
     });
@@ -97,7 +87,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
   void dispose() {
     // The notifier is provider-scoped and outlives this widget, so stop its
     // timer explicitly rather than leaving it polling in the background.
-    ref.read(directChatProvider(widget.conversationId).notifier).stopPolling();
+    ref.read(directChatProvider(widget.target).notifier).stopPolling();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -122,7 +112,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
     setState(() => _replyTarget = null);
 
     final sent = await ref
-        .read(directChatProvider(widget.conversationId).notifier)
+        .read(directChatProvider(widget.target).notifier)
         .send(
           text,
           replyTo: replyTo,
@@ -135,17 +125,17 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
       _contextSent = true;
       _scrollToBottom();
     } else if (mounted) {
-      final error = ref.read(directChatProvider(widget.conversationId)).error;
+      final error = ref.read(directChatProvider(widget.target)).error;
       communitySnack(context, error ?? 'Message could not be sent', isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(directChatProvider(widget.conversationId));
+    final state = ref.watch(directChatProvider(widget.target));
     final contact = state.conversation?.contact;
 
-    ref.listen(directChatProvider(widget.conversationId), (previous, next) {
+    ref.listen(directChatProvider(widget.target), (previous, next) {
       if ((previous?.messages.length ?? 0) < next.messages.length) {
         _scrollToBottom();
       }
@@ -160,7 +150,14 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            _ContactAvatar(contact: contact, name: widget.contactName, size: 34),
+            // Falls back to what the caller handed us, so the header is fully
+            // drawn on the first frame instead of popping in once loaded.
+            _ContactAvatar(
+              contact: contact,
+              name: widget.contactName,
+              fallbackAvatar: widget.contactAvatar,
+              size: 34,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -176,9 +173,9 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
                       color: CT.textOf(context),
                     ),
                   ),
-                  if (contact != null)
+                  if (contact != null || widget.contactRole != null)
                     Text(
-                      contact.roleLabel,
+                      contact?.roleLabel ?? widget.contactRole!,
                       style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                     ),
                 ],
@@ -251,7 +248,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
                     : RefreshIndicator(
                         color: CT.primary,
                         onRefresh: () => ref
-                            .read(directChatProvider(widget.conversationId).notifier)
+                            .read(directChatProvider(widget.target).notifier)
                             .loadOlder(),
                         child: ListView.builder(
                           controller: _scrollController,
@@ -274,7 +271,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
                                   onDelete: message.isMine
                                       ? () => ref
                                           .read(directChatProvider(
-                                                  widget.conversationId)
+                                                  widget.target)
                                               .notifier)
                                           .deleteMessage(message.id)
                                       : null,
@@ -294,7 +291,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
             _BlockedBanner(
               blockedByMe: state.conversation!.isBlockedByMe,
               onUnblock: () => ref
-                  .read(directChatProvider(widget.conversationId).notifier)
+                  .read(directChatProvider(widget.target).notifier)
                   .setBlocked(false),
             )
           else
@@ -309,8 +306,8 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
   }
 
   Future<void> _onMenu(String value) async {
-    final notifier = ref.read(directChatProvider(widget.conversationId).notifier);
-    final conversation = ref.read(directChatProvider(widget.conversationId)).conversation;
+    final notifier = ref.read(directChatProvider(widget.target).notifier);
+    final conversation = ref.read(directChatProvider(widget.target)).conversation;
     if (conversation == null) return;
 
     if (value == 'mute') {
@@ -368,16 +365,22 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
 class _ContactAvatar extends StatelessWidget {
   final MessageContact? contact;
   final String name;
+  final String? fallbackAvatar;
   final double size;
 
-  const _ContactAvatar({this.contact, required this.name, this.size = 44});
+  const _ContactAvatar({
+    this.contact,
+    required this.name,
+    this.fallbackAvatar,
+    this.size = 44,
+  });
 
   @override
   Widget build(BuildContext context) {
     final displayName = contact?.fullName ?? name;
     final seed = contact?.id ?? displayName;
     final color = CT.avatarColor(seed);
-    final avatar = contact?.avatar;
+    final avatar = contact?.avatar ?? fallbackAvatar;
 
     return Container(
       width: size,

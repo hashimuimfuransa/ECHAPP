@@ -153,9 +153,14 @@ class MessagingController {
   /**
    * Open (or resume) a conversation with someone. Idempotent — tapping
    * "Message" repeatedly always lands on the same thread.
+   *
+   * Returns the first page of messages alongside the conversation. The app
+   * opens a chat with only a user id in hand, and making it round-trip twice
+   * (resolve, then fetch) doubled the time to first paint on a cold backend.
    */
   async openConversation(req, res) {
     try {
+      const userId = req.user._id;
       const { userId: targetId } = req.body;
 
       const permission = await canMessage(req.user, targetId);
@@ -163,24 +168,47 @@ class MessagingController {
         return sendForbidden(res, permission.reason);
       }
 
-      const conversation = await DirectConversation.findOrCreate(
-        req.user._id,
-        targetId
-      );
+      const conversation = await DirectConversation.findOrCreate(userId, targetId);
 
       // Re-opening a thread the user had hidden brings it back.
-      if ((conversation.hiddenBy || []).some((h) => String(h) === String(req.user._id))) {
+      if ((conversation.hiddenBy || []).some((h) => String(h) === String(userId))) {
         conversation.hiddenBy = conversation.hiddenBy.filter(
-          (h) => String(h) !== String(req.user._id)
+          (h) => String(h) !== String(userId)
         );
         await conversation.save();
       }
 
-      const populated = await DirectConversation.findById(conversation._id)
-        .populate('participants', PUBLIC_USER_FIELDS)
-        .lean();
+      const [populated, messages] = await Promise.all([
+        DirectConversation.findById(conversation._id)
+          .populate('participants', PUBLIC_USER_FIELDS)
+          .lean(),
+        DirectMessage.find({ conversationId: conversation._id })
+          .sort({ createdAt: -1 })
+          .limit(40)
+          .populate('senderId', PUBLIC_USER_FIELDS)
+          .populate({ path: 'replyTo', select: 'content' })
+          .lean()
+      ]);
 
-      return sendSuccess(res, mapConversation(populated, req.user._id), 'Conversation ready');
+      // Opening the thread clears its unread badge — same as listMessages.
+      if (messages.length > 0) {
+        Promise.all([
+          DirectMessage.updateMany(
+            { conversationId: conversation._id, recipientId: userId, readAt: null },
+            { $set: { readAt: new Date() } }
+          ),
+          DirectConversation.updateOne(
+            { _id: conversation._id, 'unread.userId': userId },
+            { $set: { 'unread.$.count': 0 } }
+          )
+        ]).catch((e) => console.error('Failed to clear unread on open:', e.message));
+      }
+
+      return sendSuccess(res, {
+        conversation: mapConversation(populated, userId),
+        messages: messages.reverse().map((m) => mapMessage(m, userId)),
+        hasMore: messages.length === 40
+      }, 'Conversation ready');
     } catch (error) {
       console.error('Error opening conversation:', error);
       return sendError(res, 'Failed to open the conversation', 500, error.message);
