@@ -65,7 +65,14 @@ class _CommunityDashboardViewState extends ConsumerState<CommunityDashboardView>
         child: ListView(
           padding: EdgeInsets.fromLTRB(16, widget.embedded ? 12 : 16, 16, 90),
           children: [
-            _Header(overview: overview),
+            _Header(
+              overview: overview,
+              // Embedded in the learning screen, the header doubles as the way
+              // out to the full-page community.
+              onOpenFull: widget.embedded
+                  ? () => widget.onOpenSection(CommunitySection.home)
+                  : null,
+            ),
             const SizedBox(height: 14),
             _QuickActions(
               overview: overview,
@@ -114,6 +121,12 @@ class _CommunityDashboardViewState extends ConsumerState<CommunityDashboardView>
                 onOpen: () => widget.onOpenSection(CommunitySection.resources),
               ),
             ],
+            if (widget.embedded) ...[
+              const SizedBox(height: 22),
+              _OpenFullCommunityButton(
+                onTap: () => widget.onOpenSection(CommunitySection.home),
+              ),
+            ],
             const SizedBox(height: 24),
             _Tagline(courseTitle: overview.courseTitle),
           ],
@@ -129,7 +142,11 @@ class _CommunityDashboardViewState extends ConsumerState<CommunityDashboardView>
 
 class _Header extends StatelessWidget {
   final CommunityOverview overview;
-  const _Header({required this.overview});
+
+  /// Set only when the dashboard is embedded — opens the full-page community.
+  final VoidCallback? onOpenFull;
+
+  const _Header({required this.overview, this.onOpenFull});
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +227,22 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (onOpenFull != null) ...[
+                const SizedBox(width: 6),
+                Material(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: CT.r12,
+                  child: InkWell(
+                    onTap: onOpenFull,
+                    borderRadius: CT.r12,
+                    child: const Padding(
+                      padding: EdgeInsets.all(9),
+                      child: Icon(Icons.open_in_full_rounded,
+                          size: 17, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -1131,18 +1164,27 @@ class _NextSession extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLive = session.isLive;
     return CommunityCard(
-      accent: CT.accent,
+      accent: isLive ? CT.danger : CT.accent,
       onTap: onOpen,
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: CT.purpleGrad),
+              gradient: LinearGradient(
+                colors: isLive
+                    ? [CT.danger, const Color(0xFFB91C1C)]
+                    : CT.purpleGrad,
+              ),
               borderRadius: CT.r12,
             ),
-            child: const Icon(Icons.event_rounded, color: Colors.white, size: 19),
+            child: Icon(
+              isLive ? Icons.sensors_rounded : Icons.event_rounded,
+              color: Colors.white,
+              size: 19,
+            ),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -1150,8 +1192,12 @@ class _NextSession extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Next study session',
-                  style: TextStyle(fontSize: 10.5, color: CT.subTextOf(context)),
+                  isLive ? 'Study session live now' : 'Next study session',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isLive ? FontWeight.w800 : FontWeight.w500,
+                    color: isLive ? CT.danger : CT.subTextOf(context),
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -1166,13 +1212,83 @@ class _NextSession extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${CT.formatDateTime(session.scheduledAt)} · '
-                  '${session.participantCount} joining',
+                  isLive
+                      ? '${session.participantCount} in the room · tap to join'
+                      : '${CT.formatDateTime(session.scheduledAt)} · '
+                          '${session.participantCount} going',
                   style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                 ),
               ],
             ),
           ),
+          if (isLive)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(color: CT.danger, borderRadius: CT.r8),
+              child: const Text(
+                'LIVE',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom call-to-action shown only in the embedded (learning screen) view —
+/// the dashboard is a summary, and this opens the full community with every
+/// section: students, discussions, chat, groups, work and resources.
+class _OpenFullCommunityButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _OpenFullCommunityButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return CommunityCard(
+      accent: CT.primary,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: CT.heroGrad),
+              borderRadius: CT.r12,
+            ),
+            child: const Icon(Icons.open_in_full_rounded,
+                size: 18, color: Colors.white),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Open the full community',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: CT.textOf(context),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Students · Discussions · Chat · Groups · Work · Resources',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, size: 20, color: CT.subTextOf(context)),
         ],
       ),
     );

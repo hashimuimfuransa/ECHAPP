@@ -1024,11 +1024,17 @@ class _WorkTab extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: CT.accent.withOpacity(0.12),
+                          color: (session.isLive ? CT.danger : CT.accent)
+                              .withOpacity(0.12),
                           borderRadius: CT.r8,
                         ),
-                        child: const Icon(Icons.event_rounded,
-                            size: 16, color: CT.accent),
+                        child: Icon(
+                          session.isLive
+                              ? Icons.sensors_rounded
+                              : Icons.event_rounded,
+                          size: 16,
+                          color: session.isLive ? CT.danger : CT.accent,
+                        ),
                       ),
                       const SizedBox(width: 11),
                       Expanded(
@@ -1047,16 +1053,41 @@ class _WorkTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '${CT.formatDateTime(session.scheduledAt)} · '
-                              '${session.participantCount} joining',
+                              session.isLive
+                                  ? 'Live now · ${session.participantCount} in the room'
+                                  : '${CT.formatDateTime(session.scheduledAt)} · '
+                                      '${session.participantCount} going',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: CT.subTextOf(context),
+                                fontWeight: session.isLive
+                                    ? FontWeight.w700
+                                    : FontWeight.w400,
+                                color: session.isLive
+                                    ? CT.danger
+                                    : CT.subTextOf(context),
                               ),
                             ),
                           ],
                         ),
                       ),
+                      if (session.isLive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: CT.danger,
+                            borderRadius: CT.r8,
+                          ),
+                          child: const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

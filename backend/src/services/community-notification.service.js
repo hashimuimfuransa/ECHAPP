@@ -128,6 +128,79 @@ class CommunityNotificationService {
     });
   }
 
+  /**
+   * Countdown reminders fired by the session scheduler. `stage` decides the
+   * wording; the scheduler guarantees each stage fires at most once.
+   */
+  static async sessionReminder({ recipientIds, courseId, sessionId, topic, scheduledAt, stage }) {
+    const time = scheduledAt
+      ? new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    const copy = {
+      dayBefore: {
+        title: '📅 Study session tomorrow',
+        message: `"${topic}" is tomorrow at ${time}. Confirm you are coming.`
+      },
+      thirtyMinutes: {
+        title: '⏰ Study session in 30 minutes',
+        message: `"${topic}" starts at ${time}. Get your notes ready.`
+      },
+      starting: {
+        title: '🔴 Study session starting now',
+        message: `"${topic}" is starting. Tap to join the room.`
+      }
+    }[stage];
+
+    if (!copy) return;
+
+    return this.notifyMany(recipientIds, {
+      ...copy,
+      type: 'reminder',
+      data: { courseId, community: { area: 'sessions', sessionId } }
+    });
+  }
+
+  static async sessionStarted({ recipientIds, courseId, sessionId, topic, organiserName, excludeUserId }) {
+    return this.notifyMany(recipientIds, {
+      title: '🔴 Study session is live',
+      message: `${organiserName} opened the room for "${topic}"`,
+      type: 'reminder',
+      data: { courseId, community: { area: 'sessions', sessionId } },
+      excludeUserId
+    });
+  }
+
+  static async sessionRescheduled({ recipientIds, courseId, sessionId, topic, scheduledAt, excludeUserId }) {
+    const when = scheduledAt ? new Date(scheduledAt).toLocaleString() : 'a new time';
+    return this.notifyMany(recipientIds, {
+      title: '📅 Study session moved',
+      message: `"${topic}" has been rescheduled to ${when}`,
+      type: 'warning',
+      data: { courseId, community: { area: 'sessions', sessionId } },
+      excludeUserId
+    });
+  }
+
+  static async sessionCancelled({ recipientIds, courseId, sessionId, topic, excludeUserId }) {
+    return this.notifyMany(recipientIds, {
+      title: '❌ Study session cancelled',
+      message: `"${topic}" is no longer going ahead`,
+      type: 'warning',
+      data: { courseId, community: { area: 'sessions', sessionId } },
+      excludeUserId
+    });
+  }
+
+  static async sessionRecordingReady({ recipientIds, courseId, sessionId, topic }) {
+    return this.notifyMany(recipientIds, {
+      title: '🎥 Session recording ready',
+      message: `The recording of "${topic}" is available to watch back`,
+      type: 'success',
+      data: { courseId, community: { area: 'sessions', sessionId } }
+    });
+  }
+
   static async helpRequestPosted({ recipientIds, courseId, postId, askerName, excludeUserId }) {
     return this.notifyMany(recipientIds, {
       title: '🆘 Someone needs help',

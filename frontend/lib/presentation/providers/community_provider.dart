@@ -694,10 +694,35 @@ class CommunityActions {
     return session;
   }
 
-  Future<bool> toggleSessionParticipation(String courseId, String sessionId) async {
-    final joined = await _service.toggleSessionParticipation(courseId, sessionId);
+  Future<StudySession> rsvpSession(String courseId, String sessionId) async {
+    final session = await _service.rsvpSession(courseId, sessionId);
     _ref.invalidate(communitySessionsProvider);
-    return joined;
+    _refreshFeed(courseId);
+    return session;
+  }
+
+  /// Returns the meeting URL to open. For the organiser this also opens the
+  /// room, which flips the session live and notifies everyone attending.
+  Future<SessionJoinTicket> joinSessionRoom(String courseId, String sessionId) async {
+    final ticket = await _service.joinSessionRoom(courseId, sessionId);
+    _ref.invalidate(communitySessionsProvider);
+    _refreshFeed(courseId);
+    return ticket;
+  }
+
+  Future<void> endSession(String courseId, String sessionId) async {
+    await _service.endSession(courseId, sessionId);
+    _ref.invalidate(communitySessionsProvider);
+    _refreshFeed(courseId);
+  }
+
+  Future<({String? url, int duration, bool processing})> fetchSessionRecording(
+    String courseId,
+    String sessionId,
+  ) async {
+    final recording = await _service.getSessionRecording(courseId, sessionId);
+    if (recording.url != null) _ref.invalidate(communitySessionsProvider);
+    return recording;
   }
 
   Future<void> cancelSession(String courseId, String sessionId) async {

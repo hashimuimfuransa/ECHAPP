@@ -907,43 +907,83 @@ class CommunityResource {
   bool get isFromTeacher => source == 'teacher';
 }
 
+/// A peer study meeting. Runs on the platform's BigBlueButton server unless
+/// the organiser supplied their own link (`meetingProvider == 'external'`).
 class StudySession {
   final String id;
   final String topic;
   final String description;
   final DateTime? scheduledAt;
+  final DateTime? expectedEndAt;
   final int durationMinutes;
   final List<String> agenda;
   final int maxParticipants;
   final int participantCount;
   final List<CommunityMember> participants;
+
+  /// I said I am coming (RSVP) — distinct from having entered the room.
   final bool isJoined;
-  final String? meetingLink;
+  final bool hasAttended;
+
+  /// scheduled | live | completed | cancelled
   final String status;
+  final bool isLive;
+  final bool isPast;
+
+  /// bbb | external
+  final String meetingProvider;
+  final String? meetingLink;
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+
+  final String? recordingUrl;
+  final int recordingDuration;
+
   final String? groupId;
   final String? groupName;
   final CommunityMember? organiser;
   final bool isMine;
-  final bool isPast;
+
+  /// I organise this session, or I teach this course.
+  final bool canModerate;
+
+  /// The room can be opened right now (organiser only, once the window opens).
+  final bool canStart;
+
+  /// I can enter the room right now.
+  final bool canJoin;
+  final bool isWithinJoinWindow;
 
   const StudySession({
     required this.id,
     required this.topic,
     this.description = '',
     this.scheduledAt,
+    this.expectedEndAt,
     this.durationMinutes = 60,
     this.agenda = const [],
     this.maxParticipants = 10,
     this.participantCount = 0,
     this.participants = const [],
     this.isJoined = false,
-    this.meetingLink,
+    this.hasAttended = false,
     this.status = 'scheduled',
+    this.isLive = false,
+    this.isPast = false,
+    this.meetingProvider = 'bbb',
+    this.meetingLink,
+    this.startedAt,
+    this.endedAt,
+    this.recordingUrl,
+    this.recordingDuration = 0,
     this.groupId,
     this.groupName,
     this.organiser,
     this.isMine = false,
-    this.isPast = false,
+    this.canModerate = false,
+    this.canStart = false,
+    this.canJoin = false,
+    this.isWithinJoinWindow = false,
   });
 
   factory StudySession.fromJson(Map<String, dynamic> json) {
@@ -953,6 +993,7 @@ class StudySession {
       topic: _str(json['topic']) ?? '',
       description: _str(json['description']) ?? '',
       scheduledAt: _parseDate(json['scheduledAt']),
+      expectedEndAt: _parseDate(json['expectedEndAt']),
       durationMinutes: _parseInt(json['durationMinutes']) ?? 60,
       agenda: _stringList(json['agenda']),
       maxParticipants: _parseInt(json['maxParticipants']) ?? 10,
@@ -962,17 +1003,63 @@ class StudySession {
           .map(CommunityMember.fromJson)
           .toList(),
       isJoined: json['isJoined'] == true,
-      meetingLink: _str(json['meetingLink']),
+      hasAttended: json['hasAttended'] == true,
       status: _str(json['status']) ?? 'scheduled',
+      isLive: json['isLive'] == true,
+      isPast: json['isPast'] == true,
+      meetingProvider: _str(json['meetingProvider']) ?? 'bbb',
+      meetingLink: _str(json['meetingLink']),
+      startedAt: _parseDate(json['startedAt']),
+      endedAt: _parseDate(json['endedAt']),
+      recordingUrl: _str(json['recordingUrl']),
+      recordingDuration: _parseInt(json['recordingDuration']) ?? 0,
       groupId: group != null ? _str(group['id']) : null,
       groupName: group != null ? _str(group['name']) : null,
       organiser: json['organiser'] != null
           ? CommunityMember.fromJson(json['organiser'] as Map<String, dynamic>)
           : null,
       isMine: json['isMine'] == true,
-      isPast: json['isPast'] == true,
+      canModerate: json['canModerate'] == true,
+      canStart: json['canStart'] == true,
+      canJoin: json['canJoin'] == true,
+      isWithinJoinWindow: json['isWithinJoinWindow'] == true,
     );
   }
+
+  bool get isCancelled => status == 'cancelled';
+  bool get isCompleted => status == 'completed';
+  bool get isFull => participantCount >= maxParticipants;
+  bool get runsOnPlatform => meetingProvider == 'bbb';
+  bool get hasRecording => (recordingUrl ?? '').isNotEmpty;
+
+  /// Countdown shown before the room opens ("Opens in 12 min").
+  Duration? get timeUntilStart {
+    if (scheduledAt == null) return null;
+    final diff = scheduledAt!.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
+  }
+}
+
+/// What the backend hands back when you ask to enter a session's room.
+class SessionJoinTicket {
+  final String provider;
+  final String joinUrl;
+  final bool isModerator;
+  final String status;
+
+  const SessionJoinTicket({
+    required this.provider,
+    required this.joinUrl,
+    this.isModerator = false,
+    this.status = 'live',
+  });
+
+  factory SessionJoinTicket.fromJson(Map<String, dynamic> json) => SessionJoinTicket(
+        provider: _str(json['provider']) ?? 'bbb',
+        joinUrl: _str(json['joinUrl']) ?? '',
+        isModerator: json['isModerator'] == true,
+        status: _str(json['status']) ?? 'live',
+      );
 }
 
 // ─────────────────────────────────────────────

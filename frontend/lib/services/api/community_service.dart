@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+
 import '../../config/api_config.dart';
 import '../../models/community.dart';
 import '../infrastructure/api_client.dart';
@@ -17,9 +19,24 @@ class CommunityService {
   String _base(String courseId) => ApiConfig.communityCourse(courseId);
 
   /// Unwraps `{ success, message, data }` and throws on a non-2xx status.
-  Map<String, dynamic> _unwrap(dynamic response) {
+  ///
+  /// The parameter is statically typed as [http.Response] on purpose:
+  /// `validateStatus` comes from an extension, and extension methods only
+  /// resolve against a static type — a `dynamic` parameter would compile but
+  /// blow up at runtime with NoSuchMethodError.
+  Map<String, dynamic> _unwrap(http.Response response) {
     response.validateStatus();
-    final body = jsonDecode(response.body as String);
+
+    final raw = response.body.trim();
+    if (raw.isEmpty) return <String, dynamic>{};
+
+    final Object? body;
+    try {
+      body = jsonDecode(raw);
+    } catch (_) {
+      throw ApiException('The community service returned an unreadable response');
+    }
+
     if (body is! Map<String, dynamic>) {
       throw ApiException('Unexpected response from the community service');
     }
@@ -219,7 +236,7 @@ class CommunityService {
     final path = replyId == null
         ? '${_base(courseId)}/posts/$postId/like'
         : '${_base(courseId)}/posts/$postId/replies/$replyId/like';
-    final data = _unwrap(await _apiClient.post(path, body: const {}));
+    final data = _unwrap(await _apiClient.post(path, body: const <String, dynamic>{}));
     return (
       liked: data['liked'] == true,
       likeCount: (data['likeCount'] as num?)?.toInt() ?? 0,
@@ -241,7 +258,7 @@ class CommunityService {
   Future<bool> acceptReply(String courseId, String postId, String replyId) async {
     final data = _unwrap(await _apiClient.post(
       '${_base(courseId)}/posts/$postId/replies/$replyId/accept',
-      body: const {},
+      body: const <String, dynamic>{},
     ));
     return data['accepted'] == true;
   }
@@ -346,12 +363,12 @@ class CommunityService {
 
   Future<String> joinGroup(String courseId, String groupId) async {
     final data = _unwrap(
-        await _apiClient.post('${_base(courseId)}/groups/$groupId/join', body: const {}));
+        await _apiClient.post('${_base(courseId)}/groups/$groupId/join', body: const <String, dynamic>{}));
     return data['status']?.toString() ?? 'active';
   }
 
   Future<void> leaveGroup(String courseId, String groupId) async {
-    _unwrap(await _apiClient.post('${_base(courseId)}/groups/$groupId/leave', body: const {}));
+    _unwrap(await _apiClient.post('${_base(courseId)}/groups/$groupId/leave', body: const <String, dynamic>{}));
   }
 
   Future<int> inviteToGroup(
@@ -668,7 +685,7 @@ class CommunityService {
     String resourceId,
   ) async {
     final data = _unwrap(await _apiClient
-        .post('${_base(courseId)}/resources/$resourceId/like', body: const {}));
+        .post('${_base(courseId)}/resources/$resourceId/like', body: const <String, dynamic>{}));
     return (
       liked: data['liked'] == true,
       likeCount: (data['likeCount'] as num?)?.toInt() ?? 0,
@@ -722,10 +739,67 @@ class CommunityService {
     return StudySession.fromJson(_unwrap(response));
   }
 
-  Future<bool> toggleSessionParticipation(String courseId, String sessionId) async {
-    final data = _unwrap(await _apiClient
-        .post('${_base(courseId)}/sessions/$sessionId/join', body: const {}));
-    return data['joined'] == true;
+  Future<StudySession> getSession(String courseId, String sessionId) async {
+    final response = await _apiClient.get('${_base(courseId)}/sessions/$sessionId');
+    return StudySession.fromJson(_unwrap(response));
+  }
+
+  /// Toggle "I'm coming". Does not open the meeting room.
+  Future<StudySession> rsvpSession(String courseId, String sessionId) async {
+    final response = await _apiClient.post(
+      '${_base(courseId)}/sessions/$sessionId/rsvp',
+      body: const <String, dynamic>{},
+    );
+    return StudySession.fromJson(_unwrap(response));
+  }
+
+  /// Ask for a meeting URL.
+  ///
+  /// For the organiser this *opens* the room (creating the BigBlueButton
+  /// meeting on first call); for everyone else it fails with a clear message
+  /// until the organiser has started it.
+  Future<SessionJoinTicket> joinSessionRoom(String courseId, String sessionId) async {
+    final response = await _apiClient.post(
+      '${_base(courseId)}/sessions/$sessionId/join',
+      body: const <String, dynamic>{},
+    );
+    return SessionJoinTicket.fromJson(_unwrap(response));
+  }
+
+  /// Organiser closes the room and settles attendance.
+  Future<StudySession> endSession(String courseId, String sessionId) async {
+    final response = await _apiClient.post(
+      '${_base(courseId)}/sessions/$sessionId/end',
+      body: const <String, dynamic>{},
+    );
+    return StudySession.fromJson(_unwrap(response));
+  }
+
+  Future<StudySession> updateSession(
+    String courseId,
+    String sessionId,
+    Map<String, dynamic> changes,
+  ) async {
+    final response = await _apiClient.put(
+      '${_base(courseId)}/sessions/$sessionId',
+      body: changes,
+    );
+    return StudySession.fromJson(_unwrap(response));
+  }
+
+  /// Recordings process asynchronously on the BBB server — a null URL with
+  /// `processing: true` means "not ready yet", not "never recorded".
+  Future<({String? url, int duration, bool processing})> getSessionRecording(
+    String courseId,
+    String sessionId,
+  ) async {
+    final data = _unwrap(
+        await _apiClient.get('${_base(courseId)}/sessions/$sessionId/recording'));
+    return (
+      url: data['recordingUrl'] as String?,
+      duration: (data['recordingDuration'] as num?)?.toInt() ?? 0,
+      processing: data['processing'] == true,
+    );
   }
 
   Future<void> cancelSession(String courseId, String sessionId) async {

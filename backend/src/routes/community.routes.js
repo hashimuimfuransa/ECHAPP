@@ -10,6 +10,7 @@ const groupController = require('../controllers/community/group.controller');
 const assignmentController = require('../controllers/community/assignment.controller');
 const chatController = require('../controllers/community/chat.controller');
 const resourceController = require('../controllers/community/resource.controller');
+const sessionController = require('../controllers/community/session.controller');
 
 /**
  * Course Community API — every route lives under a course, and
@@ -112,11 +113,17 @@ router.patch(
   resourceController.approveResource
 );
 
-// ── Study sessions ──────────────────────────────────────────────
-router.get('/:courseId/sessions', resourceController.listSessions);
-router.post('/:courseId/sessions', resourceController.createSession);
-router.post('/:courseId/sessions/:sessionId/join', resourceController.joinSession);
-router.put('/:courseId/sessions/:sessionId', resourceController.updateSession);
-router.delete('/:courseId/sessions/:sessionId', resourceController.deleteSession);
+// ── Study sessions (BigBlueButton-backed peer meetings) ─────────
+router.get('/:courseId/sessions', sessionController.listSessions);
+router.post('/:courseId/sessions', sessionController.createSession);
+router.get('/:courseId/sessions/:sessionId', sessionController.getSession);
+router.put('/:courseId/sessions/:sessionId', sessionController.updateSession);
+router.delete('/:courseId/sessions/:sessionId', sessionController.cancelSession);
+// RSVP ("I'm coming") is separate from actually entering the room
+router.post('/:courseId/sessions/:sessionId/rsvp', sessionController.rsvp);
+// Returns a BBB join URL — the organiser's first call opens the room
+router.post('/:courseId/sessions/:sessionId/join', sessionController.join);
+router.post('/:courseId/sessions/:sessionId/end', sessionController.end);
+router.get('/:courseId/sessions/:sessionId/recording', sessionController.getRecording);
 
 module.exports = router;
