@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/community.dart';
 import '../../providers/community_provider.dart';
+import '../messages/direct_chat_screen.dart';
 import 'community_theme.dart';
 import 'member_profile_sheet.dart';
 import 'sheets/create_post_sheet.dart' show communityTextField, CommunitySheetFooter;
@@ -213,14 +214,14 @@ class _CommunityPeopleViewState extends ConsumerState<CommunityPeopleView>
   }
 }
 
-class _MemberCard extends StatelessWidget {
+class _MemberCard extends ConsumerWidget {
   final String courseId;
   final CommunityMember member;
 
   const _MemberCard({required this.courseId, required this.member});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return CommunityCard(
       padding: const EdgeInsets.all(13),
       accent: member.isTeacher ? CT.teacher : null,
@@ -291,7 +292,23 @@ class _MemberCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, size: 20, color: CT.subTextOf(context)),
+          // Straight into a private chat, without the profile detour.
+          if (!member.isMe)
+            IconButton(
+              onPressed: () => openDirectChatWithUser(
+                context,
+                ref,
+                member.id,
+                displayName: member.fullName,
+              ),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 19),
+              color: CT.primary,
+              tooltip: 'Message ${member.fullName.split(' ').first}',
+              visualDensity: VisualDensity.compact,
+            )
+          else
+            Icon(Icons.chevron_right_rounded,
+                size: 20, color: CT.subTextOf(context)),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/community_provider.dart';
+import '../messages/direct_chat_screen.dart';
 import 'community_theme.dart';
 import 'group_workspace_screen.dart';
 
@@ -289,12 +290,45 @@ class _MemberProfileBody extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 22),
+            if (!member.isMe)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await openDirectChatWithUser(
+                      context,
+                      ref,
+                      member.id,
+                      displayName: member.fullName,
+                      contextLabel: profile.currentlyStudying,
+                      contextCourseId: courseId,
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_rounded, size: 17),
+                  label: Text(
+                    member.isTeacher
+                        ? 'Message your teacher'
+                        : 'Message ${member.fullName.split(' ').first}',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CT.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: const RoundedRectangleBorder(borderRadius: CT.r12),
+                    textStyle: const TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 14),
             Text(
               member.isTeacher
-                  ? 'Ask your teacher a question from the Discussions tab so the '
-                      'whole class can benefit from the answer.'
-                  : 'Invite ${member.fullName.split(' ').first} to a study group '
-                      'from the Groups tab, or tag them in a discussion.',
+                  ? 'For anything the whole class would benefit from, the '
+                      'Discussions tab is a better place than a private message.'
+                  : 'You can also invite ${member.fullName.split(' ').first} to a '
+                      'study group from the Groups tab.',
               style: TextStyle(
                 fontSize: 11.5,
                 height: 1.5,

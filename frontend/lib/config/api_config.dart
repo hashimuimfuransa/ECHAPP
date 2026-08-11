@@ -61,6 +61,9 @@ class ApiConfig {
   // Course Community endpoints (students, groups, discussions, assignments)
   static String get community => '$baseUrl/community';
   static String communityCourse(String courseId) => '$community/$courseId';
+
+  // Direct messaging endpoints (one-to-one chat)
+  static String get messages => '$baseUrl/messages';
 }
 
 class StorageKeys {

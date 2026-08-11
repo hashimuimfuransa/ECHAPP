@@ -115,6 +115,7 @@ class MainLayout extends ConsumerWidget {
     if (currentRoute.contains('/courses')) currentPage = 'courses';
     if (currentRoute.contains('/my-courses')) currentPage = 'my-courses';
     if (currentRoute.contains('/community')) currentPage = 'community';
+    if (currentRoute.contains('/messages')) currentPage = 'messages';
     if (currentRoute.contains('/categories')) currentPage = 'categories';
     if (currentRoute.contains('/certificates')) currentPage = 'certificates';
     if (currentRoute.contains('/downloads')) currentPage = 'downloads';
@@ -190,6 +191,7 @@ class MainLayout extends ConsumerWidget {
       case 'courses': return l10n?.courses ?? 'Courses';
       case 'my-courses': return l10n?.myLearning ?? 'My Learning';
       case 'community': return 'Community';
+      case 'messages': return 'Messages';
       case 'categories': return l10n?.categories ?? 'Categories';
       case 'certificates': return l10n?.certificates ?? 'Certificates';
       case 'downloads': return l10n?.downloads ?? 'Downloads';

@@ -73,6 +73,7 @@ import 'package:excellencecoachinghub/presentation/screens/library/book_reader_s
 import 'package:excellencecoachinghub/presentation/screens/community/community_hub_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/community/course_community_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/community/community_section.dart';
+import 'package:excellencecoachinghub/presentation/screens/messages/messages_screen.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/offline_route_policy.dart';
@@ -726,6 +727,11 @@ class AppRouter {
                     state.uri.queryParameters['section'],
                   ),
                 ),
+              ),
+              // One-to-one messaging inbox
+              GoRoute(
+                path: '/messages',
+                builder: (context, state) => const MessagesScreen(),
               ),
               GoRoute(
                 path: '/upcoming-sessions',
