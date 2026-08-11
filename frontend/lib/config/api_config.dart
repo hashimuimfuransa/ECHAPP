@@ -57,6 +57,10 @@ class ApiConfig {
 
   // Feedback endpoints
   static String get feedback => '$baseUrl/feedback';
+
+  // Course Community endpoints (students, groups, discussions, assignments)
+  static String get community => '$baseUrl/community';
+  static String communityCourse(String courseId) => '$community/$courseId';
 }
 
 class StorageKeys {

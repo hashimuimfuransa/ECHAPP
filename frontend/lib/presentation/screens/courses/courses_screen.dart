@@ -18,6 +18,18 @@ import 'package:excellencecoachinghub/widgets/enhanced_course_navigation.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 
+// Desktop course-grid metrics. The card height is derived from these, so any
+// change to the card's padding or body rows belongs here too.
+const double _kDesktopCardMaxWidth = 300;
+const double _kDesktopCardSpacing = 16;
+const double _kDesktopCardPadding = 14;
+
+/// Everything below the thumbnail: padding, title (2 lines), instructor, meta
+/// row, rating row and the price/action row. Measured content is ~176px; the
+/// remainder is slack absorbed by the Spacer so font-metric differences across
+/// platforms cannot overflow the cell.
+const double _kDesktopCardBodyHeight = 206;
+
 class CoursesScreen extends ConsumerStatefulWidget {
   final String? categoryId;
   final String? categoryName;
@@ -1537,19 +1549,35 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           ),
         ));
       } else if (isDesktop) {
-        final gridCount = ResponsiveGridCount(context);
-        slivers.add(SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: gridCount.crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: gridCount.childAspectRatio,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => _buildResponsiveCourseCard(
-                context, categoryCourses[index], enrolledCourses),
-            childCount: categoryCourses.length,
-          ),
+        // A ratio-based grid made cards taller as the window widened, leaving a
+        // large dead gap above the price row. Cap the card width instead and
+        // derive the height from the 16:9 thumbnail plus a fixed body.
+        slivers.add(SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final double available = constraints.crossAxisExtent;
+            final int columns = (available /
+                    (_kDesktopCardMaxWidth + _kDesktopCardSpacing))
+                .ceil()
+                .clamp(1, 8);
+            final double cardWidth =
+                (available - _kDesktopCardSpacing * (columns - 1)) / columns;
+            final double thumbHeight =
+                (cardWidth - _kDesktopCardPadding * 2) * 9 / 16;
+
+            return SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: _kDesktopCardSpacing,
+                mainAxisSpacing: _kDesktopCardSpacing,
+                mainAxisExtent: thumbHeight + _kDesktopCardBodyHeight,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildResponsiveCourseCard(
+                    context, categoryCourses[index], enrolledCourses),
+                childCount: categoryCourses.length,
+              ),
+            );
+          },
         ));
       } else {
         slivers.add(SliverList(
@@ -1806,7 +1834,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
+          borderRadius: BorderRadius.circular(isDesktop ? 14 : 12),
           boxShadow: [
             BoxShadow(
               color: Theme.of(context).shadowColor.withOpacity(0.08),
@@ -1822,7 +1850,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 18 : 14),
+          padding: EdgeInsets.all(isDesktop ? _kDesktopCardPadding : 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1958,7 +1986,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: isDesktop ? 14 : 10),
+              SizedBox(height: isDesktop ? 10 : 10),
 
               Flexible(
                 child: Column(
@@ -1969,25 +1997,26 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                       course.title ?? 'Untitled Course',
                       style: TextStyle(
                         color: AppTheme.getTextColor(context),
-                        fontSize: isDesktop ? 16 : 14,
+                        fontSize: isDesktop ? 15 : 14,
                         fontWeight: FontWeight.w600,
+                        height: 1.25,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: isDesktop ? 4 : 2),
+                    SizedBox(height: isDesktop ? 3 : 2),
 
                     // Instructor
                     Text(
                       'by ${course.displayInstructor}',
                       style: TextStyle(
                         color: AppTheme.greyColor,
-                        fontSize: isDesktop ? 12 : 11,
+                        fontSize: isDesktop ? 11 : 11,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: isDesktop ? 8 : 4),
+                    SizedBox(height: isDesktop ? 6 : 4),
 
                     // Duration and Students
                     Row(
@@ -2021,7 +2050,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                         ),
                       ],
                     ),
-                    SizedBox(height: isDesktop ? 8 : 4),
+                    SizedBox(height: isDesktop ? 6 : 4),
 
                     // Rating and Level
                     Row(

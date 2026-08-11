@@ -5,7 +5,9 @@ final sidebarProvider = StateNotifierProvider<SidebarNotifier, bool>((ref) {
 });
 
 class SidebarNotifier extends StateNotifier<bool> {
-  SidebarNotifier() : super(false); // Default: not collapsed
+  // Default: collapsed to an icon rail, the way most modern desktop apps
+  // start. The user can expand it from the top bar at any time.
+  SidebarNotifier() : super(true);
 
   void toggleSidebar() {
     state = !state;

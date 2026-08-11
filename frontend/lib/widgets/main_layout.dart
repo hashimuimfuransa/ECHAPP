@@ -92,22 +92,9 @@ class MainLayout extends ConsumerWidget {
     final user = ref.watch(authProvider.select((state) => state.user));
     final String currentRoute = GoRouterState.of(context).uri.path;
     
-    // Responsive sidebar auto-collapse - only watch the value, not the entire state
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool shouldBeCollapsed = screenWidth < 1100 && screenWidth >= 600;
-    
-    // Use addPostFrameCallback to avoid updating state during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        final isCurrentlyCollapsed = ref.read(sidebarProvider);
-        if (shouldBeCollapsed && !isCurrentlyCollapsed) {
-          ref.read(sidebarProvider.notifier).setCollapsed(true);
-        } else if (screenWidth >= 1100 && isCurrentlyCollapsed) {
-          // Optional: auto-expand on larger screens if previously auto-collapsed
-          // ref.read(sidebarProvider.notifier).setCollapsed(false);
-        }
-      }
-    });
+    // The sidebar now starts collapsed (see SidebarNotifier), so narrow windows
+    // are already handled at launch. Re-collapsing on every build would undo the
+    // user's own toggle the moment they pressed it, so their choice is kept.
 
     // Watch only the boolean value, not the entire notifier state
     final isCollapsed = ref.watch(sidebarProvider);
@@ -127,6 +114,7 @@ class MainLayout extends ConsumerWidget {
     String currentPage = 'dashboard';
     if (currentRoute.contains('/courses')) currentPage = 'courses';
     if (currentRoute.contains('/my-courses')) currentPage = 'my-courses';
+    if (currentRoute.contains('/community')) currentPage = 'community';
     if (currentRoute.contains('/categories')) currentPage = 'categories';
     if (currentRoute.contains('/certificates')) currentPage = 'certificates';
     if (currentRoute.contains('/downloads')) currentPage = 'downloads';
@@ -201,6 +189,7 @@ class MainLayout extends ConsumerWidget {
       case 'dashboard': return l10n?.dashboard ?? 'Dashboard';
       case 'courses': return l10n?.courses ?? 'Courses';
       case 'my-courses': return l10n?.myLearning ?? 'My Learning';
+      case 'community': return 'Community';
       case 'categories': return l10n?.categories ?? 'Categories';
       case 'certificates': return l10n?.certificates ?? 'Certificates';
       case 'downloads': return l10n?.downloads ?? 'Downloads';
@@ -436,7 +425,7 @@ class MainLayout extends ConsumerWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: _getResponsiveNavBarPadding(context),
-            vertical: 6,
+            vertical: 4,
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -528,7 +517,7 @@ class MainLayout extends ConsumerWidget {
               ),
               child: Icon(
                 icon,
-                size: iconSize * 0.6,
+                size: iconSize * 0.75,
                 color: itemColor,
               ),
             ),
@@ -608,17 +597,21 @@ class MainLayout extends ConsumerWidget {
   }
 
   // Responsive helper methods for bottom navigation
-  double _getResponsiveNavBarHeight(BuildContext context) {
+
+  /// Height of the bar's own content, excluding the system gesture inset.
+  double _getNavBarContentHeight(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    if (screenHeight < 600) {
-      return 100; // Very small screens - compact but fits larger icons/text
-    } else if (screenHeight < 700) {
-      return 110; // Small screens - compact but fits larger icons/text
-    } else if (screenHeight < 800) {
-      return 120; // Medium screens - compact but fits larger icons/text
-    } else {
-      return 130; // Large screens - compact but fits larger icons/text
-    }
+    if (screenHeight < 600) return 50;
+    if (screenHeight < 700) return 52;
+    return 56;
+  }
+
+  /// Total bar height. The gesture inset is added on top of the content budget
+  /// rather than carved out of it, so the bar stays the same visual size on
+  /// devices with and without a gesture bar.
+  double _getResponsiveNavBarHeight(BuildContext context) {
+    return _getNavBarContentHeight(context) +
+        MediaQuery.of(context).padding.bottom;
   }
 
   double _getResponsiveNavBarPadding(BuildContext context) {
@@ -635,33 +628,33 @@ class MainLayout extends ConsumerWidget {
   double _getResponsiveNavIconSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 24; // Increased for very small screens
+      return 22; // Very small screens
     } else if (screenWidth < 400) {
-      return 28; // Increased for small screens
+      return 24; // Small screens
     } else {
-      return 32; // Increased for medium/large screens
+      return 26; // Medium/large screens
     }
   }
 
   double _getResponsiveNavIconRadius(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 10; // Very small screens - increased
+      return 8; // Very small screens
     } else if (screenWidth < 400) {
-      return 12; // Small screens - increased
+      return 9; // Small screens
     } else {
-      return 14; // Medium and large screens - increased
+      return 10; // Medium and large screens
     }
   }
 
   double _getResponsiveNavTextSize(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return 11; // Very small screens - increased for readability
+      return 10; // Very small screens
     } else if (screenWidth < 400) {
-      return 12; // Small screens - increased for readability
+      return 10.5; // Small screens
     } else {
-      return 14; // Medium and large screens - increased for readability
+      return 11; // Medium and large screens
     }
   }
 

@@ -72,6 +72,7 @@ const bbbAdminRoutes = require('./src/routes/admin/bbb.routes'); // BBB Admin ro
 const backupRoutes = require('./src/routes/backup.routes'); // Database backup routes
 const videoCleanupRoutes = require('./src/routes/videoCleanup.routes'); // Orphaned S3 video cleanup routes (read-only, see S3_VIDEO_CLEANUP.md)
 const mediaRoutes = require('./src/routes/media.routes'); // Media proxy for CORS-safe image/video serving on web
+const communityRoutes = require('./src/routes/community.routes'); // Course Community (students, groups, discussions, assignments)
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -98,6 +99,7 @@ app.use('/api/voice', voiceChatRoutes); // Voice Chat routes
 app.use('/api/books', bookRoutes); // Book routes
 app.use('/api/teacher', teacherRoutes); // Teacher routes
 app.use('/api/live', liveSessionRoutes); // Live Session routes
+app.use('/api/community', communityRoutes); // Course Community routes
 
 // Handle undefined routes
 app.use((req, res) => {

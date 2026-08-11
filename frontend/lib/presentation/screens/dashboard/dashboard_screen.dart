@@ -599,6 +599,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Single spacing rhythm for the top of the dashboard.
+    final double sectionGap = isMobile ? 16 : 22;
 
     // Cache resolved values to prevent repeated when() calls
     final List<Course> popularCourses = popularCoursesAsync.when(
@@ -629,20 +631,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-          // Modern Header with Gradient
+          // Brand header + floating account summary card
           SliverToBoxAdapter(
-            child: _buildModernHeader(context, user),
+            child: _buildDashboardHero(context, user, userEnrollmentsAsync),
           ),
+          // Even rhythm: the same gap sits above and below the search bar.
+          SliverToBoxAdapter(child: SizedBox(height: sectionGap)),
           // Offline Banner
           if (_isOffline)
             SliverToBoxAdapter(
               child: _buildOfflineBanner(context),
             ),
           // Search Bar with Dropdown
-          if (!_isOffline)
+          if (!_isOffline) ...[
             SliverToBoxAdapter(
               child: _buildSearchBarWithDropdown(context),
             ),
+            SliverToBoxAdapter(child: SizedBox(height: sectionGap)),
+          ],
           // Main Content (continues)
           if (!_isOffline)
             SliverPadding(
@@ -697,8 +703,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   _buildUpcomingLiveSessions(context, enrolledCourses),
                                   const SizedBox(height: 20),
                                   _buildQuickActions(context),
-                                  const SizedBox(height: 24),
-                                  _buildProgressStats(context, enrollments),
                                   const SizedBox(height: 24),
                                   _buildRecommendedCourses(
                                     context,
@@ -756,8 +760,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                         const SizedBox(height: 18),
                         _buildUpdateInterestsCard(context),
-                        const SizedBox(height: 18),
-                        _buildLiveClassesContactCard(context),
                         const SizedBox(height: 18),
                         _buildExamPreparationCard(context),
                         const SizedBox(height: 24),
@@ -838,9 +840,272 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   // Compact Modern Header - Minimal style like modern apps
-  Widget _buildModernHeader(BuildContext context, user) {
+  // ===========================================================================
+  // HERO SECTION
+  // Brand header (coloured) with the account summary card floating over it.
+  // Every height here comes from fixed-size rows, so the overlap stays exact
+  // on any screen size, notch depth or text scale factor.
+  // ===========================================================================
+
+  Widget _buildDashboardHero(
+    BuildContext context,
+    dynamic user,
+    AsyncValue<List<Enrollment>> enrollmentsAsync,
+  ) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topInset = MediaQuery.of(context).padding.top;
+
+    final double hPad = isMobile ? 16 : 28;
+    final double topBarHeight = isMobile ? 48 : 56;
+    final double topPad = isMobile ? 10 : 16;
+    final double gap = isMobile ? 20 : 26;
+    // How far the card climbs into the coloured backdrop.
+    final double overlap = isMobile ? 78 : 96;
+
+    final double backdropHeight =
+        topInset + topPad + topBarHeight + gap + overlap;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Stack(
+        children: [
+          // Coloured backdrop — stops part-way down the card.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: backdropHeight,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? const [AppTheme.primaryDark, Color(0xFF07111D)]
+                      : const [AppTheme.primary, AppTheme.primaryDark],
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(32),
+                ),
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              SizedBox(height: topInset + topPad),
+              _heroConstrained(
+                context,
+                hPad,
+                SizedBox(
+                  height: topBarHeight,
+                  child: _buildHeroTopBar(context),
+                ),
+              ),
+              SizedBox(height: gap),
+              _heroConstrained(
+                context,
+                hPad,
+                _buildAccountSummaryCard(context, user, enrollmentsAsync),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Centres hero content and caps it at the shared dashboard width so the
+  /// layout also reads well on tablets and desktop.
+  Widget _heroConstrained(BuildContext context, double hPad, Widget child) {
+    return Center(
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: hPad),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// Brand on the left, actions on the right.
+  /// NOTE: [context] must be the dashboard's own build context — the drawer
+  /// lives on the MainLayout shell Scaffold above this screen's Scaffold.
+  Widget _buildHeroTopBar(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+    final double logoSize = isMobile ? 36 : 42;
+
+    return Row(
+      children: [
+        if (isMobile) ...[
+          _buildHeroIconButton(
+            icon: Icons.menu_rounded,
+            tooltip: 'Menu',
+            onTap: () => Scaffold.of(context).openDrawer(),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Container(
+          width: logoSize,
+          height: logoSize,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            isSmall
+                ? 'Excellence Hub'
+                : (l10n?.appName ?? 'Excellence Coaching Hub'),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isMobile ? 16 : 19,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        _buildLanguageSwitcher(),
+        const SizedBox(width: 8),
+        _buildHeroNotificationButton(context),
+      ],
+    );
+  }
+
+  Widget _buildHeroNotificationButton(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final notifications = ref.watch(notificationProvider).notifications;
+        final unreadCount = notifications.where((n) => !n.isRead).length;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _buildHeroIconButton(
+              icon: unreadCount > 0
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_outlined,
+              tooltip: l10n?.notifications ?? 'Notifications',
+              onTap: () {
+                PushNotificationService.clearNotifications();
+                context.push('/notifications');
+              },
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 17,
+                    minHeight: 17,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Translucent 40x40 tile used for header actions on the coloured backdrop.
+  Widget _buildHeroIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.28)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ACCOUNT SUMMARY CARD
+  // Identity + the three headline learning metrics + the two primary actions.
+  // ---------------------------------------------------------------------------
+
+  Widget _buildAccountSummaryCard(
+    BuildContext context,
+    dynamic user,
+    AsyncValue<List<Enrollment>> enrollmentsAsync,
+  ) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final enrollments = enrollmentsAsync.when(
+      data: (data) => data,
+      loading: () => const <Enrollment>[],
+      error: (_, __) => const <Enrollment>[],
+    );
+    final isLoadingStats = enrollmentsAsync.when(
+      data: (_) => false,
+      loading: () => true,
+      error: (_, __) => false,
+    );
+
+    final coursesEnrolled = enrollments.length;
+    final coursesCompleted = enrollments.where((e) => e.progress >= 100).length;
+    final averageProgress = enrollments.isNotEmpty
+        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) /
+            enrollments.length
+        : 0.0;
+
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? (l10n?.goodMorning ?? 'Good morning')
@@ -848,161 +1113,275 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ? (l10n?.goodAfternoon ?? 'Good afternoon')
             : (l10n?.goodEvening ?? 'Good evening');
 
-    return Container(
-      color: isDark ? const Color(0xFF07111D) : const Color(0xFFF6F8FB),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            isMobile ? 16 : 28,
-            isMobile ? 12 : 16,
-            isMobile ? 16 : 28,
-            isMobile ? 16 : 20,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: _dashboardContentMaxWidth(context)),
-              child: Row(
-                children: [
-                  // Menu button to open drawer (mobile only)
-                  if (isMobile)
-                    _buildCompactHeaderButton(
-                      icon: Icons.menu_rounded,
-                      tooltip: 'Menu',
-                      onTap: () => Scaffold.of(context).openDrawer(),
-                      isDark: isDark,
-                    ),
-                  if (isMobile) const SizedBox(width: 12),
-                  // Profile Avatar
-                  _buildProfileAvatar(context, user, isMobile),
-                  const SizedBox(width: 12),
-                  // Greeting
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$greeting, ${user?.fullName?.split(" ")[0] ?? 'Student'}',
-                          style: TextStyle(
-                            fontSize: isMobile ? 18 : 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.getTextColor(context),
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Action Buttons
-                  Row(
-                    children: [
-                      _buildLanguageSwitcher(),
-                      const SizedBox(width: 8),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final notifications = ref
-                              .watch(notificationProvider)
-                              .notifications;
-                          final unreadCount = notifications
-                              .where((n) => !n.isRead)
-                              .length;
+    final rawName = (user?.fullName as String?)?.trim();
+    final displayName =
+        (rawName == null || rawName.isEmpty) ? 'Student' : rawName;
 
-                          return Stack(
-                            children: [
-                              _buildCompactHeaderButton(
-                                icon: unreadCount > 0
-                                    ? Icons.notifications_active_rounded
-                                    : Icons.notifications_outlined,
-                                tooltip: l10n?.notifications ?? 'Notifications',
-                                onTap: () {
-                                  PushNotificationService.clearNotifications();
-                                  context.push('/notifications');
-                                },
-                                isDark: isDark,
-                              ),
-                              if (unreadCount > 0)
-                                Positioned(
-                                  right: 2,
-                                  top: 2,
-                                  child: Container(
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEF4444),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: isDark
-                                            ? const Color(0xFF07111D)
-                                            : const Color(0xFFF6F8FB),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      unreadCount > 9
-                                          ? '9+'
-                                          : unreadCount.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
+    final dividerColor =
+        isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE9EEF4);
+
+    return Container(
+      padding: EdgeInsets.all(isSmall ? 14 : (isMobile ? 18 : 22)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111C2E) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE6ECF3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.38 : 0.10),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.22 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Identity row -------------------------------------------------
+          Row(
+            children: [
+              _buildAccountAvatar(context, user, isSmall ? 42 : 48),
+              SizedBox(width: isSmall ? 10 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      greeting,
+                      style: TextStyle(
+                        fontSize: isSmall ? 11 : 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getSecondaryTextColor(context),
+                        height: 1.2,
                       ),
-                    ],
-                  ),
-                ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontSize: isSmall ? 15 : (isMobile ? 17 : 19),
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextColor(context),
+                        letterSpacing: -0.4,
+                        height: 1.15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
+              _buildManageAccountButton(context, isSmall, isDark),
+            ],
+          ),
+          SizedBox(height: isSmall ? 14 : 18),
+          Container(height: 1, color: dividerColor),
+          SizedBox(height: isSmall ? 14 : 18),
+
+          // --- Headline metrics ---------------------------------------------
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildSummaryMetric(
+                    context,
+                    value: isLoadingStats ? '—' : '$coursesEnrolled',
+                    label: l10n?.enrolled ?? 'Enrolled',
+                  ),
+                ),
+                _buildMetricDivider(dividerColor),
+                Expanded(
+                  child: _buildSummaryMetric(
+                    context,
+                    value: isLoadingStats ? '—' : '$coursesCompleted',
+                    label: l10n?.completed ?? 'Completed',
+                  ),
+                ),
+                _buildMetricDivider(dividerColor),
+                Expanded(
+                  child: _buildSummaryMetric(
+                    context,
+                    value:
+                        isLoadingStats ? '—' : '${averageProgress.toInt()}%',
+                    label: 'Avg Progress',
+                  ),
+                ),
+              ],
             ),
+          ),
+          SizedBox(height: isSmall ? 16 : 20),
+
+          // --- Primary actions ----------------------------------------------
+          Row(
+            children: [
+              Expanded(
+                child: _buildPrimaryActionButton(
+                  context,
+                  icon: Icons.play_circle_fill_rounded,
+                  label: l10n?.myLearning ?? 'My Learning',
+                  color: AppTheme.primary,
+                  onTap: () => context.push('/my-courses'),
+                ),
+              ),
+              SizedBox(width: isSmall ? 10 : 12),
+              Expanded(
+                child: _buildPrimaryActionButton(
+                  context,
+                  icon: Icons.explore_rounded,
+                  label: l10n?.browseCourses ?? 'Browse Courses',
+                  color: AppTheme.accent,
+                  onTap: () => context.push('/courses'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManageAccountButton(
+      BuildContext context, bool isSmall, bool isDark) {
+    final tint = isDark ? AppTheme.primaryLight : AppTheme.primaryDark;
+
+    return Material(
+      color: AppTheme.primary.withOpacity(isDark ? 0.16 : 0.09),
+      borderRadius: BorderRadius.circular(30),
+      child: InkWell(
+        onTap: () => context.go('/profile'),
+        borderRadius: BorderRadius.circular(30),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(isSmall ? 10 : 12, 8, isSmall ? 6 : 8, 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isSmall ? 'Manage' : 'Manage Account',
+                style: TextStyle(
+                  fontSize: isSmall ? 10.5 : 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: tint,
+                  height: 1.1,
+                ),
+                maxLines: 1,
+              ),
+              Icon(Icons.chevron_right_rounded, size: 16, color: tint),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactHeaderButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    required bool isDark,
+  Widget _buildSummaryMetric(
+    BuildContext context, {
+    required String value,
+    required String label,
   }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : AppTheme.primary.withOpacity(0.1),
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: isSmall ? 22 : 26,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.getTextColor(context),
+              letterSpacing: -0.8,
+              height: 1.05,
+            ),
+            maxLines: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: isSmall ? 10 : 11,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.getSecondaryTextColor(context),
+            height: 1.2,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricDivider(Color color) {
+    return Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      color: color,
+    );
+  }
+
+  Widget _buildPrimaryActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: color.withOpacity(isDark ? 0.16 : 0.09),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 8 : 12,
+            vertical: isSmall ? 12 : 14,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(isDark ? 0.30 : 0.18),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: isSmall ? 18 : 20, color: color),
+              SizedBox(width: isSmall ? 6 : 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: isSmall ? 11.5 : 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.getTextColor(context),
+                    height: 1.15,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            child: Icon(
-              icon,
-              color: isDark ? Colors.white70 : AppTheme.primaryDark,
-              size: 20,
-            ),
+            ],
           ),
         ),
       ),
@@ -1013,13 +1392,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildNewUserWelcome(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = ref.watch(authProvider.select((state) => state.user));
-    final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? (l10n?.goodMorning ?? 'Good morning')
-        : hour < 17
-            ? (l10n?.goodAfternoon ?? 'Good afternoon')
-            : (l10n?.goodEvening ?? 'Good evening');
 
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 28),
@@ -1062,22 +1434,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$greeting, ${user?.fullName?.split(" ")[0] ?? 'Student'}!',
+                      l10n?.welcomeToExcellenceHub ??
+                          'Welcome to Excellence Hub!',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 20 : 24,
+                        fontSize: isMobile ? 19 : 23,
                         fontWeight: FontWeight.w800,
                         height: 1.2,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n?.welcomeToExcellenceHub ?? 'Welcome to Excellence Hub!',
+                      'Pick a course below to get started.',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
-                        fontSize: isMobile ? 14 : 16,
+                        fontSize: isMobile ? 13 : 15,
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -1146,36 +1523,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final currentLang = currentLocale.languageCode;
         
         return Container(
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.18),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: Colors.white.withOpacity(0.35),
-              width: 2,
+              color: Colors.white.withOpacity(0.28),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: PopupMenuButton<String>(
-            icon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  currentLang == 'en' ? '🇬🇧' : '🇷🇼',
-                  style: const TextStyle(fontSize: 20),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.arrow_drop_down,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
+            padding: EdgeInsets.zero,
+            icon: Text(
+              currentLang == 'en' ? '🇬🇧' : '🇷🇼',
+              style: const TextStyle(fontSize: 18),
             ),
             tooltip: 'Change Language',
             color: Theme.of(context).brightness == Brightness.dark
@@ -1245,122 +1606,93 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildProfileAvatar(BuildContext context, dynamic user, bool isMobile) {
-    final hasProfilePicture = user?.profilePicture != null && user!.profilePicture!.isNotEmpty;
+  /// Compact avatar for the account summary card. Falls back to the user's
+  /// initials, and keeps the "add a photo" affordance as a small badge —
+  /// tapping anywhere on it still opens the profile screen.
+  Widget _buildAccountAvatar(BuildContext context, dynamic user, double size) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final picture = user?.profilePicture as String?;
+    final hasProfilePicture = picture != null && picture.isNotEmpty;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: isMobile ? 64 : 80,
-          height: isMobile ? 64 : 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.5),
-              width: 3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: InkWell(
-            onTap: () => context.go('/profile'),
-            borderRadius: BorderRadius.circular(999),
-            child: ClipOval(
-              child: hasProfilePicture
-                  ? NetworkImageWidget(
-                      imageUrl: user.profilePicture!,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: Colors.white.withOpacity(0.25),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: isMobile ? 32 : 40,
-                          ),
-                          Positioned(
-                            bottom: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFBBF24),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt_rounded,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-        ),
-        if (!hasProfilePicture) ...[
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => context.go('/profile'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    return GestureDetector(
+      onTap: () => context.go('/profile'),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: size,
+              height: size,
               decoration: BoxDecoration(
-                color: const Color(0xFFFBBF24).withOpacity(0.9),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.primary.withOpacity(isDark ? 0.45 : 0.30),
+                  width: 2,
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.upload_rounded,
-                    color: AppTheme.primaryDark,
-                    size: isMobile ? 12 : 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Add Photo',
-                    style: TextStyle(
-                      color: AppTheme.primaryDark,
-                      fontSize: isMobile ? 10 : 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              child: ClipOval(
+                child: hasProfilePicture
+                    ? NetworkImageWidget(
+                        imageUrl: picture,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color:
+                            AppTheme.primary.withOpacity(isDark ? 0.22 : 0.12),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _initialsFor(user?.fullName as String?),
+                          style: TextStyle(
+                            fontSize: size * 0.34,
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? AppTheme.primaryLight
+                                : AppTheme.primaryDark,
+                          ),
+                        ),
+                      ),
               ),
             ),
-          ),
-        ],
-      ],
+            if (!hasProfilePicture)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBBF24),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF111C2E) : Colors.white,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: Colors.white,
+                    size: 9,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
+  }
+
+  /// Up to two initials from the user's name, e.g. "Jane Doe" -> "JD".
+  String _initialsFor(String? fullName) {
+    final parts = (fullName ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'S';
+    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+    return (parts.first.characters.first + parts[1].characters.first)
+        .toUpperCase();
   }
 
   List<BoxShadow> _softShadows(Color color, {double opacity = 0.10}) {
@@ -1393,23 +1725,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  BoxDecoration _liveClassesDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark 
-        ? const Color(0xFF0D2D1A) 
-        : const Color(0xFFECFDF5);
-    final borderColor = isDark 
-        ? const Color(0xFF10B981).withOpacity(0.3) 
-        : const Color(0xFF10B981).withOpacity(0.2);
-
-    return BoxDecoration(
-      color: baseColor,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: borderColor, width: 1.5),
-      boxShadow: _softShadows(const Color(0xFF10B981), opacity: isDark ? 0.2 : 0.12),
-    );
-  }
-
   BoxDecoration _examPreparationDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark 
@@ -1433,12 +1748,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     return Container(
-      margin: EdgeInsets.only(
-        left: isMobile ? 16 : 28,
-        right: isMobile ? 16 : 28,
-        top: 4,
-        bottom: 4,
-      ),
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
       height: isMobile ? 48 : 52,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F2937) : Colors.white,
@@ -1584,8 +1894,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       buttonIcon = Icons.play_arrow_rounded;
     }
 
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+    final double thumbSize = isSmall ? 44.0 : (isMobile ? 48.0 : 58.0);
+
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(isSmall ? 12 : (isMobile ? 14 : 18)),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1602,15 +1915,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   AppTheme.accent,
                 ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
             color: isCompleted
-                ? const Color(0xFF059669).withOpacity(0.3)
-                : AppTheme.primaryDark.withOpacity(0.28),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
+                ? const Color(0xFF059669).withOpacity(0.24)
+                : AppTheme.primaryDark.withOpacity(0.22),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -1622,11 +1935,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             children: [
               // Course thumbnail
               Container(
-                width: isMobile ? 56 : 68,
-                height: isMobile ? 56 : 68,
+                width: thumbSize,
+                height: thumbSize,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: Colors.white.withOpacity(0.2),
                     width: 1,
@@ -1635,7 +1948,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 child: lastCourse.thumbnail != null &&
                         lastCourse.thumbnail!.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         child: NetworkImageWidget(
                           imageUrl: lastCourse.thumbnail!,
                           fit: BoxFit.cover,
@@ -1644,17 +1957,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     : Icon(
                         isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded,
                         color: Colors.white,
-                        size: 28,
+                        size: 22,
                       ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: isSmall ? 10 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Status badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
@@ -1665,19 +1980,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             : isNotStarted
                                 ? (l10n?.notStarted ?? 'Not Started')
                                 : '${progressPercent}% ${l10n?.complete ?? 'Complete'}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
+                          height: 1.3,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       lastCourse.title,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: isMobile ? 16 : 18,
+                        fontSize: isSmall ? 14 : (isMobile ? 15 : 17),
                         fontWeight: FontWeight.w800,
                         height: 1.2,
                       ),
@@ -1689,89 +2005,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          // Enhanced Progress Bar
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          SizedBox(height: isSmall ? 11 : 13),
+          // Progress: one compact label line above a slim bar.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    isCompleted
-                        ? (l10n?.courseCompleted ?? 'Course Completed!')
-                        : (l10n?.yourProgress ?? 'Your Progress'),
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (!isCompleted)
-                    Text(
-                      '${100 - progressPercent}% ${l10n?.remaining ?? 'remaining'}',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Progress bar with better styling
-              Stack(
-                children: [
-                  Container(
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: progress,
-                    child: Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isCompleted
-                              ? [Colors.white, const Color(0xFFA7F3D0)]
-                              : [AppTheme.primaryLight, Colors.white],
-                        ),
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.4),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              // Progress percentage below bar
-              Align(
-                alignment: Alignment.centerRight,
+              Flexible(
                 child: Text(
-                  '$progressPercent%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                  isCompleted
+                      ? (l10n?.courseCompleted ?? 'Course Completed!')
+                      : (l10n?.yourProgress ?? 'Your Progress'),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: isSmall ? 11 : 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (!isCompleted)
+                Text(
+                  '${100 - progressPercent}% ${l10n?.remaining ?? 'remaining'}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: isSmall ? 10.5 : 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          Stack(
+            children: [
+              Container(
+                height: 7,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.22),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: progress,
+                child: Container(
+                  height: 7,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isCompleted
+                          ? [Colors.white, const Color(0xFFA7F3D0)]
+                          : [AppTheme.primaryLight, Colors.white],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmall ? 12 : 14),
           // Dynamic Action Button
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: isSmall ? 40 : 44,
             child: ElevatedButton(
               onPressed: () =>
                   CourseNavigationUtils.navigateToCourseWithContext(
@@ -1782,20 +2077,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ? const Color(0xFF059669)
                     : AppTheme.primaryDark,
                 elevation: 0,
+                padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(buttonIcon, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    buttonText,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                  Icon(buttonIcon, size: isSmall ? 17 : 19),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      buttonText,
+                      style: TextStyle(
+                        fontSize: isSmall ? 13 : 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -2250,116 +2550,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  // Progress Stats (Compact)
-  Widget _buildProgressStats(
-      BuildContext context, List<Enrollment> enrollments) {
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-
-    final coursesEnrolled = enrollments.length;
-    final coursesCompleted = enrollments.where((e) => e.progress >= 100).length;
-    final averageProgress = enrollments.isNotEmpty
-        ? enrollments.fold(0.0, (sum, e) => sum + e.progress) /
-            enrollments.length
-        : 0.0;
-
-    final statCards = [
-      _buildCompactStatCard(
-        context,
-        Icons.school_rounded,
-        '$coursesEnrolled',
-        'Enrolled',
-        AppTheme.primary,
-      ),
-      _buildCompactStatCard(
-        context,
-        Icons.verified_rounded,
-        '$coursesCompleted',
-        'Completed',
-        AppTheme.accent,
-      ),
-      _buildCompactStatCard(
-        context,
-        Icons.auto_graph_rounded,
-        '${averageProgress.toInt()}%',
-        'Avg Progress',
-        AppTheme.primaryDark,
-      ),
-    ];
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isMobile ? 0 : 0),
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: isMobile ? 8 : 12),
-      decoration: _modernPanelDecoration(
-        context,
-        accent: AppTheme.primary,
-      ),
-      child: Row(
-        children: statCards.map((card) => Expanded(child: card)).toList(),
-      ),
-    );
-  }
-
-  // Compact Stat Card
-  Widget _buildCompactStatCard(
-    BuildContext context,
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isMobile ? 3 : 4),
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 12, vertical: isMobile ? 6 : 10),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
-        border: Border.all(color: color.withOpacity(0.14)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: isMobile ? 22 : 32,
-            height: isMobile ? 22 : 32,
-            decoration: BoxDecoration(
-              color: color.withOpacity(isDark ? 0.18 : 0.12),
-              borderRadius: BorderRadius.circular(isMobile ? 5 : 8),
-            ),
-            child: Icon(icon, color: color, size: isMobile ? 12 : 18),
-          ),
-          SizedBox(width: isMobile ? 4 : 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: isMobile ? 13 : 18,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  height: 1.0,
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: isMobile ? 7 : 10,
-                  color: AppTheme.getSecondaryTextColor(context),
-                  fontWeight: FontWeight.w600,
-                  height: 1.0,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   // Stat Card (kept for other uses)
   Widget _buildStatCard(
     BuildContext context,
@@ -2415,156 +2605,159 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   // Quick Actions
+  // Quick Actions — deliberately compact: one low-profile row of small
+  // targets so it supports the dashboard instead of competing with it.
   Widget _buildQuickActions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
 
     final actions = [
       {
         'icon': Icons.play_lesson_rounded,
         'label': l10n?.myCourses ?? 'My Courses',
-        'subtitle': l10n?.resumeLessons ?? 'Resume lessons',
         'route': '/my-courses',
-        'color': AppTheme.primaryDark,
       },
       {
-        'icon': Icons.download_done_rounded,
-        'label': l10n?.downloads ?? 'Downloads',
-        'subtitle': l10n?.studyOffline ?? 'Study offline',
-        'route': '/downloads',
-        'color': AppTheme.accent,
+        'icon': Icons.groups_rounded,
+        'label': 'Community',
+        'route': '/community',
       },
       {
         'icon': Icons.verified_rounded,
         'label': l10n?.certificates ?? 'Certificates',
-        'subtitle': l10n?.showProgress ?? 'Show progress',
         'route': '/certificates',
-        'color': AppTheme.primary,
       },
       {
         'icon': Icons.local_library_rounded,
         'label': l10n?.library ?? 'E-Library',
-        'subtitle': l10n?.browseBooks ?? 'Browse books',
         'route': '/library',
-        'color': AppTheme.accent,
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n?.quickAccess ?? 'Quick Access',
-          style: TextStyle(
-            fontSize: isMobile ? 18 : 20,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.getTextColor(context),
-            letterSpacing: -0.5,
+        // Quiet label + an explicit hint that these are navigation shortcuts.
+        Padding(
+          padding: const EdgeInsets.only(left: 2, right: 2, bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n?.quickAccess ?? 'Quick Access',
+                  style: TextStyle(
+                    fontSize: isSmall ? 12 : 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.getTextColor(context),
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.touch_app_rounded,
+                size: isSmall ? 12 : 13,
+                color: AppTheme.getSecondaryTextColor(context),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Tap to open',
+                style: TextStyle(
+                  fontSize: isSmall ? 10 : 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.getSecondaryTextColor(context),
+                ),
+                maxLines: 1,
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final spacing = isMobile ? 10.0 : 12.0;
-            final columns = isMobile ? 2 : 4;
-            final itemWidth =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
-            final itemHeight = isMobile ? 116.0 : 128.0;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: actions.map((action) {
-                final color = action['color'] as Color;
-                return SizedBox(
-                  width: itemWidth,
-                  height: itemHeight,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => context.push(action['route'] as String),
-                      borderRadius: BorderRadius.circular(18),
-                      child: Ink(
-                        decoration: BoxDecoration(
-                          color:
-                              isDark ? const Color(0xFF111C2F) : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: color.withOpacity(0.16)),
-                          boxShadow: _softShadows(
-                            color,
-                            opacity: isDark ? 0.18 : 0.10,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(isMobile ? 10 : 14),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: isMobile ? 34 : 44,
-                                height: isMobile ? 34 : 44,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      color,
-                                      color.withOpacity(0.72),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color.withOpacity(0.24),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  action['icon'] as IconData,
-                                  color: Colors.white,
-                                  size: isMobile ? 18 : 22,
-                                ),
-                              ),
-                              SizedBox(height: isMobile ? 8 : 10),
-                              Flexible(
-                                child: Text(
-                                  action['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 12 : 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.getTextColor(context),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Flexible(
-                                child: Text(
-                                  action['subtitle'] as String,
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 10 : 12,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        AppTheme.getSecondaryTextColor(context),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            );
-          },
+        Row(
+          children: [
+            for (var i = 0; i < actions.length; i++) ...[
+              if (i > 0) SizedBox(width: isSmall ? 6 : 8),
+              Expanded(
+                child: _buildCompactQuickAction(
+                  context,
+                  icon: actions[i]['icon'] as IconData,
+                  label: actions[i]['label'] as String,
+                  onTap: () => context.push(actions[i]['route'] as String),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
+    );
+  }
+
+  /// A small but unmistakably tappable shortcut: each one is its own tinted,
+  /// bordered surface with a chevron cue, so it reads as a button rather than
+  /// as decoration — while still staying out of the way.
+  Widget _buildCompactQuickAction(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
+    final tint = isDark ? AppTheme.primaryLight : AppTheme.primaryDark;
+
+    return Material(
+      color: isDark
+          ? Colors.white.withOpacity(0.04)
+          : AppTheme.primary.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 4 : 6,
+            vertical: isSmall ? 9 : 10,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTheme.primary.withOpacity(isDark ? 0.26 : 0.18),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: isSmall ? 17 : 19, color: tint),
+              SizedBox(height: isSmall ? 5 : 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isSmall ? 9.5 : 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.getTextColor(context),
+                        height: 1.15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: isSmall ? 11 : 12,
+                    color: tint,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -2632,76 +2825,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
-                size: 16,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLiveClassesContactCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isMobile = ResponsiveBreakpoints.isMobile(context);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showContactInfoDialog(context),
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: EdgeInsets.all(isMobile ? 16 : 20),
-          decoration: _liveClassesDecoration(context),
-          child: Row(
-            children: [
-              Container(
-                width: isMobile ? 42 : 50,
-                height: isMobile ? 42 : 50,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.live_tv_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n?.liveClassesAvailable ?? 'Live Classes Available',
-                      style: TextStyle(
-                        fontSize: isMobile ? 15 : 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n?.liveClassesBenefit ?? 'Get real-time interaction, instant feedback & personalized guidance from instructors.',
-                      style: TextStyle(
-                        fontSize: isMobile ? 12 : 13,
-                        height: 1.35,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.getSecondaryTextColor(context),
-                      ),
-                      maxLines: isMobile ? 2 : 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF059669),
                 size: 16,
               ),
             ],
@@ -4286,6 +4409,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         'icon': Icons.play_lesson_rounded,
         'color': const Color(0xFF10B981),
         'onTap': () => context.push('/my-courses'),
+      },
+      {
+        'title': 'Community',
+        'subtitle': 'Study with classmates',
+        'icon': Icons.groups_rounded,
+        'color': const Color(0xFF00C853),
+        'onTap': () => context.push('/community'),
       },
       {
         'title': l10n?.library ?? 'Library',

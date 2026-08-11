@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/models/download.dart';
+import 'package:excellencecoachinghub/utils/media_proxy.dart';
 import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 
 /// Opens a completed [download] from the copy on disk.
@@ -19,14 +20,29 @@ import 'package:excellencecoachinghub/utils/screen_wakelock.dart';
 /// PDFs and text render in-app; anything else (EPUB, Word, …) is handed to the
 /// platform viewer.
 ///
-/// On web there is no local file system, so this always reports that the file
-/// is not available locally.
+/// On web there is no local file system, so PDFs are opened from their network
+/// URL (routed through the media proxy to satisfy CORS) instead. Non-PDF files
+/// are not viewable in the browser.
 Future<void> openDownloadedMaterial(BuildContext context, Download download) async {
   if (kIsWeb) {
     if (!context.mounted) return;
+    final extension = p.extension(download.fileName).toLowerCase();
+    if (extension == '.pdf' && download.url.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _WebPdfViewer(
+            title: download.originalTitle,
+            url: mediaProxyUrl(download.url),
+          ),
+        ),
+      );
+      return;
+    }
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Offline downloads are not available in the browser.'),
+        content: Text('This file type is not viewable in the browser.'),
         backgroundColor: Colors.orange,
       ),
     );
@@ -99,6 +115,39 @@ class _LocalPdfViewer extends StatelessWidget {
         ),
         body: SfPdfViewer.file(File(download.localPath)),
       ),
+    );
+  }
+}
+
+/// Web-only PDF viewer that loads the file from its network URL (proxied to
+/// satisfy CORS) since there is no local file system in the browser.
+class _WebPdfViewer extends StatelessWidget {
+  const _WebPdfViewer({required this.title, required this.url});
+
+  final String title;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: url.isEmpty
+          ? const Center(child: Text('No PDF URL available.'))
+          : SfPdfViewer.network(
+              url,
+              onDocumentLoadFailed: (details) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to load PDF: ${details.error}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+            ),
     );
   }
 }

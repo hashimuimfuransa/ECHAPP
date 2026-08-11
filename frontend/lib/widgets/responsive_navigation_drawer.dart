@@ -10,9 +10,15 @@ import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.da
 import 'package:excellencecoachinghub/widgets/modern_dialog.dart';
 import 'package:excellencecoachinghub/l10n/app_localizations.dart';
 
+/// Width of the collapsed desktop sidebar (icon rail).
+const double kSidebarRailWidth = 88;
+
+/// Width of the expanded desktop sidebar.
+const double kSidebarExpandedWidth = 260;
+
 class ResponsiveNavigationDrawer extends ConsumerWidget {
   final String currentPage;
-  
+
   const ResponsiveNavigationDrawer({
     super.key,
     required this.currentPage,
@@ -120,6 +126,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'my-courses'
       },
       {
+        'title': 'Community',
+        'icon': Icons.groups_outlined,
+        'route': '/community',
+        'key': 'community'
+      },
+      {
         'title': l10n?.categories ?? 'Categories',
         'icon': Icons.category_outlined,
         'route': '/categories',
@@ -215,6 +227,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'my-courses'
       },
       {
+        'title': 'Community',
+        'icon': Icons.groups_outlined,
+        'route': '/community',
+        'key': 'community'
+      },
+      {
         'title': l10n?.courses ?? 'Courses',
         'icon': Icons.school_outlined,
         'route': '/courses',
@@ -267,7 +285,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
-      width: isCollapsed ? 72 : 260,
+      width: isCollapsed ? kSidebarRailWidth : kSidebarExpandedWidth,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border(
@@ -280,7 +298,7 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.fromLTRB(isCollapsed ? 16 : 20, 24, isCollapsed ? 16 : 20, 20),
+            padding: EdgeInsets.fromLTRB(isCollapsed ? 12 : 20, 22, isCollapsed ? 12 : 20, 20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
@@ -288,65 +306,80 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
                 colors: [Color(0xFF00C896), Color(0xFF059669)],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Image.asset(
-                    'assets/logo.png',
-                    width: 28,
-                    height: 28,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: Icon(Icons.school, color: Colors.white, size: 20),
+            // The width animates between the two states, so for a few frames the
+            // box is narrower than the labels want to be. Clipping and letting the
+            // label column shrink to nothing keeps that transition overflow-free.
+            child: ClipRect(
+              child: Row(
+                mainAxisAlignment: isCollapsed
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(isCollapsed ? 7 : 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: isCollapsed ? 34 : 28,
+                      height: isCollapsed ? 34 : 28,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => SizedBox(
+                        width: isCollapsed ? 34 : 28,
+                        height: isCollapsed ? 34 : 28,
+                        child: const Icon(Icons.school,
+                            color: Colors.white, size: 22),
+                      ),
                     ),
                   ),
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n?.excellenceHub ?? 'Excellence Hub',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  if (!isCollapsed)
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              l10n?.excellenceHub ?? 'Excellence Hub',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              l10n?.sidebarLearningPlatform ??
+                                  'LEARNING PLATFORM',
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
+                              ),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        Text(
-                          l10n?.sidebarLearningPlatform ?? 'LEARNING PLATFORM',
-                          style: const TextStyle(
-                            fontSize: 8,
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
-          
+
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 8 : 12,
+                horizontal: isCollapsed ? 10 : 12,
                 vertical: 8,
               ),
               children: items.map((item) => _buildNavItem(
@@ -778,6 +811,40 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     final bool useDesktopStyle = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
     
     if (useDesktopStyle) {
+      final Color itemColor = isSelected
+          ? AppTheme.primaryGreen
+          : AppTheme.greyColor.withOpacity(0.6);
+
+      // Collapsed: a generous icon-only target with a tooltip, so the rail
+      // stays readable without labels.
+      if (isCollapsed) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Tooltip(
+            message: title,
+            waitDuration: const Duration(milliseconds: 400),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: isSelected ? null : () => context.go(route),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: isSelected
+                      ? BoxDecoration(
+                          color: AppTheme.primaryGreen.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        )
+                      : null,
+                  child: Icon(icon, color: itemColor, size: 24),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 1),
         child: Material(
@@ -786,45 +853,36 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
             onTap: isSelected ? null : () => context.go(route),
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 0 : 12, 
-                vertical: 10
-              ),
-              alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              alignment: Alignment.centerLeft,
               decoration: isSelected
                   ? BoxDecoration(
                       color: AppTheme.primaryGreen.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     )
                   : null,
-              child: isCollapsed
-                  ? Icon(
-                      icon,
-                      color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.6),
-                      size: 20,
-                    )
-                  : Row(
-                      children: [
-                        Icon(
-                          icon,
-                          color: isSelected ? AppTheme.primaryGreen : AppTheme.greyColor.withOpacity(0.6),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              color: isSelected ? AppTheme.primaryGreen : AppTheme.getTextColor(context).withOpacity(0.75),
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              fontSize: 13,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+              child: Row(
+                children: [
+                  Icon(icon, color: itemColor, size: 18),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppTheme.primaryGreen
+                            : AppTheme.getTextColor(context).withOpacity(0.75),
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -897,37 +955,65 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
     final bool useDesktopStyle = isDesktop || (isPlatformDesktop && MediaQuery.of(context).size.width >= 600);
     
     if (useDesktopStyle) {
+      final logoutLabel = l10n?.logout ?? 'Logout';
+
+      if (isCollapsed) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Tooltip(
+            message: logoutLabel,
+            waitDuration: const Duration(milliseconds: 400),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showLogoutDialog(context, ref),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  height: 48,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.logout_rounded,
+                    size: 22,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => _showLogoutDialog(context, ref),
             borderRadius: BorderRadius.circular(10),
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 0 : 12, 
-                vertical: 10
-              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
-                mainAxisAlignment: isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.logout_rounded,
                     size: 18,
                     color: Colors.red.shade600,
                   ),
-                  if (!isCollapsed) ...[
-                    const SizedBox(width: 10),
-                    Text(
-                      l10n?.logout ?? 'Logout',
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      logoutLabel,
                       style: TextStyle(
                         color: Colors.red.shade600,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),

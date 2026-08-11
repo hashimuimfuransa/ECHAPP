@@ -38,6 +38,7 @@ import 'package:excellencecoachinghub/services/api/quiz_service.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/exam_taking_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/exams/course_exam_history_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/certificates/certificates_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/course_community_screen.dart';
 
 /// Everything the Materials tab needs to launch a quiz: the quiz document,
 /// the student's previous attempts (newest first) and how many questions it has.
@@ -758,7 +759,7 @@ class _ProfessionalLearningScreenState
           _buildChaptersTab(),
           _buildLiveSessionsTab(),
           _buildProgressTab(),
-          _buildBookmarksTab(),
+          _buildCommunityTab(),
           _buildMaterialsTab(),
           _buildLibraryTab(),
         ],
@@ -844,6 +845,13 @@ class _ProfessionalLearningScreenState
         isDark: _isDark,
         cardBg: _cardBg,
         onTap: _isCourseDownloading ? null : _downloadWholeCourse,
+      ),
+      // Saved lessons (moved out of the tab row to make space for Community)
+      _ActionChip(
+        icon: Icons.bookmark_rounded,
+        isDark: _isDark,
+        cardBg: _cardBg,
+        onTap: _openSavedLessons,
       ),
       // Exam history
       _ActionChip(
@@ -1137,7 +1145,7 @@ class _ProfessionalLearningScreenState
               Tab(icon: Icon(Icons.menu_book_rounded, size: 18), text: 'Chapters'),
               Tab(icon: Icon(Icons.live_tv_rounded, size: 18), text: 'Live'),
               Tab(icon: Icon(Icons.bar_chart_rounded, size: 18), text: 'Progress'),
-              Tab(icon: Icon(Icons.bookmark_rounded, size: 18), text: 'Saved'),
+              Tab(icon: Icon(Icons.groups_rounded, size: 18), text: 'Community'),
               Tab(icon: Icon(Icons.folder_rounded, size: 18), text: 'Materials'),
               Tab(icon: Icon(Icons.local_library_rounded, size: 18), text: 'Library'),
             ],
@@ -2257,8 +2265,42 @@ class _ProfessionalLearningScreenState
   }
 
   // ─────────────────────────────────────────────
-  //  BOOKMARKS TAB
+  //  COMMUNITY TAB
   // ─────────────────────────────────────────────
+  /// The course community sits in the main tab row (where "Saved" used to be)
+  /// so collaboration is as visible as the lessons themselves. Saved lessons
+  /// moved to the bookmark action in the app bar.
+  Widget _buildCommunityTab() {
+    return CourseCommunityView(courseId: widget.courseId);
+  }
+
+  // ─────────────────────────────────────────────
+  //  SAVED LESSONS (opened from the app bar)
+  // ─────────────────────────────────────────────
+  void _openSavedLessons() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: _isDark ? _DT.bgDark : _DT.bg,
+          appBar: AppBar(
+            backgroundColor: _cardBg,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              'Saved lessons',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+          body: _buildBookmarksTab(),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBookmarksTab() {
     // Load bookmarks exactly once
     if (!_bookmarksLoaded) {

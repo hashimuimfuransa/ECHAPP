@@ -70,6 +70,9 @@ import 'package:excellencecoachinghub/presentation/screens/payments/payment_hist
 import 'package:excellencecoachinghub/presentation/screens/payments/payment_pending_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/library_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/library/book_reader_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/community_hub_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/course_community_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/community_section.dart';
 import 'package:excellencecoachinghub/utils/navigation_performance_monitor.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
 import 'package:excellencecoachinghub/presentation/router/offline_route_policy.dart';
@@ -708,6 +711,21 @@ class AppRouter {
               GoRoute(
                 path: '/my-courses',
                 builder: (context, state) => const EnrolledCoursesScreen(),
+              ),
+              // Course Community — the hub asks which course, then opens that
+              // course's community (students, groups, discussions, work).
+              GoRoute(
+                path: '/community',
+                builder: (context, state) => const CommunityHubScreen(),
+              ),
+              GoRoute(
+                path: '/community/:courseId',
+                builder: (context, state) => CourseCommunityScreen(
+                  courseId: state.pathParameters['courseId'] ?? '',
+                  initialSection: CommunitySectionInfo.fromSlug(
+                    state.uri.queryParameters['section'],
+                  ),
+                ),
               ),
               GoRoute(
                 path: '/upcoming-sessions',
