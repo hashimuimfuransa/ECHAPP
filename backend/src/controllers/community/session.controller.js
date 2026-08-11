@@ -90,15 +90,15 @@ const mapSession = (session, userId, isTeacher = false) => {
     /** The organiser can open the room at any point before the session ends. */
     canStart: moderatorCanOpen && session.status !== 'live',
     /**
-     * Whether this caller can enter right now — unrestricted for the organiser
-     * while the session is still current, gated on the room actually being
-     * live for everyone else.
+     * Whether this caller can enter right now.
+     *
+     * For an attendee the gate is simply "the room is open" — an organiser who
+     * starts early does so precisely so people can come in, and holding them
+     * to the pre-start window would lock them out of a live room.
      */
     canJoin: moderatorCanOpen ||
-        (isActive &&
-            withinWindow &&
-            session.status === 'live' &&
-            (Boolean(mine) || !isFull)),
+        (session.status === 'live' && beforeEnd && (Boolean(mine) || !isFull)),
+    isFull,
     isWithinJoinWindow: withinWindow,
     createdAt: session.createdAt
   };
@@ -340,23 +340,23 @@ class SessionController {
       const isOrganiser = String(session.createdBy) === String(userId);
       const canModerate = isOrganiser || isTeacher;
 
-      // The organiser can open the room whenever they like, right up to the
-      // end of the session's window. Attendees wait for the join window so a
-      // BBB room is not spun up hours ahead by someone tapping around.
-      if (canModerate) {
-        if (!session.isBeforeEnd()) {
-          return sendError(res, 'This session\'s time has passed', 400);
-        }
-      } else if (!session.isWithinJoinWindow()) {
-        const start = new Date(session.scheduledAt);
-        if (Date.now() < start.getTime()) {
-          return sendError(
-            res,
-            `The room opens ${StudySession.EARLY_JOIN_MINUTES} minutes before the start time`,
-            400
-          );
-        }
+      // Everyone is out once the session's window has closed.
+      if (!session.isBeforeEnd()) {
         return sendError(res, 'This session\'s time has passed', 400);
+      }
+
+      // The organiser can open the room whenever they like. Attendees can
+      // enter as soon as it is actually live — including when the organiser
+      // started early. Only a room that is not open yet holds them to the
+      // pre-start window, so nobody spins up a BBB room hours ahead.
+      if (!canModerate &&
+          session.status !== 'live' &&
+          !session.isWithinJoinWindow()) {
+        return sendError(
+          res,
+          `The room opens ${StudySession.EARLY_JOIN_MINUTES} minutes before the start time`,
+          400
+        );
       }
 
       // Joining implies attending — add the caller if they had not RSVP'd.

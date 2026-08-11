@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/community.dart';
 
@@ -690,44 +691,58 @@ class MemberStack extends StatelessWidget {
     this.size = 26,
   });
 
+  /// How far each avatar slides over the one before it.
+  static const double _overlap = 8;
+
   @override
   Widget build(BuildContext context) {
     final shown = members.take(max).toList();
     final extra = members.length - shown.length;
+    final tiles = shown.length + (extra > 0 ? 1 : 0);
+    if (tiles == 0) return const SizedBox.shrink();
+
+    // Laid out with a Stack rather than negative margins — Container asserts
+    // that margins are non-negative, so overlap has to come from positioning.
+    final step = size - _overlap;
+
     return SizedBox(
+      width: size + (tiles - 1) * step,
       height: size,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          ...shown.asMap().entries.map((entry) => Container(
-                margin: EdgeInsets.only(left: entry.key == 0 ? 0 : -8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: CT.cardOf(context), width: 2),
-                ),
-                child: MemberAvatar(
-                  member: entry.value,
-                  size: size,
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * step,
+              child: _ring(
+                context,
+                MemberAvatar(
+                  member: shown[i],
+                  size: size - 4,
                   showPresence: false,
                 ),
-              )),
-          if (extra > 0)
-            Container(
-              margin: const EdgeInsets.only(left: -8),
-              width: size,
-              height: size,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: CT.surfaceOf(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: CT.cardOf(context), width: 2),
               ),
-              child: Text(
-                '+$extra',
-                style: TextStyle(
-                  fontSize: size * 0.34,
-                  fontWeight: FontWeight.w800,
-                  color: CT.subTextOf(context),
+            ),
+          if (extra > 0)
+            Positioned(
+              left: shown.length * step,
+              child: _ring(
+                context,
+                Container(
+                  width: size - 4,
+                  height: size - 4,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: CT.surfaceOf(context),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '+$extra',
+                    style: TextStyle(
+                      fontSize: size * 0.3,
+                      fontWeight: FontWeight.w800,
+                      color: CT.subTextOf(context),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -735,6 +750,18 @@ class MemberStack extends StatelessWidget {
       ),
     );
   }
+
+  /// Card-coloured ring that separates one avatar from the one it overlaps.
+  Widget _ring(BuildContext context, Widget child) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: CT.cardOf(context),
+          shape: BoxShape.circle,
+        ),
+        child: child,
+      );
 }
 
 /// Standard bottom-sheet frame used by every community composer.
@@ -797,6 +824,80 @@ Future<T?> showCommunitySheet<T>({
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// Opens an external link (a meeting room, a recording, a shared resource).
+///
+/// On web a `launchUrl` call that happens *after* an await has lost the
+/// browser's user-activation, so popup blockers silently swallow it. When the
+/// launch fails we surface a dialog whose button re-launches from a fresh tap,
+/// which always gets through.
+Future<void> openExternalLink(
+  BuildContext context,
+  String url, {
+  String title = 'Open link',
+  String actionLabel = 'Open',
+  String? description,
+}) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null || url.isEmpty) {
+    communitySnack(context, 'That link looks broken', isError: true);
+    return;
+  }
+
+  var launched = false;
+  try {
+    launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    launched = false;
+  }
+  if (launched || !context.mounted) return;
+
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      shape: const RoundedRectangleBorder(borderRadius: CT.r16),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            description ??
+                'Your browser blocked the automatic redirect. Tap below to '
+                    'open it.',
+            style: TextStyle(fontSize: 13, height: 1.45, color: CT.subTextOf(ctx)),
+          ),
+          const SizedBox(height: 14),
+          SelectableText(
+            url,
+            style: const TextStyle(fontSize: 11, color: CT.info),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(ctx).pop();
+            // Fired straight from this tap, so user-activation is intact.
+            launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+          icon: const Icon(Icons.open_in_new_rounded, size: 16),
+          label: Text(actionLabel),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: CT.primary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: const RoundedRectangleBorder(borderRadius: CT.r12),
+          ),
+        ),
+      ],
     ),
   );
 }

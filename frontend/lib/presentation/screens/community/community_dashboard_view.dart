@@ -476,16 +476,16 @@ class _TeacherStrip extends StatelessWidget {
               ],
             ),
           ),
-          Wrap(
-            spacing: -8,
-            children: overview.teachers
-                .take(3)
-                .map((t) => GestureDetector(
-                      onTap: () => showMemberProfileSheet(context, courseId, t.id),
-                      child: MemberAvatar(member: t, size: 34),
-                    ))
-                .toList(),
-          ),
+          // A single teacher stays tappable straight through to their profile;
+          // several overlap in the shared avatar stack.
+          if (overview.teachers.length == 1)
+            GestureDetector(
+              onTap: () => showMemberProfileSheet(
+                  context, courseId, overview.teachers.first.id),
+              child: MemberAvatar(member: overview.teachers.first, size: 34),
+            )
+          else
+            MemberStack(members: overview.teachers, max: 3, size: 34),
         ],
       ),
     );

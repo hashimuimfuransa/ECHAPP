@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/community.dart';
 import '../../providers/community_provider.dart';
@@ -398,16 +397,12 @@ class _ResourceCard extends ConsumerWidget {
   Future<void> _open(BuildContext context) async {
     final url = resource.url;
     if (url == null || url.isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      communitySnack(context, 'That link looks broken', isError: true);
-      return;
-    }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        communitySnack(context, 'Could not open the link', isError: true);
-      }
-    }
+    await openExternalLink(
+      context,
+      url,
+      title: resource.title,
+      actionLabel: 'Open resource',
+    );
   }
 
   Future<void> _onMenu(String value, BuildContext context, WidgetRef ref) async {
@@ -786,21 +781,18 @@ class _SessionCardState extends ConsumerState<_SessionCard> {
           }
           return;
         }
+        if (!mounted) return;
 
-        final uri = Uri.tryParse(ticket.joinUrl);
-        if (uri == null) {
-          if (mounted) {
-            communitySnack(context, 'The meeting link looks broken', isError: true);
-          }
-          return;
-        }
-
-        final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-        if (!opened && mounted) {
-          communitySnack(context, 'Could not open the meeting room', isError: true);
-        } else if (mounted && ticket.isModerator) {
-          communitySnack(context, 'Room open — everyone attending has been notified');
-        }
+        await openExternalLink(
+          context,
+          ticket.joinUrl,
+          title: ticket.isModerator ? 'Your room is open' : 'Join the session',
+          actionLabel: 'Enter the room',
+          description: ticket.isModerator
+              ? 'The room is open and everyone attending has been notified. '
+                  'Tap to enter.'
+              : 'The session is live. Tap to enter the room.',
+        );
       });
 
   Future<void> _toggleRsvp() => _run(() async {
@@ -871,10 +863,13 @@ class _SessionCardState extends ConsumerState<_SessionCard> {
           }
         }
 
-        final uri = Uri.tryParse(url);
-        if (uri != null) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
+        if (!mounted) return;
+        await openExternalLink(
+          context,
+          url,
+          title: 'Session recording',
+          actionLabel: 'Watch',
+        );
       });
 
   @override
@@ -1077,28 +1072,52 @@ class _SessionCardState extends ConsumerState<_SessionCard> {
 
     // ── Live right now ──
     if (s.isLive) {
-      return Row(
+      // Never label a disabled button "Session full" unless it actually is —
+      // saying so at 2/4 sent people looking for a problem that wasn't there.
+      final blockedReason = s.canJoin
+          ? null
+          : (s.isFull
+              ? 'Session full'
+              : 'Cannot join right now');
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: _PrimaryButton(
-              label: s.canJoin ? 'Join now' : 'Session full',
-              icon: Icons.videocam_rounded,
-              color: CT.danger,
-              isBusy: _isBusy,
-              onTap: s.canJoin ? _enterRoom : null,
-            ),
-          ),
-          if (s.canModerate) ...[
-            const SizedBox(width: 10),
-            OutlinedButton(
-              onPressed: _isBusy ? null : _endSession,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: CT.danger,
-                side: const BorderSide(color: CT.danger),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: const RoundedRectangleBorder(borderRadius: CT.r12),
+          Row(
+            children: [
+              Expanded(
+                child: _PrimaryButton(
+                  label: blockedReason ?? 'Join now',
+                  icon: Icons.videocam_rounded,
+                  color: CT.danger,
+                  isBusy: _isBusy,
+                  onTap: s.canJoin ? _enterRoom : null,
+                ),
               ),
-              child: const Text('End'),
+              if (s.canModerate) ...[
+                const SizedBox(width: 10),
+                OutlinedButton(
+                  onPressed: _isBusy ? null : _endSession,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: CT.danger,
+                    side: const BorderSide(color: CT.danger),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: const RoundedRectangleBorder(borderRadius: CT.r12),
+                  ),
+                  child: const Text('End'),
+                ),
+              ],
+            ],
+          ),
+          if (s.isFull && !s.canJoin) ...[
+            const SizedBox(height: 9),
+            _Notice(
+              icon: Icons.group_off_rounded,
+              text: 'This session has reached its ${s.maxParticipants}-person '
+                  'limit. Ask the organiser to raise it, or catch the recording '
+                  'afterwards.',
+              color: CT.subTextOf(context),
             ),
           ],
         ],
