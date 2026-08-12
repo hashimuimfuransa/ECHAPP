@@ -511,6 +511,7 @@ class CommunityService {
   Future<({
     String cursor,
     List<ChatSyncMessage> messages,
+    List<CommunityEvent> events,
     List<ChatRoomSummary> rooms,
     int totalUnread,
   })> syncChat(
@@ -530,6 +531,9 @@ class CommunityService {
       cursor: data['cursor'] as String? ?? '',
       messages: (data['messages'] as List? ?? [])
           .map((m) => ChatSyncMessage.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      events: (data['events'] as List? ?? [])
+          .map((e) => CommunityEvent.fromJson(e as Map<String, dynamic>))
           .toList(),
       rooms: (data['rooms'] as List? ?? [])
           .map((r) => ChatRoomSummary.fromJson(r as Map<String, dynamic>))

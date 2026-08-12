@@ -320,8 +320,10 @@ class ChatController {
 
       while (true) {
         const payload = await collectSince(courseId, userId, cursor, course);
+        const hasNews =
+          payload.messages.length > 0 || payload.events.length > 0;
 
-        if (payload.messages.length > 0 || Date.now() >= deadline || clientGone) {
+        if (hasNews || Date.now() >= deadline || clientGone) {
           if (clientGone) return; // nothing to write to
           return sendSuccess(res, payload, 'Synced');
         }
@@ -509,6 +511,82 @@ async function buildInbox(courseId, userId, course) {
 }
 
 /**
+ * Workspace changes the caller should see without reopening a screen: a
+ * session scheduled or started, work submitted or graded, a task ticked off,
+ * new coursework published.
+ *
+ * These ride the same long poll as chat so the app holds one live connection
+ * rather than one per feature.
+ */
+async function collectEvents(courseId, userId, cursor, groupIds) {
+  const StudySession = require('../../models/community/StudySession');
+  const CommunitySubmission = require('../../models/community/CommunitySubmission');
+  const CommunityAssignment = require('../../models/community/CommunityAssignment');
+  const StudyGroupModel = require('../../models/community/StudyGroup');
+
+  const [sessions, submissions, assignments, touchedGroups] = await Promise.all([
+    StudySession.find({
+      courseId,
+      updatedAt: { $gt: cursor },
+      status: { $ne: 'cancelled' }
+    })
+      .select('topic status groupId updatedAt')
+      .limit(30)
+      .lean(),
+    groupIds.length
+      ? CommunitySubmission.find({ groupId: { $in: groupIds }, updatedAt: { $gt: cursor } })
+          .select('groupId assignmentId grade updatedAt')
+          .limit(30)
+          .lean()
+      : [],
+    CommunityAssignment.find({ courseId, updatedAt: { $gt: cursor }, isPublished: true })
+      .select('title updatedAt')
+      .limit(20)
+      .lean(),
+    groupIds.length
+      ? StudyGroupModel.find({ _id: { $in: groupIds }, updatedAt: { $gt: cursor } })
+          .select('name updatedAt')
+          .limit(20)
+          .lean()
+      : []
+  ]);
+
+  const events = [
+    ...sessions.map((s) => ({
+      type: 'session',
+      id: String(s._id),
+      groupId: s.groupId ? String(s.groupId) : null,
+      status: s.status,
+      label: s.topic,
+      at: s.updatedAt
+    })),
+    ...submissions.map((s) => ({
+      type: s.grade && s.grade.gradedAt ? 'submission_graded' : 'submission',
+      id: String(s._id),
+      groupId: String(s.groupId),
+      label: null,
+      at: s.updatedAt
+    })),
+    ...assignments.map((a) => ({
+      type: 'assignment',
+      id: String(a._id),
+      groupId: null,
+      label: a.title,
+      at: a.updatedAt
+    })),
+    ...touchedGroups.map((g) => ({
+      type: 'group',
+      id: String(g._id),
+      groupId: String(g._id),
+      label: g.name,
+      at: g.updatedAt
+    }))
+  ].sort((a, b) => new Date(a.at) - new Date(b.at));
+
+  return events;
+}
+
+/**
  * Collects every message across the caller's rooms newer than `cursor`,
  * tagged with the room it belongs to.
  */
@@ -571,16 +649,23 @@ async function collectSince(courseId, userId, cursor, course) {
     }))
   ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-  // Only rebuild the (heavier) inbox when something actually moved.
+  const events = await collectEvents(courseId, userId, cursor, groupIds);
+
+  // Only rebuild the (heavier) inbox when a message actually moved.
   const rooms = messages.length > 0 ? await buildInbox(courseId, userId, course) : [];
 
-  const newest = messages.length > 0
-    ? messages[messages.length - 1].createdAt
-    : cursor;
+  // The cursor has to clear everything returned, messages and events alike, or
+  // the next poll replays whichever side had the older timestamp.
+  const stamps = [
+    ...messages.map((m) => new Date(m.createdAt).getTime()),
+    ...events.map((e) => new Date(e.at).getTime())
+  ];
+  const newest = stamps.length > 0 ? new Date(Math.max(...stamps)) : cursor;
 
   return {
     cursor: new Date(newest).toISOString(),
     messages,
+    events,
     rooms,
     totalUnread: rooms.reduce((sum, r) => sum + r.unreadCount, 0)
   };

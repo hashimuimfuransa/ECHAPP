@@ -458,12 +458,14 @@ class ChatInboxState {
 /// they are sent.
 class ChatInboxNotifier extends StateNotifier<ChatInboxState> {
   final CommunityService _service;
+  final Ref _ref;
   final String _courseId;
 
   bool _running = false;
   DateTime? _cursor;
 
-  ChatInboxNotifier(this._service, this._courseId) : super(const ChatInboxState());
+  ChatInboxNotifier(this._service, this._ref, this._courseId)
+      : super(const ChatInboxState());
 
   /// How long the server holds each poll open before returning empty.
   static const _holdSeconds = 25;
@@ -517,6 +519,11 @@ class ChatInboxNotifier extends StateNotifier<ChatInboxState> {
           _cursor = DateTime.tryParse(result.cursor) ?? _cursor;
         }
 
+        // Workspace changes (a session opened, work submitted or graded, a
+        // task ticked) refresh the screens that show them, so a group's Work
+        // tab updates without anyone reopening it.
+        if (result.events.isNotEmpty) _applyEvents(result.events);
+
         if (result.messages.isEmpty) {
           // Quiet window — the server simply timed out its hold.
           state = state.copyWith(isLive: true, error: null);
@@ -542,6 +549,50 @@ class ChatInboxNotifier extends StateNotifier<ChatInboxState> {
         state = state.copyWith(isLive: false);
         await Future.delayed(_retryDelay);
       }
+    }
+  }
+
+  /// Turns live events into targeted invalidations.
+  ///
+  /// Deliberately narrow: a graded submission should not force the whole
+  /// community to refetch, so each event only touches the providers that
+  /// actually render it.
+  void _applyEvents(List<CommunityEvent> events) {
+    var touchesDashboard = false;
+    final groupIds = <String>{};
+
+    for (final event in events) {
+      if (event.groupId != null) groupIds.add(event.groupId!);
+
+      switch (event.type) {
+        case 'session':
+          _ref.invalidate(communitySessionsProvider);
+          touchesDashboard = true;
+          break;
+        case 'submission':
+        case 'submission_graded':
+          _ref.invalidate(communitySubmissionsProvider(_courseId));
+          _ref.invalidate(communityAssignmentsProvider(_courseId));
+          touchesDashboard = true;
+          break;
+        case 'assignment':
+          _ref.invalidate(communityAssignmentsProvider(_courseId));
+          touchesDashboard = true;
+          break;
+        case 'group':
+          _ref.invalidate(communityGroupsProvider);
+          break;
+      }
+    }
+
+    // Refresh each affected group's workspace — tasks, members, submissions
+    // and sessions all live on this one provider.
+    for (final groupId in groupIds) {
+      _ref.invalidate(studyGroupProvider((courseId: _courseId, groupId: groupId)));
+    }
+
+    if (touchesDashboard) {
+      _ref.invalidate(communityOverviewProvider(_courseId));
     }
   }
 
@@ -582,7 +633,8 @@ class ChatInboxNotifier extends StateNotifier<ChatInboxState> {
 final chatInboxProvider =
     StateNotifierProvider.family<ChatInboxNotifier, ChatInboxState, String>(
         (ref, courseId) {
-  final notifier = ChatInboxNotifier(ref.watch(communityServiceProvider), courseId);
+  final notifier =
+      ChatInboxNotifier(ref.watch(communityServiceProvider), ref, courseId);
   ref.onDispose(notifier.stop);
   return notifier;
 });

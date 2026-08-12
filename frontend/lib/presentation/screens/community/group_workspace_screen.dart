@@ -6,6 +6,8 @@ import '../../providers/community_provider.dart';
 import 'community_chat_view.dart';
 import 'community_theme.dart';
 import 'member_profile_sheet.dart';
+import 'session_card.dart';
+import 'sheets/create_session_sheet.dart';
 import 'sheets/create_post_sheet.dart' show communityTextField, CommunitySheetFooter;
 
 /// Opens a study group's workspace.
@@ -36,6 +38,18 @@ class GroupWorkspaceScreen extends ConsumerStatefulWidget {
 class _GroupWorkspaceScreenState extends ConsumerState<GroupWorkspaceScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController = TabController(length: 4, vsync: this);
+
+  @override
+  void initState() {
+    super.initState();
+    // Join the community's live channel so work submitted, sessions opened and
+    // tasks ticked by teammates land here without anyone reopening the screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(chatInboxProvider(widget.courseId).notifier).start();
+      ref.read(communityPresenceProvider(widget.courseId)).start(area: 'group');
+    });
+  }
 
   @override
   void dispose() {
@@ -970,14 +984,14 @@ class _InviteFormState extends ConsumerState<_InviteForm> {
 //  Group work (submissions + sessions)
 // ─────────────────────────────────────────────
 
-class _WorkTab extends StatelessWidget {
+class _WorkTab extends ConsumerWidget {
   final String courseId;
   final StudyGroupDetail group;
 
   const _WorkTab({required this.courseId, required this.group});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       children: [
@@ -1001,97 +1015,42 @@ class _WorkTab extends StatelessWidget {
                 child: _SubmissionCard(submission: submission),
               )),
         const SizedBox(height: 22),
-        const SectionHeader(
+        SectionHeader(
           icon: Icons.event_rounded,
           title: 'Study sessions',
           subtitle: 'Meetings this group has planned',
+          actionLabel: 'Schedule',
+          onAction: () => showCreateSessionSheet(
+            context,
+            courseId,
+            lockedGroupId: group.summary.id,
+            lockedGroupName: group.summary.name,
+          ),
         ),
         const SizedBox(height: 12),
         if (group.sessions.isEmpty)
-          const CommunityEmpty(
+          CommunityEmpty(
             icon: Icons.calendar_month_rounded,
             title: 'No sessions planned',
-            message: 'Schedule one from the Resources tab of the community.',
+            message: 'Pick a time to meet and everyone in the group is notified. '
+                'You can open the video room right from here.',
             compact: true,
+            actionLabel: 'Schedule a session',
+            onAction: () => showCreateSessionSheet(
+              context,
+              courseId,
+              lockedGroupId: group.summary.id,
+              lockedGroupName: group.summary.name,
+            ),
           )
         else
+          // The full session card, so the group can start, join, end and watch
+          // the recording without leaving their workspace.
           ...group.sessions.map((session) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: CommunityCard(
-                  padding: const EdgeInsets.all(13),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(9),
-                        decoration: BoxDecoration(
-                          color: (session.isLive ? CT.danger : CT.accent)
-                              .withOpacity(0.12),
-                          borderRadius: CT.r8,
-                        ),
-                        child: Icon(
-                          session.isLive
-                              ? Icons.sensors_rounded
-                              : Icons.event_rounded,
-                          size: 16,
-                          color: session.isLive ? CT.danger : CT.accent,
-                        ),
-                      ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              session.topic,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: CT.textOf(context),
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              session.isLive
-                                  ? 'Live now · ${session.participantCount} in the room'
-                                  : '${CT.formatDateTime(session.scheduledAt)} · '
-                                      '${session.participantCount} going',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: session.isLive
-                                    ? FontWeight.w700
-                                    : FontWeight.w400,
-                                color: session.isLive
-                                    ? CT.danger
-                                    : CT.subTextOf(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (session.isLive)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: CT.danger,
-                            borderRadius: CT.r8,
-                          ),
-                          child: const Text(
-                            'LIVE',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SessionCard(courseId: courseId, session: session),
               )),
+        const SizedBox(height: 8),
       ],
     );
   }

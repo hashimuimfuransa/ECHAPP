@@ -759,6 +759,42 @@ class ChatSyncMessage {
       );
 }
 
+/// A workspace change delivered on the live sync stream — a session opened,
+/// work submitted or graded, a group task ticked, new coursework published.
+///
+/// Rides the same connection as chat so the app holds one live channel.
+class CommunityEvent {
+  /// session | submission | submission_graded | assignment | group
+  final String type;
+  final String id;
+  final String? groupId;
+  final String? label;
+  final String? status;
+  final DateTime? at;
+
+  const CommunityEvent({
+    required this.type,
+    required this.id,
+    this.groupId,
+    this.label,
+    this.status,
+    this.at,
+  });
+
+  factory CommunityEvent.fromJson(Map<String, dynamic> json) => CommunityEvent(
+        type: _str(json['type']) ?? '',
+        id: _str(json['id']) ?? '',
+        groupId: _str(json['groupId']),
+        label: _str(json['label']),
+        status: _str(json['status']),
+        at: _parseDate(json['at']),
+      );
+
+  bool get isSession => type == 'session';
+  bool get isSubmission => type == 'submission' || type == 'submission_graded';
+  bool get affectsGroups => groupId != null;
+}
+
 // ─────────────────────────────────────────────
 //  Assignments & submissions
 // ─────────────────────────────────────────────
