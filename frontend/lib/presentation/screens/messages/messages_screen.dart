@@ -135,7 +135,7 @@ class _ConversationTile extends StatelessWidget {
                     ],
                     const Spacer(),
                     Text(
-                      CT.timeAgo(conversation.lastMessageAt),
+                      CT.timeAgo(context, conversation.lastMessageAt),
                       style: TextStyle(
                         fontSize: 10.5,
                         color: unread ? CT.primary : CT.textHint,

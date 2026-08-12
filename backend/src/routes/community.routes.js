@@ -19,6 +19,14 @@ const sessionController = require('../controllers/community/session.controller')
  *
  * Mounted at /api/community
  */
+/**
+ * Cross-course routes come first: `my` would otherwise be captured by the
+ * `/:courseId` param and rejected as an invalid course id.
+ */
+// Every upcoming study session across all of the caller's courses, for the
+// home dashboard — which shows them next to teacher-led live sessions.
+router.get('/my/sessions', protect, sessionController.mySessions);
+
 router.use('/:courseId', protect, loadCommunityContext);
 
 // ── Dashboard, people & presence ────────────────────────────────

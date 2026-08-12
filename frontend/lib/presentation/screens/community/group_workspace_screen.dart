@@ -394,7 +394,7 @@ class _TaskTile extends ConsumerWidget {
                         ],
                         if (task.dueDate != null)
                           CommunityChip(
-                            label: CT.dueLabel(task.dueDate),
+                            label: CT.dueLabel(context, task.dueDate),
                             icon: Icons.schedule_rounded,
                             color: task.isDone
                                 ? CT.primary
@@ -582,7 +582,7 @@ class _AddTaskFormState extends ConsumerState<_AddTaskForm> {
                       Text(
                         _dueDate == null
                             ? 'Set a due date (optional)'
-                            : CT.formatDate(_dueDate),
+                            : CT.formatDate(context, _dueDate),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -1090,7 +1090,7 @@ class _SubmissionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Submitted ${CT.formatDateTime(submission.submittedAt)}'
+            'Submitted ${CT.formatDateTime(context, submission.submittedAt)}'
             '${submission.isLate ? ' · late' : ''}',
             style: TextStyle(fontSize: 11.5, color: CT.subTextOf(context)),
           ),

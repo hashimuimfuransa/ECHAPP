@@ -1097,6 +1097,11 @@ class StudySession {
   final CommunityMember? organiser;
   final bool isMine;
 
+  /// Set only by the cross-course feed, so the home dashboard can say which
+  /// course a session belongs to.
+  final String? courseId;
+  final String? courseTitle;
+
   /// I organise this session, or I teach this course.
   final bool canModerate;
 
@@ -1133,6 +1138,8 @@ class StudySession {
     this.groupName,
     this.organiser,
     this.isMine = false,
+    this.courseId,
+    this.courseTitle,
     this.canModerate = false,
     this.canStart = false,
     this.canJoin = false,
@@ -1172,6 +1179,8 @@ class StudySession {
           ? CommunityMember.fromJson(json['organiser'] as Map<String, dynamic>)
           : null,
       isMine: json['isMine'] == true,
+      courseId: _str(json['courseId']),
+      courseTitle: _str(json['courseTitle']),
       canModerate: json['canModerate'] == true,
       canStart: json['canStart'] == true,
       canJoin: json['canJoin'] == true,

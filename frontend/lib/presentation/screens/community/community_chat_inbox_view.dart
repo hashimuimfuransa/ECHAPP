@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../models/community.dart';
 import '../../providers/community_provider.dart';
 import '../../providers/messaging_provider.dart';
@@ -95,6 +96,7 @@ class _CommunityChatInboxViewState extends ConsumerState<CommunityChatInboxView>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(chatInboxProvider(widget.courseId));
 
     // Any room receiving messages refreshes the inbox ordering for free via
@@ -114,10 +116,10 @@ class _CommunityChatInboxViewState extends ConsumerState<CommunityChatInboxView>
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              _filterChip('all', 'All', state.rooms.length),
-              _filterChip('public', 'Public', state.publicRooms.length),
-              _filterChip('groups', 'Groups', state.groupRooms.length),
-              _filterChip('direct', 'Direct', state.directRooms.length),
+              _filterChip('all', l10n.all, state.rooms.length),
+              _filterChip('public', l10n.publicFilter, state.publicRooms.length),
+              _filterChip('groups', l10n.communitySectionGroups, state.groupRooms.length),
+              _filterChip('direct', l10n.directFilter, state.directRooms.length),
             ],
           ),
         ),
@@ -138,21 +140,18 @@ class _CommunityChatInboxViewState extends ConsumerState<CommunityChatInboxView>
                       ? CommunityEmpty(
                           icon: Icons.forum_rounded,
                           title: switch (_filter) {
-                            'direct' => 'No direct chats yet',
-                            'groups' => 'You are not in a group yet',
-                            _ => 'No conversations yet',
+                            'direct' => l10n.noDirectChatsYet,
+                            'groups' => l10n.notInGroupYetShort,
+                            _ => l10n.noConversationsYet,
                           },
                           message: switch (_filter) {
                             'direct' =>
-                              'Message a classmate or your teacher privately — '
-                                  'those chats appear here.',
+                              l10n.directChatsHint,
                             'groups' =>
-                              'Join or create a study group and its chat shows '
-                                  'up here.',
-                            _ => 'Start with the course chat — everyone studying '
-                                'this course can see it.',
+                              l10n.groupChatsHint,
+                            _ => l10n.startWithCourseChat,
                           },
-                          actionLabel: _filter == 'direct' ? 'New message' : null,
+                          actionLabel: _filter == 'direct' ? l10n.newMessage : null,
                           onAction: _filter == 'direct'
                               ? () => showNewMessageSheet(context, ref)
                               : null,
@@ -214,6 +213,7 @@ class _LiveHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       child: Row(
@@ -228,7 +228,7 @@ class _LiveHeader extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            isLive ? 'Live' : 'Connecting…',
+            isLive ? l10n.live : l10n.connecting,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -238,7 +238,7 @@ class _LiveHeader extends StatelessWidget {
           if (totalUnread > 0) ...[
             const SizedBox(width: 10),
             Text(
-              '$totalUnread unread',
+              l10n.unreadCount(totalUnread.toString()),
               style: TextStyle(fontSize: 11.5, color: CT.subTextOf(context)),
             ),
           ],
@@ -246,7 +246,7 @@ class _LiveHeader extends StatelessWidget {
           TextButton.icon(
             onPressed: onNewMessage,
             icon: const Icon(Icons.edit_rounded, size: 15),
-            label: const Text('New message'),
+            label: Text(l10n.newMessage),
             style: TextButton.styleFrom(
               foregroundColor: CT.primary,
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -301,7 +301,7 @@ class _RoomTile extends StatelessWidget {
                     _RoomKindChip(room: room),
                     const Spacer(),
                     Text(
-                      CT.timeAgo(room.lastMessageAt),
+                      CT.timeAgo(context, room.lastMessageAt),
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: unread ? FontWeight.w700 : FontWeight.w400,
@@ -398,29 +398,30 @@ class _RoomKindChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (room.isPublic) {
-      return const CommunityChip(
-        label: 'Public',
+      return CommunityChip(
+        label: l10n.publicFilter,
         icon: Icons.public_rounded,
         color: CT.primary,
       );
     }
     if (room.isGroup) {
-      return const CommunityChip(
-        label: 'Group',
+      return CommunityChip(
+        label: l10n.groupLabel,
         icon: Icons.groups_rounded,
         color: CT.accent,
       );
     }
     if (room.contact?.isTeacher == true) {
-      return const CommunityChip(
-        label: 'Teacher',
+      return CommunityChip(
+        label: l10n.teacher,
         icon: Icons.school_rounded,
         color: CT.teacher,
       );
     }
-    return const CommunityChip(
-      label: 'Private',
+    return CommunityChip(
+      label: l10n.privateLabel,
       icon: Icons.lock_rounded,
       color: CT.info,
     );
@@ -436,6 +437,7 @@ class _CourseRoomScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: CT.bgOf(context),
       appBar: AppBar(
@@ -471,7 +473,7 @@ class _CourseRoomScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Everyone in this course',
+                    l10n.everyoneInThisCourse,
                     style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                   ),
                 ],

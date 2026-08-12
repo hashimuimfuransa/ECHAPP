@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/session_card.dart';
+import 'package:excellencecoachinghub/presentation/providers/community_provider.dart';
 import 'package:excellencecoachinghub/config/storage_manager.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
@@ -701,6 +703,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 if (!isNewUser) ...[
                                   const SizedBox(height: 8),
                                   _buildUpcomingLiveSessions(context, enrolledCourses),
+                                  _buildUpcomingStudySessions(context),
                                   const SizedBox(height: 20),
                                   _buildQuickActions(context),
                                   const SizedBox(height: 24),
@@ -2189,6 +2192,100 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  /// Study sessions organised by students and study groups, shown right below
+  /// the teacher-led live sessions.
+  ///
+  /// Peer sessions were previously only discoverable by opening a course's
+  /// community, which meant a group meeting scheduled for tonight could be
+  /// missed entirely. Here they sit next to classes, with the same join
+  /// affordances the community card gives.
+  Widget _buildUpcomingStudySessions(BuildContext context) {
+    final isMobile = ResponsiveBreakpoints.isMobile(context);
+
+    return Consumer(
+      builder: (context, ref, _) {
+        final sessionsAsync = ref.watch(myStudySessionsProvider);
+
+        return sessionsAsync.maybeWhen(
+          data: (sessions) {
+            if (sessions.isEmpty) return const SizedBox.shrink();
+            final live = sessions.where((s) => s.isLive).length;
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Study Sessions',
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.getTextColor(context),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      if (live > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Organised by you and your classmates',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.getSecondaryTextColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // The community's own card, so Open the room / Join now /
+                  // recording all behave identically to the Sessions tab.
+                  ...sessions.take(3).map((session) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: SessionCard(
+                          courseId: session.courseId ?? '',
+                          session: session,
+                        ),
+                      )),
+                  if (sessions.length > 3)
+                    TextButton.icon(
+                      onPressed: () => context.push('/community'),
+                      icon: const Icon(Icons.arrow_forward, size: 16),
+                      label: const Text('View all study sessions'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryGreen,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+          orElse: () => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
   bool _listEquals(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
@@ -2611,26 +2708,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
 
+    // Each action carries its own colour, matching the community's action row:
+    // a tinted tile reads as a button far faster than a uniform grey grid.
     final actions = [
       {
         'icon': Icons.play_lesson_rounded,
-        'label': l10n?.myCourses ?? 'My Courses',
+        'label': l10n?.myCourses ?? 'My\nCourses',
         'route': '/my-courses',
+        'color': const Color(0xFF10B981),
       },
       {
         'icon': Icons.groups_rounded,
-        'label': 'Community',
+        'label': l10n?.community ?? 'Community',
         'route': '/community',
+        'color': const Color(0xFF7C4DFF),
+      },
+      {
+        'icon': Icons.chat_bubble_rounded,
+        'label': l10n?.messages ?? 'Messages',
+        'route': '/messages',
+        'color': const Color(0xFF00C853),
       },
       {
         'icon': Icons.verified_rounded,
         'label': l10n?.certificates ?? 'Certificates',
         'route': '/certificates',
+        'color': const Color(0xFFF59E0B),
       },
       {
         'icon': Icons.local_library_rounded,
         'label': l10n?.library ?? 'E-Library',
         'route': '/library',
+        'color': const Color(0xFF3B82F6),
       },
     ];
 
@@ -2675,14 +2784,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < actions.length; i++) ...[
-              if (i > 0) SizedBox(width: isSmall ? 6 : 8),
+              if (i > 0) SizedBox(width: isSmall ? 4 : 6),
               Expanded(
                 child: _buildCompactQuickAction(
                   context,
                   icon: actions[i]['icon'] as IconData,
                   label: actions[i]['label'] as String,
+                  color: actions[i]['color'] as Color,
                   onTap: () => context.push(actions[i]['route'] as String),
                 ),
               ),
@@ -2696,66 +2807,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   /// A small but unmistakably tappable shortcut: each one is its own tinted,
   /// bordered surface with a chevron cue, so it reads as a button rather than
   /// as decoration — while still staying out of the way.
+  /// A tinted icon tile with its label underneath — the same shape the course
+  /// community uses for its action row, so the two read as one system.
   Widget _buildCompactQuickAction(
     BuildContext context, {
     required IconData icon,
     required String label,
+    required Color color,
     required VoidCallback onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSmall = ResponsiveBreakpoints.isSmallMobile(context);
-    final tint = isDark ? AppTheme.primaryLight : AppTheme.primaryDark;
+    final tileSize = isSmall ? 40.0 : 46.0;
 
-    return Material(
-      color: isDark
-          ? Colors.white.withOpacity(0.04)
-          : AppTheme.primary.withOpacity(0.05),
+    return InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmall ? 4 : 6,
-            vertical: isSmall ? 9 : 10,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppTheme.primary.withOpacity(isDark ? 0.26 : 0.18),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: isSmall ? 17 : 19, color: tint),
-              SizedBox(height: isSmall ? 5 : 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isSmall ? 9.5 : 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.getTextColor(context),
-                        height: 1.15,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: isSmall ? 11 : 12,
-                    color: tint,
-                  ),
-                ],
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: isSmall ? 6 : 8, horizontal: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: tileSize,
+              height: tileSize,
+              decoration: BoxDecoration(
+                // Tinted rather than saturated: five full-strength tiles side
+                // by side would fight the content below them.
+                color: color.withOpacity(isDark ? 0.22 : 0.12),
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
-          ),
+              child: Icon(
+                icon,
+                size: isSmall ? 19 : 22,
+                color: isDark ? Color.lerp(color, Colors.white, 0.35) : color,
+              ),
+            ),
+            SizedBox(height: isSmall ? 6 : 7),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isSmall ? 9.5 : 10.5,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.getTextColor(context),
+                height: 1.25,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -4411,7 +4512,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         'onTap': () => context.push('/my-courses'),
       },
       {
-        'title': 'Community',
+        'title': l10n?.community ?? 'Community',
         'subtitle': 'Study with classmates',
         'icon': Icons.groups_rounded,
         'color': const Color(0xFF00C853),

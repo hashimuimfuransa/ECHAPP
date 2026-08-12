@@ -5635,6 +5635,1290 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown Course'**
   String get unknownCourse;
+
+  /// No description provided for @community.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get community;
+
+  /// No description provided for @communityTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn together. Collaborate. Succeed.'**
+  String get communityTagline;
+
+  /// No description provided for @courseCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'COURSE COMMUNITY'**
+  String get courseCommunity;
+
+  /// No description provided for @echCourseCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'ECH Course Community'**
+  String get echCourseCommunity;
+
+  /// No description provided for @communitySectionHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get communitySectionHome;
+
+  /// No description provided for @communitySectionStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Students'**
+  String get communitySectionStudents;
+
+  /// No description provided for @communitySectionDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Discussions'**
+  String get communitySectionDiscussions;
+
+  /// No description provided for @communitySectionChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get communitySectionChat;
+
+  /// No description provided for @communitySectionGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get communitySectionGroups;
+
+  /// No description provided for @communitySectionWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get communitySectionWork;
+
+  /// No description provided for @communitySectionResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Resources'**
+  String get communitySectionResources;
+
+  /// No description provided for @teacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Teacher'**
+  String get teacher;
+
+  /// No description provided for @student.
+  ///
+  /// In en, this message translates to:
+  /// **'Student'**
+  String get student;
+
+  /// No description provided for @echStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'ECH Student'**
+  String get echStudent;
+
+  /// No description provided for @echSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'ECH Support'**
+  String get echSupport;
+
+  /// No description provided for @communityLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the community'**
+  String get communityLoadFailed;
+
+  /// No description provided for @communityNotEnrolled.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to be enrolled in this course to join its community.'**
+  String get communityNotEnrolled;
+
+  /// No description provided for @somethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get somethingWentWrong;
+
+  /// No description provided for @browse.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse'**
+  String get browse;
+
+  /// No description provided for @justNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get justNow;
+
+  /// No description provided for @noDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No deadline'**
+  String get noDeadline;
+
+  /// No description provided for @dueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get dueToday;
+
+  /// No description provided for @dueTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Due tomorrow'**
+  String get dueTomorrow;
+
+  /// No description provided for @studentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'students'**
+  String get studentsCount;
+
+  /// No description provided for @studentSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'student'**
+  String get studentSingular;
+
+  /// No description provided for @activeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'active now'**
+  String get activeNow;
+
+  /// No description provided for @groupsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'groups'**
+  String get groupsCount;
+
+  /// No description provided for @groupSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'group'**
+  String get groupSingular;
+
+  /// No description provided for @findStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Find\nstudents'**
+  String get findStudents;
+
+  /// No description provided for @createGroupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create\ngroup'**
+  String get createGroupAction;
+
+  /// No description provided for @askQuestionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a\nquestion'**
+  String get askQuestionAction;
+
+  /// No description provided for @courseChatAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Course\nchat'**
+  String get courseChatAction;
+
+  /// No description provided for @postNoticeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Post\nnotice'**
+  String get postNoticeAction;
+
+  /// No description provided for @startPostAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start\npost'**
+  String get startPostAction;
+
+  /// No description provided for @yourTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Your teacher'**
+  String get yourTeacher;
+
+  /// No description provided for @yourTeachers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your teachers'**
+  String get yourTeachers;
+
+  /// No description provided for @pinnedByTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned by your teacher'**
+  String get pinnedByTeacher;
+
+  /// No description provided for @announcement.
+  ///
+  /// In en, this message translates to:
+  /// **'Announcement'**
+  String get announcement;
+
+  /// No description provided for @studentsLearningNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Students learning now'**
+  String get studentsLearningNow;
+
+  /// No description provided for @enrolledActiveSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{enrolled} enrolled · {active} active right now'**
+  String enrolledActiveSummary(Object active, Object enrolled);
+
+  /// No description provided for @nobodyStudyingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody else is studying right now — you are ahead of the class. Leave a question and classmates will find it later.'**
+  String get nobodyStudyingNow;
+
+  /// No description provided for @myGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'My groups'**
+  String get myGroups;
+
+  /// No description provided for @workThroughCourseWithClassmates.
+  ///
+  /// In en, this message translates to:
+  /// **'Work through the course with classmates'**
+  String get workThroughCourseWithClassmates;
+
+  /// No description provided for @activeGroupsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} active {label}'**
+  String activeGroupsCount(Object count, Object label);
+
+  /// No description provided for @notInGroupYet.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not in a study group yet'**
+  String get notInGroupYet;
+
+  /// No description provided for @groupsBenefit.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups give you a shared task list, a private chat and one place to submit group assignments.'**
+  String get groupsBenefit;
+
+  /// No description provided for @createGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Create group'**
+  String get createGroup;
+
+  /// No description provided for @findOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Find one'**
+  String get findOne;
+
+  /// No description provided for @owner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get owner;
+
+  /// No description provided for @membersOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}/{max} members'**
+  String membersOf(Object count, Object max);
+
+  /// No description provided for @openTasksCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} open {label}'**
+  String openTasksCount(Object count, Object label);
+
+  /// No description provided for @taskSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'task'**
+  String get taskSingular;
+
+  /// No description provided for @tasksPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'tasks'**
+  String get tasksPlural;
+
+  /// No description provided for @coursework.
+  ///
+  /// In en, this message translates to:
+  /// **'Coursework'**
+  String get coursework;
+
+  /// No description provided for @myAssignments.
+  ///
+  /// In en, this message translates to:
+  /// **'My assignments'**
+  String get myAssignments;
+
+  /// No description provided for @nothingWaitingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing waiting for review'**
+  String get nothingWaitingReview;
+
+  /// No description provided for @submissionsAwaitingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} submission(s) awaiting review'**
+  String submissionsAwaitingReview(Object count);
+
+  /// No description provided for @youAreUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You are up to date'**
+  String get youAreUpToDate;
+
+  /// No description provided for @openAssignmentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} open {label}'**
+  String openAssignmentsCount(Object count, Object label);
+
+  /// No description provided for @assignmentSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'assignment'**
+  String get assignmentSingular;
+
+  /// No description provided for @assignmentsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'assignments'**
+  String get assignmentsPlural;
+
+  /// No description provided for @noCourseworkPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'No coursework published yet. Publish one from the Work tab.'**
+  String get noCourseworkPublished;
+
+  /// No description provided for @noAssignmentsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'No assignments are due right now.'**
+  String get noAssignmentsDue;
+
+  /// No description provided for @groupWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Group work'**
+  String get groupWork;
+
+  /// No description provided for @individual.
+  ///
+  /// In en, this message translates to:
+  /// **'Individual'**
+  String get individual;
+
+  /// No description provided for @marksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} marks'**
+  String marksLabel(Object count);
+
+  /// No description provided for @courseDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Course discussions'**
+  String get courseDiscussions;
+
+  /// No description provided for @threadsInCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} threads in this course'**
+  String threadsInCourse(Object count);
+
+  /// No description provided for @noDiscussionsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No discussions yet'**
+  String get noDiscussionsYet;
+
+  /// No description provided for @beFirstToAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Be the first to ask something — a classmate or your teacher will pick it up.'**
+  String get beFirstToAsk;
+
+  /// No description provided for @startDiscussion.
+  ///
+  /// In en, this message translates to:
+  /// **'Start discussion'**
+  String get startDiscussion;
+
+  /// No description provided for @teacherAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Teacher answered'**
+  String get teacherAnswered;
+
+  /// No description provided for @resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get resolved;
+
+  /// No description provided for @nextStudySession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next study session'**
+  String get nextStudySession;
+
+  /// No description provided for @studySessionLiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Study session live now'**
+  String get studySessionLiveNow;
+
+  /// No description provided for @joiningCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} joining'**
+  String joiningCount(Object count);
+
+  /// No description provided for @goingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} going'**
+  String goingCount(Object count);
+
+  /// No description provided for @inTheRoomTapToJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} in the room · tap to join'**
+  String inTheRoomTapToJoin(Object count);
+
+  /// No description provided for @openFullCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the full community'**
+  String get openFullCommunity;
+
+  /// No description provided for @openFullCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Students · Discussions · Chat · Groups · Work · Resources'**
+  String get openFullCommunitySubtitle;
+
+  /// No description provided for @noCourseCommunitiesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No course communities yet'**
+  String get noCourseCommunitiesYet;
+
+  /// No description provided for @communityHubStudentIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a course to meet the students learning it with you, join a study group, and get help.'**
+  String get communityHubStudentIntro;
+
+  /// No description provided for @communityHubTeacherIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Post announcements, publish assignments, answer questions and grade group work — all inside the course your students already study in.'**
+  String get communityHubTeacherIntro;
+
+  /// No description provided for @everyCourseHasCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Every course you enrol in comes with its own community — classmates, study groups and discussions.'**
+  String get everyCourseHasCommunity;
+
+  /// No description provided for @noCoursesAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'No courses assigned to you'**
+  String get noCoursesAssigned;
+
+  /// No description provided for @noCoursesAssignedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Once you are assigned to a course, its community appears here with your teacher tools.'**
+  String get noCoursesAssignedHint;
+
+  /// No description provided for @openCourseCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the course community'**
+  String get openCourseCommunity;
+
+  /// No description provided for @studentsActiveSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{students} students · {active} active'**
+  String studentsActiveSummary(Object active, Object students);
+
+  /// No description provided for @messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get messages;
+
+  /// No description provided for @timeMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String timeMinutesShort(Object minutes);
+
+  /// No description provided for @timeHoursShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String timeHoursShort(Object hours);
+
+  /// No description provided for @timeDaysShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String timeDaysShort(Object days);
+
+  /// No description provided for @timeWeeksShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{weeks}w ago'**
+  String timeWeeksShort(Object weeks);
+
+  /// No description provided for @timeMonthsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{months}mo ago'**
+  String timeMonthsShort(Object months);
+
+  /// No description provided for @monthJan.
+  ///
+  /// In en, this message translates to:
+  /// **'Jan'**
+  String get monthJan;
+
+  /// No description provided for @monthFeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Feb'**
+  String get monthFeb;
+
+  /// No description provided for @monthMar.
+  ///
+  /// In en, this message translates to:
+  /// **'Mar'**
+  String get monthMar;
+
+  /// No description provided for @monthApr.
+  ///
+  /// In en, this message translates to:
+  /// **'Apr'**
+  String get monthApr;
+
+  /// No description provided for @monthMay.
+  ///
+  /// In en, this message translates to:
+  /// **'May'**
+  String get monthMay;
+
+  /// No description provided for @monthJun.
+  ///
+  /// In en, this message translates to:
+  /// **'Jun'**
+  String get monthJun;
+
+  /// No description provided for @monthJul.
+  ///
+  /// In en, this message translates to:
+  /// **'Jul'**
+  String get monthJul;
+
+  /// No description provided for @monthAug.
+  ///
+  /// In en, this message translates to:
+  /// **'Aug'**
+  String get monthAug;
+
+  /// No description provided for @monthSep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sep'**
+  String get monthSep;
+
+  /// No description provided for @monthOct.
+  ///
+  /// In en, this message translates to:
+  /// **'Oct'**
+  String get monthOct;
+
+  /// No description provided for @monthNov.
+  ///
+  /// In en, this message translates to:
+  /// **'Nov'**
+  String get monthNov;
+
+  /// No description provided for @monthDec.
+  ///
+  /// In en, this message translates to:
+  /// **'Dec'**
+  String get monthDec;
+
+  /// No description provided for @dueTodayPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today (passed)'**
+  String get dueTodayPassed;
+
+  /// No description provided for @overdueByDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue by {days}d'**
+  String overdueByDays(Object days);
+
+  /// No description provided for @dueInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {hours}h'**
+  String dueInHours(Object hours);
+
+  /// No description provided for @dueInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Due in {days} days'**
+  String dueInDays(Object days);
+
+  /// No description provided for @dueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String dueOn(Object date);
+
+  /// No description provided for @openLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Open link'**
+  String get openLink;
+
+  /// No description provided for @linkBlockedByBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Your browser blocked the automatic redirect. Tap below to open it.'**
+  String get linkBlockedByBrowser;
+
+  /// No description provided for @linkLooksBroken.
+  ///
+  /// In en, this message translates to:
+  /// **'That link looks broken'**
+  String get linkLooksBroken;
+
+  /// No description provided for @everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get everyone;
+
+  /// No description provided for @studyPartners.
+  ///
+  /// In en, this message translates to:
+  /// **'Study partners'**
+  String get studyPartners;
+
+  /// No description provided for @searchClassmatesByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Search classmates by name'**
+  String get searchClassmatesByName;
+
+  /// No description provided for @searchClassmates.
+  ///
+  /// In en, this message translates to:
+  /// **'Search classmates'**
+  String get searchClassmates;
+
+  /// No description provided for @activeNowFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Active now'**
+  String get activeNowFilter;
+
+  /// No description provided for @teachersFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Teachers'**
+  String get teachersFilter;
+
+  /// No description provided for @nobodyActiveRightNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody is active right now'**
+  String get nobodyActiveRightNow;
+
+  /// No description provided for @noStudentsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No students found'**
+  String get noStudentsFound;
+
+  /// No description provided for @checkBackLaterOrAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Check back later, or leave a question so classmates find it when they come online.'**
+  String get checkBackLaterOrAsk;
+
+  /// No description provided for @tryDifferentName.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different name or clear the filters.'**
+  String get tryDifferentName;
+
+  /// No description provided for @enrolledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'enrolled'**
+  String get enrolledLabel;
+
+  /// No description provided for @teachersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'teachers'**
+  String get teachersLabel;
+
+  /// No description provided for @youSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (you)'**
+  String youSuffix(Object name);
+
+  /// No description provided for @messagePerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Message {name}'**
+  String messagePerson(Object name);
+
+  /// No description provided for @lookingForStudyPartner.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for a study partner'**
+  String get lookingForStudyPartner;
+
+  /// No description provided for @studentsLookingForPartners.
+  ///
+  /// In en, this message translates to:
+  /// **'Students looking for partners'**
+  String get studentsLookingForPartners;
+
+  /// No description provided for @nobodyPublishedCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody has published a card yet'**
+  String get nobodyPublishedCard;
+
+  /// No description provided for @classmatesWantToStudy.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} classmate(s) want to study together'**
+  String classmatesWantToStudy(Object count);
+
+  /// No description provided for @noStudyPartnersListed.
+  ///
+  /// In en, this message translates to:
+  /// **'No study partners listed yet'**
+  String get noStudyPartnersListed;
+
+  /// No description provided for @publishYourCardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish your own card above — classmates who join later will see it and can reach out.'**
+  String get publishYourCardHint;
+
+  /// No description provided for @youAreListedAsPartner.
+  ///
+  /// In en, this message translates to:
+  /// **'You are listed as looking for a partner'**
+  String get youAreListedAsPartner;
+
+  /// No description provided for @letClassmatesKnow.
+  ///
+  /// In en, this message translates to:
+  /// **'Let classmates know you want a study partner'**
+  String get letClassmatesKnow;
+
+  /// No description provided for @noGoalSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No goal set'**
+  String get noGoalSet;
+
+  /// No description provided for @partnerCardPrivacyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share what you want to work on and when you are free. Only people in this course can see it, and you can remove it at any time.'**
+  String get partnerCardPrivacyHint;
+
+  /// No description provided for @editMyCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit my card'**
+  String get editMyCard;
+
+  /// No description provided for @publishMyCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish my card'**
+  String get publishMyCard;
+
+  /// No description provided for @removedFromPartnerList.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from the partner list'**
+  String get removedFromPartnerList;
+
+  /// No description provided for @findStudyPartner.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a study partner'**
+  String get findStudyPartner;
+
+  /// No description provided for @whatWorkingTowards.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you working towards?'**
+  String get whatWorkingTowards;
+
+  /// No description provided for @goalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Prepare for the August exam'**
+  String get goalHint;
+
+  /// No description provided for @topicsCommaSeparated.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics (comma separated)'**
+  String get topicsCommaSeparated;
+
+  /// No description provided for @whenAreYouFree.
+  ///
+  /// In en, this message translates to:
+  /// **'When are you usually free?'**
+  String get whenAreYouFree;
+
+  /// No description provided for @anythingElseOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else (optional)'**
+  String get anythingElseOptional;
+
+  /// No description provided for @yourCardIsLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Your study partner card is live'**
+  String get yourCardIsLive;
+
+  /// No description provided for @goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get goal;
+
+  /// No description provided for @availableColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Available: {slots}'**
+  String availableColon(Object slots);
+
+  /// No description provided for @slotMornings.
+  ///
+  /// In en, this message translates to:
+  /// **'Mornings'**
+  String get slotMornings;
+
+  /// No description provided for @slotAfternoons.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoons'**
+  String get slotAfternoons;
+
+  /// No description provided for @slotEvenings.
+  ///
+  /// In en, this message translates to:
+  /// **'Evenings'**
+  String get slotEvenings;
+
+  /// No description provided for @slotWeekends.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekends'**
+  String get slotWeekends;
+
+  /// No description provided for @slotFlexible.
+  ///
+  /// In en, this message translates to:
+  /// **'Flexible'**
+  String get slotFlexible;
+
+  /// No description provided for @couldNotLoadClassmates.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load classmates.'**
+  String get couldNotLoadClassmates;
+
+  /// No description provided for @nobodyToMessageYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody to message yet'**
+  String get nobodyToMessageYet;
+
+  /// No description provided for @noMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get noMatches;
+
+  /// No description provided for @studentProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Student profile'**
+  String get studentProfile;
+
+  /// No description provided for @currentlyStudying.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently studying'**
+  String get currentlyStudying;
+
+  /// No description provided for @interests.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests'**
+  String get interests;
+
+  /// No description provided for @percentThroughCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% through the course'**
+  String percentThroughCourse(Object percent);
+
+  /// No description provided for @groupsStat.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get groupsStat;
+
+  /// No description provided for @posts.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts'**
+  String get posts;
+
+  /// No description provided for @replies.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies'**
+  String get replies;
+
+  /// No description provided for @studyGroupsInCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Study groups in this course'**
+  String get studyGroupsInCourse;
+
+  /// No description provided for @membersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String membersCount(Object count);
+
+  /// No description provided for @messageYourTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Message your teacher'**
+  String get messageYourTeacher;
+
+  /// No description provided for @teacherDiscussionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For anything the whole class would benefit from, the Discussions tab is a better place than a private message.'**
+  String get teacherDiscussionHint;
+
+  /// No description provided for @inviteToGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also invite {name} to a study group from the Groups tab.'**
+  String inviteToGroupHint(Object name);
+
+  /// No description provided for @live.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get live;
+
+  /// No description provided for @connecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get connecting;
+
+  /// No description provided for @unreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String unreadCount(Object count);
+
+  /// No description provided for @newMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'New message'**
+  String get newMessage;
+
+  /// No description provided for @publicFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get publicFilter;
+
+  /// No description provided for @directFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get directFilter;
+
+  /// No description provided for @privateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get privateLabel;
+
+  /// No description provided for @groupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group'**
+  String get groupLabel;
+
+  /// No description provided for @everyoneInThisCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone in this course'**
+  String get everyoneInThisCourse;
+
+  /// No description provided for @noDirectChatsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No direct chats yet'**
+  String get noDirectChatsYet;
+
+  /// No description provided for @notInGroupYetShort.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not in a group yet'**
+  String get notInGroupYetShort;
+
+  /// No description provided for @noConversationsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet'**
+  String get noConversationsYet;
+
+  /// No description provided for @directChatsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message a classmate or your teacher privately — those chats appear here.'**
+  String get directChatsHint;
+
+  /// No description provided for @groupChatsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Join or create a study group and its chat shows up here.'**
+  String get groupChatsHint;
+
+  /// No description provided for @startWithCourseChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with the course chat — everyone studying this course can see it.'**
+  String get startWithCourseChat;
+
+  /// No description provided for @sayHello.
+  ///
+  /// In en, this message translates to:
+  /// **'Say hello'**
+  String get sayHello;
+
+  /// No description provided for @sayHelloToClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Say something to the whole class'**
+  String get sayHelloToClass;
+
+  /// No description provided for @noMessagesInGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages in this group yet'**
+  String get noMessagesInGroup;
+
+  /// No description provided for @attachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment'**
+  String get attachment;
+
+  /// No description provided for @blocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get blocked;
+
+  /// No description provided for @youPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'You: {text}'**
+  String youPrefix(Object text);
+
+  /// No description provided for @startTheConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the conversation'**
+  String get startTheConversation;
+
+  /// No description provided for @writeAMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message…'**
+  String get writeAMessage;
+
+  /// No description provided for @writeAReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a reply…'**
+  String get writeAReply;
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get reply;
+
+  /// No description provided for @deleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete message'**
+  String get deleteMessage;
+
+  /// No description provided for @messageRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'This message was removed'**
+  String get messageRemoved;
+
+  /// No description provided for @replyingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Replying to {name}'**
+  String replyingTo(Object name);
+
+  /// No description provided for @replying.
+  ///
+  /// In en, this message translates to:
+  /// **'Replying'**
+  String get replying;
+
+  /// No description provided for @messageCouldNotBeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Message could not be sent'**
+  String get messageCouldNotBeSent;
+
+  /// No description provided for @groupChatEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your group’s private chat. Plan who does what, and share what you find.'**
+  String get groupChatEmptyHint;
+
+  /// No description provided for @courseChatEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet. Ask about a lesson, share what clicked for you, or offer to help someone.'**
+  String get courseChatEmptyHint;
+
+  /// No description provided for @searchDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Search discussions'**
+  String get searchDiscussions;
+
+  /// No description provided for @discussionsFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Discussions'**
+  String get discussionsFilter;
+
+  /// No description provided for @announcements.
+  ///
+  /// In en, this message translates to:
+  /// **'Announcements'**
+  String get announcements;
+
+  /// No description provided for @unanswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered'**
+  String get unanswered;
+
+  /// No description provided for @newPost.
+  ///
+  /// In en, this message translates to:
+  /// **'New post'**
+  String get newPost;
+
+  /// No description provided for @getHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Get help'**
+  String get getHelp;
+
+  /// No description provided for @nothingMatchesSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches that search'**
+  String get nothingMatchesSearch;
+
+  /// No description provided for @noPostsHereYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts here yet'**
+  String get noPostsHereYet;
+
+  /// No description provided for @tryDifferentWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Try different words, or start the discussion yourself.'**
+  String get tryDifferentWords;
+
+  /// No description provided for @askFirstQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the first question — your classmates and teacher will see it in their community feed.'**
+  String get askFirstQuestion;
+
+  /// No description provided for @startAPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a post'**
+  String get startAPost;
 }
 
 class _AppLocalizationsDelegate

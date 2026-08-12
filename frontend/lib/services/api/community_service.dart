@@ -793,6 +793,17 @@ class CommunityService {
     return StudySession.fromJson(_unwrap(response));
   }
 
+  /// Every upcoming or live study session across all the caller's courses.
+  ///
+  /// Not course-scoped — the home dashboard lists these beside teacher-led
+  /// live sessions, so a group meeting is as visible as a class.
+  Future<List<StudySession>> getMySessions() async {
+    final data = _unwrap(await _apiClient.get('${ApiConfig.community}/my/sessions'));
+    return (data['sessions'] as List? ?? [])
+        .map((s) => StudySession.fromJson(s as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<StudySession> getSession(String courseId, String sessionId) async {
     final response = await _apiClient.get('${_base(courseId)}/sessions/$sessionId');
     return StudySession.fromJson(_unwrap(response));

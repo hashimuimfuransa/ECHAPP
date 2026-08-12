@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../providers/community_provider.dart';
 import 'community_chat_inbox_view.dart';
 import 'community_dashboard_view.dart';
@@ -88,7 +89,7 @@ class _CourseCommunityScreenState extends ConsumerState<CourseCommunityScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Community',
+              AppLocalizations.of(context)!.community,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -132,7 +133,7 @@ class _CourseCommunityScreenState extends ConsumerState<CourseCommunityScreen>
                         height: 46,
                         icon: Icon(section.icon, size: 17),
                         iconMargin: const EdgeInsets.only(bottom: 2),
-                        text: section.label,
+                        text: section.label(context),
                       ))
                   .toList(),
             ),

@@ -204,7 +204,7 @@ class SessionCardState extends ConsumerState<SessionCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _timingLabel(s),
+                      _timingLabel(context, s),
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: s.isLive ? FontWeight.w700 : FontWeight.w500,
@@ -413,7 +413,7 @@ class SessionCardState extends ConsumerState<SessionCard> {
           const SizedBox(height: 9),
           SessionNotice(
             icon: Icons.info_outline_rounded,
-            text: _organiserHint(s),
+            text: _organiserHint(context, s),
             color: CT.subTextOf(context),
           ),
         ],
@@ -447,7 +447,7 @@ class SessionCardState extends ConsumerState<SessionCard> {
 
   /// Tells the organiser exactly what tapping "Open the room" will do, and
   /// when — a bare "you can open it later" left people hunting for a button.
-  static String _organiserHint(StudySession s) {
+  static String _organiserHint(BuildContext context, StudySession s) {
     if (!s.canStart) {
       return 'This session\'s time has passed, so the room can no longer be opened.';
     }
@@ -470,22 +470,22 @@ class SessionCardState extends ConsumerState<SessionCard> {
       return 'Starts in ${until.inHours}h — open the room early if you want to '
           'set up. $who';
     }
-    return 'Scheduled for ${CT.formatDateTime(s.scheduledAt)}. You can open the '
+    return 'Scheduled for ${CT.formatDateTime(context, s.scheduledAt)}. You can open the '
         'room whenever you are ready. $who';
   }
 
-  static String _timingLabel(StudySession s) {
+  static String _timingLabel(BuildContext context, StudySession s) {
     if (s.isLive) {
-      return 'Live now · started ${CT.timeAgo(s.startedAt ?? s.scheduledAt)}';
+      return 'Live now · started ${CT.timeAgo(context, s.startedAt ?? s.scheduledAt)}';
     }
     if (s.isCancelled) return 'Cancelled';
-    if (s.isCompleted) return 'Finished ${CT.timeAgo(s.endedAt ?? s.scheduledAt)}';
+    if (s.isCompleted) return 'Finished ${CT.timeAgo(context, s.endedAt ?? s.scheduledAt)}';
 
     final until = s.timeUntilStart;
     if (until != null && until.inMinutes <= 60 && until.inSeconds > 0) {
-      return 'Starts in ${until.inMinutes} min · ${CT.formatDateTime(s.scheduledAt)}';
+      return 'Starts in ${until.inMinutes} min · ${CT.formatDateTime(context, s.scheduledAt)}';
     }
-    return CT.formatDateTime(s.scheduledAt);
+    return CT.formatDateTime(context, s.scheduledAt);
   }
 }
 

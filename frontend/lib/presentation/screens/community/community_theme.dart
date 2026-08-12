@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../../../models/community.dart';
 
 /// Design tokens and small shared widgets for the Course Community.
@@ -84,46 +86,58 @@ class CT {
   }
 
   /// "2 min ago" / "3 days ago" — used across posts, chat and resources.
-  static String timeAgo(DateTime? date) {
+  ///
+  /// These take a BuildContext so every relative date reads in the viewer's
+  /// language; there is no sensible way to localise a static helper otherwise.
+  static String timeAgo(BuildContext context, DateTime? date) {
     if (date == null) return '';
+    final l10n = AppLocalizations.of(context)!;
     final diff = DateTime.now().difference(date);
-    if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
-    return '${(diff.inDays / 30).floor()}mo ago';
+    if (diff.inSeconds < 60) return l10n.justNow;
+    if (diff.inMinutes < 60) {
+      return l10n.timeMinutesShort(diff.inMinutes.toString());
+    }
+    if (diff.inHours < 24) return l10n.timeHoursShort(diff.inHours.toString());
+    if (diff.inDays < 7) return l10n.timeDaysShort(diff.inDays.toString());
+    if (diff.inDays < 30) {
+      return l10n.timeWeeksShort((diff.inDays / 7).floor().toString());
+    }
+    return l10n.timeMonthsShort((diff.inDays / 30).floor().toString());
   }
 
-  static String formatDate(DateTime? date) {
+  static List<String> _months(AppLocalizations l10n) => [
+        l10n.monthJan, l10n.monthFeb, l10n.monthMar, l10n.monthApr,
+        l10n.monthMay, l10n.monthJun, l10n.monthJul, l10n.monthAug,
+        l10n.monthSep, l10n.monthOct, l10n.monthNov, l10n.monthDec,
+      ];
+
+  static String formatDate(BuildContext context, DateTime? date) {
     if (date == null) return '—';
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
+    final months = _months(AppLocalizations.of(context)!);
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
-  static String formatDateTime(DateTime? date) {
+  static String formatDateTime(BuildContext context, DateTime? date) {
     if (date == null) return '—';
     final h = date.hour.toString().padLeft(2, '0');
     final m = date.minute.toString().padLeft(2, '0');
-    return '${formatDate(date)} · $h:$m';
+    return '${formatDate(context, date)} · $h:$m';
   }
 
   /// Days-until phrasing for assignment deadlines.
-  static String dueLabel(DateTime? due) {
-    if (due == null) return 'No deadline';
+  static String dueLabel(BuildContext context, DateTime? due) {
+    final l10n = AppLocalizations.of(context)!;
+    if (due == null) return l10n.noDeadline;
     final diff = due.difference(DateTime.now());
     if (diff.isNegative) {
       final days = (-diff.inDays);
-      if (days == 0) return 'Due today (passed)';
-      return 'Overdue by ${days}d';
+      if (days == 0) return l10n.dueTodayPassed;
+      return l10n.overdueByDays(days.toString());
     }
-    if (diff.inHours < 24) return 'Due in ${diff.inHours}h';
-    if (diff.inDays == 1) return 'Due tomorrow';
-    if (diff.inDays < 7) return 'Due in ${diff.inDays} days';
-    return 'Due ${formatDate(due)}';
+    if (diff.inHours < 24) return l10n.dueInHours(diff.inHours.toString());
+    if (diff.inDays == 1) return l10n.dueTomorrow;
+    if (diff.inDays < 7) return l10n.dueInDays(diff.inDays.toString());
+    return l10n.dueOn(formatDate(context, due));
   }
 }
 
@@ -658,14 +672,18 @@ class CommunityAction extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             SizedBox(
-              width: 62,
+              width: 66,
+              // Labels are deliberately two words on two lines ("Find\nstudents").
+              // maxLines: 1 was clipping every one of them to the first word,
+              // leaving "Ask a" and "Course" on screen.
               child: Text(
                 label,
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10.5,
+                  height: 1.25,
                   fontWeight: FontWeight.w700,
                   color: CT.textOf(context),
                 ),

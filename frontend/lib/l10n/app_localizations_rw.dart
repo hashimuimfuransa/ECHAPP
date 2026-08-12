@@ -1885,7 +1885,7 @@ class AppLocalizationsRw extends AppLocalizations {
   String get exploreCategories => 'Explore Categories';
 
   @override
-  String get viewAll => 'View All';
+  String get viewAll => 'Reba byose';
 
   @override
   String get whatsappNotAvailable => 'WhatsApp Not Available';
@@ -2881,4 +2881,734 @@ class AppLocalizationsRw extends AppLocalizations {
 
   @override
   String get unknownCourse => 'Isomo Ntabonetse';
+
+  @override
+  String get community => 'Umuryango';
+
+  @override
+  String get communityTagline => 'Nimwige mwese. Mufatanye. Mutsinde.';
+
+  @override
+  String get courseCommunity => 'UMURYANGO W’ISOMO';
+
+  @override
+  String get echCourseCommunity => 'Umuryango w’Isomo wa ECH';
+
+  @override
+  String get communitySectionHome => 'Ahabanza';
+
+  @override
+  String get communitySectionStudents => 'Abanyeshuri';
+
+  @override
+  String get communitySectionDiscussions => 'Ibiganiro';
+
+  @override
+  String get communitySectionChat => 'Ubutumwa';
+
+  @override
+  String get communitySectionGroups => 'Amatsinda';
+
+  @override
+  String get communitySectionWork => 'Imirimo';
+
+  @override
+  String get communitySectionResources => 'Ibikoresho';
+
+  @override
+  String get teacher => 'Mwarimu';
+
+  @override
+  String get student => 'Umunyeshuri';
+
+  @override
+  String get echStudent => 'Umunyeshuri wa ECH';
+
+  @override
+  String get echSupport => 'Ubufasha bwa ECH';
+
+  @override
+  String get communityLoadFailed => 'Ntibyashobotse gufungura umuryango';
+
+  @override
+  String get communityNotEnrolled =>
+      'Ugomba kwiyandikisha muri iri somo kugira ngo winjire mu muryango waryo.';
+
+  @override
+  String get somethingWentWrong => 'Hari ikitagenze neza. Ongera ugerageze.';
+
+  @override
+  String get browse => 'Shakisha';
+
+  @override
+  String get justNow => 'nonaha';
+
+  @override
+  String get noDeadline => 'Nta gihe ntarengwa';
+
+  @override
+  String get dueToday => 'Bigomba kurangira uyu munsi';
+
+  @override
+  String get dueTomorrow => 'Bigomba kurangira ejo';
+
+  @override
+  String get studentsCount => 'abanyeshuri';
+
+  @override
+  String get studentSingular => 'umunyeshuri';
+
+  @override
+  String get activeNow => 'bari kwiga nonaha';
+
+  @override
+  String get groupsCount => 'amatsinda';
+
+  @override
+  String get groupSingular => 'itsinda';
+
+  @override
+  String get findStudents => 'Shaka\nabanyeshuri';
+
+  @override
+  String get createGroupAction => 'Kora\nitsinda';
+
+  @override
+  String get askQuestionAction => 'Baza\nikibazo';
+
+  @override
+  String get courseChatAction => 'Ibiganiro\nby’isomo';
+
+  @override
+  String get postNoticeAction => 'Tanga\nitangazo';
+
+  @override
+  String get startPostAction => 'Tangira\nubutumwa';
+
+  @override
+  String get yourTeacher => 'Mwarimu wawe';
+
+  @override
+  String get yourTeachers => 'Abarimu bawe';
+
+  @override
+  String get pinnedByTeacher => 'Byashyizwe imbere na mwarimu';
+
+  @override
+  String get announcement => 'Itangazo';
+
+  @override
+  String get studentsLearningNow => 'Abanyeshuri bari kwiga nonaha';
+
+  @override
+  String enrolledActiveSummary(Object active, Object enrolled) {
+    return '$enrolled biyandikishije · $active bari kwiga nonaha';
+  }
+
+  @override
+  String get nobodyStudyingNow =>
+      'Nta wundi uri kwiga nonaha — uri imbere y’abandi. Siga ikibazo, bagenzi bawe bazakibona.';
+
+  @override
+  String get myGroups => 'Amatsinda yanjye';
+
+  @override
+  String get workThroughCourseWithClassmates =>
+      'Iga isomo ufatanyije na bagenzi bawe';
+
+  @override
+  String activeGroupsCount(Object count, Object label) {
+    return '$label $count akora';
+  }
+
+  @override
+  String get notInGroupYet => 'Ntabwo uri mu itsinda ry’ubushakashatsi';
+
+  @override
+  String get groupsBenefit =>
+      'Amatsinda aguha urutonde rw’imirimo, ibiganiro byihariye, n’ahantu hamwe ho gutanga imikoro y’itsinda.';
+
+  @override
+  String get createGroup => 'Kora itsinda';
+
+  @override
+  String get findOne => 'Shaka rimwe';
+
+  @override
+  String get owner => 'Nyirayo';
+
+  @override
+  String membersOf(Object count, Object max) {
+    return 'abanyamuryango $count/$max';
+  }
+
+  @override
+  String openTasksCount(Object count, Object label) {
+    return '$label $count bitararangira';
+  }
+
+  @override
+  String get taskSingular => 'umurimo';
+
+  @override
+  String get tasksPlural => 'imirimo';
+
+  @override
+  String get coursework => 'Imirimo y’isomo';
+
+  @override
+  String get myAssignments => 'Imikoro yanjye';
+
+  @override
+  String get nothingWaitingReview => 'Nta kintu gitegereje gusuzumwa';
+
+  @override
+  String submissionsAwaitingReview(Object count) {
+    return 'Imikoro $count itegereje gusuzumwa';
+  }
+
+  @override
+  String get youAreUpToDate => 'Uri ku gihe';
+
+  @override
+  String openAssignmentsCount(Object count, Object label) {
+    return '$label $count bitararangira';
+  }
+
+  @override
+  String get assignmentSingular => 'umukoro';
+
+  @override
+  String get assignmentsPlural => 'imikoro';
+
+  @override
+  String get noCourseworkPublished =>
+      'Nta mukoro urasohorwa. Sohora umwe uhereye ku gice cy’Imirimo.';
+
+  @override
+  String get noAssignmentsDue => 'Nta mukoro ugomba gutangwa ubu.';
+
+  @override
+  String get groupWork => 'Umurimo w’itsinda';
+
+  @override
+  String get individual => 'Umuntu ku giti cye';
+
+  @override
+  String marksLabel(Object count) {
+    return 'amanota $count';
+  }
+
+  @override
+  String get courseDiscussions => 'Ibiganiro by’isomo';
+
+  @override
+  String threadsInCourse(Object count) {
+    return 'Ibiganiro $count muri iri somo';
+  }
+
+  @override
+  String get noDiscussionsYet => 'Nta biganiro birabaho';
+
+  @override
+  String get beFirstToAsk =>
+      'Ba uwa mbere ubaza — mugenzi wawe cyangwa mwarimu azagusubiza.';
+
+  @override
+  String get startDiscussion => 'Tangira ikiganiro';
+
+  @override
+  String get teacherAnswered => 'Mwarimu yarasubije';
+
+  @override
+  String get resolved => 'Byakemutse';
+
+  @override
+  String get nextStudySession => 'Igiterane cy’ubushakashatsi gikurikira';
+
+  @override
+  String get studySessionLiveNow => 'Igiterane kiri kubera nonaha';
+
+  @override
+  String joiningCount(Object count) {
+    return '$count bitabiriye';
+  }
+
+  @override
+  String goingCount(Object count) {
+    return '$count bazaza';
+  }
+
+  @override
+  String inTheRoomTapToJoin(Object count) {
+    return '$count bari mu cyumba · kanda winjire';
+  }
+
+  @override
+  String get openFullCommunity => 'Fungura umuryango wose';
+
+  @override
+  String get openFullCommunitySubtitle =>
+      'Abanyeshuri · Ibiganiro · Ubutumwa · Amatsinda · Imirimo · Ibikoresho';
+
+  @override
+  String get noCourseCommunitiesYet => 'Nta miryango y’amasomo irabaho';
+
+  @override
+  String get communityHubStudentIntro =>
+      'Hitamo isomo uhure n’abanyeshuri muriga mwese, winjire mu itsinda, ubone n’ubufasha.';
+
+  @override
+  String get communityHubTeacherIntro =>
+      'Tanga amatangazo, sohora imikoro, subiza ibibazo unatange amanota — byose mu isomo abanyeshuri bawe basanzwe biga.';
+
+  @override
+  String get everyCourseHasCommunity =>
+      'Buri somo wiyandikishamo rije n’umuryango waryo — bagenzi bawe, amatsinda n’ibiganiro.';
+
+  @override
+  String get noCoursesAssigned => 'Nta masomo wahawe';
+
+  @override
+  String get noCoursesAssignedHint =>
+      'Nihagira isomo uhabwa, umuryango waryo uzagaragara hano n’ibikoresho bya mwarimu.';
+
+  @override
+  String get openCourseCommunity => 'Fungura umuryango w’isomo';
+
+  @override
+  String studentsActiveSummary(Object active, Object students) {
+    return 'abanyeshuri $students · $active bakora';
+  }
+
+  @override
+  String get messages => 'Ubutumwa';
+
+  @override
+  String timeMinutesShort(Object minutes) {
+    return 'mbere y’iminota $minutes';
+  }
+
+  @override
+  String timeHoursShort(Object hours) {
+    return 'mbere y’amasaha $hours';
+  }
+
+  @override
+  String timeDaysShort(Object days) {
+    return 'mbere y’iminsi $days';
+  }
+
+  @override
+  String timeWeeksShort(Object weeks) {
+    return 'mbere y’ibyumweru $weeks';
+  }
+
+  @override
+  String timeMonthsShort(Object months) {
+    return 'mbere y’amezi $months';
+  }
+
+  @override
+  String get monthJan => 'Mut';
+
+  @override
+  String get monthFeb => 'Gas';
+
+  @override
+  String get monthMar => 'Wer';
+
+  @override
+  String get monthApr => 'Mat';
+
+  @override
+  String get monthMay => 'Gic';
+
+  @override
+  String get monthJun => 'Kam';
+
+  @override
+  String get monthJul => 'Nya';
+
+  @override
+  String get monthAug => 'Kan';
+
+  @override
+  String get monthSep => 'Nze';
+
+  @override
+  String get monthOct => 'Ukw';
+
+  @override
+  String get monthNov => 'Ugu';
+
+  @override
+  String get monthDec => 'Uku';
+
+  @override
+  String get dueTodayPassed => 'Byari bigomba kurangira uyu munsi';
+
+  @override
+  String overdueByDays(Object days) {
+    return 'Byarengeje iminsi $days';
+  }
+
+  @override
+  String dueInHours(Object hours) {
+    return 'Bisigaje amasaha $hours';
+  }
+
+  @override
+  String dueInDays(Object days) {
+    return 'Bisigaje iminsi $days';
+  }
+
+  @override
+  String dueOn(Object date) {
+    return 'Bigomba kurangira $date';
+  }
+
+  @override
+  String get openLink => 'Fungura umurongo';
+
+  @override
+  String get linkBlockedByBrowser =>
+      'Mushakisha wawe yahagaritse kwimuka byikoresha. Kanda hepfo urebe.';
+
+  @override
+  String get linkLooksBroken => 'Uyu murongo usa nk’uwangiritse';
+
+  @override
+  String get everyone => 'Bose';
+
+  @override
+  String get studyPartners => 'Abo mwiga mwese';
+
+  @override
+  String get searchClassmatesByName => 'Shakisha bagenzi bawe ukoresheje izina';
+
+  @override
+  String get searchClassmates => 'Shakisha bagenzi bawe';
+
+  @override
+  String get activeNowFilter => 'Bari kwiga nonaha';
+
+  @override
+  String get teachersFilter => 'Abarimu';
+
+  @override
+  String get nobodyActiveRightNow => 'Nta muntu uri kwiga nonaha';
+
+  @override
+  String get noStudentsFound => 'Nta banyeshuri babonetse';
+
+  @override
+  String get checkBackLaterOrAsk =>
+      'Ongera ugaruke, cyangwa usige ikibazo bagenzi bawe bakizabone.';
+
+  @override
+  String get tryDifferentName =>
+      'Gerageza irindi zina cyangwa ukureho amashungura.';
+
+  @override
+  String get enrolledLabel => 'biyandikishije';
+
+  @override
+  String get teachersLabel => 'abarimu';
+
+  @override
+  String youSuffix(Object name) {
+    return '$name (wowe)';
+  }
+
+  @override
+  String messagePerson(Object name) {
+    return 'Andikira $name';
+  }
+
+  @override
+  String get lookingForStudyPartner => 'Ashaka uwo biga bafatanyije';
+
+  @override
+  String get studentsLookingForPartners =>
+      'Abanyeshuri bashaka abo biga bafatanyije';
+
+  @override
+  String get nobodyPublishedCard => 'Nta wari watanga amakuru ye';
+
+  @override
+  String classmatesWantToStudy(Object count) {
+    return 'Bagenzi bawe $count bashaka kwiga mwese';
+  }
+
+  @override
+  String get noStudyPartnersListed => 'Nta bo mwiga mwese barashyirwaho';
+
+  @override
+  String get publishYourCardHint =>
+      'Tanga amakuru yawe hejuru — bagenzi bawe bazayabona bakakwandikira.';
+
+  @override
+  String get youAreListedAsPartner => 'Wanditse ko ushaka uwo mwiga mwese';
+
+  @override
+  String get letClassmatesKnow =>
+      'Menyesha bagenzi bawe ko ushaka uwo mwiga mwese';
+
+  @override
+  String get noGoalSet => 'Nta ntego yashyizweho';
+
+  @override
+  String get partnerCardPrivacyHint =>
+      'Sangiza icyo ushaka gukora n’igihe uboneka. Abari muri iri somo gusa nibo babibona, kandi ushobora kubikuraho igihe cyose.';
+
+  @override
+  String get editMyCard => 'Hindura amakuru yanjye';
+
+  @override
+  String get publishMyCard => 'Tangaza amakuru yanjye';
+
+  @override
+  String get removedFromPartnerList => 'Wavanywe ku rutonde';
+
+  @override
+  String get findStudyPartner => 'Shaka uwo mwiga mwese';
+
+  @override
+  String get whatWorkingTowards => 'Ni iyihe ntego ufite?';
+
+  @override
+  String get goalHint => 'urugero: Kwitegura ikizamini cya Kanama';
+
+  @override
+  String get topicsCommaSeparated => 'Ingingo (zitandukanyijwe na koma)';
+
+  @override
+  String get whenAreYouFree => 'Ni ryari usanzwe uboneka?';
+
+  @override
+  String get anythingElseOptional => 'Ikindi (si ngombwa)';
+
+  @override
+  String get yourCardIsLive => 'Amakuru yawe yatangajwe';
+
+  @override
+  String get goal => 'Intego';
+
+  @override
+  String availableColon(Object slots) {
+    return 'Uboneka: $slots';
+  }
+
+  @override
+  String get slotMornings => 'Mu gitondo';
+
+  @override
+  String get slotAfternoons => 'Nyuma ya saa sita';
+
+  @override
+  String get slotEvenings => 'Nimugoroba';
+
+  @override
+  String get slotWeekends => 'Mu mpera z’icyumweru';
+
+  @override
+  String get slotFlexible => 'Igihe cyose';
+
+  @override
+  String get couldNotLoadClassmates => 'Ntibyashobotse kubona bagenzi bawe.';
+
+  @override
+  String get nobodyToMessageYet => 'Nta muntu wo kwandikira';
+
+  @override
+  String get noMatches => 'Nta byabonetse';
+
+  @override
+  String get studentProfile => 'Umwirondoro w’umunyeshuri';
+
+  @override
+  String get currentlyStudying => 'Ari kwiga';
+
+  @override
+  String get interests => 'Ibimushishikaje';
+
+  @override
+  String percentThroughCourse(Object percent) {
+    return '$percent% by’isomo';
+  }
+
+  @override
+  String get groupsStat => 'Amatsinda';
+
+  @override
+  String get posts => 'Ubutumwa';
+
+  @override
+  String get replies => 'Ibisubizo';
+
+  @override
+  String get studyGroupsInCourse => 'Amatsinda yo muri iri somo';
+
+  @override
+  String membersCount(Object count) {
+    return 'abanyamuryango $count';
+  }
+
+  @override
+  String get messageYourTeacher => 'Andikira mwarimu wawe';
+
+  @override
+  String get teacherDiscussionHint =>
+      'Ku bintu byafasha ishuri ryose, igice cy’Ibiganiro ni cyo cyiza kuruta ubutumwa bwihariye.';
+
+  @override
+  String inviteToGroupHint(Object name) {
+    return 'Ushobora no gutumira $name mu itsinda uhereye ku gice cy’Amatsinda.';
+  }
+
+  @override
+  String get live => 'Kuri live';
+
+  @override
+  String get connecting => 'Turahuza…';
+
+  @override
+  String unreadCount(Object count) {
+    return '$count butarasomwa';
+  }
+
+  @override
+  String get newMessage => 'Ubutumwa bushya';
+
+  @override
+  String get publicFilter => 'Rusange';
+
+  @override
+  String get directFilter => 'Bwihariye';
+
+  @override
+  String get privateLabel => 'Bwihariye';
+
+  @override
+  String get groupLabel => 'Itsinda';
+
+  @override
+  String get everyoneInThisCourse => 'Buri wese muri iri somo';
+
+  @override
+  String get noDirectChatsYet => 'Nta biganiro byihariye birabaho';
+
+  @override
+  String get notInGroupYetShort => 'Ntabwo uri mu itsinda';
+
+  @override
+  String get noConversationsYet => 'Nta biganiro birabaho';
+
+  @override
+  String get directChatsHint =>
+      'Andikira mugenzi wawe cyangwa mwarimu mu buryo bwihariye — ibyo biganiro bigaragara hano.';
+
+  @override
+  String get groupChatsHint =>
+      'Injira cyangwa ukore itsinda, ibiganiro byaryo bigaragare hano.';
+
+  @override
+  String get startWithCourseChat =>
+      'Tangira ku biganiro by’isomo — buri wese wiga iri somo arabibona.';
+
+  @override
+  String get sayHello => 'Suhuza';
+
+  @override
+  String get sayHelloToClass => 'Bwira ishuri ryose ikintu';
+
+  @override
+  String get noMessagesInGroup => 'Nta butumwa buri muri iri tsinda';
+
+  @override
+  String get attachment => 'Umugereka';
+
+  @override
+  String get blocked => 'Yahagaritswe';
+
+  @override
+  String youPrefix(Object text) {
+    return 'Wowe: $text';
+  }
+
+  @override
+  String get startTheConversation => 'Tangira ikiganiro';
+
+  @override
+  String get writeAMessage => 'Andika ubutumwa…';
+
+  @override
+  String get writeAReply => 'Andika igisubizo…';
+
+  @override
+  String get today => 'Uyu munsi';
+
+  @override
+  String get reply => 'Subiza';
+
+  @override
+  String get deleteMessage => 'Siba ubutumwa';
+
+  @override
+  String get messageRemoved => 'Ubu butumwa bwasibwe';
+
+  @override
+  String replyingTo(Object name) {
+    return 'Usubiza $name';
+  }
+
+  @override
+  String get replying => 'Urasubiza';
+
+  @override
+  String get messageCouldNotBeSent => 'Ubutumwa ntibwoherejwe';
+
+  @override
+  String get groupChatEmptyHint =>
+      'Ibi ni ibiganiro byihariye by’itsinda ryanyu. Mugene uwakora iki, munasangire ibyo mubonye.';
+
+  @override
+  String get courseChatEmptyHint =>
+      'Nta butumwa buraboneka. Baza ku isomo, sangiza ibyo wumvise, cyangwa utange ubufasha.';
+
+  @override
+  String get searchDiscussions => 'Shakisha ibiganiro';
+
+  @override
+  String get discussionsFilter => 'Ibiganiro';
+
+  @override
+  String get announcements => 'Amatangazo';
+
+  @override
+  String get unanswered => 'Bitarasubizwa';
+
+  @override
+  String get newPost => 'Ubutumwa bushya';
+
+  @override
+  String get getHelp => 'Shaka ubufasha';
+
+  @override
+  String get nothingMatchesSearch => 'Nta kintu gihuye n’ibyo washatse';
+
+  @override
+  String get noPostsHereYet => 'Nta butumwa buri hano';
+
+  @override
+  String get tryDifferentWords =>
+      'Gerageza andi magambo, cyangwa utangire ikiganiro wowe ubwawe.';
+
+  @override
+  String get askFirstQuestion =>
+      'Baza ikibazo cya mbere — bagenzi bawe na mwarimu bazakibona.';
+
+  @override
+  String get startAPost => 'Tangira ubutumwa';
 }

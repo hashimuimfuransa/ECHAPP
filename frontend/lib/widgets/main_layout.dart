@@ -11,6 +11,7 @@ import 'package:excellencecoachinghub/widgets/responsive_navigation_drawer.dart'
 import 'package:excellencecoachinghub/presentation/providers/auth_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/notification_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/sidebar_provider.dart';
+import 'package:excellencecoachinghub/presentation/providers/community_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/course_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/enrollment_provider.dart';
 import 'package:excellencecoachinghub/presentation/providers/admin_dashboard_provider.dart';
@@ -165,6 +166,7 @@ class MainLayout extends ConsumerWidget {
     ref.invalidate(enrolledCoursesProvider);
     ref.invalidate(backendCategoriesProvider);
     ref.invalidate(notificationCountProvider);
+    ref.invalidate(myStudySessionsProvider);
     ref.invalidate(adminDashboardProvider);
     ref.invalidate(adminCourseProvider);
     
@@ -190,8 +192,8 @@ class MainLayout extends ConsumerWidget {
       case 'dashboard': return l10n?.dashboard ?? 'Dashboard';
       case 'courses': return l10n?.courses ?? 'Courses';
       case 'my-courses': return l10n?.myLearning ?? 'My Learning';
-      case 'community': return 'Community';
-      case 'messages': return 'Messages';
+      case 'community': return l10n?.community ?? 'Community';
+      case 'messages': return l10n?.messages ?? 'Messages';
       case 'categories': return l10n?.categories ?? 'Categories';
       case 'certificates': return l10n?.certificates ?? 'Certificates';
       case 'downloads': return l10n?.downloads ?? 'Downloads';
@@ -389,17 +391,19 @@ class MainLayout extends ConsumerWidget {
   }
 
   Widget _buildBottomNavBar(BuildContext context, String currentRoute) {
+    // `/my-courses` is checked before `/courses` — the looser match would
+    // otherwise claim it and light up the wrong tab.
     int currentIndex = 0;
     if (currentRoute.contains('/dashboard')) {
       currentIndex = 0;
+    } else if (currentRoute.contains('/my-courses')) {
+      currentIndex = 4;
     } else if (currentRoute.contains('/courses')) {
       currentIndex = 1;
-    } else if (currentRoute.contains('/books')) {
+    } else if (currentRoute.contains('/community')) {
       currentIndex = 2;
     } else if (currentRoute.contains('/downloads')) {
       currentIndex = 3;
-    } else if (currentRoute.contains('/my-courses')) {
-      currentIndex = 4;
     }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -463,7 +467,10 @@ class MainLayout extends ConsumerWidget {
     final navItems = [
       {'icon': Icons.home_rounded, 'label': l10n?.home ?? 'Home'},
       {'icon': Icons.school_rounded, 'label': l10n?.courses ?? 'Courses'},
-      {'icon': Icons.menu_book_rounded, 'label': l10n?.library ?? 'Library'},
+      // Community sits in the centre slot — the most reachable spot on the bar
+      // — because collaboration is meant to be as present as the lessons.
+      // The Library moved to the sidebar, where it was already listed.
+      {'icon': Icons.groups_rounded, 'label': l10n?.community ?? 'Community'},
       {'icon': Icons.download_rounded, 'label': l10n?.downloads ?? 'Downloads'},
       {'icon': Icons.bookmark_rounded, 'label': l10n?.enrolled ?? 'Enrolled'},
     ];
@@ -678,7 +685,7 @@ class MainLayout extends ConsumerWidget {
       case 1:
         return () => NavigationOptimizer.navigateToTab(context, '/courses');
       case 2:
-        return () => NavigationOptimizer.navigateToTab(context, '/library');
+        return () => NavigationOptimizer.navigateToTab(context, '/community');
       case 3:
         return () => NavigationOptimizer.navigateToTab(context, '/downloads');
       case 4:

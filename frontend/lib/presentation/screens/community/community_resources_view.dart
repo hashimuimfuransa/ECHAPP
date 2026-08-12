@@ -257,7 +257,7 @@ class _ResourceCard extends ConsumerWidget {
                     const SizedBox(height: 3),
                     Text(
                       '${resource.uploadedBy?.fullName ?? 'Someone'} · '
-                      '${CT.timeAgo(resource.createdAt)}',
+                      '${CT.timeAgo(context, resource.createdAt)}',
                       style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                     ),
                   ],

@@ -295,7 +295,7 @@ class _PostHeader extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      CT.timeAgo(post.createdAt),
+                      CT.timeAgo(context, post.createdAt),
                       style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                     ),
                   ],
@@ -466,7 +466,7 @@ class _ReplyCard extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      CT.timeAgo(reply.createdAt),
+                      CT.timeAgo(context, reply.createdAt),
                       style: const TextStyle(fontSize: 10.5, color: CT.textHint),
                     ),
                   ],

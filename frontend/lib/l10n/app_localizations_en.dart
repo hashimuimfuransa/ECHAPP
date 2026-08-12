@@ -2873,4 +2873,732 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownCourse => 'Unknown Course';
+
+  @override
+  String get community => 'Community';
+
+  @override
+  String get communityTagline => 'Learn together. Collaborate. Succeed.';
+
+  @override
+  String get courseCommunity => 'COURSE COMMUNITY';
+
+  @override
+  String get echCourseCommunity => 'ECH Course Community';
+
+  @override
+  String get communitySectionHome => 'Home';
+
+  @override
+  String get communitySectionStudents => 'Students';
+
+  @override
+  String get communitySectionDiscussions => 'Discussions';
+
+  @override
+  String get communitySectionChat => 'Chat';
+
+  @override
+  String get communitySectionGroups => 'Groups';
+
+  @override
+  String get communitySectionWork => 'Work';
+
+  @override
+  String get communitySectionResources => 'Resources';
+
+  @override
+  String get teacher => 'Teacher';
+
+  @override
+  String get student => 'Student';
+
+  @override
+  String get echStudent => 'ECH Student';
+
+  @override
+  String get echSupport => 'ECH Support';
+
+  @override
+  String get communityLoadFailed => 'Could not load the community';
+
+  @override
+  String get communityNotEnrolled =>
+      'You need to be enrolled in this course to join its community.';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong. Please try again.';
+
+  @override
+  String get browse => 'Browse';
+
+  @override
+  String get justNow => 'just now';
+
+  @override
+  String get noDeadline => 'No deadline';
+
+  @override
+  String get dueToday => 'Due today';
+
+  @override
+  String get dueTomorrow => 'Due tomorrow';
+
+  @override
+  String get studentsCount => 'students';
+
+  @override
+  String get studentSingular => 'student';
+
+  @override
+  String get activeNow => 'active now';
+
+  @override
+  String get groupsCount => 'groups';
+
+  @override
+  String get groupSingular => 'group';
+
+  @override
+  String get findStudents => 'Find\nstudents';
+
+  @override
+  String get createGroupAction => 'Create\ngroup';
+
+  @override
+  String get askQuestionAction => 'Ask a\nquestion';
+
+  @override
+  String get courseChatAction => 'Course\nchat';
+
+  @override
+  String get postNoticeAction => 'Post\nnotice';
+
+  @override
+  String get startPostAction => 'Start\npost';
+
+  @override
+  String get yourTeacher => 'Your teacher';
+
+  @override
+  String get yourTeachers => 'Your teachers';
+
+  @override
+  String get pinnedByTeacher => 'Pinned by your teacher';
+
+  @override
+  String get announcement => 'Announcement';
+
+  @override
+  String get studentsLearningNow => 'Students learning now';
+
+  @override
+  String enrolledActiveSummary(Object active, Object enrolled) {
+    return '$enrolled enrolled · $active active right now';
+  }
+
+  @override
+  String get nobodyStudyingNow =>
+      'Nobody else is studying right now — you are ahead of the class. Leave a question and classmates will find it later.';
+
+  @override
+  String get myGroups => 'My groups';
+
+  @override
+  String get workThroughCourseWithClassmates =>
+      'Work through the course with classmates';
+
+  @override
+  String activeGroupsCount(Object count, Object label) {
+    return '$count active $label';
+  }
+
+  @override
+  String get notInGroupYet => 'You are not in a study group yet';
+
+  @override
+  String get groupsBenefit =>
+      'Groups give you a shared task list, a private chat and one place to submit group assignments.';
+
+  @override
+  String get createGroup => 'Create group';
+
+  @override
+  String get findOne => 'Find one';
+
+  @override
+  String get owner => 'Owner';
+
+  @override
+  String membersOf(Object count, Object max) {
+    return '$count/$max members';
+  }
+
+  @override
+  String openTasksCount(Object count, Object label) {
+    return '$count open $label';
+  }
+
+  @override
+  String get taskSingular => 'task';
+
+  @override
+  String get tasksPlural => 'tasks';
+
+  @override
+  String get coursework => 'Coursework';
+
+  @override
+  String get myAssignments => 'My assignments';
+
+  @override
+  String get nothingWaitingReview => 'Nothing waiting for review';
+
+  @override
+  String submissionsAwaitingReview(Object count) {
+    return '$count submission(s) awaiting review';
+  }
+
+  @override
+  String get youAreUpToDate => 'You are up to date';
+
+  @override
+  String openAssignmentsCount(Object count, Object label) {
+    return '$count open $label';
+  }
+
+  @override
+  String get assignmentSingular => 'assignment';
+
+  @override
+  String get assignmentsPlural => 'assignments';
+
+  @override
+  String get noCourseworkPublished =>
+      'No coursework published yet. Publish one from the Work tab.';
+
+  @override
+  String get noAssignmentsDue => 'No assignments are due right now.';
+
+  @override
+  String get groupWork => 'Group work';
+
+  @override
+  String get individual => 'Individual';
+
+  @override
+  String marksLabel(Object count) {
+    return '$count marks';
+  }
+
+  @override
+  String get courseDiscussions => 'Course discussions';
+
+  @override
+  String threadsInCourse(Object count) {
+    return '$count threads in this course';
+  }
+
+  @override
+  String get noDiscussionsYet => 'No discussions yet';
+
+  @override
+  String get beFirstToAsk =>
+      'Be the first to ask something — a classmate or your teacher will pick it up.';
+
+  @override
+  String get startDiscussion => 'Start discussion';
+
+  @override
+  String get teacherAnswered => 'Teacher answered';
+
+  @override
+  String get resolved => 'Resolved';
+
+  @override
+  String get nextStudySession => 'Next study session';
+
+  @override
+  String get studySessionLiveNow => 'Study session live now';
+
+  @override
+  String joiningCount(Object count) {
+    return '$count joining';
+  }
+
+  @override
+  String goingCount(Object count) {
+    return '$count going';
+  }
+
+  @override
+  String inTheRoomTapToJoin(Object count) {
+    return '$count in the room · tap to join';
+  }
+
+  @override
+  String get openFullCommunity => 'Open the full community';
+
+  @override
+  String get openFullCommunitySubtitle =>
+      'Students · Discussions · Chat · Groups · Work · Resources';
+
+  @override
+  String get noCourseCommunitiesYet => 'No course communities yet';
+
+  @override
+  String get communityHubStudentIntro =>
+      'Pick a course to meet the students learning it with you, join a study group, and get help.';
+
+  @override
+  String get communityHubTeacherIntro =>
+      'Post announcements, publish assignments, answer questions and grade group work — all inside the course your students already study in.';
+
+  @override
+  String get everyCourseHasCommunity =>
+      'Every course you enrol in comes with its own community — classmates, study groups and discussions.';
+
+  @override
+  String get noCoursesAssigned => 'No courses assigned to you';
+
+  @override
+  String get noCoursesAssignedHint =>
+      'Once you are assigned to a course, its community appears here with your teacher tools.';
+
+  @override
+  String get openCourseCommunity => 'Open the course community';
+
+  @override
+  String studentsActiveSummary(Object active, Object students) {
+    return '$students students · $active active';
+  }
+
+  @override
+  String get messages => 'Messages';
+
+  @override
+  String timeMinutesShort(Object minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String timeHoursShort(Object hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String timeDaysShort(Object days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String timeWeeksShort(Object weeks) {
+    return '${weeks}w ago';
+  }
+
+  @override
+  String timeMonthsShort(Object months) {
+    return '${months}mo ago';
+  }
+
+  @override
+  String get monthJan => 'Jan';
+
+  @override
+  String get monthFeb => 'Feb';
+
+  @override
+  String get monthMar => 'Mar';
+
+  @override
+  String get monthApr => 'Apr';
+
+  @override
+  String get monthMay => 'May';
+
+  @override
+  String get monthJun => 'Jun';
+
+  @override
+  String get monthJul => 'Jul';
+
+  @override
+  String get monthAug => 'Aug';
+
+  @override
+  String get monthSep => 'Sep';
+
+  @override
+  String get monthOct => 'Oct';
+
+  @override
+  String get monthNov => 'Nov';
+
+  @override
+  String get monthDec => 'Dec';
+
+  @override
+  String get dueTodayPassed => 'Due today (passed)';
+
+  @override
+  String overdueByDays(Object days) {
+    return 'Overdue by ${days}d';
+  }
+
+  @override
+  String dueInHours(Object hours) {
+    return 'Due in ${hours}h';
+  }
+
+  @override
+  String dueInDays(Object days) {
+    return 'Due in $days days';
+  }
+
+  @override
+  String dueOn(Object date) {
+    return 'Due $date';
+  }
+
+  @override
+  String get openLink => 'Open link';
+
+  @override
+  String get linkBlockedByBrowser =>
+      'Your browser blocked the automatic redirect. Tap below to open it.';
+
+  @override
+  String get linkLooksBroken => 'That link looks broken';
+
+  @override
+  String get everyone => 'Everyone';
+
+  @override
+  String get studyPartners => 'Study partners';
+
+  @override
+  String get searchClassmatesByName => 'Search classmates by name';
+
+  @override
+  String get searchClassmates => 'Search classmates';
+
+  @override
+  String get activeNowFilter => 'Active now';
+
+  @override
+  String get teachersFilter => 'Teachers';
+
+  @override
+  String get nobodyActiveRightNow => 'Nobody is active right now';
+
+  @override
+  String get noStudentsFound => 'No students found';
+
+  @override
+  String get checkBackLaterOrAsk =>
+      'Check back later, or leave a question so classmates find it when they come online.';
+
+  @override
+  String get tryDifferentName => 'Try a different name or clear the filters.';
+
+  @override
+  String get enrolledLabel => 'enrolled';
+
+  @override
+  String get teachersLabel => 'teachers';
+
+  @override
+  String youSuffix(Object name) {
+    return '$name (you)';
+  }
+
+  @override
+  String messagePerson(Object name) {
+    return 'Message $name';
+  }
+
+  @override
+  String get lookingForStudyPartner => 'Looking for a study partner';
+
+  @override
+  String get studentsLookingForPartners => 'Students looking for partners';
+
+  @override
+  String get nobodyPublishedCard => 'Nobody has published a card yet';
+
+  @override
+  String classmatesWantToStudy(Object count) {
+    return '$count classmate(s) want to study together';
+  }
+
+  @override
+  String get noStudyPartnersListed => 'No study partners listed yet';
+
+  @override
+  String get publishYourCardHint =>
+      'Publish your own card above — classmates who join later will see it and can reach out.';
+
+  @override
+  String get youAreListedAsPartner => 'You are listed as looking for a partner';
+
+  @override
+  String get letClassmatesKnow =>
+      'Let classmates know you want a study partner';
+
+  @override
+  String get noGoalSet => 'No goal set';
+
+  @override
+  String get partnerCardPrivacyHint =>
+      'Share what you want to work on and when you are free. Only people in this course can see it, and you can remove it at any time.';
+
+  @override
+  String get editMyCard => 'Edit my card';
+
+  @override
+  String get publishMyCard => 'Publish my card';
+
+  @override
+  String get removedFromPartnerList => 'Removed from the partner list';
+
+  @override
+  String get findStudyPartner => 'Find a study partner';
+
+  @override
+  String get whatWorkingTowards => 'What are you working towards?';
+
+  @override
+  String get goalHint => 'e.g. Prepare for the August exam';
+
+  @override
+  String get topicsCommaSeparated => 'Topics (comma separated)';
+
+  @override
+  String get whenAreYouFree => 'When are you usually free?';
+
+  @override
+  String get anythingElseOptional => 'Anything else (optional)';
+
+  @override
+  String get yourCardIsLive => 'Your study partner card is live';
+
+  @override
+  String get goal => 'Goal';
+
+  @override
+  String availableColon(Object slots) {
+    return 'Available: $slots';
+  }
+
+  @override
+  String get slotMornings => 'Mornings';
+
+  @override
+  String get slotAfternoons => 'Afternoons';
+
+  @override
+  String get slotEvenings => 'Evenings';
+
+  @override
+  String get slotWeekends => 'Weekends';
+
+  @override
+  String get slotFlexible => 'Flexible';
+
+  @override
+  String get couldNotLoadClassmates => 'Could not load classmates.';
+
+  @override
+  String get nobodyToMessageYet => 'Nobody to message yet';
+
+  @override
+  String get noMatches => 'No matches';
+
+  @override
+  String get studentProfile => 'Student profile';
+
+  @override
+  String get currentlyStudying => 'Currently studying';
+
+  @override
+  String get interests => 'Interests';
+
+  @override
+  String percentThroughCourse(Object percent) {
+    return '$percent% through the course';
+  }
+
+  @override
+  String get groupsStat => 'Groups';
+
+  @override
+  String get posts => 'Posts';
+
+  @override
+  String get replies => 'Replies';
+
+  @override
+  String get studyGroupsInCourse => 'Study groups in this course';
+
+  @override
+  String membersCount(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String get messageYourTeacher => 'Message your teacher';
+
+  @override
+  String get teacherDiscussionHint =>
+      'For anything the whole class would benefit from, the Discussions tab is a better place than a private message.';
+
+  @override
+  String inviteToGroupHint(Object name) {
+    return 'You can also invite $name to a study group from the Groups tab.';
+  }
+
+  @override
+  String get live => 'Live';
+
+  @override
+  String get connecting => 'Connecting…';
+
+  @override
+  String unreadCount(Object count) {
+    return '$count unread';
+  }
+
+  @override
+  String get newMessage => 'New message';
+
+  @override
+  String get publicFilter => 'Public';
+
+  @override
+  String get directFilter => 'Direct';
+
+  @override
+  String get privateLabel => 'Private';
+
+  @override
+  String get groupLabel => 'Group';
+
+  @override
+  String get everyoneInThisCourse => 'Everyone in this course';
+
+  @override
+  String get noDirectChatsYet => 'No direct chats yet';
+
+  @override
+  String get notInGroupYetShort => 'You are not in a group yet';
+
+  @override
+  String get noConversationsYet => 'No conversations yet';
+
+  @override
+  String get directChatsHint =>
+      'Message a classmate or your teacher privately — those chats appear here.';
+
+  @override
+  String get groupChatsHint =>
+      'Join or create a study group and its chat shows up here.';
+
+  @override
+  String get startWithCourseChat =>
+      'Start with the course chat — everyone studying this course can see it.';
+
+  @override
+  String get sayHello => 'Say hello';
+
+  @override
+  String get sayHelloToClass => 'Say something to the whole class';
+
+  @override
+  String get noMessagesInGroup => 'No messages in this group yet';
+
+  @override
+  String get attachment => 'Attachment';
+
+  @override
+  String get blocked => 'Blocked';
+
+  @override
+  String youPrefix(Object text) {
+    return 'You: $text';
+  }
+
+  @override
+  String get startTheConversation => 'Start the conversation';
+
+  @override
+  String get writeAMessage => 'Write a message…';
+
+  @override
+  String get writeAReply => 'Write a reply…';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get reply => 'Reply';
+
+  @override
+  String get deleteMessage => 'Delete message';
+
+  @override
+  String get messageRemoved => 'This message was removed';
+
+  @override
+  String replyingTo(Object name) {
+    return 'Replying to $name';
+  }
+
+  @override
+  String get replying => 'Replying';
+
+  @override
+  String get messageCouldNotBeSent => 'Message could not be sent';
+
+  @override
+  String get groupChatEmptyHint =>
+      'This is your group’s private chat. Plan who does what, and share what you find.';
+
+  @override
+  String get courseChatEmptyHint =>
+      'No messages yet. Ask about a lesson, share what clicked for you, or offer to help someone.';
+
+  @override
+  String get searchDiscussions => 'Search discussions';
+
+  @override
+  String get discussionsFilter => 'Discussions';
+
+  @override
+  String get announcements => 'Announcements';
+
+  @override
+  String get unanswered => 'Unanswered';
+
+  @override
+  String get newPost => 'New post';
+
+  @override
+  String get getHelp => 'Get help';
+
+  @override
+  String get nothingMatchesSearch => 'Nothing matches that search';
+
+  @override
+  String get noPostsHereYet => 'No posts here yet';
+
+  @override
+  String get tryDifferentWords =>
+      'Try different words, or start the discussion yourself.';
+
+  @override
+  String get askFirstQuestion =>
+      'Ask the first question — your classmates and teacher will see it in their community feed.';
+
+  @override
+  String get startAPost => 'Start a post';
 }

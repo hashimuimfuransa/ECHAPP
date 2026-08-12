@@ -193,7 +193,7 @@ class _CreateSessionFormState extends ConsumerState<_CreateSessionForm> {
                       Text(
                         _scheduledAt == null
                             ? 'Pick date and time'
-                            : CT.formatDateTime(_scheduledAt),
+                            : CT.formatDateTime(context, _scheduledAt),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,

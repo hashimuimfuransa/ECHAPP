@@ -126,13 +126,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'my-courses'
       },
       {
-        'title': 'Community',
+        'title': l10n?.community ?? 'Community',
         'icon': Icons.groups_outlined,
         'route': '/community',
         'key': 'community'
       },
       {
-        'title': 'Messages',
+        'title': l10n?.messages ?? 'Messages',
         'icon': Icons.chat_bubble_outline_rounded,
         'route': '/messages',
         'key': 'messages'
@@ -233,13 +233,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'my-courses'
       },
       {
-        'title': 'Community',
+        'title': l10n?.community ?? 'Community',
         'icon': Icons.groups_outlined,
         'route': '/community',
         'key': 'community'
       },
       {
-        'title': 'Messages',
+        'title': l10n?.messages ?? 'Messages',
         'icon': Icons.chat_bubble_outline_rounded,
         'route': '/messages',
         'key': 'messages'

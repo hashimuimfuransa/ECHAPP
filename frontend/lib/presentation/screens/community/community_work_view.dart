@@ -306,7 +306,7 @@ class _AssignmentCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               CommunityChip(
-                label: CT.dueLabel(assignment.dueDate),
+                label: CT.dueLabel(context, assignment.dueDate),
                 icon: Icons.schedule_rounded,
                 color: overdue ? CT.danger : CT.warn,
               ),
@@ -363,7 +363,7 @@ class _AssignmentCard extends ConsumerWidget {
                         ),
                         const Spacer(),
                         Text(
-                          'Returned ${CT.timeAgo(graded.gradedAt)}',
+                          'Returned ${CT.timeAgo(context, graded.gradedAt)}',
                           style:
                               TextStyle(fontSize: 10.5, color: CT.subTextOf(context)),
                         ),
@@ -705,7 +705,7 @@ class _AssignmentFormState extends ConsumerState<_AssignmentForm> {
                       Text(
                         _dueDate == null
                             ? 'Set the deadline'
-                            : CT.formatDateTime(_dueDate),
+                            : CT.formatDateTime(context, _dueDate),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -1134,7 +1134,7 @@ class _ReviewCard extends ConsumerWidget {
           ),
           const SizedBox(height: 11),
           Text(
-            'Submitted ${CT.formatDateTime(submission.submittedAt)}'
+            'Submitted ${CT.formatDateTime(context, submission.submittedAt)}'
             '${submission.isLate ? ' · late' : ''}',
             style: TextStyle(fontSize: 11.5, color: CT.subTextOf(context)),
           ),

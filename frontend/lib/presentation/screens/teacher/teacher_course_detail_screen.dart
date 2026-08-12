@@ -241,6 +241,13 @@ class _TeacherCourseDetailScreenState extends ConsumerState<TeacherCourseDetailS
                       ),
               ),
               actions: [
+                // Teachers reach their course community from here — these
+                // screens sit outside MainLayout, so there is no sidebar.
+                IconButton(
+                  icon: const Icon(Icons.groups_rounded, color: Colors.white),
+                  tooltip: 'Course community',
+                  onPressed: () => context.push('/community/${widget.courseId}'),
+                ),
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: _loadCourseData,

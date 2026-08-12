@@ -456,7 +456,7 @@ class _DayDivider extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
-              isToday ? 'Today' : CT.formatDate(date),
+              isToday ? 'Today' : CT.formatDate(context, date),
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -574,7 +574,7 @@ class _Bubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          CT.timeAgo(message.createdAt),
+                          CT.timeAgo(context, message.createdAt),
                           style: TextStyle(
                             fontSize: 9.5,
                             color: isMine ? Colors.white70 : CT.textHint,

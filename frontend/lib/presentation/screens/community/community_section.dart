@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// The sections of a course community, in the order they appear in the tab bar.
 enum CommunitySection {
   home,
@@ -12,15 +14,19 @@ enum CommunitySection {
 }
 
 extension CommunitySectionInfo on CommunitySection {
-  String get label => switch (this) {
-        CommunitySection.home => 'Home',
-        CommunitySection.people => 'Students',
-        CommunitySection.discussions => 'Discussions',
-        CommunitySection.chat => 'Chat',
-        CommunitySection.groups => 'Groups',
-        CommunitySection.work => 'Work',
-        CommunitySection.resources => 'Resources',
-      };
+  /// Tab label in the reader's language.
+  String label(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (this) {
+      CommunitySection.home => l10n.communitySectionHome,
+      CommunitySection.people => l10n.communitySectionStudents,
+      CommunitySection.discussions => l10n.communitySectionDiscussions,
+      CommunitySection.chat => l10n.communitySectionChat,
+      CommunitySection.groups => l10n.communitySectionGroups,
+      CommunitySection.work => l10n.communitySectionWork,
+      CommunitySection.resources => l10n.communitySectionResources,
+    };
+  }
 
   IconData get icon => switch (this) {
         CommunitySection.home => Icons.dashboard_rounded,

@@ -242,6 +242,12 @@ final communitySessionsProvider =
   return ref.watch(communityServiceProvider).getSessions(args.courseId, scope: args.scope);
 });
 
+/// Upcoming study sessions across every course the user is in — what the home
+/// dashboard shows next to teacher-led live sessions.
+final myStudySessionsProvider = FutureProvider<List<StudySession>>((ref) async {
+  return ref.watch(communityServiceProvider).getMySessions();
+});
+
 // ─────────────────────────────────────────────
 //  Chat
 // ─────────────────────────────────────────────
@@ -930,12 +936,14 @@ class CommunityActions {
     return session;
   }
 
-  /// Sessions surface in three places — the Sessions tab, the dashboard, and
-  /// every group workspace — so any change to one has to refresh all three or
-  /// the organiser is left staring at a stale card.
+  /// Sessions surface in four places — the Sessions tab, the course dashboard,
+  /// every group workspace, and the home dashboard's cross-course feed — so
+  /// any change to one has to refresh all of them or the organiser is left
+  /// staring at a stale card.
   void _refreshSessions(String courseId) {
     _ref.invalidate(communitySessionsProvider);
     _ref.invalidate(studyGroupProvider);
+    _ref.invalidate(myStudySessionsProvider);
     _refreshFeed(courseId);
   }
 

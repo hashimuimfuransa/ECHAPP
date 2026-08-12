@@ -26,6 +26,94 @@ const POPULATE = [
 const loadSession = (id) => StudySession.findById(id).populate(POPULATE).lean();
 
 class SessionController {
+  /**
+   * Every upcoming study session across all the caller's courses.
+   *
+   * Not scoped to a course, so it runs without `loadCommunityContext` and
+   * derives membership itself: sessions from courses the user is enrolled in
+   * or teaches. The home dashboard lists these beside teacher-led live
+   * sessions, so a group meeting is as visible as a class.
+   */
+  async mySessions(req, res) {
+    try {
+      const userId = req.user._id;
+      const isAdmin = req.user.role === 'admin';
+
+      const Enrollment = require('../../models/Enrollment');
+      const TeacherAssignment = require('../../models/TeacherAssignment');
+
+      const [enrollments, assignments] = await Promise.all([
+        Enrollment.find({ userId }).select('courseId').lean(),
+        TeacherAssignment.find({ teacherId: userId, isActive: true })
+          .select('courseId')
+          .lean()
+      ]);
+
+      const courseIds = [
+        ...new Set([
+          ...enrollments.map((e) => String(e.courseId)),
+          ...assignments.map((a) => String(a.courseId))
+        ])
+      ];
+
+      if (courseIds.length === 0) {
+        return sendSuccess(res, { sessions: [] }, 'No sessions');
+      }
+
+      const now = new Date();
+      const query = {
+        courseId: { $in: courseIds },
+        $or: [
+          { status: 'scheduled', scheduledAt: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } },
+          { status: 'live' }
+        ]
+      };
+
+      const sessions = await StudySession.find(query)
+        .sort({ scheduledAt: 1 })
+        .limit(25)
+        .populate(POPULATE)
+        .populate('courseId', 'title')
+        .lean();
+
+      // A group's sessions are private to that group; course-wide ones are
+      // open to everyone in the course.
+      const myGroupIds = new Set(
+        (await StudyGroup.find({
+          courseId: { $in: courseIds },
+          isArchived: false,
+          members: { $elemMatch: { userId, status: 'active' } }
+        })
+          .select('_id')
+          .lean()).map((g) => String(g._id))
+      );
+
+      const teacherCourseIds = new Set(assignments.map((a) => String(a.courseId)));
+
+      const visible = sessions.filter((s) => {
+        if (!s.groupId) return true;
+        const groupId = String(s.groupId._id || s.groupId);
+        if (myGroupIds.has(groupId)) return true;
+        return isAdmin || teacherCourseIds.has(String(s.courseId._id || s.courseId));
+      });
+
+      return sendSuccess(res, {
+        sessions: visible.map((s) => {
+          const isTeacher =
+            isAdmin || teacherCourseIds.has(String(s.courseId._id || s.courseId));
+          return {
+            ...mapSession(s, userId, isTeacher),
+            courseId: String(s.courseId._id || s.courseId),
+            courseTitle: s.courseId && s.courseId.title ? s.courseId.title : null
+          };
+        })
+      }, 'Your study sessions');
+    } catch (error) {
+      console.error('Error loading cross-course sessions:', error);
+      return sendError(res, 'Failed to load your study sessions', 500, error.message);
+    }
+  }
+
   async listSessions(req, res) {
     try {
       const { courseId, userId, isTeacher } = req.community;

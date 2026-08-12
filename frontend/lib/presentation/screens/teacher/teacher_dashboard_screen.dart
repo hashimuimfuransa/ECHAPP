@@ -165,6 +165,24 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     context.push('/teacher/sessions');
   }
 
+  /// Opens the course community.
+  ///
+  /// Teacher routes live outside MainLayout, so there is no sidebar here to
+  /// reach it from — with one assigned course we go straight in, otherwise the
+  /// hub asks which one.
+  void _navigateToCommunity() {
+    if (_courses.length == 1) {
+      context.push('/community/${_courses.first.course.id}');
+    } else {
+      context.push('/community');
+    }
+  }
+
+  /// Jumps straight into one course's community from its card.
+  void _openCourseCommunity(String courseId) {
+    context.push('/community/$courseId');
+  }
+
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -453,6 +471,28 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.groups_rounded,
+                    label: 'Community',
+                    onTap: _navigateToCommunity,
+                    color: const Color(0xFF7C4DFF),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.chat_bubble_rounded,
+                    label: 'Messages',
+                    onTap: () => context.push('/messages'),
+                    color: const Color(0xFF00C853),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -592,6 +632,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           course: course,
           onTap: () => _navigateToCourse(course.course.id),
           onSchedule: () => _navigateToScheduleSession(course.course.id),
+          onCommunity: () => _openCourseCommunity(course.course.id),
           isDark: isDark,
           cardColor: cardColor,
           textPrimary: textPrimary,
@@ -852,6 +893,7 @@ class _CourseCard extends StatelessWidget {
   final TeacherCourse course;
   final VoidCallback onTap;
   final VoidCallback onSchedule;
+  final VoidCallback onCommunity;
   final bool isDark;
   final Color cardColor;
   final Color textPrimary;
@@ -861,6 +903,7 @@ class _CourseCard extends StatelessWidget {
     required this.course,
     required this.onTap,
     required this.onSchedule,
+    required this.onCommunity,
     required this.isDark,
     required this.cardColor,
     required this.textPrimary,
@@ -938,11 +981,21 @@ class _CourseCard extends StatelessWidget {
                 ),
               ),
               Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.schedule, color: AppTheme.primaryGreen),
                     onPressed: onSchedule,
                     tooltip: 'Schedule Session',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  // Straight into this course's community, where the teacher
+                  // can post announcements, publish work and grade submissions.
+                  IconButton(
+                    icon: const Icon(Icons.groups_rounded, color: Color(0xFF7C4DFF)),
+                    onPressed: onCommunity,
+                    tooltip: 'Open course community',
+                    visualDensity: VisualDensity.compact,
                   ),
                   Icon(Icons.chevron_right, color: textSecondary),
                 ],

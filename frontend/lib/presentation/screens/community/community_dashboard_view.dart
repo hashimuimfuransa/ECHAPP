@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../models/community.dart';
 import '../../providers/community_provider.dart';
 import 'community_section.dart';
@@ -150,6 +151,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stats = overview.stats;
     return Container(
       padding: const EdgeInsets.all(18),
@@ -186,8 +188,8 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'COURSE COMMUNITY',
+                    Text(
+                      l10n.courseCommunity,
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
@@ -217,8 +219,8 @@ class _Header extends StatelessWidget {
                     color: Colors.white.withOpacity(0.22),
                     borderRadius: CT.r8,
                   ),
-                  child: const Text(
-                    'TEACHER',
+                  child: Text(
+                    l10n.teacher.toUpperCase(),
                     style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w900,
@@ -447,6 +449,7 @@ class _TeacherStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CommunityCard(
       accent: CT.teacher,
       padding: const EdgeInsets.all(14),
@@ -459,7 +462,7 @@ class _TeacherStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  overview.teachers.length == 1 ? 'Your teacher' : 'Your teachers',
+                  overview.teachers.length == 1 ? l10n.yourTeacher : l10n.yourTeachers,
                   style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                 ),
                 const SizedBox(height: 2),
@@ -509,12 +512,13 @@ class _PinnedStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
           icon: Icons.push_pin_rounded,
-          title: 'Pinned by your teacher',
+          title: l10n.pinnedByTeacher,
           actionLabel: 'All',
           onAction: onOpen,
         ),
@@ -542,7 +546,7 @@ class _PinnedStrip extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            post.title ?? 'Announcement',
+                            post.title ?? l10n.announcement,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -592,6 +596,7 @@ class _StudyingNow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final members = overview.activeMembers;
     final stats = overview.stats;
 
@@ -600,7 +605,7 @@ class _StudyingNow extends StatelessWidget {
       children: [
         SectionHeader(
           icon: Icons.bolt_rounded,
-          title: 'Students learning now',
+          title: l10n.studentsLearningNow,
           subtitle:
               '${stats.enrolledCount} enrolled · ${stats.activeCount} active right now',
           actionLabel: 'View all',
@@ -708,6 +713,7 @@ class _MyGroups extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final groups = overview.myGroups;
 
     return Column(
@@ -715,7 +721,7 @@ class _MyGroups extends ConsumerWidget {
       children: [
         SectionHeader(
           icon: Icons.workspaces_rounded,
-          title: 'My groups',
+          title: l10n.myGroups,
           subtitle: groups.isEmpty
               ? 'Work through the course with classmates'
               : '${groups.length} active ${groups.length == 1 ? 'group' : 'groups'}',
@@ -729,7 +735,7 @@ class _MyGroups extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'You are not in a study group yet',
+                  l10n.notInGroupYet,
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
@@ -984,7 +990,7 @@ class _AssignmentsBlock extends StatelessWidget {
                             const SizedBox(height: 3),
                             Text(
                               '${a.isGroupAssignment ? 'Group work' : 'Individual'} · '
-                              '${CT.dueLabel(a.dueDate)} · ${a.maxMarks} marks',
+                              '${CT.dueLabel(context, a.dueDate)} · ${a.maxMarks} marks',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -1021,6 +1027,7 @@ class _DiscussionsBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final posts = overview.recentDiscussions;
 
     return Column(
@@ -1028,7 +1035,7 @@ class _DiscussionsBlock extends ConsumerWidget {
       children: [
         SectionHeader(
           icon: Icons.chat_bubble_rounded,
-          title: 'Course discussions',
+          title: l10n.courseDiscussions,
           subtitle: '${overview.stats.discussionCount} threads in this course',
           actionLabel: 'View all',
           onAction: onViewAll,
@@ -1037,10 +1044,10 @@ class _DiscussionsBlock extends ConsumerWidget {
         if (posts.isEmpty)
           CommunityEmpty(
             icon: Icons.forum_rounded,
-            title: 'No discussions yet',
+            title: l10n.noDiscussionsYet,
             message: 'Be the first to ask something — a classmate or your teacher '
                 'will pick it up.',
-            actionLabel: 'Start discussion',
+            actionLabel: l10n.startDiscussion,
             compact: true,
             onAction: () async {
               final created = await showCreatePostSheet(context, ref, courseId);
@@ -1066,6 +1073,7 @@ class DiscussionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CommunityCard(
       padding: const EdgeInsets.all(13),
       onTap: onTap,
@@ -1129,19 +1137,19 @@ class DiscussionTile extends StatelessWidget {
               ),
               const Spacer(),
               if (post.hasTeacherAnswer)
-                const CommunityChip(
-                  label: 'Teacher answered',
+                CommunityChip(
+                  label: l10n.teacherAnswered,
                   icon: Icons.verified_rounded,
                   color: CT.teacher,
                 )
               else if (post.isResolved)
-                const CommunityChip(
-                  label: 'Resolved',
+                CommunityChip(
+                  label: l10n.resolved,
                   icon: Icons.check_rounded,
                 )
               else
                 Text(
-                  CT.timeAgo(post.lastActivityAt ?? post.createdAt),
+                  CT.timeAgo(context, post.lastActivityAt ?? post.createdAt),
                   style: TextStyle(fontSize: 10.5, color: CT.textHint),
                 ),
             ],
@@ -1164,6 +1172,7 @@ class _NextSession extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isLive = session.isLive;
     return CommunityCard(
       accent: isLive ? CT.danger : CT.accent,
@@ -1192,7 +1201,7 @@ class _NextSession extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isLive ? 'Study session live now' : 'Next study session',
+                  isLive ? l10n.studySessionLiveNow : l10n.nextStudySession,
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: isLive ? FontWeight.w800 : FontWeight.w500,
@@ -1214,7 +1223,7 @@ class _NextSession extends StatelessWidget {
                 Text(
                   isLive
                       ? '${session.participantCount} in the room · tap to join'
-                      : '${CT.formatDateTime(session.scheduledAt)} · '
+                      : '${CT.formatDateTime(context, session.scheduledAt)} · '
                           '${session.participantCount} going',
                   style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
                 ),
@@ -1251,6 +1260,7 @@ class _OpenFullCommunityButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CommunityCard(
       accent: CT.primary,
       onTap: onTap,
@@ -1271,7 +1281,7 @@ class _OpenFullCommunityButton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Open the full community',
+                  l10n.openFullCommunity,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -1280,7 +1290,7 @@ class _OpenFullCommunityButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Students · Discussions · Chat · Groups · Work · Resources',
+                  l10n.openFullCommunitySubtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, color: CT.subTextOf(context)),
@@ -1301,11 +1311,12 @@ class _Tagline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         children: [
           Text(
-            'ECH Course Community',
+            l10n.echCourseCommunity,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
@@ -1314,7 +1325,7 @@ class _Tagline extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            'Learn together. Collaborate. Succeed.',
+            l10n.communityTagline,
             style: TextStyle(fontSize: 11, color: CT.textHint),
           ),
         ],
