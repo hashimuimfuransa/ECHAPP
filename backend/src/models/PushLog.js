@@ -63,8 +63,9 @@ const pushLogSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
+    // Indexed below — the TTL and compound indexes cover it, and declaring
+    // `index: true` here as well makes Mongoose warn about a duplicate.
   }
 }, {
   timestamps: true

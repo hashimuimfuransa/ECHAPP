@@ -52,7 +52,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDrDh_HTXexEbp98YOsTb5Y_NRcxufj-iI',
-    appId: '1:216678536759:android:f024947f5605bbbc2b91b2',
+    // Must match the Android app registered in the Firebase project (the same
+    // mobilesdk_app_id as android/app/google-services.json). The previous value
+    // (…f024947f…) belonged to no app in the project, so Firebase Installations
+    // could not register the device and FirebaseMessaging.getToken() always
+    // failed — which is why no user ever had an FCM token stored.
+    appId: '1:216678536759:android:2510b08e237c51d02b91b2',
     messagingSenderId: '216678536759',
     projectId: 'excellencecoachinghub-5597c',
     storageBucket: 'excellencecoachinghub-5597c.firebasestorage.app',

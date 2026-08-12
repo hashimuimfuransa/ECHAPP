@@ -12,41 +12,55 @@ class FCMTokenService {
   static final AuthRepository _authRepository = AuthRepository();
   static final StorageManager _storageManager = StorageManager();
   
-  // Update FCM token on backend and Firestore
+  // Update FCM token on backend and Firestore.
+  //
+  // The two stores are written independently. They used to share one try block
+  // with Firestore first, so when Firestore security rules denied the write the
+  // exception skipped the MongoDB save as well and the token was stored nowhere
+  // at all — leaving the user unreachable by push. MongoDB now goes first
+  // because the backend push sender falls back to it, and neither failure can
+  // take the other down.
   static Future<bool> updateFCMToken(String token) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        print('No authenticated user, skipping FCM token update');
-        return false;
-      }
+    final user = _auth.currentUser;
+    if (user == null) {
+      print('No authenticated user, skipping FCM token update');
+      return false;
+    }
 
-      // 1. Professional way: Save token to Firestore for high availability and easy access by Functions
+    var storedSomewhere = false;
+
+    // 1. Backend/MongoDB — the store the push sender falls back to.
+    try {
+      final accessToken = await _storageManager.getAccessToken();
+      if (accessToken != null) {
+        await _authRepository.updateFCMToken(accessToken, token);
+        storedSomewhere = true;
+        print('FCM token updated successfully in MongoDB');
+      } else {
+        print('No access token yet, skipping MongoDB FCM token update');
+      }
+    } catch (apiError) {
+      print('Error updating FCM token in MongoDB: $apiError');
+    }
+
+    // 2. Firestore — preferred by the sender when present, but best-effort:
+    // security rules can legitimately deny this without breaking push.
+    try {
       await _firestore.collection('users').doc(user.uid).set({
         'fcmToken': token,
         'lastTokenUpdate': FieldValue.serverTimestamp(),
         'platform': _getPlatformName(),
       }, SetOptions(merge: true));
-      
+      storedSomewhere = true;
       print('FCM token updated successfully in Firestore');
-
-      // 2. Also update in MongoDB via backend API for reliability
-      final accessToken = await _storageManager.getAccessToken();
-      if (accessToken != null) {
-        try {
-          await _authRepository.updateFCMToken(accessToken, token);
-          print('FCM token updated successfully in MongoDB');
-        } catch (apiError) {
-          print('Error updating FCM token in MongoDB: $apiError');
-          // Don't fail the whole operation if MongoDB update fails
-        }
-      }
-      
-      return true;
     } catch (e) {
-      print('Error updating FCM token: $e');
-      return false;
+      print('Error updating FCM token in Firestore (rules may deny it): $e');
     }
+
+    if (!storedSomewhere) {
+      print('WARNING: FCM token could not be stored in either backend — push notifications will not reach this device');
+    }
+    return storedSomewhere;
   }
 
   static String _getPlatformName() {

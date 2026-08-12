@@ -1,18 +1,40 @@
-rules_version='2'
+rules_version = '2';
 
+// Firestore is used by the app for one thing: mirroring each device's FCM
+// token onto the signed-in user's own document, which the backend push sender
+// reads (falling back to MongoDB when absent).
+//
+// The previous rules were the 30-day starter rules; they expired on 2026-03-04
+// and Firebase replaced them with a blanket `allow read, write: if false`, so
+// every client write — including the token mirror — was denied.
+//
+// Deploy with:  firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // A signed-in user may read and write only their own document. The
+    // Admin SDK on the backend bypasses these rules entirely.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Restrict writes to the token-sync fields so a compromised client
+      // cannot invent arbitrary user state here.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys()
+             .hasOnly(['fcmToken', 'lastTokenUpdate', 'platform']);
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['fcmToken', 'lastTokenUpdate', 'platform']);
+
+      allow delete: if false;
+    }
+
+    // Everything else stays closed; the backend uses the Admin SDK.
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 3, 4);
+      allow read, write: if false;
     }
   }
 }
