@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:excellencecoachinghub/config/app_theme.dart';
+import 'package:excellencecoachinghub/presentation/screens/community/session_recording_screen.dart';
 import 'package:excellencecoachinghub/services/live_session_service.dart';
 import 'package:excellencecoachinghub/models/live_session.dart';
 import 'package:excellencecoachinghub/widgets/network_image_widget.dart';
@@ -582,69 +583,21 @@ class _LiveSessionsScreenState extends ConsumerState<LiveSessionsScreen>
     );
   }
 
-  Future<void> _viewRecording(LiveSession session) async {
-    try {
-      final recording = await _liveSessionService.getSessionRecording(session.id);
-
-      if (recording.hasRecording) {
-        // Show recording dialog
-        _showRecordingDialog(recording);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Recording not available yet. Please check back later.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading recording: $e')),
-        );
-      }
-    }
-  }
-
-  void _showRecordingDialog(RecordingResponse recording) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : Colors.black87;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.getCardColor(context),
-        title: Text(recording.sessionTitle ?? 'Session Recording'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.play_circle, size: 64, color: AppTheme.primaryGreen),
-            const SizedBox(height: 16),
-            Text('Duration: ${recording.duration} minutes', style: TextStyle(color: textPrimary)),
-            const SizedBox(height: 8),
-            Text('Format: ${recording.format ?? 'Video'}', style: TextStyle(color: textPrimary)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              // Launch recording URL
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening recording...')),
-              );
-            },
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play Recording'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
-          ),
-        ],
-      ),
+  /// Opens the full recording review screen.
+  ///
+  /// Replaces a dialog that could only ever say "play" or "not available": the
+  /// teacher who ran the class needs to see how long it is, whether a
+  /// downloadable file exists, and decide what students may do with it. The
+  /// screen also fetches on open, so it reports "still processing" rather than
+  /// failing when BBB has not finished rendering.
+  void _viewRecording(LiveSession session) {
+    openLiveClassRecording(
+      context,
+      sessionId: session.id,
+      title: session.title,
     );
   }
+
 
   void _scheduleNewSession() {
     context.push('/teacher/sessions/create');

@@ -137,5 +137,7 @@ router.post('/:courseId/sessions/:sessionId/rsvp', sessionController.rsvp);
 router.post('/:courseId/sessions/:sessionId/join', sessionController.join);
 router.post('/:courseId/sessions/:sessionId/end', sessionController.end);
 router.get('/:courseId/sessions/:sessionId/recording', sessionController.getRecording);
+// Organiser: share the recording, and allow members to keep a copy
+router.patch('/:courseId/sessions/:sessionId/recording', sessionController.updateRecording);
 
 module.exports = router;

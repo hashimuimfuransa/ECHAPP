@@ -167,7 +167,10 @@ class CommunitySessionSchedulerService {
           {
             $set: {
               recordingUrl: published.playback,
+              recordingDownloadUrl: published.downloadUrl || null,
+              recordingFormats: published.formats || [],
               recordingDuration: published.duration || 0,
+              recordingParticipants: published.participants || 0,
               recordingCheckedAt: new Date()
             }
           }

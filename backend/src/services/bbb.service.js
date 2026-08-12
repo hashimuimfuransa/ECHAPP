@@ -300,20 +300,49 @@ class BBBService {
         // Handle single recording or array
         const recordingsArray = Array.isArray(recordings) ? recordings : [recordings];
         
-        return recordingsArray.map(r => ({
-          recordId: r.recordID,
-          meetingId: r.meetingID,
-          internalMeetingId: r.internalMeetingID,
-          name: r.name,
-          published: r.published === 'true',
-          state: r.state,
-          startTime: parseInt(r.startTime),
-          endTime: parseInt(r.endTime),
-          participants: parseInt(r.participants || 0),
-          playback: r.playback?.format?.url || null,
-          playbackType: r.playback?.format?.type || null,
-          duration: parseInt(r.playback?.format?.length || 0)
-        }));
+        return recordingsArray.map(r => {
+          // BBB returns a single `format` object when there is one playback
+          // format and an ARRAY when there are several. Reading `.url` off the
+          // array yielded undefined, so any recording that also had a
+          // downloadable video format looked like it had no playback at all.
+          const rawFormats = r.playback?.format;
+          const formats = (rawFormats ? (Array.isArray(rawFormats) ? rawFormats : [rawFormats]) : [])
+            .map(f => ({
+              type: f.type || null,
+              url: f.url || null,
+              // BBB reports length in minutes.
+              duration: parseInt(f.length || 0),
+              size: f.size ? parseInt(f.size) : null
+            }))
+            .filter(f => f.url);
+
+          // `presentation` is the interactive web player; `video` (available
+          // when bbb-playback-video is installed) is a plain mp4 that can be
+          // downloaded and watched offline.
+          const web = formats.find(f => f.type === 'presentation') || formats[0] || null;
+          const downloadable =
+            formats.find(f => f.type === 'video') ||
+            formats.find(f => f.type && f.type.includes('video')) ||
+            null;
+
+          return {
+            recordId: r.recordID,
+            meetingId: r.meetingID,
+            internalMeetingId: r.internalMeetingID,
+            name: r.name,
+            published: r.published === 'true',
+            state: r.state,
+            startTime: parseInt(r.startTime),
+            endTime: parseInt(r.endTime),
+            participants: parseInt(r.participants || 0),
+            formats,
+            downloadUrl: downloadable ? downloadable.url : null,
+            // Kept for existing callers (liveSession.controller reads these).
+            playback: web ? web.url : null,
+            playbackType: web ? web.type : null,
+            duration: web ? web.duration : 0
+          };
+        });
       } else {
         return [];
       }

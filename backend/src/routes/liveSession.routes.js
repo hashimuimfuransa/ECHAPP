@@ -13,6 +13,7 @@ const {
   cancelSession,
   deleteSession,
   getSessionRecordings,
+  updateSessionRecording,
   getLessonSessions,
   getAllSessions
 } = require('../controllers/liveSession.controller');
@@ -38,6 +39,8 @@ router.get('/lessons/:lessonId/sessions', getLessonSessions);
 // Shared routes (permission checked in controller)
 router.get('/sessions/:sessionId/join', joinSession);
 router.get('/sessions/:sessionId/recordings', getSessionRecordings);
+// Teacher: share the recording with the class, and allow students to keep a copy
+router.patch('/sessions/:sessionId/recordings', updateSessionRecording);
 router.get('/sessions/:sessionId/attendance', getSessionAttendance);
 
 module.exports = router;

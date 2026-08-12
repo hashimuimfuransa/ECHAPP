@@ -87,6 +87,36 @@ const liveSessionSchema = new mongoose.Schema({
     enum: ['video', 'presentation', null],
     default: null
   },
+  /** Every playback format BBB produced for this session. */
+  recordingFormats: [{
+    type: { type: String },
+    url: String,
+    duration: Number,
+    size: Number
+  }],
+  /** Direct mp4, present only when the BBB server produces a video format. */
+  recordingDownloadUrl: {
+    type: String,
+    default: null
+  },
+  recordingParticipants: {
+    type: Number,
+    default: 0
+  },
+  /**
+   * The teacher reviews the recording, then decides whether students may keep
+   * a copy. Watching is allowed as soon as it exists; downloading is opt-in,
+   * matching how peer study sessions behave.
+   */
+  allowRecordingDownload: {
+    type: Boolean,
+    default: false
+  },
+  /** Lets a teacher hide a recording that did not come out usable. */
+  isRecordingPublished: {
+    type: Boolean,
+    default: true
+  },
   endedAt: {
     type: Date,
     default: null

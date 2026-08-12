@@ -585,11 +585,48 @@ const deleteSession = async (req, res) => {
 /**
  * Get session recordings
  */
+/**
+ * Resolves who the caller is for a session's recording.
+ *
+ * The previous check was `role !== 'instructor' || teacherId !== userId`,
+ * which sent admins down the enrollment branch — and since admins are not
+ * enrolled in courses, it locked them out of every recording.
+ */
+const resolveRecordingAccess = async (session, req) => {
+  const userId = String(req.user.id || req.user._id);
+  const role = req.user.role;
+
+  const teacherId = String(session.teacherId._id || session.teacherId);
+  const isOwner = role === 'instructor' && teacherId === userId;
+  const isAdmin = role === 'admin';
+
+  // Downloading a course recording is reserved for admins.
+  //
+  // A live class is paid course content owned by the institution, not by the
+  // person who happened to teach it — so the file itself only leaves the
+  // platform through an administrator. Teachers and enrolled students still
+  // watch it in full; they just stream rather than keep a copy. (Peer study
+  // sessions are the opposite: the organiser owns that content and decides.)
+  if (isOwner || isAdmin) {
+    return { allowed: true, canManage: true, canDownload: isAdmin, isAdmin };
+  }
+
+  const courseId = session.courseId._id || session.courseId;
+  const enrollment = await Enrollment.findOne({ userId, courseId }).lean();
+  if (enrollment) {
+    return { allowed: true, canManage: false, canDownload: false, isAdmin: false };
+  }
+
+  return { allowed: false, canManage: false, canDownload: false, isAdmin: false };
+};
+
+/**
+ * A live session's recording, shaped exactly like the community study-session
+ * payload so the app renders both through the same review screen.
+ */
 const getSessionRecordings = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const userId = req.user.id;
-    const userRole = req.user.role;
 
     const session = await LiveSession.findById(sessionId)
       .populate('courseId', 'title');
@@ -598,46 +635,74 @@ const getSessionRecordings = async (req, res) => {
       return sendError(res, 'Session not found', 404);
     }
 
-    // Check permissions
-    if (userRole !== 'instructor' || session.teacherId.toString() !== userId) {
-      const enrollment = await Enrollment.findOne({ userId, courseId: session.courseId });
-      if (!enrollment) {
-        return sendError(res, 'You do not have access to this recording', 403);
-      }
+    const access = await resolveRecordingAccess(session, req);
+    if (!access.allowed) {
+      return sendError(res, 'You do not have access to this recording', 403);
     }
 
-    // If we already have recording URL stored, return it
-    if (session.recordingUrl) {
+    // A teacher can hide a recording that did not come out usable.
+    if (session.isRecordingPublished === false && !access.canManage) {
       return sendSuccess(res, {
-        recordingUrl: session.recordingUrl,
-        duration: session.recordingDuration,
-        format: session.recordingFormat,
-        sessionTitle: session.title
-      }, 'Recording retrieved successfully');
+        recordingUrl: null,
+        unavailable: true
+      }, 'The teacher has not shared this recording');
     }
 
-    // Otherwise, try to fetch from BBB
+    const payload = () => ({
+      recordingUrl: session.recordingUrl,
+      // The file URL is only handed out to someone allowed to keep it.
+      recordingDownloadUrl: access.canDownload
+        ? session.recordingDownloadUrl || null
+        : null,
+      hasDownloadableFile: Boolean(session.recordingDownloadUrl),
+      recordingDuration: session.recordingDuration || 0,
+      recordingParticipants: session.recordingParticipants || 0,
+      // Withhold the video format from non-admins too — listing it would hand
+      // out the very file URL the policy is meant to hold back.
+      formats: (session.recordingFormats || []).filter(
+        (f) => access.canDownload || !(f.type && f.type.includes('video'))
+      ),
+      canDownload: Boolean(session.recordingDownloadUrl && access.canDownload),
+      /** Tells the app why a download is or is not offered. */
+      downloadPolicy: 'admin_only',
+      isAdmin: access.isAdmin,
+      isRecordingPublished: session.isRecordingPublished !== false,
+      canManageRecording: access.canManage,
+      topic: session.title,
+      endedAt: session.endedAt
+    });
+
+    if (session.recordingUrl) {
+      return sendSuccess(res, payload(), 'Recording retrieved successfully');
+    }
+
+    if (!session.bbbMeetingId) {
+      return sendSuccess(res, { recordingUrl: null }, 'This session was not recorded');
+    }
+
     try {
       const recordings = await BBBService.getRecordings(session.bbbMeetingId);
-      
-      if (recordings && recordings.length > 0) {
-        const recording = recordings[0];
-        
-        // Update session with recording info
-        session.recordingUrl = recording.playback;
-        session.recordingDuration = recording.duration;
-        session.recordingFormat = recording.playbackType || 'video';
-        await session.save();
+      const ready = recordings.find((r) => r.published && r.playback);
 
+      if (!ready) {
+        // Not an error — BBB renders recordings after the room closes, so the
+        // app needs to tell "still processing" apart from "never recorded".
         return sendSuccess(res, {
-          recordingUrl: recording.playback,
-          duration: recording.duration,
-          format: recording.playbackType || 'video',
-          sessionTitle: session.title
-        }, 'Recording retrieved successfully');
-      } else {
-        return sendError(res, 'Recording not available yet. Please check back later.', 404);
+          recordingUrl: null,
+          processing: true,
+          canManageRecording: access.canManage
+        }, 'Recording is still processing — check back shortly');
       }
+
+      session.recordingUrl = ready.playback;
+      session.recordingDownloadUrl = ready.downloadUrl || null;
+      session.recordingFormats = ready.formats || [];
+      session.recordingDuration = ready.duration || 0;
+      session.recordingParticipants = ready.participants || 0;
+      session.recordingFormat = ready.playbackType === 'video' ? 'video' : 'presentation';
+      await session.save();
+
+      return sendSuccess(res, payload(), 'Recording retrieved successfully');
     } catch (error) {
       console.error('Get Recording Error:', error);
       return sendError(res, 'Failed to retrieve recording', 500, error.message);
@@ -649,8 +714,49 @@ const getSessionRecordings = async (req, res) => {
 };
 
 /**
- * Get session attendance details
+ * Teacher controls over a live session recording: share it with the class, and
+ * allow students to keep a copy.
  */
+const updateSessionRecording = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { allowDownload, isPublished } = req.body;
+
+    const session = await LiveSession.findById(sessionId).populate('courseId', 'title');
+    if (!session) {
+      return sendError(res, 'Session not found', 404);
+    }
+
+    const access = await resolveRecordingAccess(session, req);
+    if (!access.canManage) {
+      return sendError(res, 'Only the session teacher can manage this recording', 403);
+    }
+
+    // Downloads on course recordings are admin-only by policy, so there is no
+    // per-session switch to flip. Reject it explicitly rather than accepting a
+    // value that would silently do nothing.
+    if (allowDownload !== undefined) {
+      return sendError(
+        res,
+        'Course recordings can only be downloaded by an administrator',
+        400
+      );
+    }
+
+    if (isPublished !== undefined) {
+      session.isRecordingPublished = Boolean(isPublished);
+    }
+    await session.save();
+
+    return sendSuccess(res, {
+      isRecordingPublished: session.isRecordingPublished
+    }, 'Recording updated');
+  } catch (error) {
+    console.error('Update Session Recording Error:', error);
+    sendError(res, 'Failed to update the recording', 500, error.message);
+  }
+};
+
 const getSessionAttendance = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -911,6 +1017,7 @@ module.exports = {
   cancelSession,
   deleteSession,
   getSessionRecordings,
+  updateSessionRecording,
   getLessonSessions,
   getAllSessions
 };

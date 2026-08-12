@@ -1202,6 +1202,134 @@ class StudySession {
   }
 }
 
+/// A session's recording, with everything the organiser needs to review it.
+class SessionRecording {
+  final String? playbackUrl;
+  final String? downloadUrl;
+  final int durationMinutes;
+  final int participants;
+  final List<RecordingFormat> formats;
+
+  /// True when this viewer may keep a copy.
+  final bool canDownload;
+
+  /// A downloadable file exists on the server — separate from whether *this*
+  /// viewer is allowed it, so the UI can explain a withheld download rather
+  /// than implying none exists.
+  final bool hasFile;
+
+  /// `admin_only` for course live classes (institutional content), or
+  /// `organiser_controlled` for peer study sessions.
+  final String downloadPolicy;
+  final bool isAdmin;
+
+  final bool allowDownload;
+  final bool isPublished;
+  final bool canManage;
+
+  /// BBB is still rendering it; not an error, just not ready.
+  final bool isProcessing;
+
+  /// The organiser has unpublished it, so members cannot see it.
+  final bool isUnavailable;
+
+  final String? topic;
+  final DateTime? endedAt;
+
+  const SessionRecording({
+    this.playbackUrl,
+    this.downloadUrl,
+    this.durationMinutes = 0,
+    this.participants = 0,
+    this.formats = const [],
+    this.canDownload = false,
+    this.hasFile = false,
+    this.downloadPolicy = 'organiser_controlled',
+    this.isAdmin = false,
+    this.allowDownload = false,
+    this.isPublished = true,
+    this.canManage = false,
+    this.isProcessing = false,
+    this.isUnavailable = false,
+    this.topic,
+    this.endedAt,
+  });
+
+  factory SessionRecording.fromJson(Map<String, dynamic> json) => SessionRecording(
+        playbackUrl: _str(json['recordingUrl']),
+        downloadUrl: _str(json['recordingDownloadUrl']),
+        durationMinutes: _parseInt(json['recordingDuration']) ?? 0,
+        participants: _parseInt(json['recordingParticipants']) ?? 0,
+        formats: (json['formats'] as List? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(RecordingFormat.fromJson)
+            .toList(),
+        canDownload: json['canDownload'] == true,
+        hasFile: json['hasDownloadableFile'] == true,
+        downloadPolicy: _str(json['downloadPolicy']) ?? 'organiser_controlled',
+        isAdmin: json['isAdmin'] == true,
+        allowDownload: json['allowRecordingDownload'] == true,
+        isPublished: json['isRecordingPublished'] != false,
+        canManage: json['canManageRecording'] == true,
+        isProcessing: json['processing'] == true,
+        isUnavailable: json['unavailable'] == true,
+        topic: _str(json['topic']),
+        endedAt: _parseDate(json['endedAt']),
+      );
+
+  bool get isReady => (playbackUrl ?? '').isNotEmpty;
+
+  /// A download only exists if the BBB server produced a video format.
+  ///
+  /// Uses the server flag rather than the URL, because the URL is withheld
+  /// from viewers who are not allowed to download it.
+  bool get hasDownloadableFile => hasFile || (downloadUrl ?? '').isNotEmpty;
+
+  /// Course recordings are institutional content — only an admin takes the
+  /// file off the platform.
+  bool get isAdminOnlyDownload => downloadPolicy == 'admin_only';
+
+  String get durationLabel {
+    if (durationMinutes <= 0) return '—';
+    if (durationMinutes < 60) return '$durationMinutes min';
+    final h = durationMinutes ~/ 60;
+    final m = durationMinutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+}
+
+class RecordingFormat {
+  final String type;
+  final String url;
+  final int duration;
+  final int? size;
+
+  const RecordingFormat({
+    required this.type,
+    required this.url,
+    this.duration = 0,
+    this.size,
+  });
+
+  factory RecordingFormat.fromJson(Map<String, dynamic> json) => RecordingFormat(
+        type: _str(json['type']) ?? 'presentation',
+        url: _str(json['url']) ?? '',
+        duration: _parseInt(json['duration']) ?? 0,
+        size: _parseInt(json['size']),
+      );
+
+  bool get isVideo => type.contains('video');
+
+  String get label => isVideo ? 'Video file (MP4)' : 'Interactive playback';
+
+  String get sizeLabel {
+    if (size == null || size! <= 0) return '';
+    final mb = size! / (1024 * 1024);
+    if (mb < 1024) return '${mb.toStringAsFixed(1)} MB';
+    return '${(mb / 1024).toStringAsFixed(2)} GB';
+  }
+}
+
 /// What the backend hands back when you ask to enter a session's room.
 class SessionJoinTicket {
   final String provider;

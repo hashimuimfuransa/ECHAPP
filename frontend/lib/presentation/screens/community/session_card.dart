@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/community.dart';
 import '../../providers/community_provider.dart';
 import 'community_theme.dart';
+import 'session_recording_screen.dart';
 
 /// A study session, with its full meeting lifecycle.
 ///
@@ -116,35 +117,12 @@ class SessionCardState extends ConsumerState<SessionCard> {
     });
   }
 
-  Future<void> _openRecording() => _run(() async {
-        var url = session.recordingUrl;
-
-        if (url == null || url.isEmpty) {
-          final recording = await ref
-              .read(communityActionsProvider)
-              .fetchSessionRecording(widget.courseId, session.id);
-          url = recording.url;
-          if (url == null) {
-            if (mounted) {
-              communitySnack(
-                context,
-                recording.processing
-                    ? 'The recording is still processing — check back in a few minutes'
-                    : 'This session was not recorded',
-              );
-            }
-            return;
-          }
-        }
-
-        if (!mounted) return;
-        await openExternalLink(
-          context,
-          url,
-          title: 'Session recording',
-          actionLabel: 'Watch',
-        );
-      });
+  /// Opens the recording review screen rather than launching the URL straight
+  /// away — the organiser needs to check it plays and decide whether the group
+  /// may download it, and everyone benefits from seeing duration and format
+  /// before committing to a video.
+  void _openRecording() =>
+      openSessionRecording(context, widget.courseId, session);
 
   @override
   Widget build(BuildContext context) {

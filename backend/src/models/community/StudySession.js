@@ -130,13 +130,48 @@ const studySessionSchema = new mongoose.Schema({
   },
 
   // ── Recording ──────────────────────────────────────────────────
+  /** Web playback URL — the interactive BBB player. */
   recordingUrl: {
+    type: String,
+    default: null
+  },
+  /** Every playback format BBB produced, so the UI can offer the right one. */
+  recordingFormats: [{
+    type: { type: String },
+    url: String,
+    duration: Number,
+    size: Number
+  }],
+  /**
+   * Direct file URL (mp4), present only when the BBB server has the video
+   * playback format installed. Without it a recording can be watched but not
+   * saved.
+   */
+  recordingDownloadUrl: {
     type: String,
     default: null
   },
   recordingDuration: {
     type: Number,
     default: 0
+  },
+  recordingParticipants: {
+    type: Number,
+    default: 0
+  },
+  /**
+   * The organiser reviews the recording first, then decides whether the rest
+   * of the group may download it. Watching is allowed as soon as it exists;
+   * keeping a copy is an explicit choice.
+   */
+  allowRecordingDownload: {
+    type: Boolean,
+    default: false
+  },
+  /** Organiser can hide a recording that did not come out usable. */
+  isRecordingPublished: {
+    type: Boolean,
+    default: true
   },
   /** Last time the scheduler asked BBB whether the recording had processed. */
   recordingCheckedAt: {

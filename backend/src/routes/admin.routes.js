@@ -85,4 +85,13 @@ router.get('/teachers/:teacherId/assignments', protect, authorize('admin'), getT
 router.get('/teachers/:teacherId/activity', protect, authorize('admin'), getTeacherActivity);
 router.get('/courses/:courseId/teachers', protect, authorize('admin'), getCourseTeachers);
 
+// ── Recordings library ──────────────────────────────────────────
+// Admins are the only role that can take a course recording off the platform,
+// so they get one place listing every recording rather than hunting course by
+// course. `kind` is 'live' (teacher class) or 'study' (peer session).
+const adminRecordingsController = require('../controllers/admin/recordings.controller');
+router.get('/recordings', protect, authorize('admin'), adminRecordingsController.list);
+router.post('/recordings/:kind/:sessionId/refresh', protect, authorize('admin'), adminRecordingsController.refresh);
+router.patch('/recordings/:kind/:sessionId/published', protect, authorize('admin'), adminRecordingsController.setPublished);
+
 module.exports = router;

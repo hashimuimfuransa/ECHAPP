@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/community.dart';
 import '../../services/api/community_service.dart';
+import '../../services/live_session_service.dart';
 
 /// Riverpod wiring for the Course Community.
 ///
@@ -246,6 +247,49 @@ final communitySessionsProvider =
 /// dashboard shows next to teacher-led live sessions.
 final myStudySessionsProvider = FutureProvider<List<StudySession>>((ref) async {
   return ref.watch(communityServiceProvider).getMySessions();
+});
+
+/// Which kind of session a recording belongs to.
+///
+/// Peer study sessions and teacher-led live classes both run on the same BBB
+/// server and return the same payload, so one screen reviews either — this
+/// only decides which endpoint to ask.
+enum RecordingSource { community, liveClass }
+
+class RecordingRef {
+  final RecordingSource source;
+
+  /// Empty for a live class, which is not scoped to a community.
+  final String courseId;
+  final String sessionId;
+
+  const RecordingRef({
+    required this.source,
+    required this.sessionId,
+    this.courseId = '',
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is RecordingRef &&
+      other.source == source &&
+      other.courseId == courseId &&
+      other.sessionId == sessionId;
+
+  @override
+  int get hashCode => Object.hash(source, courseId, sessionId);
+}
+
+/// A session's recording. Fetching it also asks BBB whether processing has
+/// finished, so opening the screen is what makes a fresh recording appear.
+final sessionRecordingProvider =
+    FutureProvider.family<SessionRecording, RecordingRef>((ref, args) async {
+  if (args.source == RecordingSource.liveClass) {
+    return LiveSessionService().getSessionRecordingDetail(args.sessionId);
+  }
+  return ref
+      .watch(communityServiceProvider)
+      .getSessionRecording(args.courseId, args.sessionId);
 });
 
 // ─────────────────────────────────────────────
@@ -966,13 +1010,43 @@ class CommunityActions {
     _refreshSessions(courseId);
   }
 
-  Future<({String? url, int duration, bool processing})> fetchSessionRecording(
+  Future<SessionRecording> fetchSessionRecording(
     String courseId,
     String sessionId,
   ) async {
     final recording = await _service.getSessionRecording(courseId, sessionId);
-    if (recording.url != null) _ref.invalidate(communitySessionsProvider);
+    if (recording.isReady) _ref.invalidate(communitySessionsProvider);
     return recording;
+  }
+
+  /// Works for both kinds of recording; [source] picks the endpoint.
+  Future<void> updateSessionRecording(
+    String courseId,
+    String sessionId, {
+    RecordingSource source = RecordingSource.community,
+    bool? allowDownload,
+    bool? isPublished,
+  }) async {
+    if (source == RecordingSource.liveClass) {
+      await LiveSessionService().updateSessionRecording(
+        sessionId,
+        allowDownload: allowDownload,
+        isPublished: isPublished,
+      );
+    } else {
+      await _service.updateSessionRecording(
+        courseId,
+        sessionId,
+        allowDownload: allowDownload,
+        isPublished: isPublished,
+      );
+    }
+    _ref.invalidate(sessionRecordingProvider(RecordingRef(
+      source: source,
+      courseId: courseId,
+      sessionId: sessionId,
+    )));
+    if (source == RecordingSource.community) _refreshSessions(courseId);
   }
 
   Future<void> cancelSession(String courseId, String sessionId) async {

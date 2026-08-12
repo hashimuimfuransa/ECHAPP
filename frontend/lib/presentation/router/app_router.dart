@@ -40,6 +40,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/course_material
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/payment_management_screen_riverpod.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_videos_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_recordings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_notifications_screen.dart';
@@ -370,6 +371,15 @@ class AppRouter {
             builder: (context, state) => const AdminLayoutWrapper(
               screenName: 'Admin Videos',
               child: AdminVideosScreen(),
+            ),
+          ),
+          // Platform-wide recordings library — admins are the only role that
+          // can download a course recording, so this is where they do it.
+          GoRoute(
+            path: '/admin/recordings',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Recordings',
+              child: AdminRecordingsScreen(),
             ),
           ),
           GoRoute(

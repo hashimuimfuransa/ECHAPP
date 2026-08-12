@@ -690,9 +690,12 @@ class SessionController {
   }
 
   /**
-   * Pull the recording from BBB on demand. The scheduler also does this in the
-   * background, but a student asking right after a session should not wait for
-   * the next sweep.
+   * The recording, with everything needed to review it properly: how long it
+   * runs, who was there, which playback formats exist and whether a
+   * downloadable file is among them.
+   *
+   * Pulls from BBB on demand — the scheduler also does this in the background,
+   * but someone asking right after a session should not wait for the sweep.
    */
   async getRecording(req, res) {
     try {
@@ -702,11 +705,44 @@ class SessionController {
       const session = await StudySession.findOne({ _id: sessionId, courseId });
       if (!session) return sendNotFound(res, 'Study session not found');
 
-      if (session.recordingUrl) {
+      const isOrganiser = String(session.createdBy) === String(userId);
+      const canManage = isOrganiser || isTeacher;
+
+      // Only the organiser sees a recording they have unpublished.
+      if (!session.isRecordingPublished && !canManage) {
         return sendSuccess(res, {
-          recordingUrl: session.recordingUrl,
-          recordingDuration: session.recordingDuration
-        }, 'Recording ready');
+          recordingUrl: null,
+          unavailable: true
+        }, 'The organiser has not shared this recording');
+      }
+
+      const payload = () => ({
+        recordingUrl: session.recordingUrl,
+        recordingDownloadUrl: session.recordingDownloadUrl,
+        recordingDuration: session.recordingDuration,
+        recordingParticipants: session.recordingParticipants,
+        formats: session.recordingFormats || [],
+        // A file only reaches members once the organiser has allowed it.
+        canDownload: Boolean(
+          session.recordingDownloadUrl &&
+          (canManage || session.allowRecordingDownload)
+        ),
+        /**
+         * Peer sessions are the organiser's own content, so they decide who
+         * may keep a copy — unlike course live classes, where the file is
+         * institutional and only an admin can take it off the platform.
+         */
+        downloadPolicy: 'organiser_controlled',
+        hasDownloadableFile: Boolean(session.recordingDownloadUrl),
+        allowRecordingDownload: session.allowRecordingDownload,
+        isRecordingPublished: session.isRecordingPublished,
+        canManageRecording: canManage,
+        topic: session.topic,
+        endedAt: session.endedAt
+      });
+
+      if (session.recordingUrl) {
+        return sendSuccess(res, payload(), 'Recording ready');
       }
 
       if (!session.bbbMeetingId || session.meetingProvider !== 'bbb') {
@@ -714,29 +750,76 @@ class SessionController {
       }
 
       const recordings = await BBBService.getRecordings(session.bbbMeetingId);
-      const published = recordings.find((r) => r.published && r.playback);
+      const ready = recordings.find((r) => r.published && r.playback);
 
-      if (!published) {
+      if (!ready) {
         session.recordingCheckedAt = new Date();
         await session.save();
         return sendSuccess(res, {
           recordingUrl: null,
-          processing: true
+          processing: true,
+          canManageRecording: canManage
         }, 'The recording is still processing — check back shortly');
       }
 
-      session.recordingUrl = published.playback;
-      session.recordingDuration = published.duration || 0;
+      session.recordingUrl = ready.playback;
+      session.recordingDownloadUrl = ready.downloadUrl || null;
+      session.recordingFormats = ready.formats || [];
+      session.recordingDuration = ready.duration || 0;
+      session.recordingParticipants = ready.participants || 0;
       session.recordingCheckedAt = new Date();
       await session.save();
 
-      return sendSuccess(res, {
-        recordingUrl: session.recordingUrl,
-        recordingDuration: session.recordingDuration
-      }, 'Recording ready');
+      return sendSuccess(res, payload(), 'Recording ready');
     } catch (error) {
       console.error('Error fetching session recording:', error);
       return sendError(res, 'Failed to fetch the recording', 500, error.message);
+    }
+  }
+
+  /**
+   * Organiser controls over the recording: share it with the group or not, and
+   * whether members may keep a copy.
+   */
+  async updateRecording(req, res) {
+    try {
+      const { courseId, userId, isTeacher } = req.community;
+      const { sessionId } = req.params;
+      const { allowDownload, isPublished } = req.body;
+
+      const session = await StudySession.findOne({ _id: sessionId, courseId });
+      if (!session) return sendNotFound(res, 'Study session not found');
+
+      if (String(session.createdBy) !== String(userId) && !isTeacher) {
+        return sendForbidden(res, 'Only the organiser can manage this recording');
+      }
+
+      if (allowDownload !== undefined) {
+        session.allowRecordingDownload = Boolean(allowDownload);
+      }
+      if (isPublished !== undefined) {
+        session.isRecordingPublished = Boolean(isPublished);
+      }
+      await session.save();
+
+      // Telling people a recording is downloadable is worth a notification;
+      // silently flipping a flag they cannot see is not.
+      if (allowDownload === true && session.isRecordingPublished) {
+        CommunityNotificationService.sessionRecordingReady({
+          recipientIds: session.participants.map((p) => String(p.userId)),
+          courseId,
+          sessionId: String(session._id),
+          topic: session.topic
+        });
+      }
+
+      return sendSuccess(res, {
+        allowRecordingDownload: session.allowRecordingDownload,
+        isRecordingPublished: session.isRecordingPublished
+      }, 'Recording updated');
+    } catch (error) {
+      console.error('Error updating session recording:', error);
+      return sendError(res, 'Failed to update the recording', 500, error.message);
     }
   }
 }

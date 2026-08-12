@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import './infrastructure/api_client.dart';
 import '../config/api_config.dart';
 import '../models/live_session.dart';
+// SessionRecording is shared with community study sessions — both kinds of
+// recording come back in the same shape and render through the same screen.
+import '../models/community.dart' show SessionRecording;
 
 /// Service for live session and BigBlueButton operations
 class LiveSessionService {
@@ -277,6 +280,48 @@ class LiveSessionService {
     } catch (e) {
       debugPrint('Failed to fetch session recording: $e');
       throw ApiException('Failed to fetch session recording: $e');
+    }
+  }
+
+  /// The same recording, in the richer shape the review screen uses — formats,
+  /// download availability and the teacher's own controls.
+  ///
+  /// Shares its payload with community study sessions so one screen renders
+  /// both kinds of recording.
+  Future<SessionRecording> getSessionRecordingDetail(String sessionId) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.baseUrl}/live/sessions/$sessionId/recordings',
+      );
+      response.validateStatus();
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonBody['data'] as Map<String, dynamic>? ?? const {};
+      return SessionRecording.fromJson(data);
+    } catch (e) {
+      debugPrint('Failed to fetch session recording detail: $e');
+      throw ApiException('Failed to fetch session recording: $e');
+    }
+  }
+
+  /// Teacher controls: share the recording with the class, and allow students
+  /// to keep a copy.
+  Future<void> updateSessionRecording(
+    String sessionId, {
+    bool? allowDownload,
+    bool? isPublished,
+  }) async {
+    try {
+      final response = await _apiClient.patch(
+        '${ApiConfig.baseUrl}/live/sessions/$sessionId/recordings',
+        body: {
+          if (allowDownload != null) 'allowDownload': allowDownload,
+          if (isPublished != null) 'isPublished': isPublished,
+        },
+      );
+      response.validateStatus();
+    } catch (e) {
+      debugPrint('Failed to update session recording: $e');
+      throw ApiException('Failed to update the recording: $e');
     }
   }
 

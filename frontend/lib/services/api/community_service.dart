@@ -854,17 +854,30 @@ class CommunityService {
 
   /// Recordings process asynchronously on the BBB server — a null URL with
   /// `processing: true` means "not ready yet", not "never recorded".
-  Future<({String? url, int duration, bool processing})> getSessionRecording(
+  Future<SessionRecording> getSessionRecording(
     String courseId,
     String sessionId,
   ) async {
     final data = _unwrap(
         await _apiClient.get('${_base(courseId)}/sessions/$sessionId/recording'));
-    return (
-      url: data['recordingUrl'] as String?,
-      duration: (data['recordingDuration'] as num?)?.toInt() ?? 0,
-      processing: data['processing'] == true,
-    );
+    return SessionRecording.fromJson(data);
+  }
+
+  /// Organiser controls: share the recording with the group, and let members
+  /// keep a copy.
+  Future<void> updateSessionRecording(
+    String courseId,
+    String sessionId, {
+    bool? allowDownload,
+    bool? isPublished,
+  }) async {
+    _unwrap(await _apiClient.patch(
+      '${_base(courseId)}/sessions/$sessionId/recording',
+      body: {
+        if (allowDownload != null) 'allowDownload': allowDownload,
+        if (isPublished != null) 'isPublished': isPublished,
+      },
+    ));
   }
 
   Future<void> cancelSession(String courseId, String sessionId) async {

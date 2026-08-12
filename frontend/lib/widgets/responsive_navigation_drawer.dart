@@ -83,6 +83,12 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'key': 'students'
       },
       {
+        'title': 'Recordings',
+        'icon': Icons.video_library_outlined,
+        'route': '/admin/recordings',
+        'key': 'recordings'
+      },
+      {
         'title': l10n?.sidebarAdminPayments ?? 'Payments',
         'icon': Icons.payments_outlined,
         'route': '/admin/payments',
