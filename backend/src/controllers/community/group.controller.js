@@ -6,6 +6,7 @@ const User = require('../../models/User');
 const Enrollment = require('../../models/Enrollment');
 const { sendSuccess, sendError, sendNotFound, sendForbidden } = require('../../utils/response.utils');
 const { PUBLIC_USER_FIELDS, getPresenceMap, toPublicMember } = require('../../utils/community.utils');
+const { mapSession, SESSION_POPULATE } = require('../../utils/session.mapper');
 const CommunityNotificationService = require('../../services/community-notification.service');
 
 const PURPOSES = ['exam_prep', 'assignment', 'revision', 'project', 'practice', 'general'];
@@ -116,9 +117,13 @@ class GroupController {
           .sort({ submittedAt: -1 })
           .populate('assignmentId', 'title maxMarks dueDate type')
           .lean(),
-        StudySession.find({ groupId, status: 'scheduled' })
+        // Live sessions belong here too — filtering to `scheduled` made a
+        // session disappear from the group's tab at the exact moment the
+        // organiser opened the room.
+        StudySession.find({ groupId, status: { $in: ['scheduled', 'live'] } })
           .sort({ scheduledAt: 1 })
           .limit(10)
+          .populate(SESSION_POPULATE)
           .lean()
       ]);
 
@@ -166,14 +171,9 @@ class GroupController {
           comment: s.comment,
           grade: s.grade && s.grade.gradedAt ? s.grade : null
         })),
-        sessions: sessions.map((s) => ({
-          id: String(s._id),
-          topic: s.topic,
-          scheduledAt: s.scheduledAt,
-          durationMinutes: s.durationMinutes,
-          participantCount: s.participants.length,
-          meetingLink: s.meetingLink || null
-        }))
+        // Shared mapper, so the organiser gets "Open the room" here exactly as
+        // they do in the community's Sessions tab.
+        sessions: sessions.map((s) => mapSession(s, userId, isTeacher))
       }, 'Group loaded');
     } catch (error) {
       console.error('Error loading study group:', error);

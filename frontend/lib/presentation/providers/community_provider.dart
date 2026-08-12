@@ -926,15 +926,22 @@ class CommunityActions {
       meetingLink: meetingLink,
       groupId: groupId,
     );
-    _ref.invalidate(communitySessionsProvider);
-    _refreshFeed(courseId);
+    _refreshSessions(courseId);
     return session;
+  }
+
+  /// Sessions surface in three places — the Sessions tab, the dashboard, and
+  /// every group workspace — so any change to one has to refresh all three or
+  /// the organiser is left staring at a stale card.
+  void _refreshSessions(String courseId) {
+    _ref.invalidate(communitySessionsProvider);
+    _ref.invalidate(studyGroupProvider);
+    _refreshFeed(courseId);
   }
 
   Future<StudySession> rsvpSession(String courseId, String sessionId) async {
     final session = await _service.rsvpSession(courseId, sessionId);
-    _ref.invalidate(communitySessionsProvider);
-    _refreshFeed(courseId);
+    _refreshSessions(courseId);
     return session;
   }
 
@@ -942,15 +949,13 @@ class CommunityActions {
   /// room, which flips the session live and notifies everyone attending.
   Future<SessionJoinTicket> joinSessionRoom(String courseId, String sessionId) async {
     final ticket = await _service.joinSessionRoom(courseId, sessionId);
-    _ref.invalidate(communitySessionsProvider);
-    _refreshFeed(courseId);
+    _refreshSessions(courseId);
     return ticket;
   }
 
   Future<void> endSession(String courseId, String sessionId) async {
     await _service.endSession(courseId, sessionId);
-    _ref.invalidate(communitySessionsProvider);
-    _refreshFeed(courseId);
+    _refreshSessions(courseId);
   }
 
   Future<({String? url, int duration, bool processing})> fetchSessionRecording(
@@ -964,8 +969,7 @@ class CommunityActions {
 
   Future<void> cancelSession(String courseId, String sessionId) async {
     await _service.cancelSession(courseId, sessionId);
-    _ref.invalidate(communitySessionsProvider);
-    _refreshFeed(courseId);
+    _refreshSessions(courseId);
   }
 
   // Study partners
