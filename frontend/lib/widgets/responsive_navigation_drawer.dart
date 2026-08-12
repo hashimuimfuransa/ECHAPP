@@ -141,6 +141,13 @@ class ResponsiveNavigationDrawer extends ConsumerWidget {
         'section': sManage
       },
       {
+        'title': 'Push Report',
+        'icon': Icons.mark_email_read_outlined,
+        'route': '/admin/push-report',
+        'key': 'admin-push-report',
+        'section': sManage
+      },
+      {
         'title': l10n?.profile ?? 'Profile',
         'icon': Icons.person_outline,
         'route': '/profile',

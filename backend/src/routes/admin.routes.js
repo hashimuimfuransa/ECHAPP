@@ -62,6 +62,12 @@ router.get('/courses/:courseId/students/:studentId/performance', protect, author
 // Notifications
 router.get('/notifications', protect, authorize('admin'), (req, res) => notificationController.getAdminNotifications(req, res));
 
+// Push delivery report — which pushes reached devices and which did not.
+// Push sends swallow their own errors by design, so this is the only place a
+// failed delivery is visible.
+const adminPushReportController = require('../controllers/admin/push-report.controller');
+router.get('/push-report', protect, authorize('admin'), (req, res) => adminPushReportController.report(req, res));
+
 // Device management routes
 router.get('/students/:id/device-info', protect, authorize('admin'), getUserDeviceInfo);
 router.put('/students/:id/device-reset', protect, authorize('admin'), resetUserDevice);

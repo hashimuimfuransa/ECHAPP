@@ -1,7 +1,13 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Quiz = require('../models/Quiz');
+const PushLog = require('../models/PushLog');
 const admin = require('firebase-admin');
+
+/** Callers pass either a Mongo id or a Firebase UID; only the former is a ref. */
+function isObjectId(value) {
+  return Boolean(value) && /^[0-9a-fA-F]{24}$/.test(String(value));
+}
 
 /**
  * FCM only accepts string values in `data`. firebase-admin rejects the whole
@@ -434,12 +440,23 @@ class NotificationController {
 
   // Send push notification via FCM
   async sendPushNotification(userId, title, message, data = {}, bypassLimit = false) {
+    // Every exit path below records its outcome so the admin push report can
+    // show what was delivered and what was not. See models/PushLog.js.
+    const logBase = { userId: isObjectId(userId) ? userId : undefined, title, message };
+
     try {
       // Check daily limit unless bypassed (important system notifications like payments bypass the limit)
       if (!bypassLimit) {
         const canSend = await this.checkDailyLimit(userId);
         if (!canSend) {
           console.log(`Daily notification limit reached for user ${userId}. Skipping.`);
+          PushLog.record({
+            ...logBase,
+            status: 'skipped',
+            errorCode: 'daily-limit',
+            errorMessage: 'User reached the daily notification cap',
+            attempts: 0
+          });
           return;
         }
       }
@@ -449,7 +466,8 @@ class NotificationController {
       let firebaseUid = userId;
       let user = null;
       let fcmToken = null;
-      
+      let tokenSource = 'none';
+
       // If userId looks like a MongoDB ObjectId, find the user to get their firebaseUid
       if (userId.toString().length === 24 && /^[0-9a-fA-F]+$/.test(userId)) {
         user = await User.findById(userId);
@@ -459,9 +477,17 @@ class NotificationController {
           }
           if (user.fcmToken) {
             fcmToken = user.fcmToken;
+            tokenSource = 'mongodb';
           }
         } else {
           console.log(`User ${userId} not found in MongoDB`);
+          PushLog.record({
+            ...logBase,
+            status: 'skipped',
+            errorCode: 'user-not-found',
+            errorMessage: `No user record for ${userId}`,
+            attempts: 0
+          });
           return;
         }
       } else {
@@ -469,24 +495,40 @@ class NotificationController {
         user = await User.findOne({ firebaseUid: userId });
         if (user && user.fcmToken) {
           fcmToken = user.fcmToken;
+          tokenSource = 'mongodb';
         }
       }
-      
+
+      // A user found by Firebase UID still needs their Mongo id on the log row
+      // so the report can name them.
+      if (user && !logBase.userId) logBase.userId = user._id;
+
       // Always try Firestore first for the most up-to-date token
       try {
         const userDoc = await db.collection('users').doc(firebaseUid).get();
         if (userDoc.exists && userDoc.data().fcmToken) {
           fcmToken = userDoc.data().fcmToken;
+          tokenSource = 'firestore';
           console.log(`Found up-to-date FCM token in Firestore for user ${firebaseUid}`);
         }
       } catch (firestoreError) {
         console.log(`Error fetching from Firestore, will use MongoDB fallback: ${firestoreError.message}`);
       }
-      
+
       if (!fcmToken) {
         console.log(`User FCM token not found for user ${userId} in either Firestore or MongoDB`);
+        PushLog.record({
+          ...logBase,
+          status: 'skipped',
+          errorCode: 'no-token',
+          errorMessage: 'No FCM token in Firestore or MongoDB — device never registered, or the token was cleared',
+          attempts: 0
+        });
         return;
       }
+
+      logBase.tokenTail = String(fcmToken).slice(-12);
+      logBase.tokenSource = tokenSource;
 
       const payload = {
         notification: {
@@ -532,6 +574,12 @@ class NotificationController {
         try {
           const response = await admin.messaging().send(payload);
           console.log(`Push notification sent successfully (Attempt ${retryCount + 1}):`, response);
+          PushLog.record({
+            ...logBase,
+            status: 'sent',
+            messageId: response,
+            attempts: retryCount + 1
+          });
           return response;
         } catch (error) {
           lastError = error;
@@ -561,7 +609,15 @@ class NotificationController {
             } catch (fsErr) {
               console.error('Error removing token from Firestore:', fsErr.message);
             }
-            
+
+            PushLog.record({
+              ...logBase,
+              status: 'failed',
+              errorCode,
+              errorMessage: `${error.message} — token cleared, the device must reopen the app to register a new one`,
+              attempts: retryCount + 1
+            });
+
             return null; // Stop retrying for invalid tokens
           }
           
@@ -588,9 +644,23 @@ class NotificationController {
         lastError?.code || 'unknown-error',
         lastError?.message
       );
+      PushLog.record({
+        ...logBase,
+        status: 'failed',
+        errorCode: lastError?.code || 'unknown-error',
+        errorMessage: lastError?.message || 'Send failed without an error message',
+        attempts: retryCount + 1
+      });
       return null;
     } catch (error) {
       console.error('Error in sendPushNotification wrapper:', error);
+      PushLog.record({
+        ...logBase,
+        status: 'failed',
+        errorCode: error?.code || 'internal-error',
+        errorMessage: error?.message || String(error),
+        attempts: 0
+      });
       // Don't throw to prevent breaking the caller flow
     }
   }

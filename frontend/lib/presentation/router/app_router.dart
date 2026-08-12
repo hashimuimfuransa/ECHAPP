@@ -44,6 +44,7 @@ import 'package:excellencecoachinghub/presentation/screens/admin/admin_recording
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/course_analytics_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_notifications_screen.dart';
+import 'package:excellencecoachinghub/presentation/screens/admin/admin_push_report_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_feedback_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_payment_settings_screen.dart';
 import 'package:excellencecoachinghub/presentation/screens/admin/admin_general_settings_screen.dart';
@@ -467,6 +468,13 @@ class AppRouter {
             builder: (context, state) => const AdminLayoutWrapper(
               screenName: 'Admin Notifications',
               child: AdminNotificationsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/push-report',
+            builder: (context, state) => const AdminLayoutWrapper(
+              screenName: 'Admin Push Report',
+              child: AdminPushReportScreen(),
             ),
           ),
           GoRoute(

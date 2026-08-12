@@ -406,6 +406,37 @@ class AdminService {
     }
   }
 
+  /// Push delivery report: which push notifications reached devices and which
+  /// did not. Pushes fail silently by design on the server, so this endpoint is
+  /// the only place a failed delivery is visible.
+  Future<PushReport> getPushReport({
+    int days = 7,
+    String status = 'all',
+    String search = '',
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConfig.admin}/push-report',
+        queryParams: {
+          'days': days,
+          'status': status,
+          if (search.isNotEmpty) 'search': search,
+          'page': page,
+          'limit': limit,
+        },
+      );
+      response.validateStatus();
+
+      final jsonBody = jsonDecode(response.body) as Map<String, dynamic>;
+      return PushReport.fromJson(jsonBody['data'] as Map<String, dynamic>);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to fetch push delivery report: $e');
+    }
+  }
+
   /// Get admin notifications
   Future<List<AdminNotification>> getNotifications() async {
     try {
@@ -1169,6 +1200,193 @@ class AdminNotification {
           : DateTime.now(),
       isVirtual: json['isVirtual'] as bool? ?? false,
       severity: json['severity'] as String? ?? 'info',
+    );
+  }
+}
+
+/// One push-notification attempt, as recorded server-side.
+class PushLogEntry {
+  final String id;
+  final String? userName;
+  final String? userEmail;
+  final String title;
+  final String message;
+
+  /// 'sent' (FCM accepted it), 'failed' (FCM rejected it) or 'skipped'
+  /// (it never left the server — no token, or the daily cap).
+  final String status;
+
+  /// FCM's id for the accepted message; only present when [status] is 'sent'.
+  final String? messageId;
+  final String? errorCode;
+  final String? errorMessage;
+
+  /// Plain-language reason, supplied by the backend for known error codes.
+  final String? explanation;
+  final int attempts;
+  final String? tokenTail;
+  final String tokenSource;
+  final DateTime timestamp;
+
+  PushLogEntry({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.status,
+    required this.timestamp,
+    this.userName,
+    this.userEmail,
+    this.messageId,
+    this.errorCode,
+    this.errorMessage,
+    this.explanation,
+    this.attempts = 0,
+    this.tokenTail,
+    this.tokenSource = 'none',
+  });
+
+  bool get isSent => status == 'sent';
+  bool get isFailed => status == 'failed';
+  bool get isSkipped => status == 'skipped';
+
+  factory PushLogEntry.fromJson(Map<String, dynamic> json) {
+    return PushLogEntry(
+      id: json['id']?.toString() ?? '',
+      userName: json['userName'] as String?,
+      userEmail: json['userEmail'] as String?,
+      title: json['title'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      status: json['status'] as String? ?? 'failed',
+      messageId: json['messageId'] as String?,
+      errorCode: json['errorCode'] as String?,
+      errorMessage: json['errorMessage'] as String?,
+      explanation: json['explanation'] as String?,
+      attempts: AdminService._toInt(json['attempts']),
+      tokenTail: json['tokenTail'] as String?,
+      tokenSource: json['tokenSource'] as String? ?? 'none',
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'] as String).toLocal()
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Attempt totals for the selected window.
+class PushReportSummary {
+  final int total;
+  final int sent;
+  final int failed;
+  final int skipped;
+  final double deliveryRate;
+
+  PushReportSummary({
+    required this.total,
+    required this.sent,
+    required this.failed,
+    required this.skipped,
+    required this.deliveryRate,
+  });
+
+  factory PushReportSummary.fromJson(Map<String, dynamic> json) {
+    return PushReportSummary(
+      total: AdminService._toInt(json['total']),
+      sent: AdminService._toInt(json['sent']),
+      failed: AdminService._toInt(json['failed']),
+      skipped: AdminService._toInt(json['skipped']),
+      deliveryRate: AdminService._toDouble(json['deliveryRate']),
+    );
+  }
+}
+
+/// A single failure reason and how often it occurred.
+class PushFailureReason {
+  final String code;
+  final String status;
+  final int count;
+  final String? explanation;
+
+  PushFailureReason({
+    required this.code,
+    required this.status,
+    required this.count,
+    this.explanation,
+  });
+
+  factory PushFailureReason.fromJson(Map<String, dynamic> json) {
+    return PushFailureReason(
+      code: json['code'] as String? ?? 'unknown-error',
+      status: json['status'] as String? ?? 'failed',
+      count: AdminService._toInt(json['count']),
+      explanation: json['explanation'] as String?,
+    );
+  }
+}
+
+/// Per-day totals, used for the trend bars.
+class PushDailyPoint {
+  final String date;
+  final int sent;
+  final int failed;
+  final int skipped;
+
+  PushDailyPoint({
+    required this.date,
+    required this.sent,
+    required this.failed,
+    required this.skipped,
+  });
+
+  int get total => sent + failed + skipped;
+
+  factory PushDailyPoint.fromJson(Map<String, dynamic> json) {
+    return PushDailyPoint(
+      date: json['date'] as String? ?? '',
+      sent: AdminService._toInt(json['sent']),
+      failed: AdminService._toInt(json['failed']),
+      skipped: AdminService._toInt(json['skipped']),
+    );
+  }
+}
+
+class PushReport {
+  final PushReportSummary summary;
+  final List<PushFailureReason> breakdown;
+  final List<PushDailyPoint> daily;
+  final List<PushLogEntry> logs;
+  final int page;
+  final int totalPages;
+  final int totalLogs;
+  final bool hasMore;
+
+  PushReport({
+    required this.summary,
+    required this.breakdown,
+    required this.daily,
+    required this.logs,
+    required this.page,
+    required this.totalPages,
+    required this.totalLogs,
+    required this.hasMore,
+  });
+
+  factory PushReport.fromJson(Map<String, dynamic> json) {
+    final pagination = json['pagination'] as Map<String, dynamic>? ?? {};
+    return PushReport(
+      summary: PushReportSummary.fromJson(
+          json['summary'] as Map<String, dynamic>? ?? const {}),
+      breakdown: (json['breakdown'] as List? ?? [])
+          .map((e) => PushFailureReason.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      daily: (json['daily'] as List? ?? [])
+          .map((e) => PushDailyPoint.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      logs: (json['logs'] as List? ?? [])
+          .map((e) => PushLogEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      page: AdminService._toInt(pagination['page']),
+      totalPages: AdminService._toInt(pagination['totalPages']),
+      totalLogs: AdminService._toInt(pagination['total']),
+      hasMore: pagination['hasMore'] as bool? ?? false,
     );
   }
 }
