@@ -54,7 +54,10 @@ const mapMessage = (msg, userId) => ({
  */
 const resolveRoom = async (req) => {
   const { courseId, userId, isTeacher } = req.community;
-  const groupId = req.params.groupId || req.query.groupId || req.body.groupId || null;
+  // Read defensively: on a GET there is no body at all, and the course room
+  // is exactly the case where the first two are absent.
+  const groupId =
+    req.params.groupId || req.query.groupId || (req.body && req.body.groupId) || null;
 
   if (!groupId) {
     return { scope: 'course', groupId: null, courseId };

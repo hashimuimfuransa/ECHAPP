@@ -234,6 +234,15 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
                     child:
                         CircularProgressIndicator(strokeWidth: 2.4, color: CT.primary),
                   )
+                // Same reasoning as the course room: a failed load has to look
+                // like a failure, not like an empty conversation.
+                : state.error != null && state.messages.isEmpty
+                    ? CommunityErrorView(
+                        error: state.error!,
+                        onRetry: () => ref
+                            .read(directChatProvider(widget.target).notifier)
+                            .load(),
+                      )
                 : state.messages.isEmpty
                     ? CommunityEmpty(
                         icon: Icons.chat_bubble_outline_rounded,

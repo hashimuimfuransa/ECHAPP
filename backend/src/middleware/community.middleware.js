@@ -22,7 +22,8 @@ const { sendError, sendNotFound, sendForbidden } = require('../utils/response.ut
  */
 const loadCommunityContext = async (req, res, next) => {
   try {
-    const courseId = req.params.courseId || req.body.courseId || req.query.courseId;
+    const courseId =
+      req.params.courseId || (req.body && req.body.courseId) || req.query.courseId;
 
     if (!courseId || !mongoose.Types.ObjectId.isValid(courseId)) {
       return sendError(res, 'A valid course ID is required', 400);

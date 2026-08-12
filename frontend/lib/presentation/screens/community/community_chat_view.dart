@@ -120,6 +120,15 @@ class _CommunityChatViewState extends ConsumerState<CommunityChatView> {
                   child: CircularProgressIndicator(
                       strokeWidth: 2.4, color: CT.primary),
                 )
+              // A failed load must not masquerade as an empty room: showing
+              // "start the conversation" here hid a broken request and made it
+              // look like other people's messages were missing.
+              : state.error != null && state.messages.isEmpty
+                  ? CommunityErrorView(
+                      error: state.error!,
+                      onRetry: () =>
+                          ref.read(chatRoomProvider(_key).notifier).load(),
+                    )
               : state.messages.isEmpty
                   ? CommunityEmpty(
                       icon: Icons.forum_rounded,

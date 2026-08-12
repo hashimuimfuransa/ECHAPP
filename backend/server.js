@@ -40,6 +40,16 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Express 5 leaves `req.body` undefined when a request carries no body, where
+// Express 4 gave you `{}`. Any handler reading `req.body.something` on a GET
+// then throws a TypeError and 500s — which is how the public course chat broke:
+// its GET fell through to `req.body.groupId`. Normalising here fixes the whole
+// class of bug rather than one call site at a time.
+app.use((req, res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
