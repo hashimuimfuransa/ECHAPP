@@ -2435,6 +2435,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sidebarLearningPlatform => 'LEARNING PLATFORM';
 
   @override
+  String get sidebarSectionOverview => 'Overview';
+
+  @override
+  String get sidebarSectionLearning => 'Learning';
+
+  @override
+  String get sidebarSectionConnect => 'Connect';
+
+  @override
+  String get sidebarSectionManage => 'Manage';
+
+  @override
+  String get sidebarSectionAccount => 'Account';
+
+  @override
+  String get sidebarSectionGetStarted => 'Get Started';
+
+  @override
+  String get sidebarViewProfile => 'View profile';
+
+  @override
   String get sidebarAdminNotifications => 'Notifications';
 
   @override

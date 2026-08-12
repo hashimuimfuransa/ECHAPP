@@ -3,6 +3,38 @@ const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 const admin = require('firebase-admin');
 
+/**
+ * FCM only accepts string values in `data`. firebase-admin rejects the whole
+ * message with INVALID_PAYLOAD ("data must only contain string values") as soon
+ * as one value is a number, an ObjectId or a nested object — which silently
+ * killed every push carrying a score, an amount, a Mongo id or a
+ * `community`/`messaging` deep-link payload.
+ *
+ * Objects are JSON-encoded so the client can parse them back; ids and dates
+ * collapse to their scalar form.
+ */
+function sanitizeFcmData(data = {}) {
+  const sanitized = {};
+
+  for (const [key, value] of Object.entries(data || {})) {
+    if (value === null || value === undefined) continue;
+
+    if (typeof value === 'string') {
+      sanitized[key] = value;
+    } else if (value instanceof Date) {
+      sanitized[key] = value.toISOString();
+    } else if (typeof value === 'object') {
+      // Plain maps/arrays travel as JSON; ObjectId & friends stringify to a scalar.
+      const isPlain = Array.isArray(value) || value.constructor === Object;
+      sanitized[key] = isPlain ? JSON.stringify(value) : String(value);
+    } else {
+      sanitized[key] = String(value);
+    }
+  }
+
+  return sanitized;
+}
+
 class NotificationController {
   // Get all notifications for current user
   async getNotifications(req, res) {
@@ -462,14 +494,17 @@ class NotificationController {
           body: message,
         },
         data: {
-          ...data,
+          ...sanitizeFcmData(data),
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
           sound: 'default'
         },
         token: fcmToken,
         android: {
           priority: 'high',
-          ttl: 86400, // 24 hours
+          // firebase-admin takes ttl in MILLISECONDS (it converts to seconds for
+          // FCM). The previous literal 86400 meant 86 seconds, so anything sent
+          // while the device was offline/dozing expired before it was delivered.
+          ttl: 24 * 60 * 60 * 1000, // 24 hours
           notification: {
             channelId: 'high_importance_channel',
             notificationCount: 1
@@ -548,7 +583,11 @@ class NotificationController {
         }
       }
       
-      console.error(`Failed to send push notification after ${retryCount + 1} attempts:`, lastError?.message);
+      console.error(
+        `Failed to send push notification to user ${userId} after ${retryCount + 1} attempts:`,
+        lastError?.code || 'unknown-error',
+        lastError?.message
+      );
       return null;
     } catch (error) {
       console.error('Error in sendPushNotification wrapper:', error);
@@ -565,7 +604,7 @@ class NotificationController {
           body: message,
         },
         data: {
-          ...data,
+          ...sanitizeFcmData(data),
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
           sound: 'default'
         },

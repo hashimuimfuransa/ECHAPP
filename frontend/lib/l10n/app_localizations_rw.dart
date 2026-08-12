@@ -2439,6 +2439,27 @@ class AppLocalizationsRw extends AppLocalizations {
   String get sidebarLearningPlatform => 'URUBUGA RWO KWIGA';
 
   @override
+  String get sidebarSectionOverview => 'Incamake';
+
+  @override
+  String get sidebarSectionLearning => 'Kwiga';
+
+  @override
+  String get sidebarSectionConnect => 'Guhuza';
+
+  @override
+  String get sidebarSectionManage => 'Gucunga';
+
+  @override
+  String get sidebarSectionAccount => 'Konti';
+
+  @override
+  String get sidebarSectionGetStarted => 'Tangira';
+
+  @override
+  String get sidebarViewProfile => 'Reba umwirondoro';
+
+  @override
   String get sidebarAdminNotifications => 'Ubutumwa';
 
   @override

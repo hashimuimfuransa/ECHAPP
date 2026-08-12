@@ -4832,6 +4832,48 @@ abstract class AppLocalizations {
   /// **'LEARNING PLATFORM'**
   String get sidebarLearningPlatform;
 
+  /// No description provided for @sidebarSectionOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get sidebarSectionOverview;
+
+  /// No description provided for @sidebarSectionLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get sidebarSectionLearning;
+
+  /// No description provided for @sidebarSectionConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get sidebarSectionConnect;
+
+  /// No description provided for @sidebarSectionManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get sidebarSectionManage;
+
+  /// No description provided for @sidebarSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get sidebarSectionAccount;
+
+  /// No description provided for @sidebarSectionGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get sidebarSectionGetStarted;
+
+  /// No description provided for @sidebarViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get sidebarViewProfile;
+
   /// No description provided for @sidebarAdminNotifications.
   ///
   /// In en, this message translates to:
